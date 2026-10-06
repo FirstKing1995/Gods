@@ -1,4 +1,4 @@
-// Gênesis · testes de Deus (Etapa 11). Uso: node test/deus-test.js [anos | u] [modos]
+// Gods · testes de Deus (Etapa 11). Uso: node test/deus-test.js [anos | u] [modos]
 // 1) unidades: a glória (todo Poder que entra) e os níveis (glória e fiéis), o nome que o povo dá (e trocar), as falas
 //    com o nome, os dons (a oferta e cada efeito), os céticos que se convertem com sinais, o escolhido de fé inteira
 //    (ungir, perder a graça, curar com as mãos, pregar, brilhar), a Bênção, a estátua (obra, consagrar, os quatro
@@ -9,7 +9,7 @@
 const path = require('path');
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 globalThis.G = globalThis.G || {};
-for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
+for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
 const { W, Sim, CFG: C, Family: F, God, Save, AI, Tech: T, Inv: I, Life: L, Fauna: FA, Campo: K, Narr: N, Deus: D } = G;
 const Y = 60 * 1440, DAYM = 1440;
 

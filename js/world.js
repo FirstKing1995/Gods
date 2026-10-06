@@ -1,4 +1,4 @@
-/* Gênesis · mundo: geração por seed, objetos, passagem e pathfinding. Sem DOM. */
+/* Gods · mundo: geração por seed, objetos, passagem e pathfinding. Sem DOM. */
 (function (G) {
   'use strict';
   const C = G.CFG, U = G.U;

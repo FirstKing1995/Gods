@@ -1,4 +1,4 @@
-// Gênesis · testes da vida do povo (Etapa 6). Uso: node test/vida-test.js [anos]
+// Gods · testes da vida do povo (Etapa 6). Uso: node test/vida-test.js [anos]
 // 1) unidades: relações livres (vários pares, filhos de pais diferentes, visitas, mesmo sexo, parentes nunca, limites,
 //    separação, save da 0.5), conversas de pergunta e resposta (a resposta olha o mundo), consolo, briga e pazes, ensinar,
 //    histórias ao pé do fogo, festas, agradecimentos que dão Poder (e o luto), Poder sem teto, pequenos acontecimentos,
@@ -10,7 +10,7 @@ const path = require('path');
 const fs = require('fs');
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 globalThis.G = {};
-for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
+for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
 const { W, Sim, CFG: C, Family: F, God, Save, AI, Tech: T, Life: L } = G;
 const Y = 60 * 1440, D = 1440;
 

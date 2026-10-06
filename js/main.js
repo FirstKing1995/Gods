@@ -1,4 +1,4 @@
-/* Gênesis · laço principal, telas, conta, save e controles (mouse, toque e teclado). */
+/* Gods · laço principal, telas, conta, save e controles (mouse, toque e teclado). */
 (function (G) {
   'use strict';
   const C = G.CFG, R = G.R, UI = G.UI, Sim = G.Sim, Save = G.Save, A = G.Art, W = G.W, Net = G.Net, God = G.God;
@@ -10,8 +10,9 @@
   let S = null, speed = 1, acc = 0, lastT = 0, lastSave = 0, lastCloud = 0, cloudBusy = false;
   let demo = null, demoDir = { x: 1, y: 0.35 };
   let siteWorld = null, siteSeed = 0, siteSel = null;
-  let placing = null, ghost = null, casting = null, roading = null;
-  let camTarget = null, holdSim = false;
+  let placing = null, casting = null, roading = null;   // placing: a obra que está sendo posicionada (veja startPlacing)
+  let camTarget = null, holdSim = false, holdDrawn = false;
+  let follow = null;                                     // quem a câmera segue (veja setFollow)
   const rng = new G.RNG((Date.now() ^ 0x5bd1e995) >>> 0);
 
   function setMode(m) {
@@ -21,7 +22,7 @@
     $('#scr-site').hidden = m !== 'site';
     $('#hud').hidden = !(m === 'game' || m === 'over');
     $('#scr-over').hidden = m !== 'over';
-    if (m !== 'game') { cancelPlacing(); cancelCasting(); stopRoad(true); }
+    if (m !== 'game') { cancelPlacing(); cancelCasting(); stopRoad(true); setFollow(0); }
     R.overlay.ring = null;
     if (m !== 'game' && m !== 'over') { R.overlay.selPerson = 0; R.overlay.selBuilding = 0; }
   }
@@ -121,16 +122,16 @@
     // o mundo seguiu com o jogo fechado
     const minutes = S.over ? 0 : G.Offline.minutesFor(nowTrusted - (d.savedAt || nowTrusted), S);
     if (minutes >= C.DAY_MIN / 24) {
-      holdSim = true;
-      UI.awayProgress(0, minutes);
-      // em fatias: ausências longas não travam a tela
-      G.Offline.runAsync(S, minutes, (f) => UI.awayProgress(f, minutes), (r) => {
+      holdSim = true; holdDrawn = false;
+      // em fatias: ausências longas não travam a tela (0.12: quase tudo em dias resumidos; "Entrar agora" corta o resto)
+      const job = G.Offline.runAsync(S, minutes, (f, j) => UI.awayProgress(f, minutes, j), (r) => {
         UI.consume(S, 0, true);
         R.invalidate();
         UI.bind(S);
         UI.away(r, () => { holdSim = false; checkPending(); });
         save();
       });
+      UI.awayProgress(0, minutes, job);
     } else setTimeout(checkPending, 400);
   }
   // viajantes esperando resposta (a janela fecha com o jogo; aqui ela volta)
@@ -248,24 +249,68 @@
     if (s && txt) Net.beacon('salvar', { token: s.token, dados: txt, resumo: Save.summary(S) });
   }
 
-  // ---------- construção ----------
-  function startPlacing(type) {
-    if (mode !== 'game') return;
-    cancelCasting(); stopRoad(true);
-    if (placing === type) { cancelPlacing(); return; }
-    placing = type;
+  // ---------- construção: posicionar antes de confirmar ----------
+  // O toque (ou o clique) só posiciona o fantasma. Dá para mudar à vontade (tocar em outro lugar, arrastar o próprio
+  // fantasma, as setas do teclado) e só "Confirmar" (ou Enter) marca a obra. No computador, antes do primeiro clique o
+  // fantasma segue o mouse; no celular ele já nasce preso, no meio do mapa à vista.
+  // opts (opcional) deixa outro fluxo usar o mesmo modo, por exemplo mover uma obra pronta:
+  //   canPlace(x, y) → motivo ou ''   no lugar de Sim.canPlace (x, y: o tile do canto de cima da obra)
+  //   onConfirm(x, y)                 no lugar de marcar a obra nova (devolver false mantém o modo aberto)
+  //   onCancel()                      o jogador desistiu
+  //   label, confirm                  o nome que aparece na faixa e o texto do botão de confirmar
+  //   lv, kind                        o nível e o tipo de casa com que o fantasma é desenhado
+  //   x, y                            o tile onde o fantasma começa (já preso)
+  function startPlacing(type, opts) {
+    if (mode !== 'game' || !S || !C.BUILD[type]) return;
+    if (!opts && placing && !placing.custom && placing.type === type) { cancelPlacing(); return; }   // o mesmo botão de novo: desiste
+    cancelCasting(); stopRoad(true); cancelPlacing();
+    const o = opts || {};
+    placing = { type, o, custom: !!opts, x: 0, y: 0, pinned: false, ok: false, why: '', at: 0 };
     document.body.dataset.placing = type;
-    showHint('Toque no mapa para marcar ' + C.BUILD[type].a + ' ' + C.BUILD[type].name.toLowerCase() + '.', cancelPlacing);
     if (UI.isMobile()) UI.sheet('');
-    const c = R.toWorld(window.innerWidth / 2, window.innerHeight / 2);
-    updateGhost(c.x, c.y);
+    placeHint();
+    if (o.x !== undefined && o.y !== undefined) { placing.pinned = true; setGhost(o.x, o.y); }
+    else {
+      const mob = UI.isMobile(), c = !mob && mouseAt ? mouseAt : viewCenter(), w = R.toWorld(c.x, c.y);
+      placing.pinned = mob;   // no celular não há mouse para o fantasma seguir
+      aimGhost(w.x, w.y);
+    }
+    UI.update(0, true);
   }
-  function showHint(text, onCancel) {
+  // a faixa de dica (obra, milagre, caminho e cerca dividem a mesma)
+  function hintBox(cls) {
     const hint = $('#place-hint');
     hint.hidden = false;
+    hint.className = 'panel place-hint' + (cls ? ' ' + cls : '');
+    return hint;
+  }
+  function showHint(text, onCancel) {
+    const hint = hintBox();
     hint.innerHTML = `<span>${text}</span><button class="btn btn-small" id="place-cancel">Cancelar</button>`;
     $('#place-cancel').onclick = onCancel;
     positionHint();
+  }
+  // a faixa de quem posiciona: o nome da obra, a dica, se o lugar serve (ou por que não) e os dois botões.
+  // É montada uma vez; depois só o texto e o botão mudam (o foco do teclado não se perde)
+  function placeHint() {
+    const hint = hintBox('placing'), P = placing;
+    hint.innerHTML = `<div class="ph-text"><b class="ph-name"></b><span class="small muted ph-tip">Toque para posicionar, arraste para ajustar.</span><span class="small ph-why" role="status"></span></div>
+      <div class="ph-actions"><button class="btn" id="place-cancel" type="button" title="Cancelar (Esc)">Cancelar</button><button class="btn btn-gold" id="place-ok" type="button" title="Confirmar (Enter)" disabled></button></div>`;
+    hint.querySelector('.ph-name').textContent = P.o.label || C.BUILD[P.type].name;
+    $('#place-ok').textContent = P.o.confirm || 'Confirmar';
+    $('#place-cancel').onclick = () => cancelPlacing();
+    $('#place-ok').onclick = () => confirmPlacing();
+    positionHint();
+  }
+  function paintPlaceHint() {
+    const P = placing, why = $('#place-hint .ph-why'), ok = $('#place-ok');
+    if (!P || !why || !ok) return;
+    const text = P.ok ? 'Lugar livre.' : P.why + (/[.!?]$/.test(P.why) ? '' : '.');
+    if (why.textContent !== text) why.textContent = text;
+    why.classList.toggle('warn', !P.ok);
+    why.classList.toggle('good', P.ok);
+    const off = !P.pinned || !P.ok;   // sem lugar escolhido (ou que não serve), não há o que confirmar
+    if (ok.disabled !== off) ok.disabled = off;
   }
   // a dica fica logo acima do painel de obras (que pode ter mais de uma fileira)
   function positionHint() {
@@ -275,34 +320,161 @@
     hint.style.bottom = r.height > 0 ? Math.round(window.innerHeight - r.top + 10) + 'px' : '';
   }
   function hideHint() { const h = $('#place-hint'); if (h) h.hidden = true; }
-  function cancelPlacing() {
-    placing = null; ghost = null; R.overlay.ghost = null;
-    if (!casting && !roading) delete document.body.dataset.placing;
-    if (!casting && !roading) hideHint();
+  // done: saiu porque confirmou (não é desistência)
+  function cancelPlacing(done) {
+    const P = placing;
+    placing = null; R.overlay.ghost = null;
+    const c = cv(); if (c) c.style.cursor = '';
+    if (!casting && !roading) { delete document.body.dataset.placing; hideHint(); }
+    if (P && !done && P.o.onCancel) P.o.onCancel();
   }
+  // o tile do canto de cima da obra, com ela centrada no ponto tocado
   function footprint(type, wx, wy) {
     const d = C.BUILD[type];
     return { x: Math.floor(wx / TS - (d.w - 1) / 2), y: Math.floor(wy / TS - (d.h - 1) / 2) };
   }
-  function updateGhost(wx, wy) {
-    if (!placing || !S) return;
-    const f = footprint(placing, wx, wy);
-    const why = Sim.canPlace(S, placing, f.x, f.y);
-    ghost = { type: placing, x: f.x, y: f.y, ok: !why, why };
-    R.overlay.ghost = ghost;
+  // põe o fantasma num tile (sem sair do mapa) e confere se o lugar serve
+  function setGhost(x, y) {
+    const P = placing;
+    if (!P || !S) return;
+    const d = C.BUILD[P.type], w = S.world;
+    P.x = Math.max(0, Math.min(w.W - d.w, x | 0)); P.y = Math.max(0, Math.min(w.H - d.h, y | 0));
+    P.why = (P.o.canPlace ? P.o.canPlace(P.x, P.y) : Sim.canPlace(S, P.type, P.x, P.y)) || '';
+    P.ok = !P.why;
+    R.overlay.ghost = { type: P.type, x: P.x, y: P.y, ok: P.ok, why: P.why, lv: P.o.lv || 1, kind: P.o.kind || null, pinned: P.pinned };
+    paintPlaceHint();
   }
-  function placeAt(wx, wy) {
-    updateGhost(wx, wy);
-    if (!ghost) return;
-    if (!ghost.ok) { UI.toast(ghost.why + '.', 'warn'); return; }
-    const b = Sim.placeBlueprint(S, placing, ghost.x, ghost.y);
+  function aimGhost(wx, wy) { if (!placing) return; const f = footprint(placing.type, wx, wy); setGhost(f.x, f.y); }
+  function pinGhost(wx, wy) { if (!placing) return; placing.pinned = true; aimGhost(wx, wy); }
+  // o ponto da tela está em cima do fantasma? (com folga: o dedo é maior que o mouse, e o desenho passa do chão da obra)
+  function overGhost(sx, sy, touch) {
+    const P = placing, d = C.BUILD[P.type], w = R.toWorld(sx, sy), m = (touch ? 14 : 4) / R.scale();
+    return w.x >= P.x * TS - m && w.x <= (P.x + d.w) * TS + m && w.y >= P.y * TS - m - TS * 0.75 && w.y <= (P.y + d.h) * TS + m;
+  }
+  // o ponto da tela cai num tile da obra?
+  function onGhost(sx, sy) {
+    const P = placing, d = C.BUILD[P.type], w = R.toWorld(sx, sy), tx = Math.floor(w.x / TS), ty = Math.floor(w.y / TS);
+    return tx >= P.x && tx < P.x + d.w && ty >= P.y && ty < P.y + d.h;
+  }
+  // setas do teclado: um tile por vez; se o fantasma for sair da vista, a câmera vai atrás
+  function nudgeGhost(dx, dy) {
+    const P = placing;
+    P.pinned = true;
+    setGhost(P.x + dx, P.y + dy);
+    if (follow) return;
+    const d = C.BUILD[P.type], cx = (P.x + d.w / 2) * TS, cy = (P.y + d.h / 2) * TS, s = R.toScreen(cx, cy), r = freeRect();
+    if (s.x < r.l + 40 || s.x > r.r - 40 || s.y < r.t + 40 || s.y > r.b - 40) camTarget = { x: cx, y: cy };
+  }
+  // Confirmar: marca a obra (ou faz o que o fluxo pediu) e sai do modo
+  function confirmPlacing() {
+    const P = placing;
+    if (!P || !S) return;
+    P.pinned = true; setGhost(P.x, P.y);   // confere de novo: o lugar pode ter mudado desde o último toque
+    if (!P.ok) { UI.toast(P.why + '.', 'warn'); return; }
+    if (P.o.onConfirm) {
+      if (P.o.onConfirm(P.x, P.y) === false) return;
+      if (placing === P) cancelPlacing(true);
+      UI.update(0, true);
+      return;
+    }
+    const b = Sim.placeBlueprint(S, P.type, P.x, P.y);
     if (b) {
       const d = C.BUILD[b.type];
       const costs = Object.entries(d.cost).map(([k, v]) => v + ' de ' + k);
       UI.toast(d.name + (d.a === 'o' ? ' marcado' : ' marcada') + '. ' + (costs.length ? 'Precisa de ' + (costs.length > 1 ? costs.slice(0, -1).join(', ') + ' e ' + costs[costs.length - 1] : costs[0]) + '.' : 'Só pede trabalho: o povo lavra a terra.'), '');
       if (!S.vontades.construir) UI.toast('Construir está proibido nas Vontades. Ninguém vai trabalhar na obra.', 'warn');
     }
-    cancelPlacing();
+    cancelPlacing(true);
+    UI.update(0, true);
+  }
+  // os roteiros de teste marcam direto (G.debug.placeAt): posiciona e confirma
+  function placeAt(wx, wy) { if (!placing) return; pinGhost(wx, wy); confirmPlacing(); }
+
+  // ---------- o que do mapa está à vista ----------
+  // o pedaço do mapa que nada cobre, em px da tela: no celular, entre as caixas do alto e a gaveta (ou a faixa) de
+  // baixo; no computador, entre os painéis dos lados
+  function freeRect() {
+    const W = window.innerWidth, H = window.innerHeight, r = { l: 0, t: 0, r: W, b: H };
+    const box = (el) => { if (typeof el === 'string') el = $(el); if (!el || el.hidden) return null; const b = el.getBoundingClientRect(); return b.width > 0 && b.height > 0 ? b : null; };
+    const top = box('#clockbox') || box('#almanac'), hint = box('#place-hint'), nav = box('#mobnav');
+    if (top) r.t = top.bottom;
+    if (nav) r.b = nav.top;
+    if (hint) r.b = Math.min(r.b, hint.top);
+    if (UI.isMobile()) {
+      const sh = document.body.dataset.sheet, drawer = sh ? box('.sheet[data-sheet="' + sh + '"]') : null;
+      if (drawer) r.b = Math.min(r.b, drawer.top);
+      const stock = box('#stock');
+      if (stock && r.b - stock.bottom >= 90) r.t = Math.max(r.t, stock.bottom);   // cabendo, fica abaixo do estoque
+    } else {
+      const left = box('#p-vontades'), build = box('#p-construir');
+      if (left) r.l = left.right;
+      if (build) r.b = Math.min(r.b, build.top);
+      for (const el of document.querySelectorAll('#col-right > .panel')) { const b = box(el); if (b) r.r = Math.min(r.r, b.left); }
+    }
+    return r;
+  }
+  // "o meio da tela" para a câmera: no celular, o meio do que sobra do mapa (a gaveta aberta cobre a metade de baixo)
+  function viewCenter() {
+    const c = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    if (UI.isMobile()) { const r = freeRect(); c.y = (r.t + r.b) / 2; }
+    return c;
+  }
+  // quanto esse meio fica acima (ou abaixo) do centro de verdade, em px da tela. Medido de tempos em tempos enquanto a
+  // câmera anda, e suavizado: abrir ou fechar a gaveta não dá tranco em quem está sendo seguido
+  let offY = 0, offWant = 0, offAt = 0, offLive = false;
+  function viewOff(now, dt) {
+    if (!offLive || now - offAt > 250) {
+      offAt = now;
+      offWant = UI.isMobile() ? Math.round(viewCenter().y - window.innerHeight / 2) : 0;
+      if (!offLive) offY = offWant;   // a câmera estava parada: começa do valor certo
+      offLive = true;
+    }
+    offY += (offWant - offY) * Math.min(1, dt * 10);
+    if (Math.abs(offWant - offY) < 0.5) offY = offWant;
+    return offY;
+  }
+
+  // ---------- seguir alguém ----------
+  // A câmera fica presa na pessoa, quadro a quadro, na posição interpolada (a mesma do desenho). Dentro da barraca,
+  // fica na barraca; bebê de colo, em quem carrega. Cada vez que isso muda (entrou, saiu, trocou de colo), a câmera
+  // desliza até o lugar novo em vez de pular. Solta: arrastar o mapa, WASD ou setas, escolher outra pessoa ou obra,
+  // fechar a ficha, Esc, a pessoa morrer. O zoom não solta.
+  const GLIDE_MS = 380;
+  function followPos(p, alpha) {
+    let q = p;
+    if (p.carriedBy) { const c = S.people.find((x) => x.id === p.carriedBy && x.alive); if (c) q = c; }
+    if (q.inTent) {
+      const b = Sim.building(S, q.inTent);
+      return b ? { x: (b.x + b.w / 2) * TS, y: (b.y + b.h / 2) * TS, mode: 'b' + b.id } : { x: q.x * TS, y: q.y * TS, mode: 'b' };
+    }
+    return { x: (q.px + (q.x - q.px) * alpha) * TS, y: (q.py + (q.y - q.py) * alpha) * TS - 4, mode: q === p ? 'a' : 'c' + q.id };
+  }
+  function setFollow(pid, quiet) {
+    const p = pid && S && mode === 'game' ? S.people.find((q) => q.id === pid && q.alive) : null;
+    if (!p) {
+      if (!follow) return;
+      follow = null; R.overlay.follow = 0; camTarget = null;
+      if (S) UI.update(0, true);
+      return;
+    }
+    if (follow && follow.id === pid) return;
+    if (UI.sel.person !== pid) UI.select(pid, 0);   // seguir é também escolher: a ficha abre (e quem era seguido é solto)
+    follow = { id: pid, mode: '', t0: 0, fx: 0, fy: 0 };
+    camTarget = null; R.overlay.follow = pid;
+    if (!quiet) UI.toast('Seguindo ' + p.name + '. Arraste o mapa para soltar.', '');
+    UI.update(0, true);
+  }
+  // px do mundo → px do aparelho (inteiro): presa nessa grade, a câmera anda junto com o desenho e a pessoa não treme
+  function devScale() { const c = cv(), k = c && c.clientWidth ? c.width / c.clientWidth : 1; return Math.max(1, Math.round(R.scale() * k)); }
+  function followStep(now, alpha, off) {
+    const p = S.people.find((q) => q.id === follow.id);
+    if (!p || !p.alive) { setFollow(0); return; }
+    const pos = followPos(p, alpha), tx = pos.x, ty = pos.y - off;
+    if (pos.mode !== follow.mode) { follow.mode = pos.mode; follow.t0 = now; follow.fx = R.cam.x; follow.fy = R.cam.y; }
+    const u = Math.min(1, (now - follow.t0) / GLIDE_MS);
+    if (u < 1) { const k = u * u * (3 - 2 * u); R.cam.x = follow.fx + (tx - follow.fx) * k; R.cam.y = follow.fy + (ty - follow.fy) * k; }
+    else { const s = devScale(); R.cam.x = Math.round(tx * s) / s; R.cam.y = Math.round(ty * s) / s; }
+    clampCam();
   }
 
   // ---------- milagres ----------
@@ -356,8 +528,7 @@
     UI.update(0, true);
   }
   function roadHint() {
-    const hint = $('#place-hint');
-    hint.hidden = false;
+    const hint = hintBox();
     const lv = roading.lv;
     if (roading.fence) {
       hint.innerHTML = `<span>${UI.isMobile() ? 'Arraste com um dedo para marcar a cerca; com dois, mexe o mapa.' : 'Arraste pelo chão para marcar a cerca (o botão direito mexe o mapa).'} Feche a volta toda: árvore, pedra e água também servem de parede.</span>
@@ -496,9 +667,11 @@
   const cv = () => $('#view');
   const ptrs = new Map();
   let drag = null, pinch = null;
+  let mouseAt = null;   // onde o mouse está sobre o mapa (a obra escolhida pelo teclado já nasce ali)
+  let lastTap = null;   // o último toque numa pessoa (dois toques seguidos: seguir)
   function onDown(e) {
     if (!$('#menu').hidden) $('#menu').hidden = true;   // tocar no mapa fecha o menu
-    cv().setPointerCapture(e.pointerId);
+    try { cv().setPointerCapture(e.pointerId); } catch (err) { /* o dedo já saiu: o toque segue valendo sem a captura */ }
     ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (ptrs.size === 2) {
       const [a, b] = [...ptrs.values()];
@@ -510,17 +683,24 @@
       roadDown(e.clientX, e.clientY);
     } else {
       drag = { x: e.clientX, y: e.clientY, cx: R.cam.x, cy: R.cam.y, moved: false, button: e.button };
+      // em cima do fantasma preso, o arrasto leva a obra (tile a tile), não o mapa
+      if (placing && placing.pinned && mode === 'game' && e.button === 0 && overGhost(e.clientX, e.clientY, e.pointerType !== 'mouse')) {
+        const w = R.toWorld(e.clientX, e.clientY);
+        drag.ghost = { x: placing.x, y: placing.y, wx: w.x, wy: w.y };
+      }
     }
   }
   function onMove(e) {
     const p = ptrs.get(e.pointerId);
     if (p) { p.x = e.clientX; p.y = e.clientY; }
+    if (e.pointerType === 'mouse') mouseAt = { x: e.clientX, y: e.clientY };
     if (pinch && ptrs.size === 2) {
       const [a, b] = [...ptrs.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
       const z = pinch.zoom * d / pinch.d;
       if (mode === 'site') R.cam.zoom = Math.max(0.15, Math.min(4, z));
       else R.cam.zoom = Math.max(1, Math.min(6, z));
+      if (follow) return;   // seguindo alguém, a pinça só aproxima e afasta
       // os dois dedos também arrastam o mapa
       const s = R.scale();
       R.cam.x = pinch.cx - ((a.x + b.x) / 2 - pinch.mx) / s; R.cam.y = pinch.cy - ((a.y + b.y) / 2 - pinch.my) / s;
@@ -531,7 +711,17 @@
     if (roading && mode === 'game' && !drag) { if (roading.stroke || e.pointerType === 'mouse') roadMove(e.clientX, e.clientY); return; }
     if (drag) {
       const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-      if (!drag.moved && Math.hypot(dx, dy) > 6) { drag.moved = true; cv().classList.add('dragging'); }
+      if (drag.ghost) {
+        // a obra anda com o dedo, em tiles inteiros (pelo mundo, e não pela tela: a câmera pode estar seguindo alguém)
+        if (!drag.moved && Math.hypot(dx, dy) > 6) drag.moved = true;
+        if (drag.moved && placing) { const w = R.toWorld(e.clientX, e.clientY); setGhost(drag.ghost.x + Math.round((w.x - drag.ghost.wx) / TS), drag.ghost.y + Math.round((w.y - drag.ghost.wy) / TS)); }
+        return;
+      }
+      if (!drag.moved && Math.hypot(dx, dy) > 6) {
+        drag.moved = true; cv().classList.add('dragging');
+        // arrastar o mapa solta quem era seguido; a câmera continua de onde estava, sem tranco
+        if (follow || camTarget) { setFollow(0); camTarget = null; drag.cx = R.cam.x; drag.cy = R.cam.y; drag.x = e.clientX; drag.y = e.clientY; return; }
+      }
       if (drag.moved) {
         const s = R.scale();
         R.cam.x = drag.cx - dx / s; R.cam.y = drag.cy - dy / s;
@@ -540,7 +730,10 @@
     }
     if (e.pointerType === 'mouse') {
       const w = R.toWorld(e.clientX, e.clientY);
-      if (placing) updateGhost(w.x, w.y);
+      if (placing) {
+        if (!placing.pinned) aimGhost(w.x, w.y);   // antes do primeiro clique, o fantasma segue o mouse
+        else if (!drag) cv().style.cursor = overGhost(e.clientX, e.clientY) ? 'move' : '';
+      }
       if (casting) aimCast(w.x, w.y);
     }
   }
@@ -549,7 +742,8 @@
     if (pinch) { if (ptrs.size < 2) { pinch = null; if (mode !== 'site') R.cam.zoom = snapZoom(R.cam.zoom); } drag = null; return; }
     if (roading && roading.stroke) { roadUp(); return; }
     cv().classList.remove('dragging');
-    if (drag && !drag.moved) tap(e.clientX, e.clientY, drag.button);
+    // um toque em cima da obra que está sendo posicionada não muda nada (só na folga em volta dela ele a leva para lá)
+    if (drag && !drag.moved && !(drag.ghost && placing && onGhost(e.clientX, e.clientY))) tap(e.clientX, e.clientY, drag.button);
     drag = null;
   }
   function snapZoom(z) { let best = ZOOMS[0]; for (const q of ZOOMS) if (Math.abs(q - z) < Math.abs(best - z)) best = q; return best; }
@@ -577,7 +771,14 @@
     if (mode !== 'game' || !S) return;
     if (casting) { if (button === 2) cancelCasting(); else castAt(w.x, w.y); return; }
     if (roading) return;
-    if (placing) { if (button === 2) cancelPlacing(); else placeAt(w.x, w.y); return; }
+    // posicionando uma obra: o toque só leva o fantasma para lá (quem marca é o Confirmar)
+    if (placing) { if (button === 2) cancelPlacing(); else pinGhost(w.x, w.y); return; }
+    // dois toques (ou dois cliques) seguidos na mesma pessoa: a câmera passa a segui-la. Vale o lugar do primeiro
+    // toque, e não onde ela está agora: a ficha pode ter aberto por cima e a câmera pode ter andado
+    const now = performance.now(), twice = lastTap && now - lastTap.t < 450 && Math.hypot(sx - lastTap.x, sy - lastTap.y) < 28 && UI.sel.person === lastTap.pid;
+    const pid2 = twice ? lastTap.pid : 0;
+    lastTap = null;
+    if (pid2 && button !== 2) { setFollow(pid2); return; }
     let best = null, bd = 1e9;
     for (const p of S.people) {
       if (!p.alive || p.inTent) continue;
@@ -586,7 +787,7 @@
       const reach = Math.max(10, 18 / R.scale());
       if (d < reach && d < bd) { bd = d; best = p; }
     }
-    if (best) { UI.select(best.id, 0); return; }
+    if (best) { UI.select(best.id, 0); tapped(best, sx, sy, now); return; }
     // lobo ou viajante no mapa
     if (S.narr) {
       let ent = null, ed = 1e9;
@@ -629,20 +830,49 @@
     const bid = S.world.bgrid[ty * S.world.W + tx];
     if (bid >= 0) {
       const inside = S.people.find((p) => p.alive && p.inTent === bid);
-      if (inside && !UI.sel.building) { UI.select(inside.id, 0); return; }
+      if (inside && !UI.sel.building) { UI.select(inside.id, 0); tapped(inside, sx, sy, now); return; }
       UI.select(0, bid); return;
     }
     UI.select(0, 0);
     if (UI.isMobile()) UI.sheet('');
+  }
+  // alguém foi tocado no mapa e a ficha abriu
+  let freshT = 0;
+  function tapped(p, sx, sy, now) {
+    lastTap = { pid: p.id, x: sx, y: sy, t: now };
+    // por um instante a ficha deixa o toque passar: o segundo dos dois toques chega ao mapa mesmo que ela tenha
+    // aberto por cima, e ninguém aperta sem querer um botão que acabou de aparecer debaixo do dedo
+    document.body.dataset.fresh = '1';
+    clearTimeout(freshT);
+    freshT = setTimeout(() => { delete document.body.dataset.fresh; }, 450);
+    // no celular a ficha cobre a metade de baixo do mapa: se cobriu quem foi tocado, a câmera vai até a pessoa aparecer
+    if (!UI.isMobile() || follow) return;
+    const r = freeRect(), s = R.toScreen(p.x * TS, p.y * TS);
+    if (s.y > r.b - 14 || s.y < r.t + 30) camTarget = { x: p.x * TS, y: p.y * TS - 4 };
   }
 
   // ---------- teclado ----------
   let lastSpeed = 1;
   function setSpeed(i) { i = Math.max(0, Math.min(C.SPEEDS.length - 1, i | 0)); if (i > 0) lastSpeed = i; speed = i; UI.update(0, true); }
   function onKey(e) {
-    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    // quem digita num campo (ou escolhe numa lista) não aperta atalho; nem quem usa um atalho do navegador (Ctrl+R...)
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (mode !== 'game') return;
     const k = e.key.toLowerCase();
+    // posicionando uma obra: as setas levam o fantasma um tile (WASD segue mexendo o mapa) e Enter confirma
+    // (o primeiro Enter prende o fantasma que ainda seguia o mouse). Com uma janela aberta, as teclas são dela.
+    if (placing && (k === 'enter' || k.indexOf('arrow') === 0) && !document.querySelector('.modal:not([hidden])')) {
+      if (k === 'enter') {
+        if (e.target && e.target.closest && e.target.closest('#place-hint')) return;   // Enter num botão da faixa é o clique dele
+        e.preventDefault();
+        if (placing.pinned) confirmPlacing(); else { placing.pinned = true; setGhost(placing.x, placing.y); }
+      } else {
+        e.preventDefault();
+        nudgeGhost(k === 'arrowleft' ? -1 : k === 'arrowright' ? 1 : 0, k === 'arrowup' ? -1 : k === 'arrowdown' ? 1 : 0);
+      }
+      return;
+    }
     if (k === ' ') { e.preventDefault(); setSpeed(speed === 0 ? (lastSpeed || 1) : 0); }
     else if (k >= '1' && k <= '5' && k.length === 1) setSpeed(+k);
     else if (k === 'f') startPlacing('fogueira');
@@ -673,7 +903,9 @@
     }
     else if (k === '+' || k === '=') { const i = ZOOMS.indexOf(snapZoom(R.cam.zoom)); R.cam.zoom = ZOOMS[Math.min(ZOOMS.length - 1, i + 1)]; }
     else if (k === '-') { const i = ZOOMS.indexOf(snapZoom(R.cam.zoom)); R.cam.zoom = ZOOMS[Math.max(0, i - 1)]; }
+    else if ((k === ',' || k === '.' || k === '<' || k === '>') && UI.sel.person) UI.step(k === ',' || k === '<' ? -1 : 1);   // a ficha: anterior e próximo
     else if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].indexOf(k) >= 0) {
+      setFollow(0);   // andar com o mapa solta quem era seguido
       const st = 48 / R.scale();
       if (k === 'w' || k === 'arrowup') R.cam.y -= st;
       if (k === 's' || k === 'arrowdown') R.cam.y += st;
@@ -702,13 +934,24 @@
         while (acc >= C.STEP_MIN && n < 80) { Sim.step(S, C.STEP_MIN); acc -= C.STEP_MIN; n++; if (S.over) break; }
         if (n >= 80) acc = 0;
       }
-      if (camTarget) {
-        R.cam.x += (camTarget.x - R.cam.x) * Math.min(1, dt * 6);
-        R.cam.y += (camTarget.y - R.cam.y) * Math.min(1, dt * 6);
-        if (Math.hypot(camTarget.x - R.cam.x, camTarget.y - R.cam.y) < 1) camTarget = null;
-      }
-      R.draw(S, Math.min(1, acc / C.STEP_MIN), now);
-      if (!holdSim) {   // com o mundo seguindo fora (tempo offline), os avisos esperam o resumo
+      const alpha = Math.min(1, acc / C.STEP_MIN);
+      if (follow || camTarget) {
+        const off = viewOff(now, dt) / R.scale();   // no celular, o alvo fica no meio do mapa à vista
+        if (follow) followStep(now, alpha, off);
+        else {
+          const ty = camTarget.y - off;
+          R.cam.x += (camTarget.x - R.cam.x) * Math.min(1, dt * 6);
+          R.cam.y += (ty - R.cam.y) * Math.min(1, dt * 6);
+          if (Math.hypot(camTarget.x - R.cam.x, ty - R.cam.y) < 1 && offY === offWant) camTarget = null;
+        }
+      } else offLive = false;
+      // o lugar da obra que está sendo posicionada pode deixar de servir (ou passar a servir) com o tempo
+      if (placing && now - placing.at > 400) { placing.at = now; setGhost(placing.x, placing.y); }
+      // com o mundo seguindo fora (tempo offline), o mapa atrás da janela é desenhado uma vez só (inteiro) e fica
+      // parado: o aparelho fica para o cálculo
+      if (!holdSim) R.draw(S, alpha, now);
+      else if (!holdDrawn) { holdDrawn = true; R.chunkBudget = 999; R.draw(S, alpha, now); R.chunkBudget = 0; }
+      if (!holdSim) {   // e os avisos esperam o resumo
         UI.consume(S, now);
         UI.frame(now);
         UI.update(now);
@@ -733,10 +976,13 @@
       casting: () => casting,
       speed: setSpeed,
       getSpeed: () => speed,
-      placing: () => placing,
+      placing: () => (placing && !placing.custom ? placing.type : null),   // a obra nova que está sendo posicionada (acende o botão dela)
       save: () => { save(true); },
       toTitle: () => { save(true); S = null; showTitle(); },
-      center: (x, y) => { camTarget = { x, y }; },
+      center: (x, y) => { if (!follow) camTarget = { x, y }; },   // seguindo alguém, a câmera já tem dono
+      // seguir alguém com a câmera: follow(pid) liga, follow(0) solta; following() diz quem (0: ninguém)
+      follow: (pid) => setFollow(pid),
+      following: () => (follow ? follow.id : 0),
       over: () => { if (S) { save(true); setMode('over'); UI.showOver(S); } },
       // nascimento: pausa e pede o nome
       choice: askChoice,
@@ -744,7 +990,7 @@
       alarm: () => { if (speed > 1) setSpeed(1); },
       era: showEra,
       godPending: showGodPending,
-      panels: () => positionHint(),
+      panels: () => { positionHint(); offAt = 0; },   // abriu ou fechou painel: o mapa à vista mudou
       birth: (pid) => {
         if (!S || S.safe || mode !== 'game') return;
         const baby = S.people.find((q) => q.id === pid);
@@ -761,6 +1007,7 @@
     c.addEventListener('pointermove', onMove);
     c.addEventListener('pointerup', onUp);
     c.addEventListener('pointercancel', onUp);
+    c.addEventListener('pointerleave', () => { mouseAt = null; });
     c.addEventListener('wheel', onWheel, { passive: false });
     c.addEventListener('contextmenu', (e) => e.preventDefault());
     window.addEventListener('keydown', onKey);
@@ -801,6 +1048,9 @@
       setSpeed, startPlacing, startCasting, startRoad, startFence, stopRoad, placeAt: (tx, ty) => placeAt((tx + 0.5) * TS, (ty + 0.5) * TS),
       castAt: (kind, tx, ty) => { startCasting(kind); if (casting) castAt((tx + 0.5) * TS, (ty + 0.5) * TS); },
       select: (pid) => UI.select(pid, 0, true), cam: R.cam, save: () => save(true),
+      // posicionar e seguir, para os roteiros de teste: o fantasma (ou null), confirmar, cancelar; quem é seguido
+      get placing() { return placing ? { type: placing.type, x: placing.x, y: placing.y, pinned: placing.pinned, ok: placing.ok, why: placing.why } : null; },
+      confirmPlacing, cancelPlacing: () => cancelPlacing(), follow: setFollow, get following() { return follow ? follow.id : 0; },
     };
     requestAnimationFrame(loop);
   }

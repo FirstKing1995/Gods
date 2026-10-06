@@ -1,4 +1,4 @@
-/* Gênesis · interface. Tema único escuro de propósito: céu noturno com o dourado de Deus. */
+/* Gods · interface. Tema único escuro de propósito: céu noturno com o dourado de Deus. */
 :root {
   color-scheme: dark;
   --night: #181425;
@@ -180,8 +180,9 @@ body[data-placing] #view { cursor: crosshair; }
 
 #col-right { position: absolute; top: calc(var(--top) + 70px); right: var(--gut); bottom: calc(var(--bot) + 64px); width: 320px; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
 #col-right > * { pointer-events: auto; }
-#p-povo { flex: 0 1 auto; min-height: 0; overflow: auto; display: grid; gap: 8px; align-content: start; }
-#p-deus { flex: none; display: grid; gap: 8px; }
+/* a lista do povo: o título e a busca ficam parados; só os cartões rolam */
+#p-povo { min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 8px; }
+#p-deus { display: grid; gap: 8px; align-content: start; }
 .deus-head { display: flex; justify-content: space-between; align-items: baseline; }
 .deus-head b { color: var(--gold-hi); font-size: 15px; }
 .bar.poder { height: 10px; }
@@ -291,8 +292,19 @@ body[data-placing] #view { cursor: crosshair; }
 .t-arc { stroke-dasharray: 5 3; }
 .t-heart { fill: #f6757a; }
 .away-card .chron { max-height: 34vh; overflow: auto; }
-.pcard { display: grid; gap: 6px; padding: 8px 10px; cursor: pointer; background: var(--panel-2); border: 2px solid var(--night); box-shadow: inset 0 0 0 2px var(--edge); text-align: left; width: 100%; }
-.pcard.sel { box-shadow: inset 0 0 0 2px var(--gold); }
+/* a lista do povo: busca e ordem em cima, os cartões rolando embaixo */
+.povo-filter { display: flex; gap: 6px; flex: none; }
+.povo-filter input { flex: 1 1 0; min-width: 0; min-height: 32px; padding: 4px 8px; font: inherit; font-size: 13px; background: var(--night); color: var(--text); border: 2px solid var(--edge); border-radius: 0; -webkit-appearance: none; appearance: none; }
+.povo-filter input::placeholder { color: var(--muted); opacity: 1; }
+.povo-filter input:focus-visible, .povo-filter .select:focus-visible { outline-offset: 0; border-color: var(--gold); }
+.povo-filter .select { flex: 0 1 auto; min-width: 0; max-width: 54%; min-height: 32px; padding: 2px 6px; font-size: 13px; border-radius: 0; }
+#people { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: grid; gap: 8px; align-content: start; scrollbar-width: thin; scrollbar-color: var(--edge-2) transparent; }
+#people.compact { gap: 4px; }
+#povo-empty { padding: 4px 2px 8px; }
+.pcard { display: grid; gap: 6px; padding: 8px 10px; cursor: pointer; background: var(--panel-2); border: 2px solid var(--night); box-shadow: inset 0 0 0 2px var(--edge); text-align: left; width: 100%; min-width: 0; }
+.pcard:hover { box-shadow: inset 0 0 0 2px var(--edge-2); }
+.pcard:focus-visible { outline-offset: -2px; }   /* a lista corta o que passa da borda */
+.pcard.sel, .pcard.sel:hover { box-shadow: inset 0 0 0 2px var(--gold); }
 .pcard.dead { opacity: 0.6; }
 .pcard .row1 { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .pcard .nm { font-size: 16px; font-weight: 600; }
@@ -300,6 +312,16 @@ body[data-placing] #view { cursor: crosshair; }
 .minibars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .mb { display: grid; grid-template-columns: 14px 1fr; gap: 4px; align-items: center; }
 .mb .ico { width: 14px; height: 14px; }
+/* vila grande: cartão de uma linha (nome, idade e o que faz) e barras finas */
+.pcard.compact { gap: 4px; padding: 5px 9px 6px; }
+.pcard.compact .row1 { justify-content: flex-start; gap: 6px; min-width: 0; white-space: nowrap; }
+.pcard.compact .nm { font-size: 14px; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.pcard.compact .age { flex: none; }
+.pcard.compact .doing { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.pcard.compact .doing::before { content: '· '; }
+.pcard.compact .mb { grid-template-columns: 10px 1fr; gap: 3px; }
+.pcard.compact .mb .ico { width: 10px; height: 10px; }
+.pcard.compact .bar { height: 5px; }
 .bar { height: 8px; background: var(--night); border: 1px solid var(--edge); position: relative; overflow: hidden; }
 .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--leaf); }
 .bar i.mid { background: var(--gold); }
@@ -339,6 +361,15 @@ body[data-sheet="cronica"] .drawer { display: flex; }
 .chron .what { font-family: var(--story); font-style: italic; font-size: 18px; line-height: 1.35; }
 
 .place-hint { position: absolute; left: 50%; bottom: calc(var(--bot) + 84px); transform: translateX(-50%); display: flex; gap: 12px; align-items: center; }
+/* posicionando uma obra: nome, dica e se o lugar serve; Cancelar e Confirmar. A largura do texto é fixa para os
+   botões não andarem quando o motivo muda */
+.place-hint.placing { gap: 16px; max-width: calc(100% - 2 * var(--gut)); }
+.ph-text { display: grid; gap: 1px; width: 300px; min-width: 0; flex: 0 1 auto; }
+.ph-name { font-size: 15px; font-weight: 600; }
+.ph-why { min-height: 16px; }
+.ph-why.good { color: #9be070; }
+.ph-actions { display: flex; gap: 8px; flex: none; }
+.ph-actions .btn { min-height: 40px; padding: 6px 14px; }
 
 #toasts { position: absolute; top: calc(var(--top) + 64px); left: 50%; transform: translateX(-50%); display: grid; gap: 6px; justify-items: center; width: min(460px, calc(100% - 32px)); pointer-events: none; }
 .toast { background: var(--panel); border: 2px solid var(--night); box-shadow: inset 0 0 0 2px var(--edge), 0 3px 0 rgba(0, 0, 0, 0.35); padding: 8px 14px; font-size: 14px; animation: tin 0.25s ease-out; }
@@ -383,13 +414,53 @@ body[data-sheet="cronica"] .drawer { display: flex; }
 @keyframes nudge { 50% { box-shadow: inset 0 0 0 2px var(--gold); color: var(--gold-hi); } }
 .obra-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .obra-head h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#p-obra { flex: 0 1 auto; min-height: 0; overflow: auto; display: grid; gap: 8px; align-content: start; }
+#p-obra { min-height: 0; overflow: auto; display: grid; gap: 8px; align-content: start; }
+
+/* ---------- a ficha da pessoa: caixa própria, no lugar do painel da obra ---------- */
+/* o cabeçalho (nome, seguir, anterior e próximo, fechar) fica parado; a ficha rola por dentro */
+#p-pessoa { min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 8px; }
+body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um toque no mapa: o segundo toque passa */
+.pessoa-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; flex: none; }
+.pessoa-id { min-width: 0; display: grid; gap: 1px; }
+.pessoa-id h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pessoa-id .ttl { margin-left: 4px; }
+.pessoa-tools { display: flex; align-items: center; gap: 6px; flex: none; }
+.pessoa-tools .btn-small { min-height: 30px; }
+.pessoa-nav { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.pessoa-nav .btn { min-width: 32px; padding: 4px 8px; }
+#pessoa-pos { min-width: 54px; text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
+#pessoa-follow { gap: 6px; }
+#pessoa-follow .ico { width: 16px; height: 16px; }
+#pessoa-follow.on { color: var(--gold-hi); box-shadow: inset 0 0 0 2px var(--gold), inset 0 -4px 0 rgba(0, 0, 0, 0.25); }
+#pessoa-list { display: none; }   /* só no celular, onde a ficha e a lista dividem a gaveta */
+#inspector { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--edge-2) transparent; }
+#inspector .insp { gap: 8px; padding: 0 0 2px; }
+/* a ficha é uma pilha de blocos (ui.js, paintInspector); bloco vazio não ocupa lugar */
+.ib { display: grid; gap: 4px; min-width: 0; }
+.ib:empty { display: none; }
+.ib .story { font-size: 15px; }
+.ib-familia, .ib-saberes, .ib-lembrancas { padding-top: 8px; border-top: 2px solid var(--edge); }
+.ib .sec { color: var(--gold); letter-spacing: 0.02em; }
+#inspector .needs { grid-template-columns: 1fr 1fr; gap: 5px 14px; }
+#inspector .need { grid-template-columns: 16px 46px 1fr 22px; gap: 4px; font-size: 12px; }
+#inspector .need .ico { width: 16px; height: 16px; }
+#inspector .need .bar { height: 8px; }
+.ib-saberes .kv span:nth-child(even) { text-align: right; }
+#inspector .talk { margin: 0; }
 
 /* ---------- computador: os painéis abrem e fecham (como no celular), cada um no seu canto ---------- */
 @media (min-width: 821px) {
-  #p-vontades, #p-deus, #p-povo, #p-construir, #p-obra { display: none; }
-  body[data-open~="vontades"] #p-vontades, body[data-open~="deus"] #p-deus, body[data-open~="povo"] #p-povo, body[data-open~="obra"] #p-obra { display: grid; }
+  #p-vontades, #p-deus, #p-povo, #p-construir, #p-obra, #p-pessoa { display: none; }
+  body[data-open~="vontades"] #p-vontades, body[data-open~="deus"] #p-deus, body[data-open~="obra"] #p-obra { display: grid; }
+  body[data-open~="povo"] #p-povo, body[data-open~="pessoa"] #p-pessoa { display: flex; }
   body[data-open~="construir"] #p-construir { display: block; }
+  /* a coluna da direita não passa da tela. Quando aperta, cede primeiro a lista (ela rola por dentro), depois a
+     ficha e a obra, e Deus por último; cada um até o seu mínimo */
+  #p-povo { flex: 0 1000000 auto; min-height: clamp(132px, 36%, 300px); }
+  body[data-open~="deus"] #p-povo { min-height: 132px; }
+  #p-pessoa { flex: 0 1000 auto; min-height: min(200px, 50%); }
+  #p-obra { flex: 0 1000 auto; min-height: min(150px, 40%); }
+  #p-deus { flex: 0 1 auto; min-height: min(200px, 38%); overflow: auto; }
   #p-construir { bottom: calc(var(--bot) + 60px); }
   .btn-cronica { display: none; }
   #mobnav {
@@ -403,6 +474,12 @@ body[data-sheet="cronica"] .drawer { display: flex; }
   .menu { max-height: calc(100% - var(--top) - var(--bot) - 136px); }   /* o menu não cobre a barra dos painéis */
   #mobnav { z-index: 7; }   /* a barra fica por cima da Crônica aberta */
   .drawer { padding-bottom: calc(var(--bot) + 68px); }
+}
+
+/* tela baixa, com Deus e a lista abertos: não cabem os três. Enquanto a ficha está aberta, ela fica no lugar da lista
+   (que volta quando a ficha fecha, ou pelo botão Povo) */
+@media (min-width: 821px) and (max-height: 919px) {
+  body[data-open~="deus"][data-open~="pessoa"] #p-povo { display: none; }
 }
 
 #scr-over { display: grid; place-items: center; padding: var(--top) var(--gut) var(--bot); background: rgba(24, 20, 37, 0.8); }
@@ -440,13 +517,27 @@ body[data-sheet="cronica"] .drawer { display: flex; }
   .btn-cronica { display: none; }
   .sheet { display: none; }
   #col-right { display: contents; }
-  #p-vontades, #p-povo, #p-construir, #p-deus, #p-obra, .drawer {
+  #p-vontades, #p-povo, #p-construir, #p-deus, #p-obra, #p-pessoa, .drawer {
     display: none;
     position: fixed; left: 0; right: 0; top: auto; bottom: var(--navh); width: auto; max-width: none; max-height: 58vh; transform: none;
     overflow: auto; padding: 14px var(--gut); z-index: 6;
   }
-  body[data-sheet="vontades"] #p-vontades, body[data-sheet="povo"] #p-povo, body[data-sheet="construir"] #p-construir, body[data-sheet="deus"] #p-deus, body[data-sheet="obra"] #p-obra { display: grid; }
+  body[data-sheet="vontades"] #p-vontades, body[data-sheet="construir"] #p-construir, body[data-sheet="deus"] #p-deus, body[data-sheet="obra"] #p-obra { display: grid; }
+  body[data-sheet="povo"] #p-povo, body[data-sheet="pessoa"] #p-pessoa { display: flex; }
   body[data-sheet="cronica"] .drawer { display: flex; }
+  /* a lista e a ficha rolam por dentro (o cabeçalho de cada uma fica parado) */
+  #p-povo, #p-pessoa { overflow: hidden; }
+  /* a ficha é mais baixa que as outras gavetas: sobra mapa em cima para ver quem foi tocado (e quem a câmera segue) */
+  #p-pessoa { max-height: 46vh; }
+  #pessoa-list { display: inline-flex; }
+  .pessoa-tools .btn-small, #pessoa-close { min-height: 40px; padding: 4px 12px; }
+  .pessoa-nav .btn { min-width: 44px; }
+  .povo-filter input, .povo-filter .select { min-height: 40px; font-size: 16px; }   /* 16 px: o iPhone não dá zoom ao focar */
+  /* posicionando uma obra: o texto em cima e dois botões grandes embaixo */
+  .place-hint.placing { display: grid; gap: 10px; }
+  .place-hint.placing .ph-text { width: auto; }
+  .ph-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .ph-actions .btn { min-height: 48px; font-size: 15px; }
   .sheet-only { display: block; margin-bottom: 8px; }
   .builds { display: grid; grid-template-columns: 1fr 1fr; }
   .builds .bbtn { justify-content: start; }
@@ -513,6 +604,7 @@ body[data-sheet="cronica"] .drawer { display: flex; }
 .ttl { color: var(--gold-hi); font-weight: 500; font-size: 12px; }
 .pcard .nm .ttl { margin-left: 4px; }
 .god-line { color: var(--gold-hi); display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.god-line.txt { display: block; }   /* só texto: corre como frase, sem quebrar depois do título */
 .god-line .btn-small { min-height: 28px; }
 .dom-card { width: min(480px, 100%); max-height: calc(100% - 32px); overflow: auto; }
 .dom-card .ico-lg { width: 40px; height: 40px; }
@@ -532,3 +624,27 @@ body[data-sheet="cronica"] .drawer { display: flex; }
 .consagra .mil.off { opacity: 0.6; }
 .consagra.done { background: var(--night); border: 2px solid var(--gold); }
 .consagra .ico { width: 22px; height: 22px; }
+
+/* ---------- Etapa 12: povos e minas ---------- */
+/* o povo e os dons na ficha, na janela da caravana e em Deus → Povos */
+.chip.povo { display: inline-flex; align-items: center; gap: 5px; border-color: var(--gold); color: var(--parch, #ead4aa); }
+.chip.povo .ico { width: 16px; height: 16px; }
+.chip.dom { border-color: #3e8948; }
+.chip.fraq { border-color: #a22633; color: #f6757a; }
+.povo-chips { margin-top: 4px; }
+.pcard .nm .pv { width: 14px; height: 14px; margin-right: 4px; vertical-align: -2px; }
+.choice-people li.povo-dons { grid-template-columns: 40px 1fr; }
+.choice-people li.povo-dons .ico { grid-row: span 2; justify-self: center; width: 30px; height: 30px; }
+.choice-card { max-height: 92vh; overflow-y: auto; }
+.povolist li.povo-row { grid-template-columns: 30px 1fr; align-items: start; }
+.povolist .ico-lg { width: 28px; height: 28px; margin-top: 2px; }
+.povolist .st { color: var(--gold); }
+.povolist .chips { gap: 4px; margin-top: 2px; }
+.povo-call { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; }
+.convlist { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.convlist li { display: grid; gap: 3px; padding: 6px 10px; background: var(--night); border: 2px solid var(--edge); }
+.convlist li.none { display: block; }
+.convlist .bar i { background: var(--leaf); }
+.convlist .bar.mid i { background: var(--gold); }
+.convlist .bar.low i { background: #e43b44; }
+#obra .chips .btn .ico { width: 16px; height: 16px; margin-right: 6px; vertical-align: -3px; }

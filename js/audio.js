@@ -1,4 +1,4 @@
-/* Gênesis · som (Etapa 6). Tudo nasce aqui mesmo, com Web Audio: nenhum arquivo de áudio.
+/* Gods · som (Etapa 6). Tudo nasce aqui mesmo, com Web Audio: nenhum arquivo de áudio.
    Três trilhas com volume próprio (música, ambiente, efeitos) e uma chave geral, guardadas neste aparelho.
    - Efeitos: as ações de quem está na tela (machado, pedra, martelo, água, lança), as obras, os milagres,
      as orações, nascimento, morte, descobertas, lobos, festas e os pequenos acontecimentos. Longe da câmera, mais baixo.
@@ -229,6 +229,12 @@
     },
     vaca(t, o, v) { tone('sawtooth', 118, t, 0.12, 1, 0.14 * v, bandOut(o, 520, 1.4), 150); tone('sawtooth', 236, t + 0.05, 0.12, 0.9, 0.03 * v, bandOut(o, 700, 2), 290); return 1.2; },
     praga(t, o, v) { for (let i = 0; i < 3; i++) noise(t + i * 0.3, 0.9, 'bandpass', 3200 + i * 400, 4, 0.2, 0.08 * v, o); return 1.8; },
+    // Etapa 12: a bigorna da forja, a picareta na mina, a caravana que chega, a oferenda e dois povos que viram um
+    bigorna(t, o, v) { bell(hz(96 + Math.floor(Math.random() * 3)), t, 0.16 * v, o, 0.5); noise(t, 0.03, 'highpass', 4500, 1, 0.001, 0.25 * v, o); return 0.2; },
+    picareta(t, o, v) { noise(t, 0.05, 'bandpass', 1800, 4, 0.001, 0.4 * v, o); tone('triangle', 900 + Math.random() * 300, t, 0.001, 0.1, 0.12 * v, o, 500); noise(t + 0.08, 0.12, 'lowpass', 500, 1, 0.01, 0.12 * v, o); return 0.2; },
+    caravana(t, o, v) { [62, 67, 69, 74].forEach((m, i) => pluck(hz(m), t + i * 0.16, 0.6, 0.16 * v, o)); bell(hz(86), t + 0.7, 0.07 * v, o, 1.4); return 1.8; },
+    oferenda(t, o, v) { bell(hz(84), t, 0.11 * v, o, 1.8); bell(hz(91), t + 0.2, 0.09 * v, o, 2.2); noise(t + 0.1, 0.8, 'highpass', 8000, 1, 0.2, 0.05 * v, o); return 2.4; },
+    uniao(t, o, v) { pad([hz(60), hz(64), hz(67), hz(72)], t, 2.2, 0.1 * v, o, 2200); [72, 76, 79, 84].forEach((m, i) => bell(hz(m), t + 0.3 + i * 0.18, 0.1 * v, o, 1.8)); return 3; },
     sino(t, o, v) { bell(hz(88), t, 0.08 * v, o, 0.8); bell(hz(88), t + 0.22, 0.07 * v, o, 0.8); bell(hz(91), t + 0.44, 0.06 * v, o, 1); return 1.4; },
   };
   function bandOut(o, f, q) { const b = ctx.createBiquadFilter(); b.type = 'bandpass'; b.frequency.value = f; b.Q.value = q; b.connect(o); return b; }
@@ -377,7 +383,9 @@
       case 'song': A.sfx('canto', e.x + 0.5, e.y + 0.5); break;
       case 'fireLit': A.sfx('fogo', e.x + 0.5, e.y + 0.5, 0.7); break;
       case 'upgrade': A.sfx('obra', e.x, e.y); break;
-      case 'narr': if (e.on && e.ev === 'lobos') A.sfx('uivo'); else if (e.on && e.ev === 'mascate') A.sfx('sino'); else if (e.warn && (e.ev === 'nevasca' || e.ev === 'tempestade')) A.sfx('aviso'); break;
+      case 'oferenda': A.sfx('oferenda'); break;   // Etapa 12
+      case 'povo': A.sfx('atendida'); break;
+      case 'narr': if (e.on && e.ev === 'lobos') A.sfx('uivo'); else if (e.on && e.ev === 'mascate') A.sfx('sino'); else if (e.on && e.ev === 'povo') A.sfx('caravana'); else if (e.warn && (e.ev === 'nevasca' || e.ev === 'tempestade')) A.sfx('aviso'); break;
       // Etapa 10
       case 'harvest': A.sfx('colheita', e.x, e.y); break;
       case 'praga': A.sfx('praga', e.x, e.y); break;
@@ -385,6 +393,7 @@
       case 'chron':
         if (/ morreu /.test(e.text || '')) A.sfx('morte');
         else if (/primeira fogueira/.test(e.text || '')) A.sfx('fogo');
+        else if (/viraram um só/.test(e.text || '')) A.sfx('uniao');
         else if (/Ergueram|Montaram|virou|ficou pronta|forno de barro queimou/.test(e.text || '')) A.sfx('obra');
         break;
       case 'toast':
@@ -475,7 +484,8 @@
     if (st && st.campo && st.campo.bichos.length && t > nextFarm && speed > 0 && !busy) farmSounds(st, t, dawn);
   }
   const WORK_SFX = { madeira: ['machado', 0.75], pedra: ['pedra', 0.6], construir: ['martelo', 0.55], oficio: ['lasca', 0.9], argila: ['cavar', 1.1], agua: ['agua', 1.6], frutas: ['colher', 1.1], pesca: ['agua', 4.5], conservar: ['colher', 1.5],
-    caminho: ['cavar', 0.9], tabuas: ['serra', 0.9], tecido: ['tear', 0.8], cerca: ['martelo', 0.7], plant: ['enxada', 0.9], weed: ['enxada', 0.7], harvest: ['colher', 1] };
+    caminho: ['cavar', 0.9], tabuas: ['serra', 0.9], tecido: ['tear', 0.8], cerca: ['martelo', 0.7], plant: ['enxada', 0.9], weed: ['enxada', 0.7], harvest: ['colher', 1],
+    mina: ['picareta', 0.8], forja: ['bigorna', 0.7] };   // Etapa 12
   const workAt = new Map();
   function workSounds(st) {
     let n = 0;
@@ -483,7 +493,8 @@
     for (const p of st.people) {
       if (!p.alive || !p.act || n >= 3) continue;
       const a = p.act;
-      let ws = WORK_SFX[a.type === 'oficio' && a.make === 'tabuas' ? 'tabuas' : a.type === 'oficio' && (a.make === 'mantas' || a.make === 'redes') ? 'tecido' : a.type];
+      let ws = WORK_SFX[a.type === 'oficio' && a.make === 'tabuas' ? 'tabuas' : a.type === 'oficio' && (a.make === 'mantas' || a.make === 'redes') ? 'tecido' :
+        a.type === 'oficio' && (a.make === 'ferro' || a.make === 'joias' || a.make === 'joiasOuro') ? 'forja' : a.type];
       if (a.type === 'madeira' && G.Tech && G.Tech.known(st, 'machado')) ws = ['machado', 0.5];   // com o machado, golpes mais rápidos
       const field = a.type === 'roca' && WORK_SFX[a.stage];   // Etapa 10: a roça tem o som de cada etapa
       if (field) ws = field;

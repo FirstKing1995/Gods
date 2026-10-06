@@ -1,4 +1,4 @@
-/* Gênesis · renderizador: terreno em blocos, objetos, pessoas, luz da noite e clima. */
+/* Gods · renderizador: terreno em blocos, objetos, pessoas, luz da noite e clima. */
 (function (G) {
   'use strict';
   const C = G.CFG, A = G.Art, T = G.T, U = G.U;
@@ -17,7 +17,7 @@
   const spears = [];
   const stars = [], flocks = [], glows = [];   // Etapa 6: estrela cadente, araras, vaga-lumes
   let lastNow = 0;
-  R.overlay = { ghost: null, ring: null, selPerson: 0, selBuilding: 0 };
+  R.overlay = { ghost: null, ring: null, selPerson: 0, selBuilding: 0, follow: 0 };   // follow: quem a câmera segue
 
   R.init = function (canvas) {
     cv = canvas; ctx = cv.getContext('2d');
@@ -421,7 +421,7 @@
     const vx0 = -ox / sc, vy0 = -oy / sc, vx1 = (W - ox) / sc, vy1 = (H - oy) / sc;
     const cx0 = Math.max(0, Math.floor(vx0 / CPX)), cy0 = Math.max(0, Math.floor(vy0 / CPX));
     const cx1 = Math.min(Math.ceil(w.W / CH) - 1, Math.floor(vx1 / CPX)), cy1 = Math.min(Math.ceil(w.H / CH) - 1, Math.floor(vy1 / CPX));
-    let budget = 3;
+    let budget = R.chunkBudget || 3;   // pedaços do chão refeitos por quadro (main.js sobe isto para um quadro inteiro de uma vez)
     for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
       const k = cx + ',' + cy;
       let c = chunks.get(k);
@@ -517,7 +517,7 @@
     if (S && S.seen) drawFog(S);
     // sobreposições do jogador
     const ov = R.overlay;
-    if (ov.ghost) drawGhost(S, ov.ghost);
+    if (ov.ghost) drawGhost(S, ov.ghost, now);
     if (S && ov.brush) drawBrush(S, ov.brush);
     if (ov.cast) drawCast(ov.cast, now);
     if (S && ov.selPerson) {
@@ -539,10 +539,38 @@
       drawWeather(S, dt);
       drawSky(S, now);
     }
+    if (S && ov.follow) drawFollow(S, ov.follow, alpha, now);   // por cima da noite: quem é seguido aparece a qualquer hora
     if (ov.ring) drawRing(ov.ring);
     if (ov.beam) drawBeam(ov, now);
     if (bolts.length) drawBolts(now);
   };
+
+  // quem a câmera segue: quatro cantos de visor em volta da pessoa (da barraca, se ela está dentro; de quem carrega,
+  // se é bebê de colo), pulsando de leve
+  function drawFollow(S, pid, alpha, now) {
+    const p = S.people.find((q) => q.id === pid);
+    if (!p || !p.alive) return;
+    let q = p;
+    if (p.carriedBy) { const c = S.people.find((z) => z.id === p.carriedBy && z.alive); if (c) q = c; }
+    let x, y, w, h;
+    if (q.inTent) {
+      const b = S.buildings.find((z) => z.id === q.inTent);
+      if (!b) return;
+      x = b.x * TS - 2; y = b.y * TS - 5; w = b.w * TS + 4; h = b.h * TS + 7;
+    } else {
+      const wx = Math.round(U.lerp(q.px, q.x, alpha) * TS), wy = Math.round(U.lerp(q.py, q.y, alpha) * TS), kid = G.Family.stage(S, q) === 'crianca';
+      x = wx - (kid ? 6 : 7); y = wy - (kid ? 10 : 13); w = kid ? 12 : 14; h = kid ? 16 : 19;
+    }
+    const g = Math.round(Math.sin(now / 280) * 0.6 + 0.6), L = 4;
+    x -= g; y -= g; w += g * 2; h += g * 2;
+    // cada canto: dois traços (o escuro por baixo dá contraste na grama, na água e na neve)
+    for (const [ox2, oy2, col] of [[1, 1, '#181425'], [0, 0, '#2ce8f5']]) {
+      for (const [cx, sx] of [[x, 1], [x + w - 1, -1]]) for (const [cy, sy] of [[y, 1], [y + h - 1, -1]]) {
+        rect(Math.min(cx, cx + sx * (L - 1)) + ox2, cy + oy2, L, 1, col);
+        rect(cx + ox2, Math.min(cy, cy + sy * (L - 1)) + oy2, 1, L, col);
+      }
+    }
+  }
 
   // ---------- névoa ----------
   // um pixel por tile, em degraus (borda mais clara), desenhado sem suavizar para ficar no estilo pixel
@@ -863,12 +891,19 @@
     }
     const job = G.Sim.jobOf(b);
     if (job) {
-      outline(bx, by, b.w * TS, b.h * TS, '#feae34');
+      // 0.12: a obra sendo desmontada tem contorno e barra vermelhos, e a marca em cima (o X, ou as setas se vai mudar)
+      const dem = !!job.demol;
+      outline(bx, by, b.w * TS, b.h * TS, dem ? '#e43b44' : '#feae34');
       let need = 0, have = 0;
       for (const k in job.cost) { need += job.cost[k]; have += Math.min(job.cost[k], job.have[k] || 0); }
-      const f = job.progress > 0 ? job.progress : have / need * 0.999;
+      const f = job.progress > 0 || !need ? job.progress : have / need * 0.999;
       rect(bx + 1, by - 5, b.w * TS - 2, 3, '#181425');
-      rect(bx + 2, by - 4, (b.w * TS - 4) * U.clamp(f, 0, 1), 1, job.progress > 0 ? '#63c74d' : '#feae34');
+      rect(bx + 2, by - 4, (b.w * TS - 4) * U.clamp(f, 0, 1), 1, dem ? '#e43b44' : job.progress > 0 ? '#63c74d' : '#feae34');
+      if (dem) { const m = b.demol.site ? S2.mover : S2.demolir, bob = Math.round(Math.sin(now / 300) * 1); blit(m, bx + b.w * TS / 2 - 4.5, by - 16 + bob); }
+    } else if (b.site) {
+      // o lugar reservado de uma mudança: o contorno tracejado e as setas
+      outline(bx, by, b.w * TS, b.h * TS, '#feae34');
+      blit(S2.mover, bx + b.w * TS / 2 - 4.5, by + b.h * TS / 2 - 4.5 + Math.round(Math.sin(now / 300) * 1));
     }
     if (b.type === 'fogueira' && b.built) {
       rect(bx + 2, by + 15, 12, 2, '#181425');
@@ -950,7 +985,7 @@
   }
   // armazém, marcenaria e tecelagem: a obra e um pouco do que ela guarda ou faz
   function drawShop(S, S2, b, bx, by, ghost, lv, now) {
-    const img = S2.shop[b.type][Math.min(2, lv)], top = by + 31 - img.height;
+    const imgs = S2.shop[b.type], img = imgs[Math.min(imgs.length - 1, lv)], top = by + 31 - img.height;
     blit(S2.bigShadow, bx + 5, by + 26, ghost ? 0.4 : undefined);
     blit(img, bx, top, ghost ? 0.45 : undefined);
     if (ghost) return;
@@ -965,6 +1000,23 @@
       const nm = Math.min(3, st.mantas || 0);
       for (let i = 0; i < nm; i++) blit(it.mantas, bx + 11 + (i % 2), by + 27 - i * 2);
       if ((st.redes || 0) > 0) blit(it.redes, bx + 22, by + 28);
+    } else if (b.type === 'ferraria') {
+      // Etapa 12: com alguém na forja, a brasa pulsa, sobem fagulhas e a fumaça sai pela chaminé
+      const on = S.people.some((p) => p.alive && p.act && p.act.type === 'oficio' && p.act.shop === b.id && p.act.stage === 'work');
+      if (on) {
+        const f = 0.5 + 0.5 * Math.sin(now / 130), x0 = lv >= 2 ? [6, 12] : [8];
+        for (const xo of x0) { rect(bx + xo, top + (lv >= 2 ? 21 : 20), lv >= 2 ? 4 : 6, 3, f > 0.5 ? '#fee761' : '#feae34'); rect(bx + xo + 1, top + (lv >= 2 ? 20 : 19), 2, 1, '#f77622'); }
+        if (Math.random() < 0.18) spawn({ x: bx + 10 + Math.random() * 3, y: top + 1, vx: (Math.random() - 0.5) * 3, vy: -7, g: 0, life: 1.6, col: 'rgba(192,203,220,0.55)' });
+        if (Math.random() < 0.12) spawn({ x: bx + 20 + Math.random() * 4, y: top + 18, vx: (Math.random() - 0.5) * 14, vy: -16, g: 30, life: 0.5, col: '#fee761' });
+      }
+      const nf = Math.min(3, S.stock.ferro || 0);
+      for (let i = 0; i < nf; i++) blit(it.ferro, bx + 24 + (i % 2) * 2, by + 28 - i * 2);
+    } else if (b.type === 'mina') {
+      // quem está lá dentro: um lampião aceso na boca; e o que saiu, empilhado ao lado
+      const n = S.people.filter((p) => p.alive && p.act && p.act.type === 'mina' && p.act.b === b.id && p.act.stage === 'work').length;
+      if (n) { const f = Math.sin(now / 170) > 0 ? '#fee761' : '#feae34'; rect(bx + 15, top + (lv >= 2 ? 19 : 20), 2, 2, f); rect(bx + 14, top + (lv >= 2 ? 20 : 21), 4, 1, 'rgba(254,174,52,0.35)'); }
+      if ((S.stock.minerio || 0) > 0) blit(it.minerio, bx + 1, by + 29);
+      if ((S.stock.carvao || 0) > 0) blit(it.carvao, bx + 24, by + 30);
     } else if (b.type === 'armazem') {
       // cestos cheios quando há comida guardada
       const n = Math.min(3, Math.floor((S.ctx ? S.ctx.foodDays : 0) / 6));
@@ -1272,30 +1324,53 @@
     rect(tx - (kind === 'pick' ? 1 : 0), ty - 1, kind === 'pick' ? 3 : 2, 2, head);
   }
 
-  // o nível 1 de cada obra, para o fantasma de quem está marcando
-  function ghostImg(type) {
+  // a figura da obra para o fantasma de quem está posicionando: o nível 1 de cada uma ou, quando o fluxo pede (mover
+  // uma obra pronta), o nível e o tipo de casa dados; dy: onde o desenho encosta no chão da obra, como em drawBuilding
+  function ghostImg(type, lv, kind) {
     const S2 = A.spr;
-    if (type === 'fogueira') return { img: S2.fireOut, dy: -2 };
-    if (type === 'moquem') return { img: S2.moquem, dy: -2 };
-    if (type === 'jirau') return { img: S2.jirau, dy: 2 };
-    if (type === 'forno') return { img: S2.forno, dy: 1 };
-    if (type === 'roca') return { img: A.rocaSoil('warm'), dy: 0 };
-    if (type === 'estatua') { const img = A.statue(1, null); return { img, dy: 31 - img.height }; }   // Etapa 11
+    lv = lv || 1;
+    if (type === 'fogueira') return { img: lv >= 2 ? S2.fireLv[Math.min(3, lv)].out : S2.fireOut, dy: -2 };
+    if (type === 'moquem') return lv >= 2 ? { img: S2.works2.moquem, dy: -3 } : { img: S2.moquem, dy: -2 };
+    if (type === 'jirau') return lv >= 2 ? { img: S2.works2.jirau, dy: -7 } : { img: S2.jirau, dy: 2 };
+    if (type === 'forno') return lv >= 2 ? { img: S2.works2.forno, dy: -1 } : { img: S2.forno, dy: 1 };
+    if (type === 'roca') return { img: A.rocaSoil(lv >= 2 ? 'rich' : 'warm'), dy: 0 };
+    if (type === 'estatua') { const img = A.statue(Math.min(2, lv), null); return { img, dy: 31 - img.height }; }   // Etapa 11
     if (type === 'curral') {
-      if (!S2.curralGhost) { const [c, x] = A.mk(48, 60); for (const p of ['ground', 'back', 'front']) x.drawImage(A.curral(1, p), 0, 0); S2.curralGhost = c; }
-      return { img: S2.curralGhost, dy: -12 };
+      const k = Math.min(2, lv), key = 'curralGhost' + k;
+      if (!S2[key]) {
+        const parts = ['ground', 'back', 'front'].map((p) => A.curral(k, p));
+        const [c, x] = A.mk(Math.max(...parts.map((i) => i.width)), Math.max(...parts.map((i) => i.height)));
+        for (const i of parts) x.drawImage(i, 0, 0);
+        S2[key] = c;
+      }
+      return { img: S2[key], dy: -12 };
     }
-    const img = S2.shop[type] ? S2.shop[type][1] : S2.house[1];
+    const shop = S2.shop[type];
+    const img = shop ? shop[Math.max(1, Math.min(shop.length - 1, lv))] : houseImg({ lv, kind });
     return { img, dy: 31 - img.height };
   }
-  function drawGhost(S, g) {
+  // seta de 3 x 5 px, com contorno escuro, apontando para fora (dir: 0 cima, 1 direita, 2 baixo, 3 esquerda)
+  function arrowMark(cx, cy, dir, col) {
+    const ax = dir === 1 ? 1 : dir === 3 ? -1 : 0, ay = dir === 2 ? 1 : dir === 0 ? -1 : 0;
+    const strip = (k, half, c) => { if (ax) rect(cx + ax * k, cy - half, 1, half * 2 + 1, c); else rect(cx - half, cy + ay * k, half * 2 + 1, 1, c); };
+    for (const [k, half] of [[-1, 3], [0, 3], [1, 2], [2, 1], [3, 0]]) strip(k, half, '#181425');
+    for (const [k, half] of [[0, 2], [1, 1], [2, 0]]) strip(k, half, col);
+  }
+  function drawGhost(S, g, now) {
     if (!S) return;
-    const gi = ghostImg(g.type);
+    const gi = ghostImg(g.type, g.lv, g.kind);
     const def = C.BUILD[g.type];
     blit(gi.img, g.x * TS, g.y * TS + gi.dy, 0.6);
     ctx.fillStyle = g.ok ? 'rgba(254,174,52,0.22)' : 'rgba(228,59,68,0.35)';
     ctx.fillRect(Math.round(g.x * TS * sc + ox), Math.round(g.y * TS * sc + oy), Math.round(def.w * TS * sc), Math.round(def.h * TS * sc));
     outline(g.x * TS, g.y * TS, def.w * TS, def.h * TS, g.ok ? '#feae34' : '#e43b44');
+    // preso no lugar (esperando o Confirmar): quatro setinhas em volta dizem que dá para arrastar e ajustar
+    if (g.pinned) {
+      const x0 = g.x * TS, y0 = g.y * TS, w = def.w * TS, h = def.h * TS, col = g.ok ? '#fee761' : '#ff8a8f';
+      const bob = Math.round(Math.sin((now || 0) / 260) * 0.7 + 0.7), mx = x0 + (w >> 1), my = y0 + (h >> 1);
+      arrowMark(mx, y0 - 4 - bob, 0, col); arrowMark(x0 + w + 3 + bob, my, 1, col);
+      arrowMark(mx, y0 + h + 3 + bob, 2, col); arrowMark(x0 - 4 - bob, my, 3, col);
+    }
     // o armazém tem que ficar perto do estoque: mostra até onde
     if (def.near) {
       const cx = (S.camp.x + 1) * TS * sc + ox, cy = (S.camp.y + 1) * TS * sc + oy;

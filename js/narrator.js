@@ -1,4 +1,4 @@
-/* Gênesis · Narrador (Etapa 4). Um diretor lê o mundo todo dia e escolhe o próximo acontecimento,
+/* Gods · Narrador (Etapa 4). Um diretor lê o mundo todo dia e escolhe o próximo acontecimento,
    para a tensão andar numa curva: mundo calmo e farto puxa aperto; perda recente puxa respiro;
    nunca dois desastres grandes seguidos.
    Desastres: nevasca, seca, lobos e tempestade. Alívios: fartura, piracema e andarilho.
@@ -938,6 +938,7 @@
     used.add(name);
     return name;
   }
+  N.visitorData = (S, sex, age, role, used) => visitorData(S, sex, age, role, used);   // Etapa 12: as caravanas dos povos
   function visitorData(S, sex, age, role, used) {
     return { sex, name: freeName(S, sex, used), age, traits: Sim().pickTraits(S.rng), look: Sim().makeLook(S.rng, sex), role };
   }
@@ -998,6 +999,10 @@
       // Etapa 10: o mascate mostra os bichos e diz o que quer em troca
       const o = g.offer, txt = 'Chegou um mascate, ' + (pds[0] ? pds[0].name : '') + ', com ' + G.Campo.animalsText(o.sp, o.m, o.f) + ' para trocar.';
       if (!S.stats.mascateSeen) { S.stats.mascateSeen = true; Sm.chron(S, txt); } else Sm.toast(S, txt, '');
+    } else if (g.kind === 'povo') {
+      // Etapa 12: a caravana de um povo
+      const D = G.Povos.DEF[g.povo];
+      Sm.chron(S, 'Chegou uma caravana ' + D.de + ', ' + D.alias + ': ' + Sm.listNames(pds) + '. Pedem para ficar.');
     } else if (g.kind === 'casal') {
       const mom = pds.find((p) => p.role === 'mae'), dad = pds.find((p) => p.role === 'pai'), kid = pds.find((p) => p.role === 'filho');
       Sm.chron(S, 'Chegou um casal pedindo abrigo: ' + (mom ? mom.name : '') + ' e ' + (dad ? dad.name : '') +
@@ -1016,7 +1021,7 @@
   N.groupInfo = function (S, gid) {
     const n = S.narr, g = n && n.groups[gid];
     if (!g) return null;
-    return { id: g.id, kind: g.kind, people: describeGroup(S, g), offer: g.offer || null };
+    return { id: g.id, kind: g.kind, people: describeGroup(S, g), offer: g.offer || null, povo: g.povo || null };
   };
   N.decide = function (S, gid, accept) {
     const n = S.narr, g = n && n.groups[gid];
@@ -1042,6 +1047,7 @@
         const pd = e.pd;
         const p = Sm.makePerson(S, pd.sex, pd.name, pd.age);
         p.traits = pd.traits.slice(); p.look = pd.look;
+        if (pd.povo && G.Povos) G.Povos.make(S, p, pd.povo, pd.look);   // Etapa 12: gente de outro povo
         p.x = e.x; p.y = e.y; p.px = p.x; p.py = p.y; p.dir = e.dir;
         p.lastAge = pd.age; p.joined = S.t;
         S.people.push(p);
@@ -1060,15 +1066,25 @@
       Sm.chron(S, Sm.listNames(names) + (names.length > 1 ? ' foram acolhidos.' : names[0].sex === 'F' ? ' foi acolhida.' : ' foi acolhido.') + ' Agora são ' + count + '.');
       g.state = 'acolhido';
       if (g.kind === 'casal' && n.couple) n.couple.state = 'acolhido';
+      if (g.kind === 'povo' && G.Povos) G.Povos.onWelcome(S, g.povo, made);
       if (G.Life) G.Life.onWelcome(S, names);   // festa de boas-vindas
     } else {
       for (const e of ents) { e.state = 'indo'; e.path = null; e.leftAt = e.t; }
       g.state = 'indo';
       Sm.chron(S, 'O povo mandou seguir ' + Sm.listNames(ents.map((e) => ({ name: e.pd.name }))) + '.');
       if (g.kind === 'casal' && n.couple) n.couple.state = 'recusado';
+      if (g.kind === 'povo' && G.Povos) G.Povos.onRefused(S, g.povo);
     }
-    S.events.push({ k: 'narr', ev: g.kind === 'casal' ? 'casal' : 'andarilho', on: false });
+    S.events.push({ k: 'narr', ev: g.kind === 'casal' ? 'casal' : g.kind === 'povo' ? 'povo' : 'andarilho', on: false });
     return true;
+  };
+
+  // Etapa 12: a caravana de um povo vem pela trilha como os viajantes (quem são: povos.js)
+  N.spawnPovo = function (S, kind, members) {
+    const g = spawnGroup(S, 'povo', members);
+    if (!g) return null;
+    g.povo = kind;
+    return g;
   };
 
   // Etapa 10: o mascate vem pela trilha como os viajantes, tocando os bichos que quer trocar
@@ -1126,7 +1142,8 @@
       return { k: n.plan.k, text: soon, tone: 'warn' };
     }
     const g = Object.values(n.groups).find((x) => x.state === 'vindo' || x.state === 'esperando');
-    if (g) return g.kind === 'mascate' ? { k: 'mascate', text: 'Mascate chegando', tone: 'good' } : { k: 'andarilho', text: g.kind === 'casal' ? 'Viajantes chegando' : 'Andarilho chegando', tone: 'good' };
+    if (g) return g.kind === 'mascate' ? { k: 'mascate', text: 'Mascate chegando', tone: 'good' } : g.kind === 'povo' ? { k: 'andarilho', text: 'Caravana ' + G.Povos.DEF[g.povo].de + ' chegando', tone: 'good' } :
+      { k: 'andarilho', text: g.kind === 'casal' ? 'Viajantes chegando' : 'Andarilho chegando', tone: 'good' };
     if (a.fartura) return { k: 'fartura', text: 'Fartura · ' + left(a.fartura.until), tone: 'good' };
     if (a.piracema) return { k: 'piracema', text: 'Piracema · ' + left(a.piracema.until), tone: 'good' };
     if (a.veranico) return { k: 'veranico', text: 'Veranico · ' + left(a.veranico.until), tone: 'good' };

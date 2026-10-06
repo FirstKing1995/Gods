@@ -1,4 +1,4 @@
-// Gênesis · testes das obras (Etapa 7). Uso: node test/obras-test.js [anos]
+// Gods · testes das obras (Etapa 7). Uso: node test/obras-test.js [anos]
 // 1) unidades: toda obra evolui (níveis, custos, o que pede), a casa que o lugar pede (água, mata, campo, serra),
 //    efeitos (fogueira de pedras e do centro, casas, moquém grande, jirau coberto, forno grande, armazém contra o lobo
 //    e contra a comida estragada), tábuas, fibra, mantas e redes, caminhos (marcar, abrir, andar mais rápido, pedra,
@@ -9,7 +9,7 @@ const path = require('path');
 const fs = require('fs');
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 globalThis.G = {};
-for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
+for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
 const { W, Sim, CFG: C, Family: F, God, Save, AI, Tech: T, Life: L, Obras: O, Narr: N } = G;
 const TT = G.T;
 const Y = 60 * 1440, D = 1440;

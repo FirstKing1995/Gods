@@ -1,4 +1,4 @@
-// Gênesis · testes das descobertas (Etapa 5). Uso: node test/tech-test.js [anos]
+// Gods · testes das descobertas (Etapa 5). Uso: node test/tech-test.js [anos]
 // 1) unidades: trilha e prática, Revelação, ferramentas (bônus, desgaste, quebra, ofício), roupas (frio, desgaste, vestir),
 //    caça (carne e couro, o bando não some), moquém e jirau (sol, prazo, quase não estraga), ordem de comer,
 //    argila e forno (potes), fim da era, save, save da v0.4 e jogo fechado
@@ -9,7 +9,7 @@ const path = require('path');
 const fs = require('fs');
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 globalThis.G = {};
-for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
+for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
 const { W, Sim, CFG: C, Family: F, God, Save, AI, Tech: T, Fauna: FA, Offline: Off } = G;
 const Y = 60 * 1440, D = 1440;
 
@@ -190,7 +190,7 @@ check('Revelação custa ' + C.REVELACAO_COST + ' de Poder', Math.round(S.god.po
 check('a Revelação não pula etapa', T.open(S) === 'lanca' && !T.known(S, 'lanca'));
 learnUpTo(S, 'ceramica'); S.god.poder = 100;
 check('trilha completa, invenções sem prática: o milagre explica', /não está pronto/.test(God.canCast(S, 'revelacao')), God.canCast(S, 'revelacao'));
-for (const id of G.Inv.ORDER.concat(G.Campo ? G.Campo.ORDER : [])) S.tech.known[id] = { t: S.t, by: '', how: 'pratica' };   // Etapa 10: o campo também
+for (const id of G.Inv.ORDER.concat(G.Campo ? G.Campo.ORDER : [], G.Minas ? G.Minas.ORDER : [])) S.tech.known[id] = { t: S.t, by: '', how: 'pratica' };   // Etapa 10: o campo também; Etapa 12: os metais
 check('sem nada a revelar, o milagre explica', /já sabe tudo/.test(God.canCast(S, 'revelacao')), God.canCast(S, 'revelacao'));
 
 // ---------- 3. ferramentas ----------

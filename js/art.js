@@ -1,4 +1,4 @@
-/* Gênesis · arte em pixel gerada por código. Nenhum arquivo de imagem: tudo nasce aqui. */
+/* Gods · arte em pixel gerada por código. Nenhum arquivo de imagem: tudo nasce aqui. */
 (function (G) {
   'use strict';
   const A = G.Art = {};
@@ -945,7 +945,9 @@
     S: [['...ll...', '...ll...', '...fff..'], ['..l..l..', '.l....l.', 'ff....ff'], ['...ll...', '..l.l...', '..ff.ff.']],
   };
   A.PERSON_W = 8; A.PERSON_H = 14;
-  function personFrame(sex, dir, frame, col, beard, closed) {
+  // tr (Etapa 12): os traços de povo [orelha, anao, fera]; sem eles (ou tudo 0) é o humano de sempre
+  function personFrame(sex, dir, frame, col, beard, closed, tr) {
+    if (tr && (tr[0] || tr[1] || tr[2])) return povoFrame(sex, dir, frame, col, beard, closed, tr);
     const key = (dir === 0 ? 'F' : dir === 1 ? 'B' : 'S') + (sex === 'F' ? 'F' : 'M');
     const head = HEAD[key].slice();
     if (beard && dir === 0) head[5] = '.kbbbbk.';
@@ -966,20 +968,107 @@
     }
     return b;
   }
+
+  // ---------- Etapa 12: os povos (elfos, anões, povo-fera e mestiços) ----------
+  // os traços vêm de p.look: orelha (1 meio-elfo, 2 elfo), anao (1 meio-anão, 2 anão), fera (1 meio-fera, 2 fera).
+  // Cada povo tem a sua cabeça e tronco, no jeito de HEAD (s é a pele, ou a pelagem). Letras a mais: w pelo claro
+  // (focinho e barriga), n nariz, t rabo, T ponta do rabo, g ouro (fivela, laço da trança), B cinto, L calça
+  // elfo: esguio e de perna comprida (10 linhas de corpo, 4 de pernas), cabeça estreita, testa alta e a orelha saindo
+  // dos lados e subindo (de lado, ela passa da nuca)
+  const ELFO = {
+    FM: ['..kkkk..', '.khhhhk.', 'SkhHhhkS', 'skssssks', '.sesses.', '..kssk..', '.kcccck.', '.scccCs.', '.scccCs.', '..kCCk..'],
+    FF: ['..kkkk..', '.khhhhk.', 'SkhHhhkS', 'skssssks', 'hsessesh', 'hhksskhh', 'hkcccckh', 'hscccCsh', '.scccCs.', '.kCCCCk.'],
+    BM: ['..kkkk..', '.khhhhk.', 'SkhHhhkS', 'skhhhhks', '.shhhhs.', '..khhk..', '.kchhck.', '.sCccCs.', '.sCccCs.', '..kCCk..'],
+    BF: ['..kkkk..', '.khhhhk.', 'SkhHhhkS', 'skhhhhks', 'hshhhhsh', 'hhhhhhhh', 'hhhhhhhh', 'hshhhhsh', '.sChhCs.', '.kCCCCk.'],
+    SM: ['..kkkk..', '.khhhhk.', 'SkhHhhhk', '.sshsssk', '.khssesk', '..khssk.', '..kccck.', '..kcsck.', '..kcsck.', '..kCCCk.'],
+    SF: ['..kkkk..', '.khhhhk.', 'SkhHhhhk', '.sshsssk', '.hhssesk', '.hhhssk.', '.hhccck.', '.hhcsck.', '..kcsck.', '.kCCCCk.'],
+  };
+  // anão: 2 px mais baixo (10 linhas de corpo, 2 de pernas grossas); ele, barba até o peito; ela, duas tranças grossas
+  const ANAO = {
+    FM: ['.kkkkkk.', 'khHhhhhk', 'khsssshk', 'ksessesk', 'kbbssbbk', 'kbbbbbbk', 'scbbbbcs', 'sccbbccs', 'kBBBgBBk', 'kCCCCCCk'],
+    FF: ['.kkkkkk.', 'khHhhhhk', 'khsssshk', 'hsessesh', 'hhsssshh', 'HHkcckHH', 'hhcccchh', 'HHccccHH', 'ggcccCgg', 'kCCCCCCk'],
+    BM: ['.kkkkkk.', 'khHhhhhk', 'khhhhhhk', 'khhhhhhk', 'hhhhhhhh', 'khhhhhhk', 'sChhhhCs', 'sCccccCs', 'kBBBBBBk', 'kCCCCCCk'],
+    BF: ['.kkkkkk.', 'khHhhhhk', 'khhhhhhk', 'khhhhhhk', 'khhkkhhk', 'kHHccHHk', 'shhcchhs', 'sHHccHHs', 'kggccggk', 'kCCCCCCk'],
+    SM: ['.kkkkk..', 'khHhhhk.', 'khhhsssk', 'khhssesk', 'khhbbbbk', '.kcbbbbk', '.kccbbbk', '.kcscbk.', '.kBBBBk.', '.kCCCCk.'],
+    SF: ['.kkkkk..', 'khHhhhk.', 'khhhsssk', 'khhssesk', '.khhssk.', '.kcHHck.', '.kchhck.', '.kcHHck.', '.kcggck.', '.kCCCCk.'],
+  };
+  const ANAO_LEGS = {
+    F: [['.LL..LL.', '.ff..ff.'], ['.ff..LL.', '.....ff.'], ['.LL..ff.', '.ff.....']],
+    S: [['..LLL...', '..ffff..'], ['.LL..LL.', 'ff....ff'], ['..L.LL..', '..ff.ff.']],
+  };
+  // povo-fera: orelhas de bicho no alto, focinho claro de nariz escuro, corpo de pelo com tanga (ela, com a faixa no peito)
+  const FERA = {
+    FM: ['.k....k.', 'ksk..ksk', 'kshkkhsk', 'ksessesk', 'kswnnwsk', '.kwwwwk.', 'kssssssk', 'sSswwsSs', 'sSswwsSs', 'kcccccCk', '.kcCCCk.'],
+    FF: ['.k....k.', 'ksk..ksk', 'kshkkhsk', 'ksessesk', 'hswnnwsh', 'hkwwwwkh', 'hssssssh', 'sccccccs', 'sSswwsSs', 'kcccccCk', 'kcCCCCCk'],
+    BM: ['.k....k.', 'ksk..ksk', 'kshkkhsk', 'kshhhhsk', 'kshhhhsk', '.khhhhk.', 'ksshhssk', 'sSssssSs', 'sSssssSs', 'kCccccCk', '.kCCCCk.'],
+    BF: ['.k....k.', 'ksk..ksk', 'kshkkhsk', 'kshhhhsk', 'hshhhhsh', 'hkhhhhkh', 'hsshhssh', 'sccccccs', 'sSssssSs', 'kCccccCk', 'kCCCCCCk'],
+    SM: ['...k....', '..ksk...', '.kssskk.', 'khssesk.', 'khsswwwn', '.khswwk.', '..khssk.', '..ksSwk.', '..ksSwk.', '..kccCk.', '..kcCCk.'],
+    SF: ['...k....', '..ksk...', '.kssskk.', 'khssesk.', 'hhsswwwn', 'hhhswwk.', '.hkhssk.', '..kcSck.', '..ksSwk.', '..kccCk.', '.kcCCCk.'],
+  };
+  // o rabo ([x, y, letra] nas linhas do corpo), por lado e por quadro: parado ele pende; andando, balança de um lado ao outro
+  const RABO = {
+    F: [[[1, 11, 't'], [0, 11, 't'], [0, 12, 'T']], [[0, 10, 't'], [0, 11, 'T']], [[7, 10, 't'], [7, 11, 'T']]],
+    B: [[[4, 9, 't'], [5, 10, 't'], [6, 10, 't'], [6, 11, 't'], [7, 11, 't'], [7, 12, 't'], [7, 13, 'T']],
+      [[4, 9, 't'], [5, 10, 't'], [6, 10, 't'], [7, 10, 't'], [7, 11, 'T']], [[3, 9, 't'], [2, 10, 't'], [1, 10, 't'], [0, 10, 't'], [0, 11, 'T']]],
+    S: [[[1, 9, 't'], [1, 10, 't'], [0, 10, 't'], [0, 11, 't'], [0, 12, 'T']], [[1, 9, 't'], [0, 9, 't'], [0, 8, 't'], [0, 7, 'T']], [[1, 9, 't'], [0, 10, 't'], [0, 11, 'T']]],
+  };
+  function mix(a, b, t) {
+    const m = parseInt(a.slice(1), 16), n = parseInt(b.slice(1), 16), f = (s) => Math.round(((m >> s) & 255) * (1 - t) + ((n >> s) & 255) * t);
+    return '#' + ((1 << 24) + (f(16) << 16) + (f(8) << 8) + f(0)).toString(16).slice(1);
+  }
+  function traitsOf(look) { const c = (v) => Math.max(0, Math.min(2, v | 0)); return [c(look.orelha), c(look.anao), c(look.fera)]; }
+  const putRow = (rows, y, x, s) => { rows[y] = rows[y].slice(0, x) + s + rows[y].slice(x + s.length); };
+  function povoMap(col, closed) {
+    return {
+      k: '#1c1624', h: col.hair, H: lighten(col.hair, 38), s: col.skin, S: col.skinD, e: closed ? col.skinD : '#1c1624',
+      c: col.cloth, C: col.clothD, l: col.skinD, f: P.maroon, b: col.hair,
+      w: mix(col.skin, '#fff4dc', 0.6), n: P.bark, t: col.skin, T: col.hair, g: P.gold, B: P.maroon, L: col.clothD,
+    };
+  }
+  function povoFrame(sex, dir, frame, col, beard, closed, tr) {
+    const v = dir === 0 ? 'F' : dir === 1 ? 'B' : 'S', key = v + (sex === 'F' ? 'F' : 'M');
+    const el = tr[0], an = tr[1], fe = tr[2];
+    // o povo de traço inteiro dá o corpo (anão, depois fera, depois elfo); os outros traços entram por cima
+    const base = an >= 2 ? 'anao' : fe >= 2 ? 'fera' : el >= 2 ? 'elfo' : 'humano';
+    const rows = (base === 'anao' ? ANAO : base === 'fera' ? FERA : base === 'elfo' ? ELFO : HEAD)[key].slice();
+    const eye = base === 'anao' || base === 'fera' ? 3 : 4;   // a linha dos olhos
+    if (beard && base === 'humano') { if (dir === 0) rows[5] = '.kbbbbk.'; if (dir >= 2) rows[5] = '.khbbbk.'; }
+    if (beard && base === 'elfo') { if (dir === 0) rows[5] = '..kbbk..'; if (dir >= 2) rows[5] = '..khbbk.'; }
+    // meio-elfo: a ponta da orelha aparece no cabelo
+    if (el && (base === 'humano' || base === 'anao')) {
+      if (v === 'S') putRow(rows, eye - 1, 2, 's'); else { putRow(rows, eye - 1, 0, 's'); putRow(rows, eye - 1, 7, 's'); }
+    }
+    // meio-fera: orelhinhas de bicho no alto da cabeça (o cocuruto desce 1 px)
+    if (fe && base !== 'fera') {
+      const slim = base === 'elfo';
+      if (v === 'S') { rows[0] = slim ? '....k...' : '...k....'; rows[1] = slim ? '..kkhk..' : '.kkhkk..'; }
+      else { rows[0] = slim ? '..k..k..' : '.k....k.'; rows[1] = slim ? '.khkkhk.' : 'khkkkkhk'; }
+    }
+    let legs = (base === 'anao' ? ANAO_LEGS : LEGS)[dir >= 2 ? 'S' : 'F'][frame];
+    if (base === 'elfo') legs = [legs[0]].concat(legs);   // perna comprida
+    if (an === 1) legs = legs.slice(1);   // meio-anão: 1 px mais baixo
+    const top = 14 - legs.length - rows.length, bob = (dir < 2 && frame > 0) ? 1 : 0;
+    const map = povoMap(col, closed);
+    const b = new Buf(8, 14);
+    rows.forEach((r, y) => { for (let x = 0; x < 8; x++) { const c = map[r[x]]; if (c) b.set(x, top + y + bob, c); } });
+    if (base === 'fera') for (const [x, y, c] of RABO[v][frame]) b.set(x, top + y + bob, map[c]);
+    legs.forEach((r, i) => { for (let x = 0; x < 8; x++) { const c = map[r[x]]; if (c) b.set(x, 14 - legs.length + i, c); } });
+    return dir === 3 ? mirrorBuf(b) : b;
+  }
   const sheets = new Map();
   const GRAY = '#b8c0cc';
   A.personSheet = function (p, gray) {
-    const leather = !!p.roupa;
-    const key = p.id + ':' + p.look.skin + p.look.hair + p.look.cloth + p.look.beard + (gray ? 'g' : '') + (leather ? 'L' : '');
+    const leather = !!p.roupa, tr = traitsOf(p.look);
+    const key = p.id + ':' + p.look.skin + p.look.hair + p.look.cloth + p.look.beard + (gray ? 'g' : '') + (leather ? 'L' : '') + ':' + tr.join('');
     let s = sheets.get(key);
     if (s) return s;
     const col = G.Sim.colorsOf(p.look);
     if (gray) col.hair = GRAY;
     if (leather) { col.cloth = LEATHER[0]; col.clothD = LEATHER[1]; }   // roupa de couro
     const [c, x] = mk(8 * 3, 14 * 4);
-    for (let d = 0; d < 4; d++) for (let f = 0; f < 3; f++) x.drawImage(personFrame(p.sex, d, f, col, p.look.beard).canvas(), f * 8, d * 14);
+    for (let d = 0; d < 4; d++) for (let f = 0; f < 3; f++) x.drawImage(personFrame(p.sex, d, f, col, p.look.beard, false, tr).canvas(), f * 8, d * 14);
     // dormindo: frente com olhos fechados, deitada
-    const fr = personFrame(p.sex, 0, 0, col, p.look.beard, true).canvas();
+    const fr = personFrame(p.sex, 0, 0, col, p.look.beard, true, tr).canvas();
     const [sc, sx] = mk(14, 8);
     sx.translate(0, 8); sx.rotate(-Math.PI / 2); sx.drawImage(fr, 0, 0);
     s = { sheet: c, sleep: sc };
@@ -1001,11 +1090,34 @@
     S: [['..ll..', '..ff..'], ['.l..l.', 'f....f'], ['..ll..', '.f.f..']],
   };
   A.KID_W = 6; A.KID_H = 11;
-  function kidFrame(sex, dir, frame, col, closed) {
+  // Etapa 12: a criança do povo-fera (focinho, pelo, tanga e rabinho); a de elfo e a mestiça ganham só as orelhas
+  const KID_FERA = {
+    FM: ['.k..k.', 'kskksk', 'kshhsk', 'kessek', 'kwnnwk', '.kwwk.', 'kssssk', 'sswwss', '.cCCc.'],
+    FF: ['.k..k.', 'kskksk', 'kshhsk', 'hesseh', 'hwnnwh', 'hkwwkh', 'kcccck', 'sswwss', 'cccCCc'],
+    BM: ['.k..k.', 'kskksk', 'kshhsk', 'kshhsk', 'kshhsk', '.kkkk.', 'kshhsk', 'ssssss', '.cCtc.', '....tT'],
+    BF: ['.k..k.', 'kskksk', 'kshhsk', 'hshhsh', 'hshhsh', 'hkkkkh', 'kcccck', 'ssssss', 'ccCtCc', '....tT'],
+    SM: ['..k...', '.kskk.', 'khsssk', 'khssek', 'khswwn', '.kswk.', 'Tkssk.', 'tkSsk.', '.kcck.'],
+    SF: ['..k...', '.kskk.', 'khsssk', 'hhssek', 'hhswwn', 'hkswk.', 'Tkcck.', 'tkSsk.', '.ccck.'],
+  };
+  function kidPovo(key, tr) {
+    const v = key[0], el = tr[0], fe = tr[2];
+    if (fe >= 2) return KID_FERA[key];
+    const rows = KID[key].slice();
+    // orelha de elfo: sai dos lados na altura dos olhos e sobe (a de meio-elfo é só a ponta)
+    if (el) {
+      if (v === 'S') { putRow(rows, 3, 1, 's'); if (el >= 2) putRow(rows, 2, 0, 's'); }
+      else { putRow(rows, 2, 0, 's'); putRow(rows, 2, 5, 's'); if (el >= 2) { putRow(rows, 3, 0, 's'); putRow(rows, 3, 5, 's'); } }
+    }
+    // orelhinhas de bicho do mestiço
+    if (fe) { if (v === 'S') { rows[0] = '..k...'; rows[1] = '.khkk.'; } else { rows[0] = '.k..k.'; rows[1] = 'khkkhk'; } }
+    return rows;
+  }
+  function kidFrame(sex, dir, frame, col, closed, tr) {
     const key = (dir === 0 ? 'F' : dir === 1 ? 'B' : 'S') + (sex === 'F' ? 'F' : 'M');
-    const head = KID[key], legs = KID_LEGS[dir >= 2 ? 'S' : 'F'][frame];
+    const povo = tr && (tr[0] || tr[2]);
+    const head = povo ? kidPovo(key, tr) : KID[key], legs = KID_LEGS[dir >= 2 ? 'S' : 'F'][frame];
     const bob = (dir < 2 && frame > 0) ? 1 : 0;
-    const map = {
+    const map = povo ? povoMap(col, closed) : {
       k: '#1c1624', h: col.hair, H: lighten(col.hair, 38), s: col.skin, S: col.skinD, e: closed ? col.skinD : '#1c1624',
       c: col.cloth, C: col.clothD, l: col.skinD, f: P.maroon,
     };
@@ -1020,15 +1132,15 @@
     return b;
   }
   A.kidSheet = function (p) {
-    const leather = !!p.roupa;
-    const key = 'k' + p.id + ':' + p.look.skin + p.look.hair + p.look.cloth + (leather ? 'L' : '');
+    const leather = !!p.roupa, tr = traitsOf(p.look);
+    const key = 'k' + p.id + ':' + p.look.skin + p.look.hair + p.look.cloth + (leather ? 'L' : '') + ':' + tr.join('');
     let s = sheets.get(key);
     if (s) return s;
     const col = G.Sim.colorsOf(p.look);
     if (leather) { col.cloth = LEATHER[0]; col.clothD = LEATHER[1]; }
     const [c, x] = mk(6 * 3, 11 * 4);
-    for (let d = 0; d < 4; d++) for (let f = 0; f < 3; f++) x.drawImage(kidFrame(p.sex, d, f, col).canvas(), f * 6, d * 11);
-    const fr = kidFrame(p.sex, 0, 0, col, true).canvas();
+    for (let d = 0; d < 4; d++) for (let f = 0; f < 3; f++) x.drawImage(kidFrame(p.sex, d, f, col, false, tr).canvas(), f * 6, d * 11);
+    const fr = kidFrame(p.sex, 0, 0, col, true, tr).canvas();
     const [sc, sx] = mk(11, 6);
     sx.translate(0, 6); sx.rotate(-Math.PI / 2); sx.drawImage(fr, 0, 0);
     s = { sheet: c, sleep: sc };
@@ -1646,6 +1758,221 @@
   };
   A.iconURL = function (name) { const c = A.icon(name); return c ? c.toDataURL() : ''; };
 
+  // ---------- Etapa 12: a ferraria, a mina, as marcas de demolir e de mudar, os metais ----------
+  const IRON = ['#1c2236', '#2e3852', '#4a5878', '#7888a8', '#b4c2d8'];   // ferro: do mais escuro ao brilho
+  const ROCK = ['#2a2c3a', '#454a5c', '#676e84', '#8f98ac', '#b9c1d0'];   // a pedra do morro
+  // pedras assentadas: fiadas desencontradas, com a luz em cima e à esquerda
+  function stoneWall(b, x0, y0, x1, y1, seed) {
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      const row = Math.floor((y - y0) / 3), off = row % 2 ? 2 : 0, joint = (y - y0) % 3 === 2 || (x - x0 + off) % 5 === 4;
+      let c = joint ? STONE[1] : (y - y0) % 3 === 0 ? STONE[3] : STONE[2];
+      if (!joint && H7(x, y, seed) < 0.1) c = STONE[4];
+      if (x === x0 || x === x1 || y === y1) c = STONE[0];
+      b.set(x, y, c);
+    }
+  }
+  const stamp = (b, rows, map, x0, y0) => rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) { const c = map[r[x]]; if (c) b.set(x0 + x, y0 + y, c); } });
+  const ANVIL = ['kkkkkkkkk.', 'kHHHHHhhkk', '.kkhhhhk..', '...khhk...', '..kkhmkk..', '.khhhmmmk.', '.kkkkkkkk.'];
+  const ANVIL_MAP = { k: IRON[0], H: IRON[4], h: IRON[3], m: IRON[2] };
+  // ferraria: forja de pedra com chaminé, brasa na boca, fole e bigorna no toco, debaixo de um telhado de palha (32 x 30)
+  function ferraria1() {
+    const b = new Buf(32, 30);
+    for (let y = 10; y <= 12; y++) for (let x = 4; x <= 27; x++) b.set(x, y, 'rgba(24,20,37,0.28)');
+    for (const x of [3, 27]) for (let y = 8; y <= 28; y++) { b.set(x, y, PLANK[2]); b.set(x + 1, y, PLANK[0]); }
+    // a forja
+    stoneWall(b, 5, 15, 16, 28, 121);
+    for (let x = 5; x <= 16; x++) b.set(x, 14, x === 5 || x === 16 ? STONE[0] : STONE[4]);
+    // a boca com a brasa (o brilho de cima é do render)
+    for (let y = 18; y <= 25; y++) for (let x = 7; x <= 14; x++) {
+      if (y === 18 && (x === 7 || x === 14)) continue;
+      const inner = x > 7 && x < 14 && y > 18;
+      b.set(x, y, inner ? (y >= 24 ? (x % 2 ? P.gold : P.ember) : y === 23 ? (x % 2 ? P.ember : P.rust) : P.ink) : STONE[0]);
+    }
+    // fole: couro em cunha com o bico virado para a forja
+    stamp(b, ['..kkk', '.kLLk', 'kLlLk', 'kllLk', '.kLLk', '..kkk'], { k: P.maroon, L: LEATHER[0], l: LEATHER[1] }, 17, 20);
+    b.set(16, 22, IRON[1]); b.set(16, 23, IRON[1]);
+    // bigorna no toco
+    for (let y = 24; y <= 28; y++) for (let x = 20; x <= 25; x++) b.set(x, y, y === 24 ? P.tan : x === 20 ? P.wood : x === 25 ? PLANK[0] : PLANK[1]);
+    stamp(b, ANVIL, ANVIL_MAP, 18, 17);
+    // martelo encostado no esteio
+    for (let y = 21; y <= 27; y++) b.set(29, y, PLANK[3]);
+    b.set(28, 20, IRON[3]); b.set(29, 20, IRON[3]); b.set(30, 20, IRON[2]); b.set(28, 21, IRON[1]); b.set(30, 21, IRON[1]);
+    thatch(b, 16, 1, 8, 13, 15, 91);
+    // a chaminé atravessa a palha
+    for (let y = 0; y <= 9; y++) for (let x = 8; x <= 12; x++) b.set(x, y, x === 8 || x === 12 ? STONE[0] : y === 0 ? STONE[0] : (x + y) % 3 === 0 ? STONE[1] : x === 9 ? STONE[3] : STONE[2]);
+    b.set(9, 1, P.ink); b.set(10, 1, P.ink); b.set(11, 1, P.ink);
+    return b.canvas();
+  }
+  // ferraria com ourives: parede de pedra ao fundo, telhado de tábuas, forja maior e a bancada das joias (32 x 30)
+  function ferraria2() {
+    const b = new Buf(32, 30);
+    // parede do fundo
+    stoneWall(b, 3, 10, 28, 20, 131);
+    for (const x of [2, 28]) for (let y = 8; y <= 28; y++) { b.set(x, y, PLANK[2]); b.set(x + 1, y, PLANK[0]); }
+    // a forja, mais larga, com duas bocas
+    stoneWall(b, 4, 15, 17, 28, 141);
+    for (let x = 4; x <= 17; x++) b.set(x, 14, x === 4 || x === 17 ? STONE[0] : STONE[4]);
+    for (const x0 of [5, 11]) for (let y = 19; y <= 25; y++) for (let x = x0; x <= x0 + 5; x++) {
+      if (y === 19 && (x === x0 || x === x0 + 5)) continue;
+      const inner = x > x0 && x < x0 + 5 && y > 19;
+      b.set(x, y, inner ? (y >= 24 ? (x % 2 ? P.gold : P.ember) : y === 23 ? (x % 2 ? P.ember : P.rust) : P.ink) : STONE[0]);
+    }
+    // bigorna no toco
+    for (let y = 25; y <= 28; y++) for (let x = 20; x <= 24; x++) b.set(x, y, y === 25 ? P.tan : x === 20 ? P.wood : x === 24 ? PLANK[0] : PLANK[1]);
+    stamp(b, ANVIL, ANVIL_MAP, 17, 18);
+    // a bancada do ourives: tampo de tábua com as peças brilhando
+    for (let x = 24; x <= 31; x++) { b.set(x, 20, P.tan); b.set(x, 21, P.wood); b.set(x, 22, PLANK[0]); }
+    for (const x of [25, 30]) for (let y = 23; y <= 28; y++) { b.set(x, y, PLANK[2]); b.set(x + 1, y, PLANK[0]); }
+    b.set(25, 19, P.gold); b.set(26, 19, P.yellow); b.set(28, 19, IRON[4]); b.set(29, 19, P.ice); b.set(30, 19, P.gold); b.set(27, 18, P.gold);
+    // ferramentas penduradas na parede
+    for (const [x, c] of [[20, IRON[3]], [22, IRON[4]], [24, IRON[3]]]) { b.set(x, 11, PLANK[1]); b.set(x, 12, PLANK[3]); b.set(x, 13, c); b.set(x, 14, c); b.set(x + 1, 14, IRON[2]); }
+    shingles(b, 16, 1, 8, 14, 15.5);
+    for (let y = 0; y <= 9; y++) for (let x = 7; x <= 12; x++) b.set(x, y, x === 7 || x === 12 ? STONE[0] : y === 0 ? STONE[0] : (x + y) % 3 === 0 ? STONE[1] : x === 8 ? STONE[3] : STONE[2]);
+    for (let x = 8; x <= 11; x++) b.set(x, 1, P.ink);
+    return b.canvas();
+  }
+  // o morro de pedra da mina: lv 1 baixo, 2 e 3 mais altos; devolve a linha do chão
+  function mound(b, lv, seed) {
+    const cx = 15.5, top = lv === 1 ? 6 : 3, rx = lv === 1 ? 14.5 : 15.5, base = 28;
+    for (let y = top; y <= base; y++) for (let x = 0; x < 32; x++) {
+      const dx = (x + 0.5 - cx) / rx, dy = (y - base) / (base - top + 1);
+      const edge = dx * dx + dy * dy;
+      // o contorno do morro tem dentes (pedra, não colina)
+      const bump = (H7(x >> 1, 0, seed) - 0.5) * 0.16;
+      if (edge > 1 + bump) continue;
+      let c = dx < -0.25 ? ROCK[3] : dx > 0.4 ? ROCK[1] : ROCK[2];
+      if (dy < -0.72 && dx < 0.2) c = ROCK[4];
+      const n = H7(x, y, seed + 1);
+      if (n < 0.1) c = ROCK[1]; else if (n > 0.93) c = ROCK[4];
+      if ((x + y * 2) % 9 === 0 && n < 0.6) c = ROCK[1];   // as fendas
+      if (edge > 0.86 + bump || y === base) c = ROCK[0];
+      b.set(x, y, c);
+    }
+  }
+  // a boca: escura, com moldura de troncos (lv 1) ou de tábuas com escoras (lv 2 e 3)
+  function mineMouth(b, lv) {
+    const x0 = lv === 1 ? 11 : 10, x1 = lv === 1 ? 20 : 21, y0 = lv === 1 ? 14 : 12;
+    for (let y = y0; y <= 28; y++) for (let x = x0; x <= x1; x++) b.set(x, y, y > 24 ? '#221a26' : P.ink);
+    for (let y = y0 - 1; y <= 28; y++) { b.set(x0 - 2, y, PLANK[0]); b.set(x0 - 1, y, lv === 1 ? P.wood : PLANK[3]); b.set(x0, y, PLANK[1]); b.set(x1, y, lv === 1 ? P.wood : PLANK[3]); b.set(x1 + 1, y, PLANK[1]); b.set(x1 + 2, y, PLANK[0]); }
+    for (let x = x0 - 3; x <= x1 + 3; x++) { b.set(x, y0 - 3, PLANK[0]); b.set(x, y0 - 2, lv === 1 ? P.tan : PLANK[4]); b.set(x, y0 - 1, lv === 1 ? P.wood : PLANK[2]); b.set(x, y0, PLANK[0]); }
+    if (lv >= 2) {
+      // escoras em cruz nos cantos de cima e a travessa de dentro
+      line(b, x0 + 1, y0 + 4, x0 + 4, y0 + 1, PLANK[2]); line(b, x1 - 1, y0 + 4, x1 - 4, y0 + 1, PLANK[2]);
+      for (let x = x0 + 1; x < x1; x++) if (x % 2) b.set(x, y0 + 7, PLANK[0]);
+    }
+  }
+  // mina: a boca num morrote de pedra, com a picareta encostada e um monte de pedra solta (32 x 30)
+  function mina1() {
+    const b = new Buf(32, 30);
+    mound(b, 1, 151);
+    mineMouth(b, 1);
+    // pedra solta ao pé
+    stamp(b, ['..kk...', '.kLlk..', 'kLllmk.', 'kkkkkkk'], { k: ROCK[0], L: ROCK[4], l: ROCK[3], m: ROCK[2] }, 24, 25);
+    // picareta encostada
+    line(b, 4, 28, 7, 20, PLANK[3]);
+    stamp(b, ['.kkkkk.', 'kHhhhhk', 'k.....k'], { k: IRON[0], H: IRON[4], h: IRON[3] }, 4, 18);
+    return b.canvas();
+  }
+  // mina funda: morro mais alto, escoras de tábua, o monte de entulho e os cestos de minério (32 x 31)
+  function mina2() {
+    const b = new Buf(32, 31);
+    mound(b, 2, 161);
+    mineMouth(b, 2);
+    // monte de entulho à direita
+    stamp(b, ['....kk....', '...kLlk...', '..kLllmk..', '.kLlllmmk.', 'kLllmlmmmk', 'kkkkkkkkkk'], { k: ROCK[0], L: ROCK[4], l: ROCK[3], m: ROCK[1] }, 22, 23);
+    // dois cestos com minério
+    for (const x0 of [1, 5]) stamp(b, ['.orko.', 'kwbwbk', 'kbwbwk', '.kkkk.'], { k: PLANK[0], w: P.tan, b: P.wood, o: ROCK[3], r: P.rust }, x0, x0 === 1 ? 25 : 26);
+    return b.canvas();
+  }
+  // mina de veio: o lampião na travessa, o trilho saindo da boca com o carrinho, e o veio brilhando na pedra (32 x 31)
+  function mina3() {
+    const b = new Buf(32, 31);
+    mound(b, 3, 171);
+    // os veios: ouro à esquerda, prata à direita, uma pedra preciosa
+    for (const [x, y] of [[3, 20], [4, 19], [5, 19], [6, 18], [4, 21], [7, 17]]) b.set(x, y, (x + y) % 2 ? P.gold : P.yellow);
+    for (const [x, y] of [[26, 14], [27, 15], [27, 16], [28, 17], [25, 13]]) b.set(x, y, (x + y) % 2 ? P.silver : P.white);
+    b.set(24, 9, P.ice); b.set(25, 9, '#9fe8ff'); b.set(24, 10, P.sky);
+    mineMouth(b, 3);
+    // o trilho
+    for (let y = 21; y <= 30; y++) { b.set(13, y, IRON[2]); b.set(18, y, IRON[2]); if (y % 3 === 0) for (let x = 12; x <= 19; x++) b.set(x, y, x === 13 || x === 18 ? IRON[3] : PLANK[1]); }
+    // o carrinho, cheio
+    stamp(b, ['..orgo..', '.oLlrLo.', 'kPPPPPPk', 'kPpPpPpk', '.kkkkkk.', '.kw..wk.'], { k: PLANK[0], P: PLANK[3], p: PLANK[2], o: ROCK[3], L: ROCK[4], l: ROCK[2], r: P.rust, g: P.gold, w: IRON[1] }, 12, 23);
+    // o lampião pendurado na travessa
+    b.set(15, 13, IRON[1]); b.set(16, 13, IRON[1]);
+    stamp(b, ['.kk.', 'kYWk', 'kyYk', '.kk.'], { k: IRON[0], Y: P.gold, W: P.yellow, y: P.ember }, 14, 14);
+    return b.canvas();
+  }
+  // as marcas que ficam em cima da obra: demolir (o X vermelho) e mudar de lugar (as quatro setas)
+  function markDemolir() {
+    return fromRows(['kk.....kk', 'kRk...kRk', '.kRk.kRk.', '..kRkRk..', '...kRk...', '..kRkRk..', '.kRk.kRk.', 'kRk...kRk', 'kk.....kk'], { k: P.ink, R: P.red }).canvas();
+  }
+  function markMover() {
+    return fromRows(['....k....', '...kYk...', '..kYYYk..', '.kk.Y.kk.', 'kYYYYYYYk', '.kk.Y.kk.', '..kYYYk..', '...kYk...', '....k....'], { k: P.ink, Y: P.gold }).canvas();
+  }
+  // o que vem da mina e da forja, no estoque e nas costas de quem carrega
+  function item12(kind) {
+    switch (kind) {
+      case 'carvao': return fromRows(['..kk...', '.kKkkk.', 'kKkkKkk', 'kkkKkkk', '.kkkkk.'], { k: '#12101c', K: P.ink3 }).canvas();
+      case 'minerio': return fromRows(['..kkk..', '.kLlrk.', 'krlLlmk', 'klrmlrk', '.kkkkk.'], { k: ROCK[0], L: ROCK[4], l: ROCK[3], m: ROCK[2], r: P.rust }).canvas();
+      case 'prata': return fromRows(['.kkkkk.', 'kWLLLlk', 'kLLlllk', '.kkkkk.'], { k: IRON[1], W: P.white, L: P.silver, l: P.mist }).canvas();
+      case 'ouro': return fromRows(['.kkkkk.', 'kWYYYyk', 'kYYyyyk', '.kkkkk.'], { k: '#8a4a14', W: '#fff6c0', Y: P.yellow, y: P.gold }).canvas();
+      case 'gemas': return fromRows(['.kk..kk.', 'kCck.kPk', 'kccckPpk', '.kck.kk.', '..k.....'], { k: P.ink2, C: '#9fe8ff', c: P.ice, P: P.rose, p: P.pink }).canvas();
+      case 'ferro': return fromRows(['.kkkk..', 'kHhhhk.', 'khhkbk.', '.kk.kbk', '.....kb', '......k'], { k: IRON[0], H: IRON[4], h: IRON[3], b: PLANK[3] }).canvas();
+      case 'joias': return fromRows(['.kkkk.', 'kY..Yk', 'kY..Yk', '.kYYk.', '.kCck.', '..kk..'], { k: '#8a4a14', Y: P.gold, C: '#9fe8ff', c: P.ice }).canvas();
+    }
+    return null;
+  }
+  // ícones da Etapa 12 (10 x 10)
+  Object.assign(ICONS, {
+    // os povos: um rosto de cada
+    humano: [['...kkkk...', '..khhhhk..', '.khhhhhhk.', '.khsssshk.', '.ksessesk.', '.kssssssk.', '..ksnnsk..', '...kssk...', '..kcccck..', '.kcccccck.'],
+      { k: P.ink2, h: P.bark, s: P.skinL, e: P.ink, n: P.skinD, c: P.wood }],
+    elfo: [['...kkkk...', '..khhhhk..', '.khhHhhhk.', 'skhsssshks', 'sksessesks', '.kssssssk.', '..ksnnsk..', '...kssk...', '..kcccck..', '.kcccccck.'],
+      { k: P.ink2, h: '#e2b44a', H: '#f4dc8c', s: '#f6e2cc', e: P.ink, n: '#d2ae96', c: '#3f8a5c' }],
+    anao: [['..kkkkkk..', '.khhHhhhk.', '.khsssshk.', '.ksessesk.', '.kbssssbk.', '.kbbnnbbk.', '.kbbbbbbk.', '..kbbbbk..', '.kckbbkck.', 'kcccggccck'],
+      { k: P.ink2, h: '#c0501e', H: '#e87a3c', s: '#f0ae8a', e: P.ink, n: '#8e3a14', b: '#c0501e', c: '#7a8394', g: P.gold }],
+    fera: [['.kk....kk.', 'kssk..kssk', 'kspkkkkpsk', '.kssssssk.', '.ksessesk.', '.kswwwwsk.', '.kwwnnwwk.', '..kwwwwk..', '..kcccck..', '.kcccccck.'],
+      { k: P.ink2, s: '#e2a23c', p: '#f6c6a0', e: P.ink, w: '#f8e6c0', n: P.bark, c: '#c23a34' }],
+    // mestiço: o rosto em duas metades
+    meio: [['...kkkk...', '..khhHHk..', '.khhhHHHk.', '.khssSSHks', '.ksesSeSks', '.ksssSSSk.', '..ksnNSk..', '...ksSk...', '..kccCCk..', '.kcccCCCk.'],
+      { k: P.ink2, h: P.bark, H: '#e2b44a', s: P.skinL, S: '#f6e2cc', e: P.ink, n: P.skinD, N: '#d2ae96', c: P.wood, C: '#3f8a5c' }],
+    // a caravana: três vultos de trouxa chegando
+    povos: [['..........', '..kk......', '.khhk.kk..', '.kssk.khk.', 'kccckkssk.', 'kcccckcckk', '.kcckcccck', '.k.k.kcck.', '.k.k.k..k.', '..........'],
+      { k: P.ink2, h: P.bark, s: P.skinL, c: P.gourd }],
+    // convivência: duas mãos que se dão
+    uniao: [['..........', '.kkk..kkk.', 'kAaakkbbbk', 'kaaaabbbBk', 'kaaaabbbBk', '.kaaabbBk.', '..kaabBk..', '...kaBk...', '....kk....', '..........'],
+      { k: P.ink2, A: P.rose, a: P.red, b: P.gold, B: P.ember }],
+    mina: [['...kkkk...', '..kLLllk..', '.kLllllmk.', 'kLlkkkklmk', 'kllkddkmmk', 'klkddddkmk', 'klkddddkmk', 'kTkddddkTk', 'kTkddddkTk', 'kkkkkkkkkk'],
+      { k: P.ink2, L: P.silver, l: P.mist, m: P.slate, d: P.ink, T: P.wood }],
+    ferraria: [['..........', '.kkkkkkk..', 'kLLLLLllkk', 'kkklllkkk.', '..kllk....', '..kllk.y..', '.kklmkkOy.', 'klllmmkrO.', 'kkkkkkkk..', '..........'],
+      { k: P.ink2, L: P.silver, l: P.mist, m: P.slate, y: P.yellow, O: P.ember, r: P.rust }],
+    carvao: [['..........', '...kkk....', '..kKKkkk..', '.kKkkkKKk.', '.kkkKkkkk.', 'kKkkkkKkk.', 'kkkKkkkkrk', '.kkkkkkOk.', '..kkkkkk..', '..........'],
+      { k: '#12101c', K: P.ink3, r: P.rust, O: P.ember }],
+    minerio: [['..........', '...kkkk...', '..kLLlrk..', '.kLlrllmk.', '.krlllrmk.', 'klllrlmmmk', 'klrllmmrmk', '.kkkkkkkk.', '..........', '..........'],
+      { k: P.ink2, L: P.silver, l: P.mist, m: P.slate, r: P.rust }],
+    prata: [['..........', '..........', '..kkkkkk..', '.kWWLLLLk.', 'kWLLLLLllk', 'kLLLLLlllk', 'kLLllllllk', '.kkkkkkkk.', '..........', '..........'],
+      { k: P.ink3, W: P.white, L: P.silver, l: P.mist }],
+    ouro: [['..........', '..........', '..kkkkkk..', '.kWWYYYYk.', 'kWYYYYYyyk', 'kYYYYYyyyk', 'kYYyyyyyyk', '.kkkkkkkk.', '..........', '..........'],
+      { k: '#8a4a14', W: '#fff6c0', Y: P.yellow, y: P.gold }],
+    gemas: [['..........', '..kkkkkk..', '.kWCCCCck.', 'kWCCcccbbk', '.kCcccbbk.', '..kccbbk..', '...kcbk...', '....kk....', '..........', '..........'],
+      { k: P.ink2, W: P.white, C: '#9fe8ff', c: P.ice, b: P.sky }],
+    // ferramenta de ferro: o machado de lâmina azulada (a de pedra é "ferramentas")
+    ferro: [['..........', '..kkkk....', '.kHHhhkk..', 'kHhhhhbk..', 'khhhkkbk..', '.kkk.kbk..', '.....kbk..', '......kbk.', '......kbk.', '.......k..'],
+      { k: IRON[0], H: IRON[4], h: IRON[3], b: P.wood }],
+    joias: [['..kkkkkk..', '.kYk..kYk.', 'kYk....kYk', 'kYk....kYk', '.kYk..kYk.', '..kYkkYk..', '...kCCk...', '..kCWcbk..', '...kcbk...', '....kk....'],
+      { k: '#8a4a14', Y: P.gold, C: '#9fe8ff', W: P.white, c: P.ice, b: P.sky }],
+    // oferenda: a tigela com o que brilha, ao pé da estátua
+    oferenda: [['....y.....', '..y.Y.y...', '...yWy....', '..kYYYk...', 'kkkYyYkkk.', 'kTTkkkTTk.', '.kTTTTTk..', '..kkkkk...', '..kTTTk...', '.kkkkkkk..'],
+      { k: P.ink2, y: P.gold, Y: P.yellow, W: P.white, T: P.wood }],
+    // seguir: a mira em volta de alguém
+    seguir: [['kkk....kkk', 'kC......Ck', 'k...kk...k', '...khhk...', '...kssk...', '..kcccck..', '..kcccck..', 'k...kk...k', 'kC......Ck', 'kkk....kkk'],
+      { k: P.ink2, C: P.ice, h: P.bark, s: P.skinL, c: P.wood }],
+    mover: [['....YY....', '...YYYY...', '....Yy....', '.Y..Yy..Y.', 'YYYYYyYYYY', 'YyyyyyyyYy', '.Y..Yy..Y.', '....Yy....', '...YYYy...', '....Yy....'],
+      { Y: P.gold, y: P.ember }],
+    demolir: [['..........', '.kkkkkkk..', 'kLLLLLLmkk', 'kLlllllmkk', '.kkkbkkkk.', '...kbk.r..', '...kbk.rr.', '...kbkr.r.', '...kbk.rr.', '....k.....'],
+      { k: P.ink2, L: P.silver, l: P.mist, m: P.slate, b: P.wood, r: P.red }],
+  });
+
   // ---------- construção de todos os sprites ----------
   A.build = function () {
     const S = A.spr = {};
@@ -1666,12 +1993,17 @@
     S.moquem = moquem(); S.jirau = jirau(); S.forno = forno();
     S.works2 = { moquem: moquem2(), jirau: jirau2(), forno: forno2() };
     S.shop = { armazem: [null, armazem1(), armazem2()], marcenaria: [null, marcenaria1(), marcenaria2()], tecelagem: [null, tecelagem1(), tecelagem2()] };
+    // Etapa 12: a ferraria (com ourives no nível 2) e a mina (três níveis), e as marcas de demolir e de mudar de lugar
+    S.shop.ferraria = [null, ferraria1(), ferraria2()];
+    S.shop.mina = [null, mina1(), mina2(), mina3()];
+    S.demolir = markDemolir(); S.mover = markMover();
     S.bench = { h: benchH(), v: benchV() };
     S.mat = mat();
     S.item = {};
     for (const k of ['madeira', 'pedra', 'frutas', 'peixe', 'agua', 'carne', 'couro', 'argila', 'defumado', 'seca']) S.item[k] = item(k);
     for (const k of ['tabuas', 'fibra', 'mantas', 'redes']) S.item[k] = item7(k);
     for (const k of ['feijao', 'milho', 'abobora', 'mandioca', 'ovos', 'leite']) S.item[k] = item10(k);   // Etapa 10
+    for (const k of ['carvao', 'minerio', 'prata', 'ouro', 'gemas', 'ferro', 'joias']) S.item[k] = item12(k);   // Etapa 12
     S.item.caca = S.item.carne; S.item.cria = S.item.ovos; S.item.racao = S.item.milho; S.item.cerca = S.item.madeira;
     // sombra
     const ellipse = (w, h, a) => {

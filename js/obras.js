@@ -1,4 +1,4 @@
-/* Gênesis · Obras (Etapa 7): toda obra evolui no lugar, a casa que o lugar pede, o armazém, as oficinas
+/* Gods · Obras (Etapa 7): toda obra evolui no lugar, a casa que o lugar pede, o armazém, as oficinas
    (marcenaria e tecelagem), os caminhos que o povo abre e as trilhas que se formam sozinhas, mantas e redes.
    Sem DOM. */
 (function (G) {
@@ -136,6 +136,17 @@
       else Sm.toast(S, 'Tecelagem pronta.');
       return true;
     }
+    // Etapa 12
+    if (b.type === 'mina') {
+      if (first) { Sm.chron(S, 'Abriram a primeira mina, morro adentro. Dela sai pedra sem fim e, com sorte, carvão e minério.'); Sm.toast(S, 'Mina pronta. Suba Mineração nas Vontades.', 'good'); }
+      else Sm.toast(S, 'Mina pronta.');
+      return true;
+    }
+    if (b.type === 'ferraria') {
+      if (first) { Sm.chron(S, 'A primeira ferraria ficou pronta: a forja acesa, o fole, a bigorna. Com minério e carvão, o Ofício faz ferramentas de ferro.'); Sm.toast(S, 'Ferraria pronta. Forja quem é ferreiro nato ou bom de Ofício.', 'good'); }
+      else Sm.toast(S, 'Ferraria pronta.');
+      return true;
+    }
     return false;
   };
   O.onUpgraded = function (S, b, from) {
@@ -224,7 +235,7 @@
   };
   O.daily = function (S) {
     const w = S.world, o = S.obras;
-    if (!w.foot) return;
+    if (!w.foot || S.resumido) return;   // dia resumido (jogo fechado): ninguém anda, e a trilha, a manta e a rede ficam como estavam
     let made = 0;
     for (let i = 0; i < w.foot.length; i++) {
       const f = w.foot[i];
@@ -276,7 +287,8 @@
   };
   O.shopOf = shopOf;
   // o que o Ofício faz agora: ferramentas e roupas (Etapa 5) ou, nas oficinas, tábuas, mantas e redes
-  O.oficioPlan = function (S) {
+  // p (Etapa 12): para quem é o plano. O trabalho da forja só entra para quem sabe forjar
+  O.oficioPlan = function (S, p) {
     const base = Tech().oficioPlan(S);
     if (!Tech().known(S, 'pedra')) return null;
     const st = S.stock, cold = S.ck.season >= 2;
@@ -292,17 +304,20 @@
       if (gm > 0 && st.fibra >= C.MANTA_FIBRA) cand.push({ k: 'mantas', gap: gm, b: tec, pri: cold ? 4.2 : 2.5 });
       if (gr > 0 && st.fibra >= C.REDE_FIBRA) cand.push({ k: 'redes', gap: gr, b: tec, pri: 2 });
     }
+    if (G.Minas && (!p || (G.Povos && G.Povos.canForge(S, p)))) for (const pl of G.Minas.plans(S)) cand.push(pl);   // Etapa 12: ferro e joias
     if (!cand.length) return null;
     cand.sort((a, b) => b.pri - a.pri || b.gap - a.gap);
     return cand[0];
   };
-  O.costOf = (k) => (k === 'tabuas' ? { madeira: C.TABUA_WOOD } : k === 'mantas' ? { fibra: C.MANTA_FIBRA } : k === 'redes' ? { fibra: C.REDE_FIBRA } : k === 'roupas' ? C.ROUPA_COST : C.TOOL_COST);
+  O.costOf = (k) => (G.Minas && G.Minas.isForge(k) ? G.Minas.costOf(k) : k === 'tabuas' ? { madeira: C.TABUA_WOOD } : k === 'mantas' ? { fibra: C.MANTA_FIBRA } : k === 'redes' ? { fibra: C.REDE_FIBRA } : k === 'roupas' ? C.ROUPA_COST : C.TOOL_COST);
   O.minutesOf = function (S, k, b) {
+    if (G.Minas && G.Minas.isForge(k)) return G.Minas.minutesOf(S, k, b);   // Etapa 12
     if (k === 'tabuas') return C.TABUA_MIN / (b ? def(b).shop.speed : 1);
     if (k === 'mantas' || k === 'redes') return C.TECIDO_MIN / (b ? def(b).shop.speed : 1);
     return C.OFICIO_MIN * (k === 'roupas' ? 1.5 : 1);
   };
   O.make = function (S, k, n) {
+    if (G.Minas && G.Minas.isForge(k)) return G.Minas.make(S, k, n);   // Etapa 12
     if (k === 'ferramentas' || k === 'roupas') return Tech().make(S, k, n);
     S.stock[k] += n;
     const st = S.stats, Sm = Sim();

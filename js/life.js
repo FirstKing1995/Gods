@@ -1,4 +1,4 @@
-/* Gênesis · Vida (Etapa 6): o dia a dia do povo além do trabalho. Sem DOM.
+/* Gods · Vida (Etapa 6): o dia a dia do povo além do trabalho. Sem DOM.
    Conversas de pergunta e resposta (a resposta olha o mundo: a comida, o tempo, a fé de quem responde),
    histórias ao pé do fogo, festas, consolo no luto, brigas e pazes, os mais velhos ensinando os mais novos,
    orações de agradecimento (dão Poder) e de luto, e pequenos acontecimentos: ninho, cogumelos, estrela cadente,
@@ -205,6 +205,16 @@
     ['Fecha a barraca cedo hoje?', 'E quem disse que a gente vai dormir?'],
     ['Me dá um beijo antes do trabalho?', 'Um só não dá.'],
   ];
+  // 0.12, tom adulto (+18, escolhido no menu): o par fala de desejo sem rodeio. Só adultos; nada é descrito
+  const CASAL_ADULTO = [
+    ['Quero você hoje à noite.', 'Então não demora no trabalho.'],
+    ['Ontem foi bom demais.', 'Hoje tem mais.'],
+    ['Tô com vontade de você desde cedo.', 'Eu também. Espera escurecer.'],
+    ['Dorme lá em casa hoje. Sem dormir.', 'Combinado.'],
+    ['Vamos transar hoje?', 'Hoje, amanhã e depois.'],
+    ['Você fica uma delícia suando assim.', 'Para, que tem gente olhando.'],
+    ['Me espera sem roupa?', 'Só se você chegar cedo.'],
+  ];
   const KID_Q = [
     ['Por que o céu é azul?', ['Porque alguém lá em cima pintou assim.', 'Ninguém sabe ainda. Descobre pra mim?']],
     ['Quando eu crescer posso caçar?', ['Pode. Mas primeiro aprende a pescar.', 'Quando tiver força pra lança.']],
@@ -236,6 +246,14 @@
     (a, b) => ['Para de reclamar!', 'Reclamo sim, tá tudo errado!'],
     (a, b) => ['Sai da minha frente!', 'Sai você!'],
   ];
+  // tom adulto: adulto brigando com adulto solta palavrão
+  const BRIGA_ADULTA = [
+    (a, b) => ['Você não fez porra nenhuma hoje!', 'E você, que só sabe encher o saco?'],
+    (a, b) => ['Foi você que deixou o fogo apagar, seu merda!', 'Não fui eu! Vai à merda.'],
+    (a, b) => ['Você comeu a minha parte, desgraçad' + oa(b) + '!', 'Comi porra nenhuma! Tá doid' + oa(a) + '?'],
+    (a, b) => ['Cala essa boca!', 'Calo nada. Tá tudo uma merda mesmo!'],
+    (a, b) => ['Some da minha frente!', 'Some você, cacete!'],
+  ];
   const PAZES = [['Desculpa por aquilo.', 'Tudo bem. Já passou.'], ['Eu tava de cabeça quente.', 'Eu também. Vamos esquecer.'], ['Paz?', 'Paz.']];
 
   function skillLevel(p, sk) { return G.AI.lvl(p, sk); }
@@ -258,6 +276,7 @@
       if (p.traits.indexOf('Pessimista') >= 0) ch += 0.02;
       if (p.traits.indexOf('Otimista') >= 0) ch -= 0.01;
     }
+    if (S.povos && S.povos.mixed && G.Povos) ch *= G.Povos.fightMult(S, a, b);   // Etapa 12: povos que se estranham brigam mais
     return Math.max(0, ch);
   }
   // monta a conversa: o tipo e as falas. hint 'consolo' vem da IA (quem viu alguém de luto)
@@ -276,7 +295,7 @@
     }
     // briga: gente de mau humor se estranha
     if (S.rng.next() < fightChance(S, a, b)) {
-      const [q, r] = pick(S, BRIGA)(a, b);
+      const [q, r] = pick(S, F.adulto && F.adulto(S) && ka >= 18 && kb >= 18 ? BRIGA_ADULTA : BRIGA)(a, b);
       return dlg('briga', [[0, q], [1, r]], { at: [3, 10], dur: 22, style: 'briga' });
     }
     // ensinar: quem sabe (nível 3+) com quem está aprendendo (7 a 17 anos)
@@ -305,7 +324,7 @@
     // par: namoro
     if (F.isPartner(a, b) && S.rng.next() < 0.6) {
       const hot = F.spicy && F.spicy(S) && F.age(S, a) >= 18 && F.age(S, b) >= 18 && S.rng.next() < 0.35;
-      const [q, r] = pick(S, hot ? CASAL_PICANTE : CASAL);
+      const [q, r] = pick(S, hot ? (F.adulto(S) ? CASAL_ADULTO.concat(CASAL_PICANTE) : CASAL_PICANTE) : CASAL);
       return dlg('casal', [[0, q], [1, r]], { style: 'casal' });
     }
     // papo: um tópico que caiba agora
@@ -325,6 +344,7 @@
     if (!d) return;
     const Sm = Sim(), F = Fam();
     S.stats.talks++;
+    if (S.povos && S.povos.mixed && G.Povos) G.Povos.onChat(S, a, b, d.kind);   // Etapa 12: a conversa aproxima os povos (a briga afasta)
     const rec = { t: S.t, kind: d.kind, lines: d.lines.map((ln) => [(ln.by ? b : a).name, ln.text]) };
     a.talk = rec; b.talk = rec;
     if (d.kind === 'casal') F.addAfeto(S, a, b, 2);
@@ -472,6 +492,7 @@
       // a pregação (Etapa 11): a fé de quem ouve sobe, o cético vê um sinal, e Deus ganha Poder
       Sm.addMem(S, p, 'contouHistoria');
       for (const q of heard) q.rel[p.id] = (q.rel[p.id] || 0) + 1;
+      if (S.povos && S.povos.mixed && G.Povos) G.Povos.onGather(S, heard.concat([p]), C.CONV_SERMAO);
       G.Deus.onSermon(S, p, heard);
       S.events.push({ k: 'story', on: false });
       return;
@@ -487,6 +508,7 @@
     }
     Sm.addMem(S, p, 'contouHistoria');
     for (const q of heard) { Sm.addMem(S, q, 'ouviuHistoria'); q.rel[p.id] = (q.rel[p.id] || 0) + 1; }
+    if (S.povos && S.povos.mixed && G.Povos) G.Povos.onGather(S, heard.concat([p]), C.CONV_HISTORIA);   // Etapa 12
     // histórias espalham o saber: a próxima descoberta anda um pouco
     const open = G.Tech.open(S);
     const esc = G.Deus && G.Deus.saber(S, 'escrita') ? C.ESCRITA_STORY : 1;   // com a escrita (Etapa 11), a história ensina o dobro
@@ -507,6 +529,7 @@
     fogo: () => 'Acenderam a primeira fogueira.',
     era: () => 'O acampamento virou aldeia.',
     onca: (S, x) => 'A onça foi vencida' + (x.name ? ' por ' + x.name : '') + '.',
+    uniao: () => 'Dois povos viraram um só.',   // Etapa 12
     colheita: (S, x) => 'A primeira colheita da roça' + (x.k && C.ROCA[x.k] ? ', de ' + C.ROCA[x.k].name.toLowerCase() : '') + '.',   // Etapa 10
   };
   L.partyText = (S, pt) => (PARTY_TXT[pt.why] ? PARTY_TXT[pt.why](S, pt) : '');
@@ -588,6 +611,7 @@
       a.rel[b.id] = (a.rel[b.id] || 0) + pm; b.rel[a.id] = (b.rel[a.id] || 0) + pm;
       if (F.isPartner(a, b)) F.addAfeto(S, a, b, 3 * pm);
     }
+    if (S.povos && S.povos.mixed && G.Povos) G.Povos.onParty(S, ps, C.CONV_FESTA * pm);   // Etapa 12: a festa aproxima os povos
     // 0.10: adultos ligados por pares podem esticar a noite juntos (só adultos; desliga no menu)
     if (F.afterParty) F.afterParty(S, ps);
     // quem tem mais fé agradece pela noite
@@ -631,7 +655,7 @@
     if (k === 'fartura' || k === 'piracema') L.party(S, k);
   };
   L.onDiscover = function (S, id, by, how) {
-    if (by && by.alive && how !== 'revelacao' && by.fe >= 45 && !S.safe) God().thank(S, by, 'Obrigad' + oa(by) + ' pela ideia, céu!', C.THANKS.descoberta, true);
+    if (by && by.alive && how !== 'revelacao' && how !== 'povo' && by.fe >= 45 && !S.safe) God().thank(S, by, 'Obrigad' + oa(by) + ' pela ideia, céu!', C.THANKS.descoberta, true);
     L.party(S, 'descoberta', { id });
   };
   L.onWelcome = function (S, made) { L.party(S, 'acolhida', { names: Sim().listNames(made) }); };

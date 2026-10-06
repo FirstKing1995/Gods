@@ -1,4 +1,4 @@
-// Gênesis · testes dos bichos (Etapa 9). Uso: node test/bichos-test.js [anos]
+// Gods · testes dos bichos (Etapa 9). Uso: node test/bichos-test.js [anos]
 // 1) unidades: as nove espécies no mundo novo, cada uma no seu lugar; save antigo ganha os bichos novos; o que dá para
 //    caçar com a lança e com o arco; a presa (bicho novo atiça a curiosidade); a anta pede três acertos; o porco-do-mato
 //    ferido parte para cima; o jacaré ataca quem pesca perto e a margem fica marcada (o povo evita); quem tem lança revida
@@ -9,7 +9,7 @@
 const path = require('path');
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 globalThis.G = {};
-for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
+for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
 const { W, Sim, CFG: C, Family: F, God, Save, AI, Tech: T, Inv: I, Life: L, Obras: O, Fauna: FA, Bichos: B, Narr: N } = G;
 const Y = 60 * 1440, D = 1440;
 

@@ -1,12 +1,12 @@
-/* Gênesis · números de balanceamento v0.6 (Etapas 1 a 5: MVP da Era da Família; Etapa 6: Vida).
+/* Gods · números de balanceamento v0.6 (Etapas 1 a 5: MVP da Era da Família; Etapa 6: Vida).
    Tudo que é ajuste de jogo mora aqui. Unidades: minutos e horas DE JOGO. */
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.11.0',
+    VERSION: '0.12.0',
     SAVE_KEY: 'genesis.save.v1',
     // endereço do Web App do Google Apps Script (termina em /exec). Vazio = jogo só local.
-    API_URL: 'https://script.google.com/macros/s/AKfycbzDy7z7jS8Xd9ejZINSNtR6_S7_3zmfqDaPa77NKVEoEFBY8N_F6-EHTvlsbX0-wGsQ/exec',
+    API_URL: '',
     CLOUD_SAVE_SEC: 180,
 
     // ---- mapa ----
@@ -118,6 +118,19 @@
       forno: { name: 'Forno de barro', a: 'o', key: 'O', w: 2, h: 2, cost: { argila: 12, pedra: 6, madeira: 8 }, work: 300, need: 'ceramica', potes: 1,
         desc: 'Queima potes de barro: o estoque guarda o dobro de água e a comida dura mais.',
         up: [{ name: 'Forno grande', cost: { argila: 12, pedra: 8 }, work: 300, potes: 2, desc: 'Potes grandes: guardam 90 de água, e a comida estraga 40% menos.' }] },
+      // Etapa 12: a mina (ao pé da serra) e a ferraria. mine: quantos mineiros por vez e o nível da sorte
+      mina: { name: 'Mina', a: 'a', key: '', w: 2, h: 2, cost: { madeira: 10 }, work: 300, need: 'mineracao', env: 'serra', mine: { cap: 2, lv: 1 },
+        desc: 'Uma boca cavada ao pé da serra: dá pedra sempre e, com sorte, carvão e minério de ferro. Dois mineiros por vez.',
+        up: [
+          { name: 'Mina funda', cost: { madeira: 12, tabuas: 8 }, work: 360, mine: { cap: 3, lv: 2 },
+            desc: 'Escoras de tábua deixam cavar mais fundo: mais minério, e aparecem a prata e, de vez em quando, ouro e pedra preciosa. Três mineiros.' },
+          { name: 'Mina de veio', cost: { tabuas: 10, pedra: 10 }, work: 420, need: 'metalurgia', mine: { cap: 4, lv: 3 },
+            desc: 'Trilho, carrinho e lampião: quatro mineiros seguem o veio. Mais prata, ouro e pedras preciosas.' },
+        ] },
+      ferraria: { name: 'Ferraria', a: 'a', key: '', w: 2, h: 2, cost: { pedra: 20, madeira: 10 }, work: 360, need: 'metalurgia', shop: { k: 'ferro', speed: 1 },
+        desc: 'Forja de pedra com fole e bigorna: de 2 de minério e 1 de carvão sai uma ferramenta de ferro.',
+        up: [{ name: 'Ferraria com ourives', cost: { pedra: 10, tabuas: 8 }, work: 300, shop: { k: 'ferro', speed: 1.3, joias: true },
+          desc: 'Forja 30% mais depressa e ganha a bancada do ourives: de 1 de prata ou de ouro sai uma joia.' }] },
       // Etapa 7: obras novas
       armazem: { name: 'Armazém', a: 'o', key: 'G', w: 2, h: 2, cost: { madeira: 16, pedra: 6 }, work: 300, store: { rot: 0.75 }, near: 8, open: 'inverno',
         desc: 'Guarda a comida do estoque: estraga 25% menos e o lobo não leva. Tem que ficar a até 8 passos do estoque.',
@@ -162,6 +175,9 @@
       serra: { name: 'colina, montanha ou pedras por perto', hill: 10, rocks: 3 },
     },
     MATERIALS: ['madeira', 'pedra', 'argila', 'tabuas', 'fibra'],   // o que as obras podem pedir
+    // 0.12: demolir é trabalho do povo (uma parte do trabalho de erguer) e devolve metade do material; mudar de lugar é
+    // desmontar e erguer de novo no lugar novo, levando três quartos do material (o resto sai do estoque)
+    DEMOL_WORK: 0.35, DEMOL_REFUND: 0.5, MOVE_KEEP: 0.75, MOVE_WORK: 0.6, NO_MOVE: { roca: 1, curral: 1 },
     // caminhos: 0 nada · 1 trilha (se forma sozinha onde muita gente passa) · 2 caminho de terra · 3 caminho de pedra
     ROAD_MULT: [1, 0.85, 0.7, 0.55],
     ROAD_WORK: [0, 0, 12, 18],           // minutos de trabalho por passo de caminho
@@ -182,7 +198,7 @@
     // ---- IA ----
     VONTADE_W: [0, 0.5, 1, 1.6],
     WORK_BASE: 32, WORK_CAP: 75, CRITICAL: 15, CRITICAL_BONUS: 70, EVENING_BONUS: 18,
-    DEFAULT_VONTADES: { frutas: 2, agua: 2, madeira: 2, pedra: 1, pesca: 2, caca: 2, argila: 1, construir: 2, oficio: 2, conservar: 2, fogo: 3, roca: 2, criacao: 2 },
+    DEFAULT_VONTADES: { frutas: 2, agua: 2, madeira: 2, pedra: 1, pesca: 2, caca: 2, argila: 1, construir: 2, oficio: 2, conservar: 2, fogo: 3, roca: 2, criacao: 2, mina: 2 },
     REEVAL_MIN: 20,
 
     // ---- Deus (Etapa 2) ----
@@ -198,6 +214,45 @@
     // tempo com o jogo fechado: fração do 1x (o jogador escolhe no menu; padrão metade)
     OFFLINE_RATES: [0.1, 0.25, 0.5, 1], OFFLINE_RATE_NAMES: ['1/10 (1 h fora = 6 dias)', '1/4 (1 h fora = 15 dias)', 'metade (1 h fora = 30 dias)', 'igual ao 1x (1 h fora = 1 ano)'],
     OFFLINE_RATE_DEFAULT: 2, OFFLINE_MAX_DAYS: 300, OFFLINE_MIN_SEC: 120, OFFLINE_HEALTH_FLOOR: 25,
+    // 0.12: a volta tem orçamento de relógio. Até BUDGET, entram dias inteiros pelo meio; passou de HARD, o que falta
+    // vira dia resumido; passou do dobro de HARD (aparelho muito lento), o resto do tempo deixa de passar
+    OFFLINE_BUDGET_MS: 2500, OFFLINE_HARD_MS: 7000,
+    // dias resumidos: o estoque volta ao nível de sempre da aldeia em REST_TAU dias; nunca abaixo de REST_FOOD_DAYS de
+    // comida; REST_PRAY dos fiéis rezam de manhã; REST_CHATS conversas por pessoa por dia
+    REST_TAU: 8, REST_FOOD_DAYS: 30, REST_PRAY: 0.6, REST_CHATS: 0.35,
+
+    // ---- povos (Etapa 12) ----
+    // convivência entre dois povos (0 a 100): começa em CONV_START. O dia a dia soma pouco e tem teto por par de povos
+    // por dia (CONV_DAY; metade a mais quando um dos dois é humano, o povo acolhedor): a conversa CONV_CHAT (em dobro
+    // com um acolhedor; quatro vezes ao ensinar ou consolar), a história CONV_HISTORIA, a pregação CONV_SERMAO e cada
+    // mestiço vivo CONV_PONTE. Os acontecimentos somam por fora do teto: as pazes CONV_PAZES, a festa CONV_FESTA, cada
+    // casal misto CONV_CASAL, cada filho mestiço CONV_FILHO; a briga tira CONV_BRIGA. Abaixo de 50 briga-se até
+    // CONV_FIGHT a mais e os pares saem mais devagar; abaixo de CONV_LOW o jogo avisa. Em 100 os dois povos viram um
+    // só, de uma vez por todas. Nos testes de 20 anos a primeira união sai de 5 a 9 anos depois da primeira caravana
+    CONV_START: 20, CONV_LOW: 15, CONV_DAY: 0.2, CONV_DAY_HUM: 1.5,
+    CONV_CHAT: 0.03, CONV_HISTORIA: 0.15, CONV_SERMAO: 0.15, CONV_PONTE: 0.03,
+    CONV_PAZES: 0.5, CONV_FESTA: 1, CONV_CASAL: 1, CONV_FILHO: 4, CONV_BRIGA: 3, CONV_FIGHT: 0.6,
+    // os dons
+    DOM_PEDRA: 1.6, DOM_OBRA: 1.4, DOM_MATA: 1.5, DOM_FERREIRO: 1.6, DOM_VERSATIL: 1.15, DOM_ARQUEIRO_HIT: 0.2, DOM_ARQUEIRO_R: 1.2,
+    DOM_FARO_CARNE: 3, DOM_GARRAS_HIT: 0.25, DOM_GARRAS_BITE: 0.5, DOM_VISTA: 2, DOM_NOITE: 0.9,
+    // as caravanas: a primeira sai POVO_FIRST_D dias depois de a aldeia se formar (ou a partir do ano POVO_YEAR, com
+    // POVO_MIN_POP pessoas); as outras, a cada POVO_GAP_D dias; quem foi mandado seguir volta uma vez, POVO_VOLTA_D
+    // dias depois. Deus pode chamar um povo (nível POVO_CALL_LV, POVO_CALL de Poder)
+    POVO_FIRST_D: [20, 40], POVO_GAP_D: [90, 150], POVO_VOLTA_D: 180, POVO_YEAR: 6, POVO_MIN_POP: 6, POVO_MAX_POP: 150, POVO_CALL: 300, POVO_CALL_LV: 2,
+
+    // ---- minas e metais (Etapa 12) ----
+    MINA_NEED: { mineracao: 90, metalurgia: 80 },
+    // um turno na mina (MINA_TURNO min de trabalho) dá pedra sempre e, por sorte, o resto; por nível da mina (1, 2, 3).
+    // n: quantos saem quando sai. A mão de pedra do anão multiplica a sorte
+    MINA_TURNO: 120, MINA_SORTE_ANAO: 1.4,
+    MINA_YIELD: { pedra: [4, 4, 5], carvao: [0.45, 0.5, 0.5], minerio: [0.3, 0.5, 0.55], prata: [0, 0.14, 0.2], ouro: [0, 0.04, 0.1], gemas: [0, 0.02, 0.07], n: { carvao: 2, minerio: 2 } },
+    // a forja: uma ferramenta de ferro pede minério e carvão; rende mais (e mais ainda no machado), gasta um terço,
+    // segura melhor a mordida e ajuda na luta. Forja quem é ferreiro nato ou tem Ofício no nível FORJA_LVL
+    FERRO_COST: { minerio: 2, carvao: 1 }, FERRO_MIN: 110, JOIA_MIN: 90, FORJA_LVL: 4,
+    FERRO_BONUS: 1.45, FERRO_MACHADO: 1.9, FERRO_WEAR: 0.3, FERRO_BITE: 0.8, FERRO_LUTA: 0.1,
+    // o que brilha: oferenda ao pé da estátua (Poder, uma por estátua por dia), troca com o mascate e a joia, que
+    // levanta o humor de quem usa
+    OFERENDA: { prata: 8, ouro: 20, gemas: 40 }, OFERENDA_KEEP: 0, JOIA_MOOD: 3,   // (quanto valem na troca: TRADE_VALUE)
 
     // ---- metas do Ato 1 ----
     GOAL_FOOD: 60, GOAL_WOOD: 60,
@@ -390,7 +445,7 @@
     MASCATE_FIRST_D: [2, 4], MASCATE_D: [20, 34], MASCATE_LATER_D: [50, 80],
     MASCATE_OFFER: { galinha: [1, 2, 9], coelho: [1, 1, 8], porco: [1, 1, 16], ovelha: [1, 1, 20], gado: [1, 1, 34] },   // machos, fêmeas, preço
     TRADE_VALUE: { couro: 2.5, ferramentas: 3, roupas: 5, mantas: 5, redes: 4, tabuas: 1.5, defumado: 1, seca: 0.8, feijao: 0.8, milho: 0.6,
-      abobora: 0.6, mandioca: 0.5, fibra: 0.8, carne: 0.6, peixe: 0.5, argila: 0.3, pedra: 0.2, madeira: 0.15 },
+      abobora: 0.6, mandioca: 0.5, fibra: 0.8, carne: 0.6, peixe: 0.5, argila: 0.3, pedra: 0.2, madeira: 0.15, prata: 5, ouro: 10, gemas: 14, joias: 9 },
     TRADE_KEEP: { couro: 4, ferramentas: 3, tabuas: 6, fibra: 8, madeira: 40, pedra: 20, argila: 12 },
     // cercas: 1 madeira e 12 minutos por passo; quem passa pela cerca pula (3 vezes mais devagar); cerca em cima
     // de caminho de terra ou de pedra vira porteira (o povo passa, bicho não). Área cercada: até 1.600 passos

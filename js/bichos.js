@@ -1,4 +1,4 @@
-/* Gênesis · luta (Etapa 9): o povo luta e se defende. Quando um bicho ataca (lobo, onça, jacaré, porco-do-mato ou anta),
+/* Gods · luta (Etapa 9): o povo luta e se defende. Quando um bicho ataca (lobo, onça, jacaré, porco-do-mato ou anta),
    quem foi atacado revida se tem lança na mão (ou o arco), e quem está perto e armado vem ajudar. Cada acerto tira
    vida do bicho: ferido, ele foge; sem vida, cai. Lobo e onça moram no Narrador; o resto, na fauna. Sem DOM. */
 (function (G) {
@@ -8,7 +8,7 @@
   const Sim = () => G.Sim, Fam = () => G.Family, Tech = () => G.Tech;
 
   // armado: ferramenta na mão (a lança vem dela) e a lança já descoberta
-  B.armed = (S, p) => !!(p && p.alive && p.tool && Tech().known(S, 'lanca'));
+  B.armed = (S, p) => !!(p && p.alive && ((p.tool && Tech().known(S, 'lanca')) || (p.sangue && G.Povos && G.Povos.has(p, 'garras') && Fam().age(S, p) >= 12)));   // Etapa 12: o povo-fera luta com as garras
   // o alvo de uma luta: { kind: 'fauna' | 'narr', id } → a entidade, se ainda existe
   B.ent = function (S, tgt) {
     if (!tgt) return null;
@@ -58,7 +58,8 @@
     B.strike(S, p, tgt, true);
     return true;
   };
-  B.hitChance = (S, p) => C.LUTA_HIT + C.CACA_HIT_LVL * G.AI.lvl(p, 'caca') + (Tech().known(S, 'arco') ? C.ARCO_HIT : 0);
+  B.hitChance = (S, p) => C.LUTA_HIT + C.CACA_HIT_LVL * G.AI.lvl(p, 'caca') + (Tech().known(S, 'arco') ? C.ARCO_HIT : 0) +
+    (p.tool && p.tool.fe ? C.FERRO_LUTA : 0) + (p.sangue && G.Povos ? G.Povos.lutaHit(p) : 0);   // Etapa 12: a lança de ferro e as garras
 
   // um golpe (lança) ou uma flechada, já decidido que acertou (sure) ou jogando a chance
   B.strike = function (S, p, tgt, sure) {
@@ -117,7 +118,7 @@
     if (S.precip || S.temp < 6 || (G.Narr && (G.Narr.is(S, 'nevasca') || G.Narr.is(S, 'tempestade')))) return 0;
     const AI = G.AI, busy = (q) => q.act && (q.act.type === 'defender' || q.act.type === 'parto' || q.act.type === 'festa');
     const cands = S.people.filter((q) => q.alive && !q.carriedBy && !q.sleeping && !q.inTent && !q.labor && !q.preg &&
-      Fam().age(S, q) >= 16 && Fam().age(S, q) < 60 && q.needs.saude >= 60 && !busy(q) && (B.armed(S, q) || (Tech().known(S, 'lanca') && S.stock.ferramentas > 0)))
+      Fam().age(S, q) >= 16 && Fam().bodyAge(S, q) < 60 && q.needs.saude >= 60 && !busy(q) && (B.armed(S, q) || (Tech().known(S, 'lanca') && S.stock.ferramentas > 0)))
       .sort((a, b) => AI.lvl(b, 'caca') - AI.lvl(a, 'caca') || b.needs.saude - a.needs.saude);
     if (cands.length < 2) return 0;
     const tgt = { kind: 'narr', id: e.id, hunt: true }, went = [];

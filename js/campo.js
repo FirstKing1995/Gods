@@ -1,4 +1,4 @@
-/* Gênesis · Campo (Etapa 10): a roça, a criação e as cercas.
+/* Gods · Campo (Etapa 10): a roça, a criação e as cercas.
    Quatro descobertas do campo, numa árvore (como as invenções): Roça → Algodão, Cerca e Criação.
    Roça: obra de 3 x 3 onde o povo planta feijão, milho, abóbora, mandioca e algodão, capina o mato, colhe e leva ao
    estoque. O inverno para tudo, menos a mandioca. Bicho do mato come roça aberta; a cerca segura.
@@ -722,6 +722,7 @@
   K.hourly = function (S) {
     const c = S.campo;
     if (!c) return;
+    if (S.resumido) return;   // dia resumido (jogo fechado): a roça e o curral ficam como estavam; o que rendem entra pela média
     // a roça cresce (e o mato aparece no meio do caminho)
     const Sm = Sim();
     for (const b of K.rocas(S)) {
@@ -765,6 +766,17 @@
     // o mascate
     mascateTick(S);
   };
+  // depois dos dias resumidos do jogo fechado: roça que ficou parada crescendo e que o inverno não deixa seguir volta a
+  // ser terra lavrada (sem a geada levar a culpa); a madura e a mandioca esperam quem colha
+  K.afterRest = function (S) {
+    if (!S.campo) return;
+    for (const b of K.rocas(S)) {
+      const f = farmOf(b);
+      if (f.st === 'crescendo' && f.k !== 'mandioca' && S.ck.season === 3) Object.assign(f, { st: 'vazia', k: null, grow: 0, mato: 0, weeded: false, lost: 0, bonus: 1, wk: null });
+      else if (f.st === 'madura') f.ripeAt = S.t;   // o prazo de passar do ponto conta de agora
+      else if (f.mato && !f.weeded) f.mato = S.t;
+    }
+  };
   K.daily = function (S) {
     const c = S.campo;
     if (!c) return;
@@ -778,6 +790,7 @@
       }
       if (best && S.rng.chance(C.DISC_DAILY)) K.invent(S, best, null, 'pratica');
     }
+    if (S.resumido) return;   // dia resumido: nada de mato, geada, cria ou ração (veja K.hourly)
     const Sm = Sim(), winter = S.ck.season === 3;
     // roças: mato que tomou conta, colheita passando do ponto, geada
     for (const b of K.rocas(S)) {
@@ -954,7 +967,9 @@
   }
   K.payFor = function (S, price) {
     const av = tradable(S), V = C.TRADE_VALUE;
-    const keys = Object.keys(av).sort((a, b) => av[b] * V[b] - av[a] * V[a]);
+    // Etapa 12: o que brilha (prata, ouro, pedra preciosa) é a moeda: paga-se primeiro com ela
+    const coin = { gemas: 3, ouro: 2, prata: 1 };
+    const keys = Object.keys(av).sort((a, b) => (coin[b] || 0) - (coin[a] || 0) || av[b] * V[b] - av[a] * V[a]);
     const pay = {};
     let left = price;
     for (const k of keys) {
@@ -970,6 +985,7 @@
   const WORD = { couro: ['couro', 'couros'], ferramentas: ['ferramenta', 'ferramentas'], roupas: ['roupa de couro', 'roupas de couro'], mantas: ['manta', 'mantas'],
     redes: ['rede de dormir', 'redes de dormir'], tabuas: ['tábua', 'tábuas'], defumado: ['de defumado', 'de defumado'], seca: ['de fruta seca', 'de fruta seca'],
     feijao: ['de feijão', 'de feijão'], milho: ['de milho', 'de milho'], abobora: ['abóbora', 'abóboras'], mandioca: ['de mandioca', 'de mandioca'],
+    prata: ['de prata', 'de prata'], ouro: ['de ouro', 'de ouro'], gemas: ['pedra preciosa', 'pedras preciosas'], joias: ['joia', 'joias'],
     fibra: ['de fibra', 'de fibra'], carne: ['de carne', 'de carne'], peixe: ['peixe', 'peixes'], argila: ['de argila', 'de argila'], pedra: ['de pedra', 'de pedra'], madeira: ['de madeira', 'de madeira'] };
   K.payText = function (pay) {
     const parts = Object.keys(pay).map((k) => pay[k] + ' ' + (WORD[k] ? WORD[k][pay[k] === 1 ? 0 : 1] : k));

@@ -1,4 +1,4 @@
-/* Gênesis · save: seed + o que mudou. O mundo é regerado pela seed ao carregar. */
+/* Gods · save: seed + o que mudou. O mundo é regerado pela seed ao carregar. */
 (function (G) {
   'use strict';
   const C = G.CFG;
@@ -88,6 +88,8 @@
       tech: S.tech || null, fauna: packFauna(S.fauna), opts: S.opts || null, life: packLife(S.life),
       obras: G.Obras ? G.Obras.pack(S) : null, campo: G.Campo ? G.Campo.pack(S) : null,
       goalsPhase: S.goalsPhase || 1, era: S.era || '', famInit: !!S.famInit, savedAt: G.Net ? G.Net.now() : Date.now(),
+      hist: S.hist ? { day: S.hist.day, s: S.hist.s, n: S.hist.n } : null,   // a memória da aldeia (0.12), para o jogo fechado
+      povos: S.povos || null,   // Etapa 12: a convivência e as caravanas
     };
   };
 
@@ -122,6 +124,8 @@
       obras: d.obras || null, campo: d.campo || null,
       seen: unpackSeen(d.seen, w.W * w.H),
       goalsPhase: d.goalsPhase || 1, era: d.era || '', famInit: !!d.famInit,
+      hist: d.hist ? { day: -2, s: d.hist.s || [null, null, null, null], n: d.hist.n || [0, 0, 0, 0] } : null,
+      povos: d.povos || null,
     };
     for (const p of S.people) {
       p.path = null; p.pathI = 0; p.act = null; p.px = p.x; p.py = p.y; p.fail = {}; p.stuck = false;

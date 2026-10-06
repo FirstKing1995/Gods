@@ -1,0 +1,119 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Povos e minas da Etapa 12</title>
+<style>body{margin:0;background:#262b44;color:#ead4aa;font:12px monospace} canvas{image-rendering:pixelated;display:block}</style></head>
+<body><canvas id="sheet"></canvas>
+<script src="../js/core.js"></script><script src="../js/config.js"></script><script src="../js/world.js"></script>
+<script src="../js/sim.js"></script><script src="../js/family.js"></script><script src="../js/life.js"></script><script src="../js/tech.js"></script><script src="../js/invencoes.js"></script>
+<script src="../js/obras.js"></script><script src="../js/fauna.js"></script><script src="../js/bichos.js"></script><script src="../js/campo.js"></script><script src="../js/ai.js"></script>
+<script src="../js/god.js"></script><script src="../js/deus.js"></script><script src="../js/narrator.js"></script><script src="../js/povos.js"></script><script src="../js/minas.js"></script><script src="../js/save.js"></script>
+<script src="../js/art.js"></script>
+<script>
+// folha da Etapa 12: os povos (elfos, anões, povo-fera) e os mestiços ao lado dos humanos, as crianças, a ferraria e a
+// mina nos níveis, as marcas de demolir e mover, os itens e os ícones; no fim, um grupo misturado em 3x (o zoom do jogo)
+// sobre a grama e sobre a neve. ?parte=gente|criancas|obras|icones|grupo mostra só um pedaço; ?z=5 muda o zoom das folhas
+const q = new URLSearchParams(location.search);
+const parte = q.get('parte') || '', Z = +(q.get('z') || 4);
+const A = G.Art, S = A.build(), PL = G.Sim.POVO_LOOK;
+const W = 1400, H = +(q.get('h') || (parte ? 1000 : 4200));
+const sh = document.getElementById('sheet'); sh.width = W; sh.height = H;
+const x = sh.getContext('2d'); x.imageSmoothingEnabled = false;
+const GRASS = '#58a447', SNOW = '#dfe6f0', DARK = '#262b44';
+x.fillStyle = GRASS; x.fillRect(0, 0, W, H);
+let px = 8, py = 8, rowH = 0;
+function put(img, s, sx, sy, sw, sh2) { if (!img) return; s = s || Z; const w = sw || img.width, h = sh2 || img.height; if (px + w * s > W - 8) nl(); x.drawImage(img, sx || 0, sy || 0, w, h, px, py, w * s, h * s); px += w * s + 10; rowH = Math.max(rowH, h * s); }
+function nl(gap) { px = 8; py += rowH + (gap === undefined ? 12 : gap); rowH = 0; }
+// a folha de uma pessoa com os quadros separados (3 colunas: parado e dois passos; 4 linhas: frente, costas, direita, esquerda)
+function folha(sheet, fw, fh, s) {
+  s = s || Z; const g = 2 * s, w = 3 * fw * s + 2 * g, h = 4 * fh * s + 3 * g;
+  if (px + w > W - 8) nl();
+  for (let d = 0; d < 4; d++) for (let f = 0; f < 3; f++) x.drawImage(sheet, f * fw, d * fh, fw, fh, px + f * (fw * s + g), py + d * (fh * s + g), fw * s, fh * s);
+  px += w + 14; rowH = Math.max(rowH, h);
+}
+function label(t, col) { nl(4); x.fillStyle = 'rgba(24,20,37,0.78)'; x.fillRect(0, py, W, 16); x.fillStyle = col || '#ead4aa'; x.font = '12px monospace'; x.textBaseline = 'top'; x.fillText(t, 8, py + 2); py += 20; }
+function band(col, h) { nl(4); x.fillStyle = col; x.fillRect(0, py, W, h); return py; }
+let nid = 1;
+// uma pessoa de mentira: povo 'humano' | 'elfo' | 'anao' | 'fera'; k escolhe as cores do povo; tr soma traços (mestiços)
+function gente(povo, sex, k, tr, extra) {
+  const lk = { skin: k % 5, hair: ['#181425', '#2b1d1a', '#733e39', '#be4a2f', '#3e2731'][k % 5], cloth: (k * 2 + (sex === 'F' ? 3 : 0)) % 5, beard: sex === 'M' && k % 3 === 1 };
+  const P = PL[povo];
+  if (P) { lk.skin = P.skin[k % P.skin.length]; lk.hair = P.hair[k % P.hair.length]; lk.cloth = P.cloth[k % P.cloth.length]; lk.beard = false; }
+  if (povo === 'elfo') lk.orelha = 2; if (povo === 'anao') lk.anao = 2; if (povo === 'fera') lk.fera = 2;
+  Object.assign(lk, tr || {});
+  return Object.assign({ id: 'p' + (nid++), sex, look: lk }, extra || {});
+}
+const TIPOS = [
+  ['humano', 'humano', null], ['elfo', 'elfo', null], ['anão', 'anao', null], ['povo-fera', 'fera', null],
+  ['meio-elfo (orelha 1)', 'humano', { orelha: 1 }], ['meio-anão (anao 1)', 'humano', { anao: 1 }], ['meio-fera (fera 1)', 'humano', { fera: 1 }],
+  ['elfo com anão (orelha 1, anao 1)', 'humano', { orelha: 1, anao: 1 }], ['elfo com fera (orelha 1, fera 1)', 'humano', { orelha: 1, fera: 1 }],
+  ['anão com fera (anao 1, fera 1)', 'humano', { anao: 1, fera: 1 }],
+];
+if (!parte || parte === 'gente') {
+  for (const [nome, povo, tr] of TIPOS) {
+    label(nome + ': ele e ela em 3 cores (folha: frente, costas, direita, esquerda × parado e dois passos), dormindo, e os dois idosos');
+    for (let k = 0; k < 3; k++) for (const sex of ['M', 'F']) { const p = gente(povo, sex, k + (sex === 'F' ? 1 : 0), tr); const s = A.personSheet(p); folha(s.sheet, 8, 14); if (k === 0) put(s.sleep); }
+    for (const sex of ['M', 'F']) folha(A.personSheet(gente(povo, sex, 3, tr), true).sheet, 8, 14);
+  }
+}
+if (!parte || parte === 'criancas') {
+  label('crianças (6 × 11): humana, elfa, meio-elfa, fera, meio-fera, elfo com fera, anã (igual à humana); menino e menina, e dormindo');
+  for (const [povo, tr] of [['humano', null], ['elfo', null], ['humano', { orelha: 1 }], ['fera', null], ['humano', { fera: 1 }], ['humano', { orelha: 1, fera: 1 }], ['anao', null]])
+    for (const sex of ['M', 'F']) { const p = gente(povo, sex, sex === 'F' ? 1 : 0, tr); const s = A.kidSheet(p); folha(s.sheet, 6, 11, Z + 1); if (sex === 'M') put(s.sleep, Z + 1); }
+  label('as mesmas com a segunda cor de cada povo');
+  for (const [povo, tr] of [['elfo', null], ['fera', null], ['fera', null], ['humano', { fera: 1 }]])
+    for (const sex of ['M', 'F']) { const p = gente(povo, sex, sex === 'F' ? 3 : 2, tr); folha(A.kidSheet(p).sheet, 6, 11, Z + 1); }
+}
+if (!parte || parte === 'obras') {
+  label('a ferraria (2 níveis) e a mina (3 níveis), em ' + (Z + 1) + 'x e em 3x sobre a grama; as marcas de demolir e de mudar; os itens');
+  for (const k of ['ferraria', 'mina']) for (let lv = 1; lv < S.shop[k].length; lv++) put(S.shop[k][lv], Z + 1);
+  put(S.demolir, Z + 2); put(S.mover, Z + 2);
+  for (const k of ['carvao', 'minerio', 'prata', 'ouro', 'gemas', 'ferro', 'joias', 'pedra', 'madeira']) put(S.item[k], Z + 2);
+  nl();
+  for (const k of ['ferraria', 'mina']) for (let lv = 1; lv < S.shop[k].length; lv++) put(S.shop[k][lv], 3);
+  for (const k of ['marcenaria', 'tecelagem', 'armazem']) put(S.shop[k][2], 3);
+  for (const k of ['carvao', 'minerio', 'prata', 'ouro', 'gemas', 'ferro', 'joias']) put(S.item[k], 3);
+  nl();
+  const y0 = band(SNOW, 110);
+  py = y0 + 6; px = 8; rowH = 0;
+  for (const k of ['ferraria', 'mina']) for (let lv = 1; lv < S.shop[k].length; lv++) put(S.shop[k][lv], 3);
+  py = y0 + 110; rowH = 0; px = 8;
+}
+if (!parte || parte === 'icones') {
+  label('os ícones novos em 3x, 2x (painéis) e 1,6x, sobre o fundo dos painéis');
+  const names = ['humano', 'elfo', 'anao', 'fera', 'meio', 'povos', 'uniao', 'mina', 'ferraria', 'carvao', 'minerio', 'prata', 'ouro', 'gemas', 'ferro', 'joias', 'oferenda', 'seguir', 'mover', 'demolir', 'ferramentas', 'pedra', 'pessoa', 'olho'];
+  const y0 = band('#262b44', 150);
+  py = y0 + 8; px = 8; rowH = 0;
+  for (const n of names) put(A.icon(n), 4);
+  nl(8);
+  for (const n of names) put(A.icon(n), 2);
+  nl(8);
+  x.imageSmoothingEnabled = false;
+  for (const n of names) { const c = A.icon(n); if (c) { x.drawImage(c, px, py, 16, 16); px += 26; } }
+  py = y0 + 150; rowH = 0; px = 8;
+}
+// um grupo misturado, como no mapa: sombra, depois a figura (o mesmo encaixe de drawPerson, em render.js)
+function grupo(bg, z) {
+  const y0 = band(bg, 76 * z / 3 * 3 + 0), rows = [[0, 'de frente'], [2, 'de lado'], [1, 'de costas']];
+  const fila = [];
+  const mk = (povo, sex, k, tr, kid) => fila.push([gente(povo, sex, k, tr), kid]);
+  mk('humano', 'M', 1); mk('elfo', 'F', 0); mk('anao', 'M', 0); mk('fera', 'M', 0); mk('humano', 'F', 2); mk('elfo', 'M', 1); mk('anao', 'F', 1); mk('fera', 'F', 1);
+  mk('humano', 'M', 0, { orelha: 1 }); mk('humano', 'F', 3, { fera: 1 }); mk('humano', 'M', 4, { anao: 1 }); mk('elfo', 'M', 2); mk('fera', 'M', 2); mk('anao', 'M', 2); mk('humano', 'F', 0);
+  mk('fera', 'F', 3); mk('elfo', 'F', 3); mk('anao', 'F', 3); mk('humano', 'M', 3); mk('elfo', 'M', 0, null, true); mk('fera', 'F', 0, null, true); mk('humano', 'M', 2, null, true); mk('humano', 'F', 1, { fera: 1 }, true);
+  mk('anao', 'M', 1); mk('fera', 'M', 1); mk('elfo', 'F', 2); mk('humano', 'F', 4); mk('humano', 'M', 2, { orelha: 1, anao: 1 });
+  rows.forEach(([dir], r) => {
+    fila.forEach(([p, kid], i) => {
+      const s = kid ? A.kidSheet(p) : A.personSheet(p), fw = kid ? 6 : 8, fh = kid ? 11 : 14;
+      const d = dir === 2 && i % 2 ? 3 : dir, f = (i + r) % 3;
+      const wx = 14 + i * 16 + (r % 2) * 5, wy = y0 / z + 16 + r * 24 + (i % 3);
+      x.drawImage(S.shadow, Math.round((wx - 6) * z), Math.round((wy + 2) * z), S.shadow.width * z, S.shadow.height * z);
+      x.drawImage(s.sheet, f * fw, d * fh, fw, fh, Math.round((wx - fw / 2) * z), Math.round((wy - (kid ? 7 : 10)) * z), fw * z, fh * z);
+    });
+  });
+  py = y0 + 76 * z; rowH = 0; px = 8;
+}
+if (!parte || parte === 'grupo') {
+  const z = +(q.get('gz') || 3);
+  label('grupo misturado em ' + z + 'x (o zoom do jogo), de frente, de lado e de costas: na grama e na neve');
+  grupo(GRASS, z); grupo(SNOW, z);
+  if (!q.get('gz')) { label('o mesmo em 2x (celular)'); grupo(GRASS, 2); grupo(SNOW, 2); }
+}
+document.title = 'pronto';
+</script></body></html>

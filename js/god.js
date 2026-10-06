@@ -1,4 +1,4 @@
-/* Gênesis · Deus: Fé, Poder, orações, milagres e alinhamento (Etapa 2). Os níveis, os dons, o nome e os grandes atos
+/* Gods · Deus: Fé, Poder, orações, milagres e alinhamento (Etapa 2). Os níveis, os dons, o nome e os grandes atos
    (Etapa 11) moram em deus.js: aqui só os ganchos (God.gain soma Poder e glória; os dons mudam custo e alcance). Sem DOM. */
 (function (G) {
   'use strict';

@@ -1,4 +1,4 @@
-/* Gênesis · conexão com o servidor (Google Apps Script). Sem servidor configurado, o jogo fica só local. */
+/* Gods · conexão com o servidor (Google Apps Script). Sem servidor configurado, o jogo fica só local. */
 (function (G) {
   'use strict';
   const C = G.CFG;

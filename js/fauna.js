@@ -1,4 +1,4 @@
-/* Gênesis · bichos (Etapas 5 e 9). Capivaras na beira d'água; veados, porcos-do-mato e jacus na mata; pacas e antas
+/* Gods · bichos (Etapas 5 e 9). Capivaras na beira d'água; veados, porcos-do-mato e jacus na mata; pacas e antas
    na mata perto da água; tatus e tapitis no campo; jacarés na beira dos lagos. Cada espécie tem o seu jeito: pasta de
    dia (a paca, de noite), foge de quem chega perto (as ariscas) ou só de quem ataca, e o bando cresce com o tempo.
    O porco-do-mato e a anta podem partir para cima de quem atacou; o jacaré espreita quem trabalha na beira d'água.
@@ -225,6 +225,7 @@
   function nearPerson(S, e, r) {
     for (const p of S.people) {
       if (!p.alive || p.carriedBy || p.inTent || p.sleeping || G.Family.age(S, p) < 7) continue;
+      if (p.sangue && G.Povos && G.Povos.has(p, 'faro')) continue;   // Etapa 12: o faro chega sem ser notado
       if (Math.abs(p.x - e.x) <= r && Math.abs(p.y - e.y) <= r && Math.hypot(p.x - e.x, p.y - e.y) <= r) return p;
     }
     return null;

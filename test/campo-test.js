@@ -1,4 +1,4 @@
-// Gênesis · testes do campo (Etapa 10). Uso: node test/campo-test.js [anos | u]
+// Gods · testes do campo (Etapa 10). Uso: node test/campo-test.js [anos | u]
 // 1) unidades: a árvore do campo (roça → algodão, criação e, com a corda, cerca), a prática e a Revelação; a roça (terra
 //    boa, plantar, crescer por estação, o mato e a capina, madurar, passar do ponto, a geada do inverno, a mandioca que
 //    aguenta o frio, o que o povo escolhe plantar, o adubo e a fartura, colher e levar ao estoque); a roça jogada pela IA;
@@ -11,7 +11,7 @@
 const path = require('path');
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 globalThis.G = {};
-for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
+for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
 const { W, Sim, CFG: C, Family: F, God, Save, AI, Tech: T, Inv: I, Life: L, Obras: O, Fauna: FA, Campo: K, Narr: N } = G;
 const Y = 60 * 1440, D = 1440;
 

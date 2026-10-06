@@ -1,4 +1,4 @@
-/* Gênesis · família (Etapa 3): idades, laços, gravidez, parto, bebês no colo e parentesco. Sem DOM.
+/* Gods · família (Etapa 3): idades, laços, gravidez, parto, bebês no colo e parentesco. Sem DOM.
    Etapa 6: relações livres. Cada adulto pode ter até BONDS_MAX pares, de qualquer sexo (p.bonds = { id: afeto });
    filhos nascem de mulher com homem, que podem ser de pares diferentes. Nunca entre parentes próximos.
    A intimidade é abstraída: o par dorme junto na barraca e aparece um coração. */
@@ -13,7 +13,11 @@
   F.stageOfAge = (age) => (age < 3 ? 'bebe' : age < 12 ? 'crianca' : age < 18 ? 'jovem' : age < C.OLD_AGE ? 'adulto' : 'idoso');
   F.age = (S, p) => Math.floor((S.t - p.born) / YEAR());
   F.ageYears = (S, p) => (S.t - p.born) / YEAR();
-  F.stage = (S, p) => F.stageOfAge(F.age(S, p));
+  // Etapa 12: os povos envelhecem em ritmos diferentes. A idade do corpo: até os 18 é a de verdade; depois, os anos de
+  // adulto se esticam até a velhice do povo (p.velho; nos humanos, 60: tudo como sempre). É ela que decide a fase da
+  // vida, até quando se tem filho e par, e a velhice. Adulto é sempre quem tem 18 anos de verdade.
+  F.bodyAge = (S, p) => { const a = F.age(S, p), old = p.velho; return !old || old === C.OLD_AGE || a <= 18 ? a : Math.floor(18 + (a - 18) * (C.OLD_AGE - 18) / (old - 18)); };
+  F.stage = (S, p) => F.stageOfAge(F.bodyAge(S, p));
   const LABEL = {
     F: { bebe: 'bebê', crianca: 'criança', jovem: 'jovem', adulto: 'adulta', idoso: 'idosa' },
     M: { bebe: 'bebê', crianca: 'criança', jovem: 'jovem', adulto: 'adulto', idoso: 'idoso' },
@@ -21,13 +25,22 @@
   F.stageLabel = (S, p) => LABEL[p.sex === 'F' ? 'F' : 'M'][F.stage(S, p)];
   F.isAdult = (S, p) => F.age(S, p) >= 18;
 
-  function person(S, id) { if (!id) return null; for (const q of S.people) if (q.id === id) return q; return null; }
+  // (0.12: índice por id, refeito quando entra gente; antes era uma busca na lista inteira a cada chamada)
+  const byId = new WeakMap();
+  function person(S, id) {
+    if (!id) return null;
+    const list = S.people;
+    let m = byId.get(list);
+    if (!m || m.n !== list.length) { m = new Map(); for (const q of list) m.set(q.id, q); m.n = list.length; byId.set(list, m); }
+    return m.get(id) || null;
+  }
   F.person = person;
 
   // quem trabalha em quê: criança só colhe frutas e busca água, a partir dos 7
   F.canWork = function (S, p, wk) {
     const st = F.stage(S, p);
     if (st === 'bebe' || p.labor || (p.rest && p.rest > S.t)) return false;   // resguardo depois do parto
+    if (p.sangue && G.Povos && !G.Povos.canWork(p, wk)) return false;   // Etapa 12: elfo não derruba árvore, anão não pesca
     if (st === 'crianca') return F.age(S, p) >= C.CHILD_HELP_AGE && (wk === 'frutas' || wk === 'agua' || wk === 'criacao');   // Etapa 10: ovos e ração
     return true;
   };
@@ -45,15 +58,17 @@
     let f = st === 'crianca' ? 0.9 : st === 'idoso' ? 0.85 : 1;
     if (F.latePregnant(S, p)) f *= 0.85;
     if (p.hurt && p.hurt.until > S.t) f *= p.hurt.walk;   // pé torcido
+    if (p.sangue && G.Povos) f *= G.Povos.body(p).walk;   // Etapa 12: o passo de cada povo
     return f;
   };
-  F.carryCap = (S, p) => Math.round((F.stage(S, p) === 'crianca' ? C.CARRY_CHILD : C.CARRY) * (G.Tech ? G.Tech.carryMult(S) : 1));   // cestos: metade a mais
+  F.carryCap = (S, p) => Math.round((F.stage(S, p) === 'crianca' ? C.CARRY_CHILD : C.CARRY) * (G.Tech ? G.Tech.carryMult(S) : 1) * (p.sangue && G.Povos ? G.Povos.body(p).carry : 1));   // cestos: metade a mais; o anão carrega mais
   // aprender: jovem aprende mais rápido, e mais ainda perto de um idoso
   F.xpFactor = function (S, p) {
     const st = F.stage(S, p);
     let f = st === 'jovem' ? 1.5 : st === 'crianca' ? 1.2 : 1;
     if ((st === 'jovem' || st === 'crianca') && S.people.some((q) => q.alive && q !== p && F.stage(S, q) === 'idoso' && Math.hypot(q.x - p.x, q.y - p.y) < 6)) f *= 1.25;
     if (G.Deus && G.Deus.saber(S, 'escrita')) f *= C.ESCRITA_XP;   // a escrita (Etapa 11): todos aprendem mais rápido
+    if (S.povos && S.povos.mixed && G.Povos) f *= G.Povos.xp(S, p);   // Etapa 12: o versátil aprende com os outros povos
     return f;
   };
   F.nursing = (S, p) => p.sex === 'F' && S.people.some((b) => b.alive && b.mother === p.id && F.stage(S, b) === 'bebe' && b.carriedBy === p.id);
@@ -66,6 +81,7 @@
     else if (st === 'idoso') { m.fome = 0.9; m.energia = 1.2; m.frio = 1.15; }
     if (p.preg) { m.fome *= C.PREGNANT_HUNGER; m.energia *= C.PREGNANT_ENERGY; }
     if (F.nursing(S, p)) { m.fome *= 1.15; m.sede *= 1.15; }
+    if (p.sangue && G.Povos) { const b = G.Povos.body(p); m.fome *= b.fome; m.frio *= b.cold; }   // Etapa 12: o corpo de cada povo
     return m;
   };
   // bocas para o cálculo de "comida para N dias"
@@ -154,7 +170,9 @@
   };
 
   // ---------- nomes e herança ----------
-  F.pickName = function (S, sex) {
+  F.pickName = function (S, sex, mom, dad) {
+    const own = G.Povos && mom && dad ? G.Povos.babyName(S, sex, mom, dad) : null;   // Etapa 12: pai e mãe do mesmo povo de fora
+    if (own) return own;
     const pool = sex === 'F' ? Sim().namePool.FEM : Sim().namePool.MASC;
     const used = new Set(S.people.filter((q) => q.alive).map((q) => q.name));
     const free = pool.filter((n) => !used.has(n));
@@ -204,29 +222,42 @@
   // brigados não se aproximam até fazer as pazes
   F.feuding = (S, a, b) => !!((a.feud && a.feud[b.id] > S.t) || (b.feud && b.feud[a.id] > S.t));
   // pares de cada tipo: do outro sexo (até BONDS_MAX) e do mesmo sexo (até BONDS_SAME_MAX, à parte)
-  const countKind = (S, p, same) => F.partners(S, p).filter((q) => (q.sex === p.sex) === same).length;
+  const countKind = (S, p, same) => {
+    let n = 0;
+    if (p.bonds) for (const id in p.bonds) { const q = person(S, +id); if (q && q.alive && (q.sex === p.sex) === same) n++; }
+    return n;
+  };
   // quem ainda pode ter mais um par
-  F.canBond = (S, p) => p.alive && !p.carriedBy && F.age(S, p) >= 18 && F.age(S, p) <= C.BOND_AGE_MAX;
+  F.canBond = (S, p) => p.alive && !p.carriedBy && F.age(S, p) >= 18 && F.bodyAge(S, p) <= C.BOND_AGE_MAX;
   // novos pares: quem conversa muito, anda de bem com a vida e não é parente próximo.
   // Ter par não impede outro; só pesa um pouco (BOND_MORE por par do mesmo tipo que já tem).
   function formBonds(S) {
+    // (0.12: as mesmas condições de sempre, as baratas primeiro; com 80 pessoas são três mil pares por dia)
     const free = S.people.filter((p) => F.canBond(S, p));
+    // quantos pares de cada tipo cada um tem: contado uma vez e corrigido quando nasce um par novo
+    const cnt = new Map();
+    const kind = (p, same) => { const key = p.id * 2 + (same ? 1 : 0); let n = cnt.get(key); if (n === undefined) { n = countKind(S, p, same); cnt.set(key, n); } return n; };
     for (let i = 0; i < free.length; i++) for (let j = i + 1; j < free.length; j++) {
       const a = free[i], b = free[j];
-      if (F.isPartner(a, b) || F.closeKin(S, a, b) || F.feuding(S, a, b)) continue;
-      const same = a.sex === b.sex, max = same ? C.BONDS_SAME_MAX : C.BONDS_MAX;
-      const na = countKind(S, a, same), nb = countKind(S, b, same);
-      if (na >= max || nb >= max) continue;
+      if (a.mood < 40 || b.mood < 40) continue;
       const talks = Math.min(a.rel[b.id] || 0, b.rel[a.id] || 0);
-      if (talks < C.COUPLE_TALKS || a.mood < 40 || b.mood < 40) continue;
+      if (talks < C.COUPLE_TALKS) continue;
+      if (F.isPartner(a, b) || F.feuding(S, a, b)) continue;
+      const same = a.sex === b.sex, max = same ? C.BONDS_SAME_MAX : C.BONDS_MAX;
+      const na = kind(a, same), nb = kind(b, same);
+      if (na >= max || nb >= max) continue;
+      if (F.closeKin(S, a, b)) continue;
       let ch = C.COUPLE_DAILY * Math.pow(C.BOND_MORE, Math.min(2, na + nb));
       if (same) ch *= C.BOND_SAME_SEX;
       else {
         const w = a.sex === 'F' ? a : b;
-        if (F.age(S, w) <= C.FERTILE_MAX && !F.partners(S, w).some((m) => m.sex === 'M')) ch *= C.BOND_FERTILE;   // quer ter filho
+        if (F.bodyAge(S, w) <= C.FERTILE_MAX && !F.partners(S, w).some((m) => m.sex === 'M')) ch *= C.BOND_FERTILE;   // quer ter filho
       }
+      if (S.povos && S.povos.mixed && G.Povos) ch *= G.Povos.bondMult(S, a, b);   // Etapa 12: povos que se estranham se juntam menos
       if (!S.rng.chance(ch)) continue;
       F.link(S, a, b, 55);
+      cnt.set(a.id * 2 + (same ? 1 : 0), na + 1); cnt.set(b.id * 2 + (same ? 1 : 0), nb + 1);
+      if (S.povos && S.povos.mixed && G.Povos) G.Povos.onBond(S, a, b);
       S.stats.bonds = (S.stats.bonds || 0) + 1;
       Sim().chron(S, a.name + ' e ' + b.name + ' estão juntos.');
       if (G.Life) G.Life.onBond(S, a, b);
@@ -253,25 +284,73 @@
     for (const q of S.people) if (q.alive && q.mother === w.id) best = Math.min(best, F.ageYears(S, q));
     return best;
   }
+  // a noite de um dia resumido: cada um na sua casa, e quem tem par morando em outra dorme lá em parte das noites,
+  // com os mesmos pesos da visita de verdade (AI: visitTent). Devolve pessoa → casa em que passou a noite.
+  function restNight(S) {
+    const Sm = Sim(), home = new Map(), load = new Map(), loc = new Map(), host = new Set();
+    for (const b of S.buildings) {
+      if (!b.built || !b.beds || !Sm.def(b).cap) continue;
+      load.set(b.id, b.beds.length);
+      for (const id of b.beds) home.set(id, b);
+    }
+    for (const p of S.people) if (p.alive && !p.carriedBy && home.has(p.id)) loc.set(p.id, home.get(p.id).id);
+    for (const p of S.people) {
+      if (!loc.has(p.id) || !p.bonds || p.labor || host.has(p.id) || F.age(S, p) < 18) continue;
+      const h = home.get(p.id), opts = [];
+      let stay = C.VISIT_HOME;
+      for (const q of F.partners(S, p)) {
+        if (q.carriedBy || F.age(S, q) < 18) continue;
+        const af = F.afeto(p, q), qt = home.get(q.id);
+        if (qt === h) { stay += af; continue; }
+        if (!qt || loc.get(q.id) !== qt.id) continue;   // sem casa, ou foi dormir com outro par
+        if (load.get(qt.id) + 1 > Sm.def(qt).cap + C.VISIT_SQUEEZE) continue;
+        opts.push({ q, qt, w: af });
+      }
+      if (!opts.length) continue;
+      let sum = stay;
+      for (const o of opts) sum += o.w;
+      let r = S.rng.next() * sum - stay;
+      if (r < 0) continue;
+      for (const o of opts) {
+        r -= o.w;
+        if (r > 0) continue;
+        loc.set(p.id, o.qt.id); load.set(o.qt.id, load.get(o.qt.id) + 1); load.set(h.id, load.get(h.id) - 1);
+        host.add(o.q.id);   // quem recebe fica em casa esta noite
+        break;
+      }
+    }
+    return loc;
+  }
   // uma vez por noite: pares que dormem na mesma barraca (moradores ou visita), afeto alto e o corpo em dia
   function nightTogether(S) {
     const hearts = new Set();
+    let said = false;
+    // dia resumido (jogo fechado, offline.js): ninguém anda; quem dorme com quem sai do mesmo sorteio da noite de visita
+    const rest = !!S.resumido, loc = rest ? restNight(S) : null;
     for (const w of S.people) {
-      if (!w.alive || !w.sleeping || !w.inTent || !w.bonds) continue;
-      const here = F.partners(S, w).filter((q) => q.sleeping && q.inTent === w.inTent);
+      if (!w.alive || !w.bonds || (rest ? !loc.has(w.id) : !w.sleeping || !w.inTent)) continue;
+      const here = rest ? F.partners(S, w).filter((q) => loc.get(q.id) === loc.get(w.id))
+        : F.partners(S, w).filter((q) => q.sleeping && q.inTent === w.inTent);
       if (!here.length) continue;
       for (const q of here) {
         if (w.id < q.id) F.addAfeto(S, w, q, C.AFETO_NIGHT);   // cada par uma vez
+        if (rest) continue;
         if (F.afeto(w, q) >= C.AFETO_MIN && !hearts.has(w.inTent)) {
           hearts.add(w.inTent);
           const tb = Sim().building(S, w.inTent);
           if (tb) S.events.push({ k: 'heart', x: tb.x + 1, y: tb.y });
+          // tom adulto (0.12): a noite do par é dita sem rodeio, uma vez por noite no máximo (os dois com 18 ou mais)
+          if (tb && !said && F.adulto(S) && !S.safe && grown(S, w) && grown(S, q) && !F.closeKin(S, w, q) && S.rng.chance(0.2)) {
+            said = true;
+            S.stats.sexo = (S.stats.sexo || 0) + 1;
+            Sim().toast(S, S.rng.pick([w.name + ' e ' + q.name + ' transaram ' + houseName(S, tb) + ' esta noite.', 'Noite de sexo ' + houseName(S, tb) + ': ' + w.name + ' e ' + q.name + '.', w.name + ' e ' + q.name + ' fizeram amor ' + houseName(S, tb) + ' até tarde.']), 'amor');
+          }
         }
       }
       // gravidez: mulher com um par homem, adultos, sem parentesco próximo
       if (w.sex !== 'F' || w.preg || w.labor) continue;
       const aw = F.age(S, w);
-      if (aw < 18 || aw > C.FERTILE_MAX) continue;
+      if (aw < 18 || F.bodyAge(S, w) > C.FERTILE_MAX) continue;
       const men = here.filter((m) => m.sex === 'M' && F.age(S, m) >= 18 && F.afeto(w, m) >= C.AFETO_MIN && !F.closeKin(S, w, m));
       if (!men.length) continue;
       if (youngestChildAge(S, w) < C.BIRTH_SPACING_Y) continue;
@@ -282,7 +361,7 @@
       for (const m of men) sum += F.afeto(w, m);
       let r = S.rng.next() * sum, m = men[0];
       for (const x of men) { r -= F.afeto(w, x); if (r <= 0) { m = x; break; } }
-      if (S.rng.next() < C.CONCEIVE_NIGHT * (F.afeto(w, m) / 100) * (G.Deus && G.Deus.dom(S, 'ventre') ? C.DOM.ventreConceive : 1)) {
+      if (S.rng.next() < C.CONCEIVE_NIGHT * (F.afeto(w, m) / 100) * (G.Deus && G.Deus.dom(S, 'ventre') ? C.DOM.ventreConceive : 1) * ((w.sangue || m.sangue) && G.Povos ? G.Povos.fert(w, m) : 1)) {
         w.preg = { t0: S.t, due: S.t + Math.round(C.PREGNANCY_Y * YEAR()), father: m.id, known: false };
       }
     }
@@ -290,7 +369,12 @@
   // ---------- noites picantes (0.10, pedido do jogador) ----------
   // Só entre adultos (18 anos ou mais), sem parentesco próximo entre ninguém do grupo e sem briga; tudo insinuado,
   // nunca descrito. Desliga no menu (S.opts.picante === false) e não acontece com o jogo fechado.
-  const spicy = (S) => !(S.opts && S.opts.picante === false) && !S.safe;
+  // 0.12: o tom do mundo, escolhido no menu. 0 leve (sem noites picantes), 1 picante (insinuado, o padrão), 2 adulto
+  // (+18: sexo entre adultos dito sem rodeio e briga com palavrão; nada é descrito nem desenhado). Em qualquer tom,
+  // só gente de 18 anos ou mais, sem parentesco próximo. Saves antigos: picante === false é o tom leve.
+  F.tom = (S) => { const o = (S && S.opts) || {}; return o.tom ? (o.tom === 'adulto' ? 2 : o.tom === 'leve' ? 0 : 1) : o.picante === false ? 0 : 1; };
+  F.adulto = (S) => F.tom(S) === 2;
+  const spicy = (S) => F.tom(S) >= 1 && !S.safe;
   F.spicy = spicy;
   const grown = (S, p) => !!(p && p.alive && !p.carriedBy && F.age(S, p) >= 18);
   function clean(S, list) {
@@ -336,13 +420,16 @@
     for (const q of three) Sm.addMem(S, q, 'noiteTres');
     const tb = Sm.building(S, tid), names = Sm.listNames(three), where = houseName(S, tb);
     if (tb) S.events.push({ k: 'heart', x: tb.x + 1, y: tb.y, many: 3 });
-    if (st.trios === 1) Sm.chron(S, 'A primeira noite a três do povo: ' + names + ' passaram a noite juntos ' + where + ', e dormir foi o de menos.');
-    else if (S.rng.chance(0.35)) Sm.toast(S, S.rng.pick(['Noite animada ' + where + ': ' + names + '.', names + ' dividiram a mesma cama ' + where + ' esta noite.', 'De novo a três ' + where + ': ' + names + '. O povo já nem estranha.']), 'amor');
+    const ad = F.adulto(S);
+    if (st.trios === 1) Sm.chron(S, ad ? 'A primeira noite a três do povo: ' + names + ' transaram juntos ' + where + ', e de manhã ninguém fingiu que foi sem querer.' :
+      'A primeira noite a três do povo: ' + names + ' passaram a noite juntos ' + where + ', e dormir foi o de menos.');
+    else if (S.rng.chance(0.35)) Sm.toast(S, S.rng.pick(ad ? ['Sexo a três ' + where + ': ' + names + '.', names + ' transaram juntos ' + where + ' esta noite.', 'De novo os três na mesma cama ' + where + ': ' + names + '. O povo já nem estranha.'] :
+      ['Noite animada ' + where + ': ' + names + '.', names + ' dividiram a mesma cama ' + where + ' esta noite.', 'De novo a três ' + where + ': ' + names + '. O povo já nem estranha.']), 'amor');
   }
   // depois da festa: um grupo de adultos ligados por pares (cada um tem par no grupo) estica a noite junto
   F.afterParty = function (S, ps) {
     if (!spicy(S)) return null;
-    const adults = ps.filter((q) => grown(S, q) && F.age(S, q) <= C.BOND_AGE_MAX && q.mood >= 50 && !q.labor && F.partners(S, q).length);
+    const adults = ps.filter((q) => grown(S, q) && F.bodyAge(S, q) <= C.BOND_AGE_MAX && q.mood >= 50 && !q.labor && F.partners(S, q).length);
     if (adults.length < C.PARTY_MANY_MIN) return null;
     let best = [];
     for (const seed of adults) {
@@ -371,8 +458,10 @@
     }
     if (home) S.events.push({ k: 'heart', x: home.x + 1, y: home.y, many: best.length });
     const names = Sm.listNames(best), where = home ? houseName(S, home) : 'na barraca maior';
-    if (st.manyNights === 1) Sm.chron(S, 'Depois da festa, ' + names + ' não foram cada um para a sua casa: a festa continuou ' + where + '. Foi a primeira noite de muitos do povo; no dia seguinte ninguém tocou no assunto, mas todo mundo sorria.');
-    else if (S.rng.chance(0.5)) Sm.toast(S, 'A festa continuou ' + where + ': ' + names + ' esticaram a noite juntos.', 'amor');
+    const ad = F.adulto(S);
+    if (st.manyNights === 1) Sm.chron(S, ad ? 'Depois da festa, ' + names + ' não foram cada um para a sua casa: a festa acabou em sexo ' + where + ', todos com todos. Foi a primeira noite de muitos do povo; no dia seguinte ninguém tocou no assunto, mas todo mundo sorria.' :
+      'Depois da festa, ' + names + ' não foram cada um para a sua casa: a festa continuou ' + where + '. Foi a primeira noite de muitos do povo; no dia seguinte ninguém tocou no assunto, mas todo mundo sorria.');
+    else if (S.rng.chance(0.5)) Sm.toast(S, ad ? 'A festa acabou em sexo ' + where + ': ' + names + '.' : 'A festa continuou ' + where + ': ' + names + ' esticaram a noite juntos.', 'amor');
     return best;
   };
 
@@ -441,7 +530,8 @@
       return null;
     }
     const sex = S.rng.chance(0.5) ? 'F' : 'M';
-    const baby = F.makeBaby(S, w, dad, sex, F.pickName(S, sex));
+    const baby = F.makeBaby(S, w, dad, sex, F.pickName(S, sex, w, dad));
+    if (G.Povos) G.Povos.inherit(S, baby, w, dad);   // Etapa 12: o povo, o sangue e os dons
     // o bebê mais velho passa para o colo do pai
     if (dad && dad.alive) for (const b of S.people) if (b.alive && b.carriedBy === w.id && !F.carrying(S, dad)) b.carriedBy = dad.id;
     S.people.push(baby);
@@ -456,6 +546,7 @@
     for (const q of S.people) if (q.alive && q !== w && q !== dad && q !== baby && F.closeKin(S, q, baby)) Sm.addMem(S, q, 'nasceuIrmao');
     if (first && !S.stats.eraEnd) { S.era = 'familia'; Sm.chron(S, 'Começa a Era da Família.'); }
     G.God.onBirth(S, baby, w, dad);
+    if (G.Povos) G.Povos.onBirth(S, baby, w, dad);
     if (G.Life) G.Life.onBirth(S, baby, w, dad);   // agradecem e fazem festa
     return baby;
   }
@@ -531,7 +622,7 @@
       Sm.chron(S, (first ? 'A primeira criança do povo cresceu: ' : '') + p.name + ' fez 18 anos.');
       // o primogênito virou adulto: o Narrador manda um segundo casal pedindo abrigo
       if ((p.mother || p.father) && G.Narr) G.Narr.onAdult(S, p);
-    } else if (age === C.OLD_AGE) Sm.toast(S, p.name + ' fez ' + age + ' anos: ensina os jovens, mas já não tem a mesma força.');
+    } else if (age === (p.velho || C.OLD_AGE)) Sm.toast(S, p.name + ' fez ' + age + ' anos: ensina os jovens, mas já não tem a mesma força.');
     else Sm.toast(S, 'Aniversário de ' + p.name + ': ' + age + ' anos.');
   }
   function oldAge(S, p, age) {
@@ -596,7 +687,7 @@
       const age = F.age(S, p);
       if (p.lastAge !== undefined && age > p.lastAge) birthday(S, p, age);
       p.lastAge = age;
-      oldAge(S, p, age);
+      oldAge(S, p, p.velho ? F.bodyAge(S, p) : age);
     }
     coolBonds(S);
     formBonds(S);

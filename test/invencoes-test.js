@@ -1,4 +1,4 @@
-// Gênesis · testes das invenções (Etapa 8). Uso: node test/invencoes-test.js [anos]
+// Gods · testes das invenções (Etapa 8). Uso: node test/invencoes-test.js [anos]
 // 1) unidades: a árvore (o que abre o quê), a prática (cada trabalho ensina a sua, várias ao mesmo tempo), inventar
 //    (quem mais praticou, uma por dia, festa e Crônica), a Revelação (a escolhida, a trilha primeiro, a mais adiantada),
 //    os efeitos (faca, corda, machado, agulha, rede de pesca, arco e flecha, vasos, tambor e flauta, na conta e na prática),
@@ -8,7 +8,7 @@
 const path = require('path');
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 globalThis.G = {};
-for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
+for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
 const { W, Sim, CFG: C, Family: F, God, Save, AI, Tech: T, Inv: I, Life: L, Obras: O, Fauna: FA } = G;
 const Y = 60 * 1440, D = 1440;
 

@@ -1,4 +1,4 @@
-/* Gênesis · núcleo: seed, ruído e utilidades.
+/* Gods · núcleo: seed, ruído e utilidades.
    Sem DOM: roda no navegador e no Node (testes de balanceamento). */
 (function (G) {
   'use strict';

@@ -1,4 +1,4 @@
-/* Gênesis · interface (DOM): HUD, Vontades, povo, construir, Crônica, avisos e balões. */
+/* Gods · interface (DOM): HUD, Vontades, povo, construir, Crônica, avisos e balões. */
 (function (G) {
   'use strict';
   const C = G.CFG, Sim = G.Sim, AI = G.AI, A = G.Art;
@@ -11,9 +11,9 @@
   let S = null;
   UI.sel = { person: 0, building: 0 };
 
-  const VORDER = ['frutas', 'pesca', 'caca', 'roca', 'criacao', 'agua', 'madeira', 'pedra', 'argila', 'construir', 'oficio', 'conservar', 'fogo'];
+  const VORDER = ['frutas', 'pesca', 'caca', 'roca', 'criacao', 'agua', 'madeira', 'pedra', 'mina', 'argila', 'construir', 'oficio', 'conservar', 'fogo'];
   const VICON = { frutas: 'frutas', pesca: 'peixe', caca: 'lanca', agua: 'agua', madeira: 'madeira', pedra: 'pedra', argila: 'argila',
-    construir: 'construir', oficio: 'ferramentas', conservar: 'moquem', fogo: 'fogo', roca: 'roca', criacao: 'galinha' };
+    construir: 'construir', oficio: 'ferramentas', conservar: 'moquem', fogo: 'fogo', roca: 'roca', criacao: 'galinha', mina: 'mina' };
   const VHELP = {
     frutas: 'Colher pitangas nos arbustos. Arbustos não dão fruta no inverno.',
     pesca: 'Pescar na beira da água. Peixe assado na fogueira sustenta mais.',
@@ -28,6 +28,7 @@
     fogo: 'Manter a fogueira acesa quando esfria.',
     roca: 'Plantar, capinar e colher nas roças, e levar a colheita ao estoque. No inverno só a mandioca cresce.',
     criacao: 'Recolher ovos, leite e lã no curral, levar ração aos bichos no frio e abater quando o curral enche. Criança de 7 anos já recolhe ovos.',
+    mina: 'Trabalhar na mina: pedra sempre e, com sorte, carvão e minério; na mina funda, prata, ouro e pedras preciosas.',
   };
   const LEVELS = ['Proibido', 'Baixa', 'Normal', 'Máxima'];
   const NEEDS = [['fome', 'Fome', 'fome'], ['sede', 'Sede', 'sede'], ['energia', 'Energia', 'energia'], ['calor', 'Calor', 'calor'], ['social', 'Social', 'social'], ['saude', 'Saúde', 'saude']];
@@ -91,17 +92,35 @@
     g_escolhido: 'Quem chega à fé inteira (100), com 16 anos ou mais, pode receber um poder: Deus → Escolhidos.',
     g_estatua: 'Construir → Estátua. Pronta, toque nela e escolha o milagre dela.',
     g_ato: 'No nível 4, crie uma espécie; no nível 5, ensine um saber. Deus → Grandes atos.',
+    // Etapa 12: povos e minas
+    p_acolher: 'As caravanas chegam depois que o acampamento vira aldeia. No nível 2, Deus pode chamar um povo: Deus → Povos.',
+    p_casal: 'Os pares entre povos nascem da conversa, como os outros, e saem mais fácil com a convivência alta.',
+    p_hibrido: 'Um casal de mulher e homem de povos diferentes pode ter um filho mestiço: um dom de cada lado.',
+    p_tres: 'Acolha elfos, anões e povo-fera. Quem foi mandado seguir volta uma vez; depois, só chamando.',
+    p_uniao: 'Festa, história ao pé do fogo, casais e filhos mistos aproximam. Briga afasta. Veja em Deus → Povos.',
+    m_mina: 'Com a mineração (os anões trazem), Construir → Mina, encostada na serra ou perto de pedras.',
+    m_ferraria: 'Com a metalurgia, Construir → Ferraria: 20 de pedra e 10 de madeira.',
+    m_ferro: 'A forja pede 2 de minério e 1 de carvão, e alguém que saiba forjar: um anão, ou Ofício no nível 4.',
+    m_ouro: 'O ouro só aparece na mina funda (nível 2) e na mina de veio (nível 3).',
   };
   // estoque: os cinco de sempre e os da Etapa 5, que aparecem quando existem
   const RES = [['madeira', 'madeira'], ['pedra', 'pedra'], ['argila', 'argila'], ['tabuas', 'tabuas'], ['fibra', 'fibra'], ['agua', 'agua'], ['frutas', 'frutas'], ['peixe', 'peixe'], ['carne', 'carne'],
     ['feijao', 'feijao'], ['milho', 'milho'], ['abobora', 'abobora'], ['mandioca', 'mandioca'], ['ovos', 'ovos'], ['leite', 'leite'],
-    ['defumado', 'defumado'], ['seca', 'frutaseca'], ['couro', 'couro'], ['ferramentas', 'ferramentas'], ['roupas', 'roupas'], ['mantas', 'mantas'], ['redes', 'redes']];
+    ['defumado', 'defumado'], ['seca', 'frutaseca'], ['couro', 'couro'], ['ferramentas', 'ferramentas'], ['roupas', 'roupas'], ['mantas', 'mantas'], ['redes', 'redes'],
+    ['carvao', 'carvao'], ['minerio', 'minerio'], ['ferro', 'ferro'], ['prata', 'prata'], ['ouro', 'ouro'], ['gemas', 'gemas'], ['joias', 'joias']];   // Etapa 12
   const RES_BASE = new Set(['madeira', 'pedra', 'agua', 'frutas', 'peixe']);
   const RES_NAME = { madeira: 'Madeira', pedra: 'Pedra', agua: 'Água', frutas: 'Frutas', peixe: 'Peixe', carne: 'Carne', couro: 'Couro', argila: 'Argila',
     defumado: 'Defumado (peixe e carne)', seca: 'Fruta seca', ferramentas: 'Ferramentas', roupas: 'Roupas de couro',
     tabuas: 'Tábuas', fibra: 'Fibra (embira, algodão e lã)', mantas: 'Mantas', redes: 'Redes de dormir',
-    feijao: 'Feijão', milho: 'Milho', abobora: 'Abóbora', mandioca: 'Mandioca', ovos: 'Ovos', leite: 'Leite' };
+    feijao: 'Feijão', milho: 'Milho', abobora: 'Abóbora', mandioca: 'Mandioca', ovos: 'Ovos', leite: 'Leite',
+    carvao: 'Carvão', minerio: 'Minério de ferro', ferro: 'Ferramentas de ferro', prata: 'Prata', ouro: 'Ouro', gemas: 'Pedras preciosas', joias: 'Joias' };
   // o nome do material no meio de uma frase
+  const cap1 = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+  const TOM_DESC = {
+    leve: 'Namoro de mãos dadas. Os pares têm filhos, e a Crônica não fala das noites.',
+    picante: 'Noites a três e noites de muitos na Crônica, insinuadas e nunca descritas. Só entre adultos, sem parentes.',
+    adulto: 'O povo fala de desejo sem rodeio, a Crônica diz quem transou com quem, e briga de adulto tem palavrão. Só entre adultos, sem parentes; nenhuma cena é descrita.',
+  };
   const MAT_WORD = { madeira: 'madeira', pedra: 'pedra', argila: 'argila', tabuas: 'tábuas', fibra: 'fibra' };
   UI.RES_NAME = RES_NAME;
 
@@ -132,7 +151,7 @@
     });
     // construir (as das descobertas aparecem com elas; o armazém, depois do primeiro inverno) e a ferramenta de caminho
     const builds = [['fogueira', 'fogo'], ['barraca', 'barraca'], ['armazem', 'armazem'], ['moquem', 'moquem'], ['jirau', 'jirau'], ['forno', 'forno'],
-      ['marcenaria', 'marcenaria'], ['tecelagem', 'tecelagem'], ['roca', 'roca'], ['curral', 'curral'], ['estatua', 'estatua']];
+      ['marcenaria', 'marcenaria'], ['tecelagem', 'tecelagem'], ['roca', 'roca'], ['curral', 'curral'], ['mina', 'mina'], ['ferraria', 'ferraria'], ['estatua', 'estatua']];
     const SHORT = { barraca: 'Barraca', forno: 'Forno' };   // nome curto no botão (o painel fica em duas fileiras)
     $('#builds').innerHTML = builds.map(([t, icn]) => {
       const d = C.BUILD[t];
@@ -200,6 +219,27 @@
       const c = e.target.closest('[data-pid]'); if (!c) return;
       UI.select(+c.dataset.pid, 0, true);
     });
+    // a lista: busca pelo nome e ordem (valem só nesta sessão)
+    const search = $('#povo-search'), relist = () => { listSig = ''; $('#people').scrollTop = 0; if (S) paintPeople(); };
+    search.addEventListener('input', () => { listQ = norm(search.value.trim()); relist(); });
+    search.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (search.value) { search.value = ''; listQ = ''; relist(); e.preventDefault(); } else search.blur();
+    });
+    $('#povo-sort').addEventListener('change', (e) => { listSort = e.target.value; relist(); });
+    // quem mexe na lista não vê os cartões trocarem de lugar debaixo do dedo
+    for (const ev of ['pointerdown', 'pointermove', 'wheel', 'keydown']) $('#p-povo').addEventListener(ev, listTouched, { passive: true });
+    $('#people').addEventListener('scroll', listTouched, { passive: true });
+    // a ficha da pessoa: seguir, anterior e próximo, voltar para a lista (celular), fechar
+    $('#pessoa-follow img').src = ic('seguir') || ic('olho');
+    const arrow = (d) => `<svg width="9" height="15" viewBox="0 0 6 10" aria-hidden="true" shape-rendering="crispEdges"><path fill="currentColor" d="${d}"/></svg>`;
+    $('#pessoa-prev').innerHTML = arrow('M4 0h2v2H4zM2 2h2v2H2zM0 4h2v2H0zM2 6h2v2H2zM4 8h2v2H4z');
+    $('#pessoa-next').innerHTML = arrow('M0 0h2v2H0zM2 2h2v2H2zM4 4h2v2H4zM2 6h2v2H2zM0 8h2v2H0z');
+    $('#pessoa-close').addEventListener('click', () => UI.select(0, 0));
+    $('#pessoa-follow').addEventListener('click', () => { if (S && UI.sel.person) UI.hooks.follow(UI.hooks.following() === UI.sel.person ? 0 : UI.sel.person); });
+    $('#pessoa-prev').addEventListener('click', () => UI.step(-1));
+    $('#pessoa-next').addEventListener('click', () => UI.step(1));
+    $('#pessoa-list').addEventListener('click', () => UI.showList());
     $('#inspector').addEventListener('click', (e) => {
       const b = e.target.closest('[data-act]'); if (!b || !S) return;
       if (b.dataset.act === 'rename') {
@@ -222,10 +262,38 @@
         }
       }
       if (b.dataset.act === 'remove') {
-        const d = Sim.def(bd), was = bd.up ? 'A melhoria foi desmarcada' : d.name + (d.a === 'o' ? ' removido' : ' removida');
-        if (b.dataset.armed || bd.up) { Sim.removeBuilding(S, bd); if (!bd.up && !S.buildings.includes(bd)) UI.select(0, 0); UI.toast(was + '. Material devolvido ao estoque.', ''); }
-        else { b.dataset.armed = '1'; b.textContent = 'Confirmar remoção'; }
+        // obra marcada, melhoria marcada ou obra sendo erguida no lugar novo: desistir devolve o material entregue
+        const d = Sim.def(bd), was = bd.up ? 'A melhoria foi desmarcada' : bd.site ? 'A mudança foi cancelada' : d.name + (d.a === 'o' ? ' removido' : ' removida');
+        if (b.dataset.armed || bd.up || bd.site) { Sim.removeBuilding(S, bd); if (!bd.up && !S.buildings.includes(bd)) UI.select(0, 0); UI.toast(was + (bd.site ? '.' : '. Material devolvido ao estoque.'), ''); }
+        else { b.dataset.armed = '1'; b.textContent = 'Confirmar'; }
         lastInsp = '';
+        return;
+      }
+      // 0.12: demolir (o povo desmonta e metade do material volta) e mudar de lugar (desmonta e ergue de novo)
+      if (b.dataset.act === 'demolish') {
+        if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Confirmar demolição'; return; }
+        if (Sim.startDemolish(S, bd)) {
+          UI.toast('Demolição marcada. O povo desmonta e metade do material volta ao estoque.', '');
+          if (!S.vontades.construir) UI.toast('Construir está proibido nas Vontades. Ninguém vai desmontar a obra.', 'warn');
+        }
+        lastInsp = '';
+        return;
+      }
+      if (b.dataset.act === 'undemolish') { Sim.cancelDemolish(S, bd); UI.toast(bd.site ? 'Mudança cancelada.' : 'A obra fica onde está.', ''); lastInsp = ''; return; }
+      if (b.dataset.act === 'move') {
+        const d = Sim.def(bd), id = bd.id;
+        UI.hooks.place(bd.type, {
+          label: 'Mudar: ' + d.name.toLowerCase(), confirm: 'Mudar para cá', lv: bd.lv || 1, kind: bd.kind || null,
+          canPlace: (x, y) => { const o = Sim.building(S, id); return o ? Sim.canMoveTo(S, o, x, y) : 'A obra não existe mais'; },
+          onConfirm: (x, y) => {
+            const o = Sim.building(S, id);
+            if (!o || !Sim.startMove(S, o, x, y)) { UI.toast('Não deu para marcar a mudança.', 'warn'); return false; }
+            UI.toast('Mudança marcada. O povo desmonta, leva três quartos do material e ergue de novo no lugar novo.', '');
+            if (!S.vontades.construir) UI.toast('Construir está proibido nas Vontades. Ninguém vai fazer a mudança.', 'warn');
+            lastInsp = '';
+            return true;
+          },
+        });
         return;
       }
       if (b.dataset.act === 'back') UI.select(0, 0);
@@ -254,6 +322,8 @@
     document.querySelectorAll('#mobnav button').forEach((b) => b.addEventListener('click', () => {
       const n = b.dataset.open;
       if (UI.isMobile() || n === 'cronica') UI.sheet(document.body.dataset.sheet === n ? '' : n);
+      // em tela baixa a ficha fica no lugar da lista aberta (veja o CSS): aí o botão Povo traz a lista de volta
+      else if (n === 'povo' && openSet.has('povo') && UI.sel.person && getComputedStyle($('#p-povo')).display === 'none') UI.select(0, 0);
       else UI.toggle(n);
     }));
     applyOpen();
@@ -270,11 +340,13 @@
     off.innerHTML = C.OFFLINE_RATE_NAMES.map((n, i) => `<option value="${i}">${n}</option>`).join('');
     off.addEventListener('change', () => { if (!S) return; S.opts = S.opts || {}; S.opts.offline = +off.value; UI.toast('Com o jogo fechado: ' + C.OFFLINE_RATE_NAMES[+off.value] + '.'); });
     $('#menu-save').addEventListener('click', () => { UI.hooks.save(); });
-    // noites picantes (0.10): só entre adultos; desligado, não acontecem mais neste mundo
-    $('#menu-picante').addEventListener('change', (e) => {
+    // o tom do mundo (0.12; antes, a chave das noites picantes): leve, picante ou adulto. Sempre só entre adultos
+    $('#menu-tom').addEventListener('change', (e) => {
       if (!S) return;
-      S.opts = S.opts || {}; S.opts.picante = !!e.target.checked;
-      UI.toast(e.target.checked ? 'Noites picantes ligadas: só entre adultos, e nada descrito.' : 'Noites picantes desligadas neste mundo.', '');
+      const v = e.target.value;
+      S.opts = S.opts || {}; S.opts.tom = v; S.opts.picante = v !== 'leve';
+      $('#tom-desc').textContent = TOM_DESC[v];
+      UI.toast(v === 'adulto' ? 'Tom adulto (+18): o povo fala e a Crônica conta sem rodeio. Só entre adultos; nada é descrito.' : v === 'picante' ? 'Tom picante: noites a três e de muitos na Crônica, insinuadas.' : 'Tom leve: sem noites picantes neste mundo.', '');
     });
     // som: chave geral e as três trilhas (guardado neste aparelho)
     const Au = G.Audio;
@@ -299,24 +371,34 @@
     $('#menu-title').addEventListener('click', () => { $('#menu').hidden = true; UI.hooks.toTitle(); });
   };
 
-  UI.sheet = function (name) {
+  // quiet: quem chama pinta depois (UI.select)
+  UI.sheet = function (name, quiet) {
+    const was = document.body.dataset.sheet || '';
     if (name) document.body.dataset.sheet = name; else delete document.body.dataset.sheet;
     paintNav();
+    if (was !== (name || '')) opened(quiet);
   };
+  // um painel abriu ou fechou: pinta já o que apareceu (a lista fechada não é pintada) e avisa quem depende do espaço livre
+  function opened(quiet) {
+    if (S && !quiet) UI.update(0, true);
+    if (UI.hooks && UI.hooks.panels) UI.hooks.panels();
+  }
   UI.isMobile = () => window.matchMedia('(max-width: 820px)').matches;
   // No computador os painéis ficam fechados e abrem ao clicar (como no celular), cada um no seu canto; o que fica
-  // aberto é lembrado neste aparelho. O painel da obra abre quando se escolhe uma obra no mapa.
-  const PANELS = ['vontades', 'construir', 'deus', 'povo', 'obra'];
+  // aberto é lembrado neste aparelho. O painel da obra e a ficha da pessoa abrem quando se escolhe um dos dois no mapa
+  // (ou a pessoa na lista), e por isso não são lembrados.
+  const PANELS = ['vontades', 'construir', 'deus', 'povo', 'obra', 'pessoa'];
+  const TRANSIENT = ['obra', 'pessoa'];
   let firstRun = false;
   const openSet = new Set((() => {
     try {
       const raw = localStorage.getItem('genesis-paineis');
       if (raw === null) { firstRun = true; return []; }
       const v = JSON.parse(raw);
-      return Array.isArray(v) ? v.filter((k) => PANELS.indexOf(k) >= 0 && k !== 'obra') : [];
+      return Array.isArray(v) ? v.filter((k) => PANELS.indexOf(k) >= 0 && TRANSIENT.indexOf(k) < 0) : [];
     } catch (e) { return []; }
   })());
-  function saveOpen() { try { localStorage.setItem('genesis-paineis', JSON.stringify([...openSet].filter((k) => k !== 'obra'))); } catch (e) { /* sem guardar */ } }
+  function saveOpen() { try { localStorage.setItem('genesis-paineis', JSON.stringify([...openSet].filter((k) => TRANSIENT.indexOf(k) < 0))); } catch (e) { /* sem guardar */ } }
   function applyOpen() {
     const v = [...openSet].join(' ');
     if (v) document.body.dataset.open = v; else delete document.body.dataset.open;
@@ -331,14 +413,15 @@
     });
   }
   UI.isOpen = (n) => (UI.isMobile() ? document.body.dataset.sheet === n : openSet.has(n));
-  UI.toggle = function (n, on) {
+  UI.toggle = function (n, on, quiet) {
     const want = on === undefined ? !openSet.has(n) : !!on;
-    if (want !== openSet.has(n)) {
+    const changed = want !== openSet.has(n);
+    if (changed) {
       if (want) openSet.add(n); else openSet.delete(n);
       applyOpen(); saveOpen();
     }
     if (n === 'vontades') { const v = document.querySelector('#mobnav .nudge'); if (v) v.classList.remove('nudge'); }
-    if (UI.hooks && UI.hooks.panels) UI.hooks.panels();
+    if (changed) opened(quiet); else if (UI.hooks && UI.hooks.panels) UI.hooks.panels();
   };
   UI.closeAll = function () { if (!openSet.size) return false; openSet.clear(); applyOpen(); saveOpen(); if (UI.hooks && UI.hooks.panels) UI.hooks.panels(); return true; };
   window.addEventListener('resize', paintNav);
@@ -347,9 +430,12 @@
     S = state;
     if (S.narr) { $('#menu-narr').value = S.narr.kind; $('#narr-desc').textContent = G.Narr.kind(S).desc; }
     $('#menu-offline').value = String(S.opts && S.opts.offline !== undefined ? S.opts.offline : C.OFFLINE_RATE_DEFAULT);
-    $('#menu-picante').checked = !(S.opts && S.opts.picante === false);
+    { const t = ['leve', 'picante', 'adulto'][G.Family.tom(S)]; $('#menu-tom').value = t; $('#tom-desc').textContent = TOM_DESC[t]; }
     UI.sel = { person: 0, building: 0 };
-    lastInsp = ''; cardsKey = '';
+    lastInsp = ''; listSig = '';
+    // mundo novo: a lista e a ficha começam do zero (a busca e a ordem são da sessão, e ficam)
+    cards.clear(); $('#people').innerHTML = ''; selCard = 0; inspPid = 0;
+    for (const k of TRANSIENT) UI.toggle(k, false, true);
     $('#chron').innerHTML = '';
     for (const c of S.chron) addChron(c, false);
     $('#toasts').innerHTML = '';
@@ -357,28 +443,48 @@
     UI.update(0, true);
   };
 
+  // Escolher uma pessoa abre a ficha dela (#p-pessoa); escolher uma obra, o painel da obra. Um fecha o outro, e
+  // UI.select(0, 0) fecha os dois. A lista do povo fica como estava.
   UI.select = function (pid, bid, center) {
     UI.sel.person = pid || 0; UI.sel.building = bid || 0;
     G.R.overlay.selPerson = UI.sel.person; G.R.overlay.selBuilding = UI.sel.building;
-    lastInsp = ''; cardsKey = '';
+    lastInsp = '';
+    // seguir é de uma pessoa só: escolher outra (ou uma obra, ou ninguém) solta a câmera
+    const fol = UI.hooks.following ? UI.hooks.following() : 0;
+    if (fol && fol !== UI.sel.person) UI.hooks.follow(0);
     if (pid && S) {
       const p = S.people.find((q) => q.id === pid);
       if (p && p.alive) { AI.touch(S, p); S.stats.inspected = true; if (center) UI.hooks.center(p.x * C.TILE, p.y * C.TILE); }
     }
-    // a obra no seu painel; a pessoa, no painel do povo
     if (UI.isMobile()) {
-      if (bid) UI.sheet('obra');
-      else if (pid) UI.sheet('povo');
-      else if (document.body.dataset.sheet === 'obra') UI.sheet('');
+      const sh = document.body.dataset.sheet || '';
+      if (bid) UI.sheet('obra', true);
+      else if (pid) UI.sheet('pessoa', true);
+      else if (TRANSIENT.indexOf(sh) >= 0) UI.sheet('', true);
     } else {
-      UI.toggle('obra', !!bid);
-      if (pid) UI.toggle('povo', true);
+      UI.toggle('obra', !!bid, true);
+      UI.toggle('pessoa', !!pid && !bid, true);
     }
     UI.update(0, true);
   };
+  // anterior e próximo da ficha: os vivos, na ordem da lista (a câmera vai junto)
+  UI.step = function (d) {
+    if (!S) return;
+    const ids = order().filter((p) => p.alive).map((p) => p.id);
+    if (!ids.length) return;
+    const i = ids.indexOf(UI.sel.person);
+    listTouched();   // a ordem não muda no meio do passeio
+    UI.select(ids[i < 0 ? (d > 0 ? 0 : ids.length - 1) : (i + d + ids.length) % ids.length], 0, true);
+  };
+  // da ficha de volta para a lista (no celular a ficha e a lista dividem a mesma gaveta), com o cartão escolhido à vista
+  UI.showList = function () {
+    if (UI.isMobile()) UI.sheet('povo'); else UI.toggle('povo', true);
+    const c = cards.get(UI.sel.person);
+    if (c) scrollTo($('#people'), c.el, true);
+  };
 
   // ---------- atualização ----------
-  let lastUpd = 0, lastInsp = '', cardsKey = '';
+  let lastUpd = 0, lastInsp = '';
   UI.update = function (now, force) {
     if (!S) return;
     if (!force && now - lastUpd < 180) return;
@@ -479,35 +585,117 @@
     });
   }
   function barCls(v) { return v < 25 ? 'low' : v < 50 ? 'mid' : ''; }
-  function ordered() {
-    return S.people.slice().sort((a, b) => (b.alive - a.alive) || (a.born - b.born));
-  }
   UI.ageText = function (st, p) {
     const F = G.Family, y = F.age(st, p);
     if (y < 1) return p.sex === 'F' ? 'recém-nascida' : 'recém-nascido';
     const lbl = F.stageLabel(st, p);
     return (y === 1 ? '1 ano' : y + ' anos') + (lbl === 'adulto' || lbl === 'adulta' ? '' : ' · ' + lbl);
   };
+  const anos = (y) => (y === 1 ? '1 ano' : y + ' anos');
+  // quem morreu fica com a idade que tinha (a conta pelo relógio seguiria somando anos)
+  const yearsOf = (p) => Math.max(0, Math.floor(((p.alive || !p.diedAt ? S.t : p.diedAt) - p.born) / (C.DAY_MIN * C.YEAR_DAYS)));
+  // rola só a lista (scrollIntoView mexeria também nos painéis de fora)
+  function scrollTo(list, el, center) {
+    const a = list.getBoundingClientRect(), b = el.getBoundingClientRect();
+    if (!a.height || !b.height) return;
+    if (center) list.scrollTop += (b.top + b.height / 2) - (a.top + a.height / 2);
+    else if (b.top < a.top) list.scrollTop += b.top - a.top - 4;
+    else if (b.bottom > a.bottom) list.scrollTop += b.bottom - a.bottom + 4;
+  }
+
+  // ---------- a lista do povo ----------
+  // Vila grande: busca pelo nome, quatro ordens e, com mais de COMPACT_AT vivos, cartões de uma linha. Cada cartão é
+  // montado uma vez e guardado em `cards`; a cada pintura só muda o que mudou (texto e barras), e a lista fechada nem
+  // isso. Mudou a gente ou a ordem: os cartões trocam de lugar, sem refazer o HTML.
+  const COMPACT_AT = 16;
+  const norm = (t) => String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const byName = new Intl.Collator('pt-BR', { sensitivity: 'base' });
+  const worst = (p) => Math.min(p.needs.fome, p.needs.sede, p.needs.calor, p.needs.saude);
+  const SORTS = {
+    idade: (a, b) => a.born - b.born,                                    // os mais velhos primeiro (como sempre foi)
+    nome: (a, b) => byName.compare(a.name, b.name),
+    ajuda: (a, b) => worst(a) - worst(b),                                // a menor entre fome, sede, calor e saúde
+    humor: (a, b) => a.mood - b.mood,                                    // os mais tristes primeiro
+  };
+  const cards = new Map();   // pid → { el, sig, age, doing, bars, v }
+  let listQ = '', listSort = 'idade', listSig = '', listOrder = [], listAt = -1e9, listBusy = 0, listDrawn = null, selCard = 0;
+  function listTouched() { listBusy = performance.now() + 4000; }
+  // a ordem em uso (os vivos na frente), que também vale para o anterior e o próximo da ficha. Idade e nome só mudam
+  // quando muda a gente; ajuda e humor mudam o tempo todo: refaz a cada 3 s, e nunca enquanto o jogador mexe na lista
+  function order() {
+    const now = performance.now(), dyn = listSort === 'ajuda' || listSort === 'humor';
+    let sig = listSort + '|';
+    for (const p of S.people) sig += p.id + (p.alive ? 'a' : 'd') + ',';
+    if (sig !== listSig || (dyn && now - listAt > 3000 && now > listBusy)) {
+      const f = SORTS[listSort] || SORTS.idade, dead = listSort === 'nome' ? SORTS.nome : SORTS.idade;
+      const next = S.people.slice().sort((a, b) => (b.alive - a.alive) || (a.alive ? f(a, b) : dead(a, b)) || a.id - b.id);
+      listSig = sig; listAt = now;
+      if (next.length !== listOrder.length || next.some((p, i) => p !== listOrder[i])) listOrder = next;
+    }
+    return listOrder;
+  }
+  function cardHTML(p, compact) {
+    const pv = p.sangue && G.Povos ? `<img class="ico pv" src="${ic(G.Povos.iconOf(p))}" alt="" title="${esc(G.Povos.label(p))}">` : '';   // Etapa 12
+    const nm = `<span class="nm">${pv}${esc(p.name)}${p.alive ? '' : ' †'}${p.alive && p.escolhido && G.Deus ? ` <span class="ttl">${esc(G.Deus.title(p))}</span>` : ''}</span>`;
+    const bars = p.alive ? `<div class="minibars">${NEEDS.slice(0, 4).map(([k, lbl, icn]) => `<div class="mb" title="${lbl}"><img class="ico" src="${ic(icn)}" alt=""><div class="bar"><i data-n="${k}"></i></div></div>`).join('')}</div>` : '';
+    // compacto: nome, idade e o que faz numa linha só; barras finas
+    if (compact) return `<div class="row1">${nm}<span class="small muted age"></span><span class="doing"></span></div>${bars}`;
+    return `<div class="row1">${nm}<span class="small muted age"></span></div><div class="doing"></div>${bars}`;
+  }
   function paintPeople() {
     const list = $('#people');
-    const key = ordered().map((p) => p.id + (p.alive ? 'a' : 'd') + (p.escolhido ? p.escolhido.power : '')).join(',') + '|' + UI.sel.person;
-    if (key !== cardsKey) {
-      cardsKey = key;
-      list.innerHTML = ordered().map((p) => `
-        <button class="pcard${p.id === UI.sel.person ? ' sel' : ''}${p.alive ? '' : ' dead'}" data-pid="${p.id}">
-          <div class="row1"><span class="nm">${esc(p.name)}${p.alive ? '' : ' †'}${p.alive && p.escolhido && G.Deus ? ` <span class="ttl">${esc(G.Deus.title(p))}</span>` : ''}</span><span class="small muted age"></span></div>
-          <div class="doing"></div>
-          ${p.alive ? `<div class="minibars">${NEEDS.slice(0, 4).map(([k, , icn]) => `<div class="mb" title="${k}"><img class="ico" src="${ic(icn)}" alt=""><div class="bar"><i data-n="${k}"></i></div></div>`).join('')}</div>` : ''}
-        </button>`).join('');
+    let alive = 0;
+    for (const p of S.people) if (p.alive) alive++;
+    setText($('#povo-title'), 'Seu povo · ' + alive);
+    if (!UI.isOpen('povo')) return;
+    const ord = order(), compact = alive > COMPACT_AT;
+    const key = (compact ? 'c' : 'f') + listQ;
+    if (ord !== listDrawn || key !== list._key) {
+      listDrawn = ord; list._key = key;
+      const want = listQ ? ord.filter((p) => norm(p.name).indexOf(listQ) >= 0) : ord;
+      const keep = new Set();
+      let i = 0;
+      for (const p of want) {
+        let c = cards.get(p.id);
+        if (!c) { c = { el: document.createElement('button'), sig: '' }; c.el.type = 'button'; c.el.dataset.pid = p.id; cards.set(p.id, c); }
+        if (list.children[i] !== c.el) list.insertBefore(c.el, list.children[i] || null);
+        keep.add(p.id); i++;
+      }
+      while (list.children.length > i) list.removeChild(list.lastChild);
+      for (const id of [...cards.keys()]) if (!keep.has(id)) cards.delete(id);
+      list.classList.toggle('compact', compact);
+      const none = $('#povo-empty');
+      if (none.hidden !== !!want.length) none.hidden = !!want.length;
     }
-    for (const p of S.people) {
-      const c = list.querySelector(`[data-pid="${p.id}"]`); if (!c) continue;
-      c.querySelector('.age').textContent = p.alive ? UI.ageText(S, p) : Sim.ageOf(S, p) + (Sim.ageOf(S, p) === 1 ? ' ano' : ' anos');
-      c.querySelector('.doing').textContent = AI.describe(S, p);
-      c.querySelectorAll('i[data-n]').forEach((i) => { const v = p.needs[i.dataset.n]; i.style.width = v + '%'; i.className = barCls(v); });
+    const compactNow = list.classList.contains('compact');
+    for (const p of ord) {
+      const c = cards.get(p.id); if (!c) continue;
+      // o cartão é refeito só quando muda quem ele é (nome, vivo, escolhido) ou o jeito da lista
+      const sig = p.name + '|' + (p.alive ? 'a' : 'd') + (p.alive && p.escolhido ? p.escolhido.power : '') + (compactNow ? 'c' : 'f') + (p.povo || '');
+      if (c.sig !== sig) {
+        c.sig = sig;
+        c.el.className = 'pcard' + (compactNow ? ' compact' : '') + (p.alive ? '' : ' dead') + (p.id === selCard ? ' sel' : '');
+        c.el.innerHTML = cardHTML(p, compactNow);
+        c.el.removeAttribute('title');
+        c.age = c.el.querySelector('.age'); c.doing = c.el.querySelector('.doing'); c.bars = [...c.el.querySelectorAll('i[data-n]')]; c.v = {};
+      }
+      const y = yearsOf(p);
+      const age = !p.alive || compactNow ? (y < 1 && p.alive ? 'bebê' : anos(y)) : UI.ageText(S, p);
+      if (c.v.age !== age) { c.v.age = age; c.age.textContent = age; }
+      const doing = AI.describe(S, p);
+      if (c.v.doing !== doing) { c.v.doing = doing; c.doing.textContent = doing; if (compactNow) c.el.title = doing; }   // na linha só, o texto pode ficar cortado
+      for (const b of c.bars) {
+        const k = b.dataset.n, v = Math.max(0, Math.min(100, Math.round(p.needs[k])));
+        if (c.v[k] !== v) { c.v[k] = v; b.style.width = v + '%'; b.className = barCls(v); }
+      }
     }
-    const n = S.people.filter((p) => p.alive).length;
-    $('#povo-title').textContent = 'Seu povo · ' + n;
+    // o escolhido: só a moldura muda de cartão (e a lista rola até ele, se ele estiver fora da vista)
+    if (selCard !== UI.sel.person) {
+      const old = cards.get(selCard), cur = cards.get(UI.sel.person);
+      if (old) old.el.classList.remove('sel');
+      selCard = UI.sel.person;
+      if (cur) { cur.el.classList.add('sel'); scrollTo(list, cur.el); }
+    }
   }
   function setText(el, t) { if (el && el.textContent !== t) el.textContent = t; }
   const fmtN = (n) => Math.floor(n).toLocaleString('pt-BR');
@@ -549,16 +737,36 @@
       if (n && bd.textContent !== String(n)) bd.textContent = String(n);
     }
   }
+  // ---------- a ficha da pessoa (#p-pessoa) ----------
+  // A ficha é uma pilha de blocos com nome, na ordem em que aparecem. Cada bloco só é trocado quando o HTML dele muda
+  // (as barras mudam o tempo todo; um botão ali ao lado não some debaixo do clique). Bloco vazio não ocupa lugar.
+  // Para acrescentar uma linha, basta mais uma entrada em `blocos`, em paintInspector.
+  function paintBlocks(root, blocks) {
+    let i = 0;
+    for (const k of Object.keys(blocks)) {
+      let el = root.children[i];
+      if (!el || el.dataset.b !== k) {
+        el = [...root.children].find((x) => x.dataset.b === k) || document.createElement('div');
+        el.dataset.b = k; el.className = 'ib ib-' + k;
+        root.insertBefore(el, root.children[i] || null);
+      }
+      setHTML(el, blocks[k] || '');
+      i++;
+    }
+    while (root.children.length > i) root.removeChild(root.lastChild);
+  }
+  const sec = (title, html) => `<span class="small muted sec">${title}</span>${html}`;
+  let inspPid = 0;
   function paintInspector() {
     paintObra();
     const el = $('#inspector');
     if (UI.sel.person) {
       const p = S.people.find((q) => q.id === UI.sel.person);
-      if (!p) { el.innerHTML = ''; return; }
+      if (!p) { UI.select(0, 0); return; }   // não existe mais (mundo trocado)
+      if (!UI.isOpen('pessoa')) return;      // no celular a ficha divide a gaveta com os outros painéis
       const n = p.needs;
-      const needs = NEEDS.map(([k, lbl, icn]) => `<div class="need"><img class="ico" src="${ic(icn)}" alt=""><span>${lbl}</span><div class="bar"><i class="${barCls(n[k])}" style="width:${n[k]}%"></i></div><span class="v">${Math.round(n[k])}</span></div>`).join('') +
-        `<div class="need"><img class="ico" src="${ic('humor')}" alt=""><span>Humor</span><div class="bar"><i class="${barCls(p.mood)}" style="width:${p.mood}%"></i></div><span class="v">${p.mood}</span></div>` +
-        `<div class="need"><img class="ico" src="${ic('deus')}" alt=""><span>Fé</span><div class="bar"><i class="${barCls(p.fe)}" style="width:${p.fe}%"></i></div><span class="v">${Math.round(p.fe)}</span></div>`;
+      const need = (icn, lbl, v) => { const w = Math.max(0, Math.min(100, Math.round(v))); return `<div class="need" title="${lbl}"><img class="ico" src="${ic(icn)}" alt=""><span>${lbl}</span><div class="bar"><i class="${barCls(w)}" style="width:${w}%"></i></div><span class="v">${w}</span></div>`; };
+      const needs = NEEDS.map(([k, lbl, icn]) => need(icn, lbl, n[k])).join('') + need('humor', 'Humor', p.mood) + need('deus', 'Fé', p.fe);
       const mems = p.mem.slice().sort((a, b) => Math.abs(Sim.MEM[b.k].v) - Math.abs(Sim.MEM[a.k].v)).slice(0, 6)
         .map((m) => { const d = Sim.MEM[m.k]; return `<li class="${d.v >= 0 ? 'pos' : 'neg'}">${d.v > 0 ? '+' : ''}${d.v} ${esc(p.sex === 'F' && d.tf ? d.tf : d.t)}</li>`; }).join('');
       const skills = Object.keys(p.skills).filter((k) => AI.SKILL_LABEL[k] && (['coleta', 'pesca', 'construcao'].indexOf(k) >= 0 || p.skills[k] > 0))
@@ -582,7 +790,7 @@
       let godLine = '';
       const Dz = G.Deus;
       if (p.alive && Dz && S.god && S.god.pending) {
-        if (p.escolhido) godLine = `<p class="small god-line"><b>${esc(Dz.title(p))}</b> de ${esc(Dz.call(S))}: ${esc(Dz.POWERS[p.escolhido.power].desc)}</p>`;
+        if (p.escolhido) godLine = `<p class="small god-line txt"><b>${esc(Dz.title(p))}</b> de ${esc(Dz.call(S))}: ${esc(Dz.POWERS[p.escolhido.power].desc)}</p>`;
         else if (Sim.has(p, 'Cético') && (p.sinais || 0) > 0) godLine = `<p class="small muted">Já viu ${Math.floor(p.sinais)} de ${C.CONVERTE_SINAIS} sinais de ${esc(Dz.call(S))}. Com os sinais e fé ${C.CONVERTE_FE}, se converte.</p>`;
         else if (Dz.full100(S, p) && F.age(S, p) >= C.UNGIR_AGE && !p.carriedBy) godLine = Dz.level(S) >= 3 ? `<p class="small god-line">Fé inteira. <button class="btn btn-small" data-act="ungir">Dar um poder</button></p>` : `<p class="small god-line">Fé inteira. No nível 3 de Deus, pode receber um poder.</p>`;
       }
@@ -590,25 +798,48 @@
       const talk = p.alive && p.talk && S.t - p.talk.t < 2 * C.DAY_MIN ? `<div class="talk"><span class="small muted">Última conversa${p.talk.kind === 'briga' ? ' (briga)' : p.talk.kind === 'consolo' ? ' (consolo)' : p.talk.kind === 'pazes' ? ' (pazes)' : ''}</span>${p.talk.lines.map(([n, t]) => `<p><b>${esc(n)}:</b> “${esc(t)}”</p>`).join('')}</div>` : '';
       const feud = p.alive && p.feud ? Object.keys(p.feud).filter((id) => p.feud[id] > S.t).map((id) => { const q = F.person(S, +id); return q && q.alive ? q.name : ''; }).filter(Boolean) : [];
       if (feud.length) state = (state ? state + ' ' : '') + 'Brigad' + (p.sex === 'F' ? 'a' : 'o') + ' com ' + feud.join(' e ') + ': sem se falar por uns dias.';
-      const html = `<div class="insp">
-        <h3><span>${esc(p.name)}</span><span class="small muted">${who}, ${p.alive ? UI.ageText(S, p) : Sim.ageOf(S, p) + ' anos'}</span></h3>
-        <p class="small">${p.alive ? esc(AI.describe(S, p)) + ' · ' + feel(p.tempHere) : esc(AI.describe(S, p)) + '.'}</p>
-        ${state ? `<p class="small preg">${esc(state)}</p>` : ''}
-        ${godLine}
-        ${p.prayer ? `<p class="story">Reza: “${esc(p.prayer.text)}”</p>` : ''}
-        ${talk}
-        <div class="chips">${p.traits.map((t) => `<span class="chip" title="${esc(Sim.TRAIT_DESC[t])}">${esc(t)}</span>`).join('')}</div>
-        ${p.alive ? gear(p) : ''}
-        ${p.alive ? `<div class="needs">${needs}</div>` : ''}
-        ${fam ? `<div class="kv fam">${fam}</div>` : ''}
-        ${p.alive && (p.mother || p.father) && F.age(S, p) < 3 ? '<div class="chips"><button class="btn btn-small" data-act="rename">Dar outro nome</button></div>' : ''}
-        ${p.carriedBy ? '' : `<div class="kv">${skills}</div>`}
-        ${mems ? `<ul class="mems">${mems}</ul>` : ''}
-      </div>`;
-      setHTML(el, html);
+      // o cabeçalho da caixa: o nome (e o título de escolhido), quem é e a idade
+      setHTML($('#pessoa-title'), esc(p.name) + (p.alive ? '' : ' †') + (p.alive && p.escolhido && Dz ? ` <span class="ttl">${esc(Dz.title(p))}</span>` : ''));
+      setText($('#pessoa-sub'), who + ', ' + (p.alive ? UI.ageText(S, p) : anos(yearsOf(p))));
+      paintSheetTools(p);
+      // no alto o essencial (o que faz, o estado, a oração, os traços, o que carrega); depois as barras; depois a
+      // família, as habilidades, as lembranças e a última conversa
+      const blocos = {
+        faz: `<p class="small">${p.alive ? esc(AI.describe(S, p)) + ' · ' + feel(p.tempHere) : esc(AI.describe(S, p)) + '.'}</p>`,
+        estado: state ? `<p class="small preg">${esc(state)}</p>` : '',
+        deus: godLine,
+        reza: p.prayer ? `<p class="story">Reza: “${esc(p.prayer.text)}”</p>` : '',
+        tracos: `<div class="chips">${p.traits.map((t) => `<span class="chip" title="${esc(Sim.TRAIT_DESC[t])}">${esc(t)}</span>`).join('')}</div>`,
+        povo: povoChips(p),   // Etapa 12: o povo da pessoa e os dons dela
+        posses: p.alive ? gear(p) : '',
+        barras: p.alive ? `<div class="needs">${needs}</div>` : '',
+        familia: fam ? sec('Família', `<div class="kv fam">${fam}</div>`) : '',
+        nome: p.alive && (p.mother || p.father) && F.age(S, p) < 3 ? '<div class="chips"><button class="btn btn-small" data-act="rename">Dar outro nome</button></div>' : '',
+        saberes: p.carriedBy || !skills ? '' : sec('Habilidades', `<div class="kv">${skills}</div>`),
+        lembrancas: mems ? sec('Lembranças', `<ul class="mems">${mems}</ul>`) : '',
+        conversa: talk,
+      };
+      let box = el.firstElementChild;
+      if (!box) { el.innerHTML = '<div class="insp"></div>'; box = el.firstElementChild; }
+      paintBlocks(box, blocos);
+      if (inspPid !== p.id) { inspPid = p.id; el.scrollTop = 0; }   // outra pessoa: a ficha volta para o alto
       return;
     }
-    if (el.innerHTML) el.innerHTML = '';
+    if (inspPid) { inspPid = 0; el.innerHTML = ''; }
+  }
+  // os botões da ficha: seguir (liga e desliga), a posição entre os vivos na ordem da lista, anterior e próximo
+  function paintSheetTools(p) {
+    const fol = $('#pessoa-follow'), on = !!p.alive && UI.hooks.following() === p.id;
+    if (fol.disabled !== !p.alive) fol.disabled = !p.alive;
+    if (fol.classList.contains('on') !== on) {
+      fol.classList.toggle('on', on);
+      fol.setAttribute('aria-pressed', on ? 'true' : 'false');
+      fol.querySelector('span').textContent = on ? 'Seguindo' : 'Seguir';
+    }
+    const alive = order().filter((q) => q.alive), i = alive.indexOf(p);
+    setText($('#pessoa-pos'), i >= 0 ? (i + 1) + ' de ' + alive.length : alive.length === 1 ? '1 vivo' : alive.length + ' vivos');
+    const stuck = !alive.length || (alive.length === 1 && i === 0);   // não há para onde ir
+    for (const id of ['#pessoa-prev', '#pessoa-next']) { const b = $(id); if (b.disabled !== stuck) b.disabled = stuck; }
   }
   // o painel da obra: o nível, o que ela faz agora, a evolução (melhorias) e remover
   function paintObra() {
@@ -622,20 +853,29 @@
     }
     const d = Sim.def(b), job = Sim.jobOf(b);
     const opts = Sim.upgrades(S, b);
-    const sig = b.id + ':' + (d.lv || 1) + (d.kind || '') + (b.built ? 1 : 0) + (b.up ? 'u' + b.up.lv + (b.up.kind || '') : '') + '|' + opts.map((o) => (o.kind || '') + (o.why ? 0 : 1)).join(',');
+    // 0.12: a obra pode estar sendo desmontada, mudando de lugar, sendo erguida de novo, ou ser só o lugar reservado
+    const mov = b.site ? 's' : b.demol ? (b.demol.site ? 'm' : 'd') : b.re ? 'r' : '';
+    const sig = b.id + ':' + (d.lv || 1) + (d.kind || '') + (b.built ? 1 : 0) + mov + (b.up ? 'u' + b.up.lv + (b.up.kind || '') : '') + '|' + opts.map((o) => (o.kind || '') + (o.why ? 0 : 1)).join(',');
     if (lastInsp !== sig) {
       lastInsp = sig;
       $('#obra-title').textContent = d.name;
-      const lv = C.BUILD[b.type].up ? `<p class="small muted">Nível ${d.lv || 1}${d.max ? ', o último' : ''}${b.built ? '' : ' · marcada, esperando o povo'}</p>` : b.built ? '' : '<p class="small muted">Marcada, esperando o povo</p>';
+      const wait = b.site ? ' · lugar reservado' : b.re ? ' · mudou para cá, por erguer' : b.built ? '' : ' · marcada, esperando o povo';
+      const lv = C.BUILD[b.type].up ? `<p class="small muted">Nível ${d.lv || 1}${d.max ? ', o último' : ''}${wait}</p>` : wait ? '<p class="small muted">' + wait.slice(3, 4).toUpperCase() + wait.slice(4) + '</p>' : '';
+      const btn = (act, text, icon) => `<button class="btn btn-small" data-act="${act}">${icon && ic(icon) ? '<img class="ico" src="' + ic(icon) + '" alt="">' : ''}${text}</button>`;
+      const acts = b.site ? btn('remove', 'Cancelar mudança') :
+        b.demol ? btn('undemolish', b.demol.site ? 'Cancelar mudança' : 'Cancelar demolição') :
+        b.up ? btn('remove', 'Cancelar melhoria') :
+        b.re ? btn('remove', 'Desistir da obra') :
+        !b.built ? btn('remove', 'Cancelar obra') :
+        (Sim.canMove(S, b) ? btn('move', 'Mudar de lugar', 'mover') : '') + btn('demolish', 'Demolir', 'demolir');
       el.innerHTML = `<div class="insp">
         ${lv}
         <p class="small muted">${esc(d.desc)}</p>
         <p class="small" id="bstatus"></p>
         <div id="bextra"></div>
-        ${b.built && !b.up && opts.length ? upgradeHTML(b, opts) : ''}
-        <div class="chips">
-          <button class="btn btn-small" data-act="remove">${b.up ? 'Cancelar melhoria' : b.built ? 'Remover' : 'Cancelar obra'}</button>
-        </div>
+        ${b.built && !b.up && !b.demol && opts.length ? upgradeHTML(b, opts) : ''}
+        <div class="chips">${acts}</div>
+        ${b.built && !b.up && !b.demol ? '<p class="small muted">' + (Sim.canMove(S, b) ? 'Mudar: o povo desmonta e ergue de novo no lugar que você marcar. ' : 'Esta obra não muda de lugar: marque outra e demola esta. ') + 'Demolir devolve metade do material.</p>' : ''}
       </div>`;
     }
     const st = el.querySelector('#bstatus'); if (st) st.textContent = buildingStatus(b, d, job);
@@ -648,11 +888,16 @@
   // o que a obra está fazendo agora (atualiza a cada quadro)
   function buildingStatus(b, d, job) {
     const T = G.Tech;
+    if (b.site) {
+      const from = Sim.building(S, b.site);
+      return 'Lugar reservado. ' + (from ? (Sim.def(from).a === 'o' ? 'O ' : 'A ') + Sim.def(from).name.toLowerCase() + ' vem para cá: o povo desmonta lá (' + Math.floor(((from.demol && from.demol.progress) || 0) * 100) + '%) e ergue de novo aqui.' : '');
+    }
+    if (b.demol) return (b.demol.site ? 'Mudando de lugar: o povo está desmontando. ' : 'Marcada para demolir. ') + 'Trabalho ' + Math.floor(b.demol.progress * 100) + '%' + (S.vontades.construir ? '.' : ' · Construir está proibido nas Vontades.');
     if (job) {
       const mats = Object.keys(job.cost);
       const need = mats.reduce((n, k) => n + job.cost[k], 0), have = mats.reduce((n, k) => n + Math.min(job.cost[k], job.have[k] || 0), 0);
       const short = mats.filter((k) => (job.have[k] || 0) < job.cost[k] && (S.stock[k] || 0) <= 0);
-      return (b.up ? 'Melhorando para ' + Sim.upDef(b).name.toLowerCase() + '. ' : 'Em obra. ') +
+      return (b.up ? 'Melhorando para ' + Sim.upDef(b).name.toLowerCase() + '. ' : b.re ? 'Sendo erguida de novo. ' : 'Em obra. ') +
         'Material ' + have + '/' + need + (job.progress > 0 ? ' · trabalho ' + Math.floor(job.progress * 100) + '%' : '') +
         (short.length && job.progress <= 0 ? ' · falta ' + short.map((k) => MAT_WORD[k] || k).join(' e ') + ' no estoque' + (short.includes('tabuas') ? ' (a marcenaria faz)' : short.includes('fibra') ? ' (vem da casca das árvores cortadas)' : '') : '');
     }
@@ -665,6 +910,20 @@
     if (b.type === 'moquem' || b.type === 'jirau') return batchText(b, d);
     if (b.type === 'forno') return 'Água no estoque: ' + S.stock.agua + ' de ' + T.waterCap(S) + '.';
     if (b.type === 'armazem') return 'Guardando comida para ' + Math.floor(S.ctx.foodDays) + (Math.floor(S.ctx.foodDays) === 1 ? ' dia' : ' dias') + (S.stats.rottedToday ? ' · ontem estragaram ' + S.stats.rottedToday : '') + '. O lobo não leva nada.';
+    if (b.type === 'mina' && G.Minas) {
+      const Mi = G.Minas, who = S.people.filter((p) => p.alive && p.act && p.act.type === 'mina' && p.act.b === b.id).map((p) => p.name), got = S.stats.minaGot || {};
+      const lv = d.mine.lv, Y = C.MINA_YIELD, pc = (k) => Math.round(Y[k][lv - 1] * 100) + '%';
+      const saiu = ['carvao', 'minerio', 'prata', 'ouro', 'gemas'].filter((k) => got[k]).map((k) => got[k] + ' de ' + Mi.WORD[k]);
+      return (who.length ? 'Lá dentro: ' + who.join(', ') + ' (' + who.length + ' de ' + d.mine.cap + '). ' : 'Vazia. Com Mineração nas Vontades, até ' + d.mine.cap + ' trabalham aqui. ') +
+        'Cada turno dá ' + Y.pedra[lv - 1] + ' de pedra; a sorte: carvão ' + pc('carvao') + ', minério ' + pc('minerio') + (lv >= 2 ? ', prata ' + pc('prata') + ', ouro ' + pc('ouro') + ', pedra preciosa ' + pc('gemas') : '') + '.' +
+        (saiu.length ? ' Já saíram ' + listPT(saiu) + '.' : '');
+    }
+    if (b.type === 'ferraria' && G.Minas) {
+      const Mi = G.Minas, who = S.people.filter((p) => p.alive && p.act && p.act.type === 'oficio' && p.act.shop === b.id).map((p) => p.name), fs = Mi.forgers(S);
+      return (who.length ? 'Na forja: ' + who.join(', ') + '. ' : fs.length ? 'Sabem forjar: ' + listPT(fs.slice(0, 4).map((p) => p.name)) + (fs.length > 4 ? ' e mais ' + (fs.length - 4) : '') + '. ' : 'Ninguém sabe forjar ainda: é coisa de ferreiro nato (os anões) ou de quem tem Ofício no nível ' + C.FORJA_LVL + '. ') +
+        'Ferramenta de ferro: ' + C.FERRO_COST.minerio + ' de minério e ' + C.FERRO_COST.carvao + ' de carvão, em ' + Math.round(C.FERRO_MIN / d.shop.speed) + ' min. No estoque: minério ' + S.stock.minerio + ', carvão ' + S.stock.carvao + ', ferramentas de ferro ' + S.stock.ferro + '.' +
+        (d.shop.joias ? ' Joia: 1 de prata ou de ouro, em ' + Math.round(C.JOIA_MIN / d.shop.speed) + ' min.' : '');
+    }
     if (d.shop) {
       const who = S.people.filter((p) => p.alive && p.act && p.act.type === 'oficio' && p.act.shop === b.id).map((p) => p.name);
       const make = d.shop.k === 'tabuas' ? 'Tábuas: 2 de madeira dão 1, em ' + Math.round(C.TABUA_MIN / d.shop.speed) + ' min. No estoque: ' + S.stock.tabuas + '.' :
@@ -752,12 +1011,23 @@
   }
   function feel(t) { return t >= 30 ? 'com calor' : t >= C.COMFORT ? 'confortável' : t >= 8 ? 'com frio' : t >= 0 ? 'com muito frio' : 'congelando'; }
   // ferramenta e roupa de quem está no inspetor
+  // Etapa 12: o povo de alguém e os dons (com a fraqueza, de quem é do povo inteiro). Num mundo só de humanos, nada
+  function povoChips(p) {
+    const Pv = G.Povos;
+    if (!Pv || !(S.povos && (S.povos.mixed || p.sangue))) return '';
+    const fr = Pv.fraqOf(p), lb = Pv.label(p), b = Pv.body(p);
+    const vida = 'Vive uns ' + Math.round(p.velho || b.old) + ' anos.';
+    return `<div class="chips povo-chips"><span class="chip povo" title="${esc(vida)}"><img class="ico" src="${ic(Pv.iconOf(p))}" alt="">${esc(lb.charAt(0).toUpperCase() + lb.slice(1))}</span>` +
+      Pv.donsOf(p).map((d) => `<span class="chip dom" title="${esc(Pv.DONS[d].desc)}">${esc(Pv.DONS[d].name)}</span>`).join('') +
+      (fr ? `<span class="chip fraq" title="${esc(Pv.FRAQ[fr].desc)}">${esc(Pv.FRAQ[fr].name)}</span>` : '') + '</div>';
+  }
   function gear(p) {
     const T = G.Tech, out = [];
     // Etapa 8: a ferramenta ganha o nome dos utensílios que o povo já inventou
     const kit = ['faca', 'machado', 'arco'].filter((id) => T.known(S, id)).map((id) => (id === 'arco' ? 'arco' : id));
     const tool = kit.length ? kit[0][0].toUpperCase() + listPT(kit).slice(1) : 'Ferramenta';
-    if (T.known(S, 'pedra') && G.Family.age(S, p) >= 12) out.push(p.tool ? tool + ' ' + Math.max(1, Math.round(p.tool.dur)) + '%' : 'Sem ferramenta');
+    if (T.known(S, 'pedra') && G.Family.age(S, p) >= 12) out.push(p.tool ? (p.tool.fe ? 'De ferro: ' + tool.toLowerCase() : tool) + ' ' + Math.max(1, Math.round(p.tool.dur)) + '%' : 'Sem ferramenta');
+    if (p.joia) out.push('Joia');   // Etapa 12
     if (p.roupa) out.push((T.known(S, 'agulha') ? 'Roupa costurada ' : 'Roupa de couro ') + Math.max(1, Math.round(p.roupa.dur)) + '%');
     else if (S.stats.clothesMade && G.Family.age(S, p) >= 3) out.push('Sem roupa de couro');
     if (p.manta) out.push('Manta ' + Math.max(1, Math.round(p.manta.dur)) + '%');
@@ -826,9 +1096,31 @@
     document.querySelectorAll('#modal-deus [data-gtab]').forEach((b) => { b.classList.toggle('on', b.dataset.gtab === deusTab); b.setAttribute('aria-selected', b.dataset.gtab === deusTab ? 'true' : 'false'); });
     $('#deus-mtitle').textContent = g.name ? g.name + ', ' + g.epithet : 'Deus';
     $('#deus-poder').textContent = fmtN(g.poder) + ' de Poder · glória ' + fmtN(g.glory);
-    $('#deus-body').innerHTML = deusTab === 'escolhidos' ? escolhidosHTML(Dz, g) : deusTab === 'atos' ? atosHTML(Dz, g) : nivelHTML(Dz, g);
+    $('#deus-body').innerHTML = deusTab === 'escolhidos' ? escolhidosHTML(Dz, g) : deusTab === 'atos' ? atosHTML(Dz, g) : deusTab === 'povos' && G.Povos ? povosHTML(Dz, g) : nivelHTML(Dz, g);
     $('#modal-deus').hidden = false;
   };
+  // Etapa 12: os povos (quem são, os dons, a convivência entre eles) e o chamado de Deus
+  function povosHTML(Dz, g) {
+    const Pv = G.Povos, P = S.povos;
+    const row = (k) => {
+      const d = Pv.DEF[k], n = Pv.count(S, k), why = k === 'humano' ? null : Pv.callWhy(S, k);
+      const dons = d.dons.map((x) => `<span class="chip dom" title="${esc(Pv.DONS[x].desc)}">${esc(Pv.DONS[x].name)}</span>`).join('') + (d.fraq ? `<span class="chip fraq" title="${esc(Pv.FRAQ[d.fraq].desc)}">${esc(Pv.FRAQ[d.fraq].name)}</span>` : '');
+      const call = k === 'humano' ? '' : `<button type="button" class="btn btn-small" data-gact="chamar" data-k="${k}"${why ? ' disabled' : ''} title="${esc(why ? 'Agora não: ' + why : 'Uma caravana sai na manhã seguinte')}">Chamar (${C.POVO_CALL} de Poder)</button>${why ? `<span class="small muted">Agora não: ${esc(why)}.</span>` : ''}`;
+      return `<li class="povo-row"><img class="ico ico-lg" src="${ic(d.icon)}" alt=""><div><b>${esc(d.name)}</b> <span class="small ttl">${esc(d.alias)}</span><span class="small">${esc(d.desc)}</span>
+        <span class="small st">${esc(Pv.status(S, k))}</span><div class="chips">${dons}</div>${call ? `<div class="povo-call">${call}</div>` : ''}</div></li>`;
+    };
+    // a convivência: só entre os povos que já moram aqui
+    const here = Pv.ORDER.filter((k) => Pv.count(S, k) > 0), pairs = [];
+    for (let i = 0; i < here.length; i++) for (let j = i + 1; j < here.length; j++) pairs.push([here[i], here[j]]);
+    const word = (v) => (v >= 100 ? 'um povo só' : v >= 75 ? 'irmãos' : v >= 50 ? 'bons vizinhos' : v >= 30 ? 'se toleram' : v >= C.CONV_LOW ? 'se estranham' : 'à beira da briga');
+    const conv = pairs.length ? pairs.map(([a, b]) => { const v = Pv.conv(S, a, b); return `<li><span class="small">${esc(Pv.DEF[a].name)} e ${esc(Pv.DEF[b].name.toLowerCase())} · <b>${Math.floor(v)}</b> · ${word(v)}</span><div class="bar ${v < 30 ? 'low' : v < 50 ? 'mid' : ''}"><i style="width:${Math.floor(v)}%"></i></div></li>`; }).join('') :
+      '<li class="none small muted">Por enquanto a aldeia tem um povo só.</li>';
+    const mest = Pv.count(S, 'meio');
+    return `<p class="small muted">Outros povos chegam em caravanas depois que o acampamento vira aldeia, e pedem para ficar. Cada um tem o seu corpo, três dons e uma fraqueza. Filho de dois povos herda um dom de cada lado.${mest ? ' Mestiços na aldeia: ' + mest + '.' : ''}</p>
+      <h3>Convivência</h3><ul class="convlist">${conv}</ul>
+      <p class="small muted">Sobe com conversa, festa, história ao pé do fogo, pregação, casais e filhos mistos. Desce com briga. Abaixo de 50, briga-se mais e os pares saem devagar; em 100, viram um povo só.</p>
+      <h3>Os povos</h3><ul class="donlist povolist">${Pv.ORDER.map(row).join('')}</ul>`;
+  }
   function nivelHTML(Dz, g) {
     const lv = Dz.level(S), nx = Dz.next(S), fi = Dz.fieis(S);
     const ladder = C.GOD_LEVELS.map((L, i) => {
@@ -909,6 +1201,13 @@
       return;
     }
     if (a === 'goto') { $('#modal-deus').hidden = true; UI.select(+b.dataset.pid, 0, true); return; }
+    if (a === 'chamar' && G.Povos) {   // Etapa 12
+      const why = G.Povos.callWhy(S, b.dataset.k);
+      if (why) { UI.toast('Agora não: ' + why + '.', 'warn'); return; }
+      G.Povos.call(S, b.dataset.k);
+      UI.deus('povos'); UI.update(0, true);
+      return;
+    }
     if (a === 'gobuild') {
       const bd = Sim.building(S, +b.dataset.bid);
       $('#modal-deus').hidden = true;
@@ -995,6 +1294,8 @@
       else if (e.k === 'godName' || e.k === 'dom' || e.k === 'fe100') { /* só som */ }
       else if (e.k === 'bite') { G.R.event(e); if (UI.hooks.alarm) UI.hooks.alarm(); }
       else if (e.k === 'thanks') UI.toast(e.text, e.kind === 'luto' ? 'prayer' : 'thanks');
+      else if (e.k === 'oferenda') { UI.toast(e.text, 'thanks'); const ob = Sim.building(state, e.bid); if (ob) UI.float(ob.x + 1, ob.y, '+' + e.poder + ' Poder'); }   // Etapa 12
+      else if (e.k === 'povo') { /* só som */ }
       else if (e.k === 'festa' || e.k === 'story' || e.k === 'fight' || e.k === 'goal' || e.k === 'moon' || e.k === 'song') { /* só som */ }
       else if (e.k === 'fireLit') G.R.event(e);
       else if (e.k === 'star' || e.k === 'rainbow' || e.k === 'birds') G.R.event(e);
@@ -1169,26 +1470,41 @@
     $('#rank-close').onclick = () => { $('#modal-rank').hidden = true; };
   };
   // o mundo ainda está seguindo (ausência longa): progresso na mesma janela
-  UI.awayProgress = function (f, minutes) {
+  // job: o cálculo em andamento (offline.js); "Entrar agora" para onde estiver e mostra o resumo do que passou
+  UI.awayProgress = function (f, minutes, job) {
     const total = Math.max(1, Math.round(minutes / C.DAY_MIN));
     $('#away-title').textContent = 'Enquanto você esteve fora…';
     $('#away-lead').textContent = 'O mundo está seguindo: dia ' + Math.min(total, Math.round(total * f)) + ' de ' + total + '.';
     $('#away-bar').hidden = false;
-    $('#away-bar i').style.width = Math.round(f * 100) + '%';
-    $('#away-stats').innerHTML = ''; $('#away-chron').innerHTML = '';
+    $('#away-bar i').style.width = (f * 100).toFixed(1) + '%';
+    if ($('#modal-away').hidden) { $('#away-stats').innerHTML = ''; $('#away-chron').innerHTML = ''; }
     $('#away-ok').hidden = true;
+    const now = $('#away-now');
+    if (job && now.hidden) {
+      now.hidden = false; now.disabled = false; now.textContent = 'Entrar agora';
+      now.onclick = () => { job.stop = true; now.disabled = true; now.textContent = 'Entrando…'; };
+    }
     $('#modal-away').hidden = false;
   };
   UI.away = function (r, onOk) {
-    $('#away-bar').hidden = true; $('#away-ok').hidden = false;
-    const days = Math.round(r.days);
-    $('#away-lead').textContent = days < 1 ? 'Passaram poucas horas. O povo seguiu a vida.' :
-      'Passaram ' + days + (days === 1 ? ' dia' : ' dias') + ', de ' + Sim.dateText(r.from).toLowerCase() + ' até ' + Sim.dateText(r.to).toLowerCase() + '.';
+    $('#away-bar').hidden = true; $('#away-ok').hidden = false; $('#away-now').hidden = true;
+    const days = Math.round(r.days), plan = Math.round(r.planned || r.days);
+    const span = 'de ' + Sim.dateText(r.from).toLowerCase() + ' até ' + Sim.dateText(r.to).toLowerCase() + '.';
+    const nd = (n) => n + (n === 1 ? ' dia' : ' dias');
+    $('#away-lead').textContent = days < 1 ? (r.early ? 'Você entrou logo: passaram poucas horas.' : 'Passaram poucas horas. O povo seguiu a vida.') :
+      r.early && plan > days ? 'Você entrou antes do fim: passaram ' + nd(days) + ' dos ' + plan + ', ' + span :
+      r.cut && plan > days ? 'Este aparelho não deu conta de tudo: passaram ' + nd(days) + ' dos ' + plan + ', ' + span :
+      'Passaram ' + nd(days) + ', ' + span;
     const RS = RES.map(([k]) => k).filter((k) => RES_BASE.has(k) || r.stockAfter[k] || r.stockBefore[k]);
-    $('#away-stats').innerHTML = RS.map((k) => {
+    // o povo: numa vila grande, um número e só quem não está bem
+    const many = r.alive.length > 12, weak = r.alive.filter((a) => a.saude < 70).slice(0, 8);
+    const row = (a) => `<dt><img class="ico" src="${ic('pessoa')}" alt="">${esc(a.name)}</dt><dd>saúde ${a.saude} · ${moodWord(a.humor)}</dd>`;
+    const povo = `<dt><img class="ico" src="${ic('pessoa')}" alt="">Povo</dt><dd>${r.alive.length} ${r.alive.length === 1 ? 'pessoa' : 'pessoas'}${r.born ? ' <span class="small muted">(' + r.born + (r.born === 1 ? ' nascimento' : ' nascimentos') + ')</span>' : ''}</dd>` +
+      (r.built ? `<dt><img class="ico" src="${ic('construir')}" alt="">Obras</dt><dd>${r.built} ${r.built === 1 ? 'ficou pronta' : 'ficaram prontas'}</dd>` : '');
+    $('#away-stats').innerHTML = povo + RS.map((k) => {
       const d = r.stockAfter[k] - r.stockBefore[k];
       return `<dt><img class="ico" src="${ic(k)}" alt="">${RES_NAME[k]}</dt><dd>${r.stockAfter[k]} <span class="small muted">(${d >= 0 ? '+' : ''}${d})</span></dd>`;
-    }).join('') + r.alive.map((a) => `<dt><img class="ico" src="${ic('pessoa')}" alt="">${esc(a.name)}</dt><dd>saúde ${a.saude} · ${moodWord(a.humor)}</dd>`).join('');
+    }).join('') + (many ? weak : r.alive).map(row).join('');
     $('#away-chron').innerHTML = r.newChron.slice().reverse().map((c) => `<li><span class="when">${esc(Sim.dateText(c.t))}</span><span class="what">${esc(c.text)}</span></li>`).join('');
     $('#modal-away').hidden = false;
     $('#away-ok').onclick = () => { $('#modal-away').hidden = true; if (onOk) onOk(); };
@@ -1215,7 +1531,7 @@
       e.preventDefault();
       F.rename(S, baby.id, input.value);
       $('#modal-birth').hidden = true;
-      cardsKey = ''; lastInsp = '';
+      listSig = ''; lastInsp = '';   // o nome novo entra na ordem da lista
       UI.refreshChron();
       if (!rename) UI.toast('Bem-vind' + (ela ? 'a' : 'o') + ', ' + baby.name + '.', 'chron');
       if (onDone) onDone();
@@ -1257,7 +1573,13 @@
     $('#choice-yes').disabled = false;
     $('#choice-no').textContent = 'Mandar seguir';
     $('#choice-ico').src = ic('pessoa');
-    if (info.kind === 'casal') {
+    const Pv = G.Povos, PD = info.kind === 'povo' && Pv ? Pv.DEF[info.povo] : null;
+    if (PD) {
+      // Etapa 12: a caravana de um povo
+      $('#choice-ico').src = ic(PD.icon);
+      $('#choice-title').textContent = 'Uma caravana ' + PD.de + ' pede para ficar';
+      $('#choice-lead').textContent = cap1(PD.alias) + '. ' + PD.desc + ' Se ficarem, trazem ' + Pv.giftText(info.povo, true) + '.';
+    } else if (info.kind === 'casal') {
       $('#choice-title').textContent = 'Um casal pede abrigo';
       $('#choice-lead').textContent = (mom ? mom.name : '') + ' e ' + (dad ? dad.name : '') + ' vêm de longe' +
         (kid ? ', com ' + (kid.sex === 'F' ? 'a filha ' : 'o filho ') + kid.name + ', de ' + kid.age + ' anos' : '') +
@@ -1270,17 +1592,23 @@
     const roleTxt = { mae: 'mãe', pai: 'pai', filho: null, so: null };
     $('#choice-people').innerHTML = ps.map((p, i) => `<li><canvas data-i="${i}" width="8" height="14"></canvas>
       <div class="nm">${esc(p.name)}<span class="small">${p.age} anos${roleTxt[p.role] ? ' · ' + roleTxt[p.role] : p.role === 'filho' ? ' · ' + (p.sex === 'F' ? 'filha' : 'filho') : ''}</span></div>
-      <div class="chips">${p.traits.map((t) => `<span class="chip" title="${esc(Sim.TRAIT_DESC[t])}">${esc(t)}</span>`).join('')}</div></li>`).join('');
+      <div class="chips">${p.traits.map((t) => `<span class="chip" title="${esc(Sim.TRAIT_DESC[t])}">${esc(t)}</span>`).join('')}</div></li>`).join('') +
+      (PD ? `<li class="povo-dons"><img class="ico ico-lg" src="${ic(PD.icon)}" alt=""><div class="nm">Dons ${esc(PD.de)}<span class="small">Vivem uns ${PD.old} anos</span></div><div class="chips">` +
+        PD.dons.map((d) => `<span class="chip dom" title="${esc(Pv.DONS[d].desc)}">${esc(Pv.DONS[d].name)}</span>`).join('') + (PD.fraq ? `<span class="chip fraq" title="${esc(Pv.FRAQ[PD.fraq].desc)}">${esc(Pv.FRAQ[PD.fraq].name)}</span>` : '') + '</div></li>' : '');
     ps.forEach((p, i) => {
       const cv = $('#choice-people').querySelector(`canvas[data-i="${i}"]`);
-      const sh = A.personSheet({ id: 'c' + gid + ':' + i, sex: p.sex, look: p.look });
-      cv.getContext('2d').drawImage(sh.sheet, 0, 0, 8, 14, 0, 0, 8, 14);
+      // criança (até 11 anos) no desenho de criança, mais baixo no quadro
+      const kid = p.age < 12, q = { id: 'c' + gid + ':' + i, sex: p.sex, look: p.look };
+      const x2 = cv.getContext('2d');
+      if (kid) x2.drawImage(A.kidSheet(q).sheet, 0, 0, 6, 11, 1, 3, 6, 11);
+      else x2.drawImage(A.personSheet(q).sheet, 0, 0, 8, 14, 0, 0, 8, 14);
     });
     const beds = G.Family.bedsTotal(S), need = G.Family.bedsNeeded(S) + ps.length * 2;
     $('#choice-note').textContent = 'Hoje: comida para ' + Math.floor(S.ctx.foodDays) + (Math.floor(S.ctx.foodDays) === 1 ? ' dia' : ' dias') +
       ' · barracas com ' + beds + ' lugares, ' + (need > beds ? 'faltariam ' + (need - beds) : 'sobrariam ' + (beds - need)) + ' com ' + (one ? 'quem chegou' : 'eles') + '.' +
-      (info.kind === 'casal' ? ' Recusar é para sempre: não vem outro casal.' : '');
-    $('#choice-yes').textContent = one ? 'Acolher' : 'Acolher os três';
+      (info.kind === 'casal' ? ' Recusar é para sempre: não vem outro casal.' : '') +
+      (PD ? ' Povos diferentes começam se estranhando: conversa, festa e história aproximam. Mandados seguir, voltam uma vez, daqui a uns anos.' : '');
+    $('#choice-yes').textContent = one ? 'Acolher' : PD ? 'Acolher a caravana' : 'Acolher os três';
     $('#modal-choice').hidden = false;
     setTimeout(() => $('#choice-yes').focus(), 50);
     return true;
@@ -1384,7 +1712,7 @@
     }
     for (const p of people) {
       const a = pos.get(p.id);
-      const age = p.alive ? UI.ageText(S, p) : '† ' + Sim.ageOf(S, p) + (Sim.ageOf(S, p) === 1 ? ' ano' : ' anos');
+      const age = p.alive ? UI.ageText(S, p) : '† ' + anos(yearsOf(p));
       nodes += `<g class="t-node${p.alive ? '' : ' dead'}${p.sex === 'F' ? ' f' : ' m'}" data-pid="${p.id}" transform="translate(${a.x},${a.y})">` +
         `<rect width="${NW}" height="${NH}" rx="6"/><text x="10" y="19" class="t-name">${esc(p.name)}</text><text x="10" y="35" class="t-age">${esc(age)}</text></g>`;
     }
@@ -1447,11 +1775,23 @@
       }).join('');
       $('#campo-count').textContent = '(' + K.count(S) + ' de ' + K.ORDER.length + ')';
     }
-    const cur = discTab === 'inv' && I ? 'inv' : discTab === 'campo' && K ? 'campo' : 'trilha', inv = cur !== 'trilha';
-    $('#disc-list').hidden = cur !== 'trilha'; $('#inv-list').hidden = cur !== 'inv'; $('#campo-list').hidden = cur !== 'campo';
+    // Etapa 12: as descobertas da mina (mineração e metalurgia), no mesmo jeito
+    const Mi = G.Minas;
+    if (Mi) {
+      $('#mina-list').innerHTML = Mi.ORDER.map((id) => {
+        const k = S.tech.known[id];
+        if (k) return row(id, 'known', k.how === 'povo' ? 'Ensinada por ' + esc(k.by || 'quem veio de fora') + ' · ' + esc(Sim.dateText(k.t).toLowerCase()) : knownTxt(T.DISC[id], k), '', '');
+        if (Mi.isOpen(S, id)) { const [st, bar] = learning(id, Mi.progress(S, id)); return row(id, 'open', st, bar, reveal(id)); }
+        return row(id, 'locked', '<span class="req">Pede ' + esc(listPT(Mi.missing(S, id))) + '</span>', '', '');
+      }).join('');
+      $('#mina-count').textContent = '(' + Mi.count(S) + ' de ' + Mi.ORDER.length + ')';
+    }
+    const cur = discTab === 'inv' && I ? 'inv' : discTab === 'campo' && K ? 'campo' : discTab === 'mina' && Mi ? 'mina' : 'trilha', inv = cur !== 'trilha';
+    $('#disc-list').hidden = cur !== 'trilha'; $('#inv-list').hidden = cur !== 'inv'; $('#campo-list').hidden = cur !== 'campo'; $('#mina-list').hidden = cur !== 'mina';
     for (const b of document.querySelectorAll('.disc-tabs [data-dtab]')) b.classList.toggle('on', b.dataset.dtab === cur);
     $('#disc-intro').textContent = cur === 'inv'
       ? 'Cada invenção abre quando o que ela pede já existe e aprende com o seu próprio trabalho: várias andam ao mesmo tempo. A Revelação entrega a que você escolher, se o povo já passou de ' + Math.round(C.REVELACAO_MIN * 100) + '% da prática.'
+      : cur === 'mina' ? 'Os metais começam com a cerâmica: quem quebra pedra aprende a mineração, e quem trabalha na mina, a metalurgia. Os anões já chegam sabendo as duas, e ensinam.'
       : cur === 'campo' ? 'O campo começa com a cerâmica: primeiro a roça; dela vêm o algodão, a criação e, com a corda, a cerca. Cada uma aprende com o seu próprio trabalho, e a Revelação entrega a que você escolher.'
         : 'O povo aprende fazendo: cada descoberta vem da prática, uma depois da outra. A Revelação de Deus entrega a próxima antes da hora.';
     const alive = S.people.filter((p) => p.alive).length;

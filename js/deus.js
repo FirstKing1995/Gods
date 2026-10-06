@@ -1,4 +1,4 @@
-/* Gênesis · Deus (Etapa 11): o que Deus vira com o tempo. A fé, as orações e os milagres moram em god.js; aqui moram
+/* Gods · Deus (Etapa 11): o que Deus vira com o tempo. A fé, as orações e os milagres moram em god.js; aqui moram
    a glória e os níveis (de Espírito a Deus Maior), os dons (um a cada nível), o nome que o povo dá, os céticos que se
    convertem, o escolhido de fé inteira que recebe um poder (curar, pregar ou brilhar), a Bênção e os grandes atos:
    a estátua com milagre próprio, a espécie nova (um bicho, um peixe, uma árvore) e o conhecimento de outra era.
@@ -486,6 +486,7 @@
     p.prayedDay = S.ck.day;
     God().faith(S, p, C.REZA_FE * (Sim().def(b).god.reza || 1));
     God().gain(S, C.REZA_PODER);
+    if (G.Minas && !S.resumido) G.Minas.offer(S, p, b);   // Etapa 12: a oferenda do que brilha (uma por estátua por dia)
     Sim().addMem(S, p, 'rezou');
     S.stats.rezas = (S.stats.rezas || 0) + 1;
     if (S.stats.rezas === 1) chron(S, 'Pela primeira vez, ' + p.name + ' rezou de manhã ao pé da estátua de ' + D.call(S) + '.');

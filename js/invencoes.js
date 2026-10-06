@@ -1,4 +1,4 @@
-/* Gênesis · Invenções (Etapa 8): os utensílios da aldeia.
+/* Gods · Invenções (Etapa 8): os utensílios da aldeia.
    Faca, corda, flauta, tambor, machado, agulha, arco e flecha, rede de pesca e vasos.
    A trilha das descobertas (Etapa 5) anda uma de cada vez. As invenções são uma árvore: cada uma abre quando
    o que ela pede já existe e aprende com o seu próprio trabalho, várias ao mesmo tempo. A Revelação também

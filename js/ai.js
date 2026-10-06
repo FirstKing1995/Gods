@@ -1,4 +1,4 @@
-/* Gênesis · IA utilitária e ações dos cidadãos. Sem DOM.
+/* Gods · IA utilitária e ações dos cidadãos. Sem DOM.
    Cada cidadão dá nota a cada ação possível e executa a maior.
    As Vontades de Deus pesam no trabalho; as necessidades pesam mais quando apertam. */
 (function (G) {
@@ -8,27 +8,28 @@
   const RUN = 0, DONE = 1, FAIL = -1;
   const DONE_QUIET = 2;   // terminou, mas sem o "bom dia" (acordou de madrugada para beber, por exemplo)
 
-  const WORK = ['frutas', 'agua', 'madeira', 'pedra', 'pesca', 'caca', 'argila', 'construir', 'caminho', 'oficio', 'conservar', 'roca', 'criacao', 'cerca', 'fogo'];
+  const WORK = ['frutas', 'agua', 'madeira', 'pedra', 'pesca', 'caca', 'argila', 'construir', 'caminho', 'oficio', 'conservar', 'roca', 'criacao', 'cerca', 'mina', 'fogo'];   // mina: Etapa 12
   const VONT = { caminho: 'construir', cerca: 'construir' };   // caminho e cerca usam a Vontade de Construir (Etapas 7 e 10)
   const WORK_SET = new Set(WORK);
   const SKILL_OF = { frutas: 'coleta', agua: 'coleta', madeira: 'coleta', pedra: 'coleta', pesca: 'pesca', caca: 'caca', argila: 'coleta',
-    construir: 'construcao', caminho: 'construcao', oficio: 'oficio', conservar: null, fogo: null, roca: 'plantio', criacao: 'criacao', cerca: 'construcao' };
+    construir: 'construcao', caminho: 'construcao', oficio: 'oficio', conservar: null, fogo: null, roca: 'plantio', criacao: 'criacao', cerca: 'construcao', mina: 'mineracao' };
   // reavaliadas a cada 20 min; alimentar o fogo não (é rápido, e largar no meio devolvia a lenha e recomeçava sem fim);
   // caçar e conservar também não (largar a caça no meio perdia a presa; a carga do moquém é curta)
   // caça, ofício e conservar não se reavaliam no meio: quem lasca segura a pedra na mão (o estoque parece vazio)
   // e largava a peça pela metade a cada reavaliação, sem nunca terminar
   // roça e criação também não (a colheita no cesto, a ração na mão: cada tarefa é curta e termina sozinha)
-  const REEVAL = new Set(WORK.filter((w) => w !== 'fogo' && w !== 'caca' && w !== 'conservar' && w !== 'oficio' && w !== 'roca' && w !== 'criacao')
+  const REEVAL = new Set(WORK.filter((w) => w !== 'fogo' && w !== 'caca' && w !== 'conservar' && w !== 'oficio' && w !== 'roca' && w !== 'criacao' && w !== 'mina')
     .concat(['vagar', 'brincar', 'aquecer', 'depositar', 'ouvir', 'festa']));
   const Fam = G.Family, Tech = G.Tech;
   AI.WORK = WORK;
   AI.LABEL = { frutas: 'Frutas', agua: 'Água', madeira: 'Madeira', pedra: 'Pedra', pesca: 'Pesca', caca: 'Caça', argila: 'Argila',
-    construir: 'Construir', caminho: 'Caminhos', oficio: 'Ofício', conservar: 'Conservar', fogo: 'Fogo', roca: 'Roça', criacao: 'Criação', cerca: 'Cercas' };
-  AI.SKILL_LABEL = { coleta: 'Coleta', pesca: 'Pesca', construcao: 'Construção', caca: 'Caça', oficio: 'Ofício', plantio: 'Plantio', criacao: 'Criação' };
+    construir: 'Construir', caminho: 'Caminhos', oficio: 'Ofício', conservar: 'Conservar', fogo: 'Fogo', roca: 'Roça', criacao: 'Criação', cerca: 'Cercas', mina: 'Mineração' };
+  AI.SKILL_LABEL = { coleta: 'Coleta', pesca: 'Pesca', construcao: 'Construção', caca: 'Caça', oficio: 'Ofício', plantio: 'Plantio', criacao: 'Criação', mineracao: 'Mineração' };
   const RES_LABEL = { madeira: 'madeira', pedra: 'pedra', agua: 'água', frutas: 'frutas', peixe: 'peixe', carne: 'carne', couro: 'couro',
     argila: 'argila', defumado: 'defumado', seca: 'fruta seca', ferramentas: 'ferramentas', roupas: 'roupas',
     tabuas: 'tábuas', fibra: 'fibra', mantas: 'mantas', redes: 'redes',
-    feijao: 'feijão', milho: 'milho', abobora: 'abóbora', mandioca: 'mandioca', ovos: 'ovos', leite: 'leite' };
+    feijao: 'feijão', milho: 'milho', abobora: 'abóbora', mandioca: 'mandioca', ovos: 'ovos', leite: 'leite',
+    carvao: 'carvão', minerio: 'minério', prata: 'prata', ouro: 'ouro', gemas: 'pedras preciosas', ferro: 'ferramentas de ferro', joias: 'joias' };
   AI.RES_LABEL = RES_LABEL;
 
   const LINES = {
@@ -60,10 +61,15 @@
     lobos: ['Lobos!', 'Corre pro fogo!', 'Tem lobo aqui!'],
     caca: ['Hoje tem carne.', 'Silêncio… lá está.', 'Devagar, contra o vento.'],
     acertou: ['Peguei!', 'Na mosca!', 'Carne para todo mundo!'],
+    achou: ['Olha isso!', 'Achei! Achei!', 'Como brilha!'],
     errou: ['Errei…', 'Quase!', 'Fugiu!'],
     escapou: ['Escaparam todas.', 'Hoje não deu.'],
     oficio: ['Vou fazer ferramentas.', 'Deixa eu lascar essa pedra.', 'Vou costurar um couro.'],
     marcenaria: ['Vou tirar umas tábuas.', 'Essa madeira é boa.', 'Tábua reta, casa firme.'],
+    // Etapa 12
+    mina: ['Vou descer na mina.', 'Hoje eu acho o veio.', 'Pedra não acaba lá embaixo.'],
+    forja: ['Vou acender a forja.', 'Ferro quente, martelo firme.', 'Essa vai durar uma vida.'],
+    ourives: ['Vou fazer uma coisa bonita.', 'Olha como brilha.'],
     tear: ['Vou tecer um pouco.', 'Um fio por cima, um por baixo…', 'Essa manta vai ficar quentinha.'],
     caminho: ['Vou abrir o caminho.', 'Por aqui a gente vai mais rápido.', 'Tirando o mato…'],
     conservar: ['Vou pôr o peixe no moquém.', 'Fruta no sol dura o inverno.', 'Guardar para o frio.'],
@@ -103,6 +109,7 @@
     if (curS) s *= Fam.workFactor(curS, p);
     if (curS && wk) s *= Tech.speed(curS, p, wk);   // ferramenta de pedra
     if (curS && wk && curS.god && curS.god.blessings && curS.god.blessings.length && G.Deus) s *= G.Deus.blessAt(curS, p.x, p.y);   // a Bênção (Etapa 11)
+    if (curS && wk && p.sangue && G.Povos) s *= G.Povos.speed(curS, p, wk);   // os dons de cada povo (Etapa 12)
     if (has(p, 'Trabalhador')) s *= 1.15;
     if (has(p, 'Preguiçoso')) s *= 0.85;
     if (p.needs.energia < 15) s *= 0.8;
@@ -116,7 +123,7 @@
     for (const b of S.people) if (b.alive && b.carriedBy === p.id && b.needs.calor < c) c = b.needs.calor;
     return c;
   }
-  function person(S, id) { for (const q of S.people) if (q.id === id) return q; return null; }
+  const person = (S, id) => Fam.person(S, id);   // (0.12: pelo índice da família)
   AI.person = person;
   function say(S, p, key, chance, force, kind) {
     if (chance !== undefined && S.rng.next() > chance) return;
@@ -1180,7 +1187,9 @@
         face(p, b.x, b.y);
         say(S, p, 'construir', 0.3);
       }
-      job.progress = job.progress + dt * workSpeed(p, 'construcao', 'construir') / job.work;
+      const wsp = workSpeed(p, 'construcao', 'construir');
+      job.progress = job.progress + dt * wsp / job.work;
+      S.stats.buildMin = (S.stats.buildMin || 0) + dt * wsp;   // a memória da aldeia (0.12): quanto se trabalha em obra
       p.skills.construcao += dt / 60 * Fam.xpFactor(S, p);
       a.t += dt;
       if (job.progress >= 1) { Sim.complete(S, b); return DONE; }
@@ -1189,6 +1198,46 @@
     end(S, p) {
       if (p.carry && p.carry.k === 'obra') { for (const k of MATS) S.stock[k] += p.carry[k] || 0; p.carry = null; }
     },
+  };
+
+  // Etapa 12: a mina. Vai até a boca, trabalha um turno lá dentro e traz o que saiu (pedra sempre; o resto é sorte)
+  ACT.mina = {
+    start(S, p, a) {
+      if (p.carry || !G.Minas) return false;
+      const b = G.Minas.pick(S, p);
+      if (!b) return false;
+      a.b = b.id;
+      return !!toBuilding(S, p, b);
+    },
+    run(S, p, a, dt) {
+      const Mi = G.Minas, b = Sim.building(S, a.b);
+      if (a.stage === 'haul') {
+        if (moving(p)) return RUN;
+        if (p.stuck) return FAIL;
+        if (p.carry && p.carry.mina) { Mi.deposit(S, p, p.carry.mina); p.carry = null; }
+        return DONE;
+      }
+      if (!b || !b.built || b.demol) return FAIL;
+      if (a.stage === 'go') {
+        if (moving(p)) return RUN;
+        if (p.stuck) return FAIL;
+        a.stage = 'work'; a.t = 0;
+        face(p, b.x + 1, b.y + 1);
+        say(S, p, 'mina', 0.3);
+      }
+      a.t += dt * workSpeed(p, 'mineracao', 'mina');
+      p.skills.mineracao = (p.skills.mineracao || 0) + dt / 60 * Fam.xpFactor(S, p);
+      if (a.t < C.MINA_TURNO) return RUN;
+      const got = Mi.yield(S, p, b);
+      let n = 0;
+      for (const k in got) n += got[k];
+      p.carry = { k: got.ouro ? 'ouro' : got.prata ? 'prata' : got.minerio ? 'minerio' : got.carvao ? 'carvao' : 'pedra', n, mina: got };
+      if (got.ouro || got.gemas) say(S, p, 'achou', 1, true);
+      a.stage = 'haul';
+      return toCamp(S, p) ? RUN : FAIL;
+    },
+    // largou no meio do caminho: o que já tinha saído da mina chega ao estoque assim mesmo
+    end(S, p) { if (p.carry && p.carry.mina) { G.Minas.deposit(S, p, p.carry.mina); p.carry = null; } },
   };
 
   ACT.fogo = {
@@ -1231,7 +1280,7 @@
 
   // caça (lança): escolhe uma capivara, chega perto, arremessa; acertou, carneia e leva carne e couro.
   // Com o arco e flecha (Etapa 8), atira de longe, acerta mais e a flecha não espanta o bando
-  const cacaR = (S) => (G.Inv ? G.Inv.cacaR(S) : C.CACA_R);
+  const cacaR = (S, p) => (G.Inv ? G.Inv.cacaR(S) : C.CACA_R) + (p && p.sangue && G.Povos ? G.Povos.cacaReach(p) : 0);   // o olho de arqueiro alcança mais (Etapa 12)
   // a presa caiu: vai até ela para carnear
   function toCut(S, p, a, e) {
     const w = S.world, ex = Math.floor(e.x), ey = Math.floor(e.y);
@@ -1243,7 +1292,7 @@
     const w = S.world, ex = e.x, ey = e.y;
     const r = W.findNearest(w, tileOf(S, p), (i) => {
       const x = i % w.W + 0.5, y = ((i / w.W) | 0) + 0.5;
-      return Math.hypot(x - ex, y - ey) <= cacaR(S) - 0.4 ? 1 : 0;
+      return Math.hypot(x - ex, y - ey) <= cacaR(S, p) - 0.4 ? 1 : 0;
     }, 160);
     if (!r) return false;
     setPath(p, r.path.length ? r.path : null);
@@ -1253,8 +1302,11 @@
     start(S, p, a) {
       if (p.carry) return false;
       if (!Tech.hasTool(S, p)) {
-        if (S.stock.ferramentas <= 0) return false;
-        S.stock.ferramentas--; p.tool = { dur: 100 };   // a lança vem do estoque de ferramentas
+        if (S.stock.ferro > 0) { S.stock.ferro--; p.tool = { dur: 100, fe: 1 }; }   // Etapa 12: a de ferro primeiro
+        else {
+          if (S.stock.ferramentas <= 0) return false;
+          S.stock.ferramentas--; p.tool = { dur: 100 };   // a lança vem do estoque de ferramentas
+        }
       }
       const e = G.Fauna.prey(S, p, 60);
       if (!e) return false;
@@ -1271,7 +1323,7 @@
       if ((a.stage === 'go' || a.stage === 'aim') && e.state === 'morta') return toCut(S, p, a, e);   // caiu (na luta, por exemplo)
       if (a.stage === 'go') {
         const d = Math.hypot(e.x - p.x, e.y - p.y);
-        if (e.state !== 'morta' && d <= cacaR(S)) { a.stage = 'aim'; a.t = 0; p.path = null; face(p, Math.floor(e.x), Math.floor(e.y)); return RUN; }
+        if (e.state !== 'morta' && d <= cacaR(S, p)) { a.stage = 'aim'; a.t = 0; p.path = null; face(p, Math.floor(e.x), Math.floor(e.y)); return RUN; }
         a.t += dt;
         // a presa anda: refaz o caminho de tempos em tempos
         if (!moving(p) || a.t - (a.repath || 0) >= 15) {
@@ -1281,7 +1333,7 @@
         return a.t > 240 ? FAIL : RUN;   // correu demais atrás
       }
       if (a.stage === 'aim') {
-        if (Math.hypot(e.x - p.x, e.y - p.y) > cacaR(S) + 1.2) { a.stage = 'go'; a.t = 0; a.repath = -99; return RUN; }
+        if (Math.hypot(e.x - p.x, e.y - p.y) > cacaR(S, p) + 1.2) { a.stage = 'go'; a.t = 0; a.repath = -99; return RUN; }
         face(p, Math.floor(e.x), Math.floor(e.y));
         a.t += dt * workSpeed(p, 'caca', 'caca');
         p.skills.caca += dt / 60 * Fam.xpFactor(S, p);
@@ -1290,7 +1342,7 @@
         const bow = !!(G.Inv && Tech.known(S, 'arco'));
         S.events.push({ k: 'throw', x1: p.x, y1: p.y - 0.4, x2: e.x, y2: e.y, bow });
         const bando = Fa.alive(S).filter((o) => o !== e && o.h === e.h && Math.hypot(o.x - e.x, o.y - e.y) < 7);
-        if (S.rng.next() < C.CACA_HIT + C.CACA_HIT_LVL * lvl(p, 'caca') + (G.Inv ? G.Inv.cacaHit(S) : 0)) {
+        if (S.rng.next() < C.CACA_HIT + C.CACA_HIT_LVL * lvl(p, 'caca') + (G.Inv ? G.Inv.cacaHit(S) : 0) + (p.sangue && G.Povos ? G.Povos.cacaHit(p) : 0)) {
           S.events.push({ k: 'hit', x: e.x, y: e.y });
           const r = Fa.hit ? Fa.hit(S, e, p) : (Fa.kill(S, e), 'morto');   // bicho grande pede mais de um acerto
           if (r === 'morto') {
@@ -1325,7 +1377,8 @@
         if (!S.stats.firstHunt) { S.stats.firstHunt = true; Sim.chron(S, p.name + ' voltou da primeira caçada com ' + C.BICHOS[sp].art + ' nas costas.'); }
         else if (hb[sp] === 1) { Sim.chron(S, p.name + ' caçou ' + C.BICHOS[sp].art + ' pela primeira vez.'); Sim.addMem(S, p, 'cacouNovo'); }   // Etapa 9: cada bicho novo entra na Crônica
         const y = Fa.yieldOf ? Fa.yieldOf(S, sp) : G.Inv ? G.Inv.cacaYield(S) : { carne: C.CACA_CARNE, couro: C.CACA_COURO };   // com a faca, carneia melhor
-        p.carry = { k: 'caca', carne: y.carne, couro: y.couro, n: y.carne + y.couro, sp };
+        const faro = p.sangue && G.Povos ? G.Povos.cacaMeat(p) : 0;   // Etapa 12: o faro tira mais carne
+        p.carry = { k: 'caca', carne: y.carne + faro, couro: y.couro, n: y.carne + faro + y.couro, sp };
         a.stage = 'haul';
         return toCamp(S, p) ? RUN : FAIL;
       }
@@ -1400,13 +1453,13 @@
 
   // ofício (pedra lascada): no acampamento, lasca pedra e encaba ferramentas; com couro, costura roupas
   // Ofício: ferramentas e roupas no acampamento; tábuas na marcenaria, mantas e redes na tecelagem (Etapa 7)
-  const PIECE = { ferramentas: 'ferramenta', roupas: 'roupa', tabuas: 'tábua', mantas: 'manta', redes: 'rede' };
-  const craftPlan = (S) => (G.Obras ? G.Obras.oficioPlan(S) : Tech.oficioPlan(S));
+  const PIECE = { ferramentas: 'ferramenta', roupas: 'roupa', tabuas: 'tábua', mantas: 'manta', redes: 'rede', ferro: 'ferramenta de ferro', joias: 'joia', joiasOuro: 'joia' };
+  const craftPlan = (S, p) => (G.Obras ? G.Obras.oficioPlan(S, p) : Tech.oficioPlan(S));   // p (Etapa 12): quem não sabe forjar não pega o trabalho da forja
   const craftCost = (k) => (G.Obras ? G.Obras.costOf(k) : k === 'roupas' ? C.ROUPA_COST : C.TOOL_COST);
   ACT.oficio = {
     start(S, p, a) {
       if (p.carry) return false;
-      const plan = craftPlan(S);
+      const plan = craftPlan(S, p);
       if (!plan) return false;
       a.make = plan.k; a.shop = plan.b ? plan.b.id : 0;
       return !!toCamp(S, p);
@@ -1439,11 +1492,11 @@
         const b = Sim.building(S, a.shop);
         if (b) face(p, b.x + b.w / 2, b.y + b.h / 2);
         a.stage = 'work'; a.t = 0;
-        say(S, p, a.make === 'tabuas' ? 'marcenaria' : 'tear', 0.4);
+        say(S, p, a.make === 'tabuas' ? 'marcenaria' : a.make === 'ferro' ? 'forja' : a.make === 'joias' || a.make === 'joiasOuro' ? 'ourives' : 'tear', 0.4);
       }
       const b = a.shop ? Sim.building(S, a.shop) : null;
       if (a.shop && (!b || !b.built)) return FAIL;
-      a.t += dt * workSpeed(p, 'oficio', 'oficio');
+      a.t += dt * workSpeed(p, 'oficio', 'oficio') * (p.sangue && G.Povos && G.Minas && G.Minas.isForge(a.make) ? G.Povos.speed(S, p, 'forja') : 1);   // o ferreiro nato (Etapa 12)
       p.skills.oficio += dt / 60 * Fam.xpFactor(S, p);
       const need = G.Obras ? G.Obras.minutesOf(S, a.make, b) : C.OFICIO_MIN * (a.make === 'roupas' ? 1.5 : 1);
       if (a.t < need) return RUN;
@@ -1459,7 +1512,7 @@
       p.carry = null;
       // no acampamento, se ainda falta e dá, emenda a próxima peça (até 3 por vez)
       if (!a.shop) {
-        const next = craftPlan(S);
+        const next = craftPlan(S, p);
         if (next && !next.b && a.done < 3) { a.make = next.k; a.stage = 'go'; return RUN; }
       }
       return DONE;
@@ -1804,7 +1857,7 @@
     if (d > 40) return 0.5;
     return (1 + 0.5 * U.clamp((4 - d) / 4, 0, 1)) * (d < 1 ? 1.6 : 1);
   }
-  function campNeed(S, wk) {
+  function campNeed(S, wk, p) {
     const st = S.stock, ctx = S.ctx;
     switch (wk) {
       case 'frutas': return ctx.bushFruit > 0 ? foodFactor(S) * Math.min(1, ctx.bushFruit / 12) : 0;
@@ -1821,7 +1874,7 @@
         const forno = S.buildings.some((b) => b.type === 'forno');
         return !forno && st.argila < C.BUILD.forno.cost.argila ? 0.8 : 0;
       }
-      case 'oficio': { const plan = G.Obras ? G.Obras.oficioPlan(S) : Tech.oficioPlan(S); return plan ? (plan.gap >= 3 || plan.pri >= 4 ? 1.5 : 1.1) : 0; }
+      case 'oficio': { const plan = G.Obras ? G.Obras.oficioPlan(S, p) : Tech.oficioPlan(S); return plan ? (plan.gap >= 3 || plan.pri >= 4 ? 1.5 : 1.1) : 0; }
       case 'caminho': return G.Obras && G.Obras.roadNeed(S) ? 0.95 : 0;
       case 'conservar': {
         const plan = Tech.conservePlan(S);
@@ -1863,6 +1916,7 @@
         return plan.kind === 'feed' ? (plan.pri >= 3 ? 2 : 1.5) : plan.kind === 'collect' ? (plan.pri > 2 ? 1.35 : 1.15) : 1.1;
       }
       case 'cerca': return G.Campo && G.Campo.fenceNeed(S) ? 0.95 : 0;
+      case 'mina': return G.Minas ? G.Minas.want(S) : 0;   // Etapa 12
     }
     return 1;
   }
@@ -1921,17 +1975,18 @@
       const v = S.vontades[VONT[wk] || wk] | 0;
       if (!v || !Fam.canWork(S, p, wk) || !Tech.workOpen(S, wk)) continue;
       if (wk === 'fogo' && othersDoing(S, p, 'fogo')) continue;
-      if (wk === 'caca' && !Tech.hasTool(S, p) && S.stock.ferramentas <= 0) continue;   // sem lança não se caça
+      if (wk === 'caca' && !Tech.hasTool(S, p) && S.stock.ferramentas <= 0 && !(S.stock.ferro > 0)) continue;   // sem lança não se caça
       const vw = Math.pow(C.VONTADE_W[v], G.God.obedience(S, p));
-      let s = C.WORK_BASE * vw * campNeed(S, wk);
+      let s = C.WORK_BASE * vw * campNeed(S, wk, p);
       if (!(s > 0)) continue;
       if (has(p, 'Trabalhador')) s *= 1.15;
       if (has(p, 'Preguiçoso')) s *= 0.85;
       const sk = SKILL_OF[wk];
       if (sk) s *= 1 + 0.03 * lvl(p, sk);
       if (wk !== 'construir' && wk !== 'fogo' && othersDoing(S, p, wk)) s *= 0.8;
-      if (ctx.night && wk !== 'fogo') s *= 0.45;
-      else if (ctx.hour >= 17.5 && wk !== 'fogo') s *= 0.75;   // de tardinha o trabalho afrouxa (é hora de história e de festa)
+      const noite = p.sangue && G.Povos && G.Povos.has(p, 'noite');   // Etapa 12: os olhos da noite do povo-fera
+      if (ctx.night && wk !== 'fogo') s *= noite ? C.DOM_NOITE : 0.45;
+      else if (ctx.hour >= 17.5 && wk !== 'fogo' && !noite) s *= 0.75;   // de tardinha o trabalho afrouxa (é hora de história e de festa)
       s *= G.Narr.workMult(S, wk);   // nevasca, tempestade e lobos seguram o povo em casa
       add(wk, Math.min(C.WORK_CAP, s));
     }
@@ -2140,8 +2195,13 @@
       case 'parto': return p.labor && p.labor.hard && !p.labor.helped ? 'Em trabalho de parto difícil' : 'Em trabalho de parto';
       case 'greve': return 'Em greve';
       case 'fugir': return st === 'go' ? 'Fugindo dos lobos' : p.sleeping ? (p.inTent ? 'Dormindo na barraca' : 'Dormindo junto ao fogo') : p.inTent ? 'Escondido na barraca' : a.src === 'campo' ? 'Junto dos outros, com medo' : 'A salvo junto ao fogo';
-      case 'construir': return st === 'fetch' ? 'Pegando material' : st === 'deliver' ? 'Levando material para a obra' : st === 'build' ? 'Construindo' : 'Indo para a obra';
+      case 'construir': {
+        const ob = a.b ? Sim.building(S, a.b) : null;
+        if (ob && ob.demol) return st === 'build' ? 'Desmontando a obra' : 'Indo desmontar a obra';   // 0.12
+        return st === 'fetch' ? 'Pegando material' : st === 'deliver' ? 'Levando material para a obra' : st === 'build' ? (ob && ob.re ? 'Erguendo a obra no lugar novo' : 'Construindo') : 'Indo para a obra';
+      }
       case 'fogo': return st === 'fetch' ? 'Pegando lenha' : 'Alimentando a fogueira';
+      case 'mina': return st === 'work' ? 'Trabalhando na mina' : st === 'haul' ? 'Trazendo o que saiu da mina' : 'Indo para a mina';   // Etapa 12
     }
     const d = DOING[a.type];
     if (d) return st === 'work' ? d[1] : st === 'haul' ? d[2] : d[0];

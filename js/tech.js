@@ -1,4 +1,4 @@
-/* Gênesis · Descobertas (Etapa 5): a trilha do conhecimento da Era da Família.
+/* Gods · Descobertas (Etapa 5): a trilha do conhecimento da Era da Família.
    Pedra lascada → Cestos → Lança → Anzol → Defumar e secar → Cerâmica.
    Cada descoberta vem da prática (quem pesca muito inventa o anzol) ou da Revelação de Deus.
    Aqui também moram as ferramentas e roupas que gastam, a conservação (moquém e jirau),
@@ -47,9 +47,9 @@
     ceramica: { 'agua:work': 1, 'argila:work': 1 },
   };
   // trabalhos que usam ferramenta (e a gastam)
-  const TOOL_WORK = { madeira: 'work', pedra: 'work', construir: 'build', caca: 'aim', argila: 'work', pesca: 'work', roca: 'weed' };   // capinar gasta a enxada (Etapa 10)
+  const TOOL_WORK = { madeira: 'work', pedra: 'work', construir: 'build', caca: 'aim', argila: 'work', pesca: 'work', roca: 'weed', mina: 'work' };   // capinar gasta a enxada (Etapa 10)
   // trabalhos novos: quando abrem
-  T.WORK_NEED = { oficio: 'pedra', caca: 'lanca', conservar: 'conserva', argila: 'ceramica', roca: 'roca', criacao: 'criacao', cerca: 'cerca' };
+  T.WORK_NEED = { oficio: 'pedra', caca: 'lanca', conservar: 'conserva', argila: 'ceramica', roca: 'roca', criacao: 'criacao', cerca: 'cerca', mina: 'mineracao' };
   // comida: quanto sustenta cada porção (Etapa 10: o que vem da roça e da criação)
   T.FOOD = ['peixe', 'carne', 'frutas', 'defumado', 'seca', 'feijao', 'milho', 'abobora', 'mandioca', 'ovos', 'leite'];
   const FOOD_V = () => ({ peixe: C.FISH_COOKED, carne: C.CARNE_COOKED, frutas: C.FRUIT_FOOD, defumado: C.DEFUMADO_FOOD, seca: C.SECA_FOOD,
@@ -97,7 +97,7 @@
     }
     return null;
   };
-  T.need = (id) => C.DISC_NEED[id] || (C.INV_NEED && C.INV_NEED[id]) || (C.CAMPO_NEED && C.CAMPO_NEED[id]);
+  T.need = (id) => C.DISC_NEED[id] || (C.INV_NEED && C.INV_NEED[id]) || (C.CAMPO_NEED && C.CAMPO_NEED[id]) || (C.MINA_NEED && C.MINA_NEED[id]);
   T.progress = (S, id) => (S.tech && S.tech.known[id] ? 1 : Math.min(1, ((S.tech && S.tech.prat[id]) || 0) / T.need(id)));
   T.workOpen = (S, wk) => !T.WORK_NEED[wk] || T.known(S, T.WORK_NEED[wk]);
   T.buildOpen = (S, type) => { const d = C.BUILD[type]; return !!d && (!d.need || T.known(S, d.need)) && !(G.Obras && G.Obras.openWhy(S, type)); };
@@ -111,6 +111,7 @@
     }
     if (G.Inv) G.Inv.onWork(S, p, a, dt);   // as invenções (Etapa 8) aprendem com o próprio trabalho
     if (G.Campo) G.Campo.onWork(S, p, a, dt);   // e as descobertas do campo (Etapa 10)
+    if (G.Minas) G.Minas.onWork(S, p, a, dt);   // e as da mina (Etapa 12)
     const open = T.open(S);
     if (!open) return;
     const w = TEACH[open][key];
@@ -146,7 +147,8 @@
     const trail = T.ORDER.indexOf(id) >= 0;
     if (trail) t.who = {};   // a prática das invenções (Etapa 8) tem conta própria
     const name = by ? by.name : 'Alguém';
-    const txt = how === 'revelacao' ? 'Num sonho, Deus mostrou a ' + name + ' o segredo: ' + d.name.toLowerCase() + '. ' + d.gives.split('.')[0] + '.' : d.story(name);
+    const txt = how === 'revelacao' ? 'Num sonho, Deus mostrou a ' + name + ' o segredo: ' + d.name.toLowerCase() + '. ' + d.gives.split('.')[0] + '.' :
+      how === 'povo' ? name + ' ensinou ao povo ' + (d.art || d.name.toLowerCase()) + ', que a gente d' + (by && by.sex === 'F' ? 'ela' : 'ele') + ' já conhecia. ' + d.gives.split('.')[0] + '.' : d.story(name);   // Etapa 12: o que um povo traz
     S.chron.push({ t: S.t, text: txt, disc: id });
     S.events.push({ k: 'chron', text: txt });
     S.events.push({ k: 'disc', id, hint: d.hint });
@@ -163,7 +165,7 @@
   // ---------- Revelação (milagre) ----------
   // o que ela entrega: a que o jogador escolheu na janela das Descobertas (se já dá), senão a próxima da trilha,
   // senão a invenção mais adiantada (Etapa 8), senão a do campo (Etapa 10). Só vale o que o povo já começou a entender.
-  const openAny = (S, id) => !!id && (T.open(S) === id || !!(G.Inv && G.Inv.isOpen(S, id)) || !!(G.Campo && G.Campo.isOpen(S, id)));
+  const openAny = (S, id) => !!id && (T.open(S) === id || !!(G.Inv && G.Inv.isOpen(S, id)) || !!(G.Campo && G.Campo.isOpen(S, id)) || !!(G.Minas && G.Minas.isOpen(S, id)));
   // Sonhos Claros (Etapa 11): a Revelação já vale com menos prática
   T.revMin = (S) => (G.Deus && G.Deus.dom(S, 'sonhos') ? C.DOM.sonhosMin : C.REVELACAO_MIN);
   T.revealable = (S, id) => openAny(S, id) && T.progress(S, id) >= T.revMin(S);
@@ -173,15 +175,16 @@
     if (T.revealable(S, aim)) return aim;
     const open = T.open(S);
     if (T.revealable(S, open)) return open;
-    const inv = G.Inv ? G.Inv.best(S) : null, cam = G.Campo ? G.Campo.best(S) : null;
-    if (inv && cam) return T.progress(S, cam) > T.progress(S, inv) ? cam : inv;
-    return inv || cam;
+    const inv = G.Inv ? G.Inv.best(S) : null, cam = G.Campo ? G.Campo.best(S) : null, min = G.Minas ? G.Minas.best(S) : null;
+    const ic = inv && cam ? (T.progress(S, cam) > T.progress(S, inv) ? cam : inv) : inv || cam;
+    if (ic && min) return T.progress(S, min) > T.progress(S, ic) ? min : ic;   // Etapa 12: as da mina
+    return ic || min;
   };
   T.canReveal = function (S) {
     if (T.revealTarget(S)) return '';
-    const cands = [T.open(S)].concat(G.Inv ? G.Inv.openList(S) : [], G.Campo ? G.Campo.openList(S) : []).filter(Boolean);
+    const cands = [T.open(S)].concat(G.Inv ? G.Inv.openList(S) : [], G.Campo ? G.Campo.openList(S) : [], G.Minas ? G.Minas.openList(S) : []).filter(Boolean);
     if (!cands.length) {
-      const all = T.count(S) >= T.ORDER.length && (!G.Inv || G.Inv.count(S) >= G.Inv.ORDER.length) && (!G.Campo || G.Campo.count(S) >= G.Campo.ORDER.length);
+      const all = T.count(S) >= T.ORDER.length && (!G.Inv || G.Inv.count(S) >= G.Inv.ORDER.length) && (!G.Campo || G.Campo.count(S) >= G.Campo.ORDER.length) && (!G.Minas || G.Minas.count(S) >= G.Minas.ORDER.length);
       if (all) return 'O povo já sabe tudo o que esta era ensina.';
       return S.stats.firstFire ? 'Ainda não há o que revelar.' : 'Ainda não há o que revelar: falta a primeira fogueira.';
     }
@@ -193,6 +196,7 @@
     if (!id) return null;
     if (G.Inv && G.Inv.DEF[id]) G.Inv.invent(S, id, p, 'revelacao');
     else if (G.Campo && G.Campo.DEF[id]) G.Campo.invent(S, id, p, 'revelacao');
+    else if (G.Minas && G.Minas.DEF[id]) G.Minas.invent(S, id, p, 'revelacao');
     else T.discover(S, id, p, 'revelacao');
     S.tech.aim = null;
     return id;
@@ -201,11 +205,15 @@
   // ---------- ferramentas ----------
   T.useTool = function (S, p, dt, wear) {
     if (!p.tool) {
-      if (S.stock.ferramentas <= 0) return;
-      S.stock.ferramentas--;
-      p.tool = { dur: 100 };
+      // Etapa 12: havendo ferramenta de ferro no estoque, é ela que se pega
+      if (S.stock.ferro > 0) { S.stock.ferro--; p.tool = { dur: 100, fe: 1 }; }
+      else {
+        if (S.stock.ferramentas <= 0) return;
+        S.stock.ferramentas--;
+        p.tool = { dur: 100 };
+      }
     }
-    p.tool.dur -= wear * dt / 60;
+    p.tool.dur -= wear * dt / 60 * (p.tool.fe ? C.FERRO_WEAR : 1);
     if (p.tool.dur <= 0) {
       p.tool = null;
       S.stats.toolsBroken = (S.stats.toolsBroken || 0) + 1;
@@ -220,8 +228,8 @@
   // bônus de velocidade no trabalho: a ferramenta de pedra e, na Etapa 8, o machado, a corda e a faca
   T.speed = function (S, p, wk) {
     let s = 1;
-    if (T.hasTool(S, p) && (wk === 'madeira' || wk === 'pedra' || wk === 'construir' || wk === 'argila' || wk === 'caca' || wk === 'roca'))
-      s = wk === 'madeira' && T.known(S, 'machado') ? C.MACHADO_BONUS : C.TOOL_BONUS;
+    if (T.hasTool(S, p) && (wk === 'madeira' || wk === 'pedra' || wk === 'construir' || wk === 'argila' || wk === 'caca' || wk === 'roca' || wk === 'mina'))
+      s = p.tool.fe ? (wk === 'madeira' && T.known(S, 'machado') ? C.FERRO_MACHADO : C.FERRO_BONUS) : wk === 'madeira' && T.known(S, 'machado') ? C.MACHADO_BONUS : C.TOOL_BONUS;   // a de ferro rende mais (Etapa 12)
     if (wk === 'construir' && T.known(S, 'corda')) s *= C.CORDA_BUILD;
     if (wk === 'construir' && G.Deus && G.Deus.saber(S, 'roda')) s *= C.RODA_BUILD;   // o carrinho de mão (Etapa 11)
     if (wk === 'oficio' && T.known(S, 'faca')) s *= C.FACA_OFICIO;
@@ -230,13 +238,14 @@
   // Etapa 11: o peixe criado por Deus, o carrinho de mão (a roda) e a Sentinela
   T.fishMult = (S, p) => (T.known(S, 'anzol') && T.hasTool(S, p) ? C.ANZOL_FISH : 1) * (T.known(S, 'rede') ? C.REDE_FISH : 1) * (G.Deus && G.Deus.species(S, 'peixe') ? C.PEIXE_FISH : 1);
   T.carryMult = (S) => (T.known(S, 'cestos') ? C.CESTO_CARRY : 1) * (G.Deus && G.Deus.saber(S, 'roda') ? C.RODA_CARRY : 1);
-  T.biteMult = (S, p) => (T.known(S, 'lanca') && T.hasTool(S, p) ? C.LANCA_BITE : 1) * (G.Deus && G.Deus.dom(S, 'sentinela') ? C.DOM.sentinelaBite : 1);
+  T.biteMult = (S, p) => (T.known(S, 'lanca') && T.hasTool(S, p) ? C.LANCA_BITE * (p.tool.fe ? C.FERRO_BITE : 1) : 1) * (G.Deus && G.Deus.dom(S, 'sentinela') ? C.DOM.sentinelaBite : 1) *
+    (p.sangue && G.Povos ? G.Povos.bite(p) : 1);   // Etapa 12: a lança de ferro e as garras do povo-fera
   T.coldMult = (p, S) => (p.roupa ? (S && T.known(S, 'agulha') ? C.AGULHA_COLD : C.ROUPA_COLD) : 1);   // costurada com agulha, mais quente
   // quantas ferramentas guardar: quem trabalha (12+) e ainda não tem, mais uma folga
   T.workers = (S) => S.people.filter((p) => p.alive && !p.carriedBy && Fam().age(S, p) >= 12);
   T.toolTarget = function (S) {
     const ws = T.workers(S);
-    return Math.max(2, Math.ceil(ws.length * 0.3)) + ws.filter((p) => !p.tool).length;
+    return Math.max(2, Math.ceil(ws.length * 0.3)) + ws.filter((p) => !p.tool).length - (S.stock.ferro || 0);   // as de ferro guardadas contam (Etapa 12)
   };
   // quem ainda precisa de roupa (a partir dos 3 anos; bebê vai enrolado no colo)
   T.needClothes = (S) => S.people.filter((p) => p.alive && !p.carriedBy && Fam().age(S, p) >= 3 && (!p.roupa || p.roupa.dur < 15)).length;
@@ -336,7 +345,7 @@
     // roupa gasta com o tempo (mais no inverno)
     let torn = 0;
     for (const p of S.people) {
-      if (!p.alive || !p.roupa) continue;
+      if (!p.alive || !p.roupa || S.resumido) continue;   // dia resumido (jogo fechado): a roupa fica como estava
       p.roupa.dur -= (C.ROUPA_WEAR_DAY + (S.ck.season === 3 ? C.ROUPA_WEAR_WINTER : 0)) * (T.known(S, 'agulha') ? C.AGULHA_WEAR : 1);
       if (p.roupa.dur <= 0) { p.roupa = null; torn++; }
     }

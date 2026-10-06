@@ -29,4 +29,4 @@ http.createServer((req, res) => {
   if (!p.startsWith(root) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); res.end('não achei'); return; }
   res.writeHead(200, { 'Content-Type': TYPES[path.extname(p)] || 'application/octet-stream' });
   fs.createReadStream(p).pipe(res);
-}).listen(port, () => console.log('Gênesis em http://localhost:' + port + '/?api=http://localhost:' + port + '/exec'));
+}).listen(port, () => console.log('Gods em http://localhost:' + port + '/?api=http://localhost:' + port + '/exec'));
