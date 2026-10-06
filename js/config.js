@@ -6,7 +6,7 @@
     VERSION: '0.12.0',
     SAVE_KEY: 'genesis.save.v1',
     // endereço do Web App do Google Apps Script (termina em /exec). Vazio = jogo só local.
-    API_URL: '',
+    API_URL: 'https://script.google.com/macros/s/AKfycbzDy7z7jS8Xd9ejZINSNtR6_S7_3zmfqDaPa77NKVEoEFBY8N_F6-EHTvlsbX0-wGsQ/exec',
     CLOUD_SAVE_SEC: 180,
 
     // ---- mapa ----
