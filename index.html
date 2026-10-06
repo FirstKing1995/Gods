@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<title>Gênesis</title>
+<title>Gods</title>
 <meta name="description" content="Um casal. Um lugar. Todas as eras. Simulador de sobrevivência em pixel art em que você é Deus.">
 <meta name="theme-color" content="#181425">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,7 +20,7 @@
 <!-- título -->
 <section id="scr-title" class="screen">
   <div class="title-card">
-    <h1 class="wordmark">Gênesis</h1>
+    <h1 class="wordmark">Gods</h1>
     <p class="pitch">Um casal. Um lugar. Todas as eras.</p>
     <div class="title-actions">
       <p id="acct-line" class="small acct-line" hidden></p>
@@ -121,7 +121,7 @@
     <div id="away-bar" class="bar poder" hidden><i></i></div>
     <dl id="away-stats" class="site-stats"></dl>
     <ol id="away-chron" class="chron"></ol>
-    <div class="modal-actions"><span></span><button id="away-ok" class="btn btn-gold">Voltar ao meu povo</button></div>
+    <div class="modal-actions"><span></span><button id="away-now" type="button" class="btn" hidden>Entrar agora</button><button id="away-ok" class="btn btn-gold">Voltar ao meu povo</button></div>
   </div>
 </div>
 
@@ -160,11 +160,13 @@
       <button type="button" role="tab" data-dtab="trilha" class="on">Trilha</button>
       <button type="button" role="tab" data-dtab="inv">Invenções <span id="inv-count"></span></button>
       <button type="button" role="tab" data-dtab="campo">Campo <span id="campo-count"></span></button>
+      <button type="button" role="tab" data-dtab="mina">Metais <span id="mina-count"></span></button>
     </div>
     <p id="disc-intro" class="small muted"></p>
     <ol id="disc-list" class="disc-list"></ol>
     <ul id="inv-list" class="disc-list" hidden></ul>
     <ul id="campo-list" class="disc-list" hidden></ul>
+    <ul id="mina-list" class="disc-list" hidden></ul>
     <p id="disc-era" class="small disc-era"></p>
     <div class="modal-actions"><span></span><button id="disc-close" class="btn">Fechar</button></div>
   </div>
@@ -190,6 +192,7 @@
       <button type="button" role="tab" data-gtab="nivel" class="on">Níveis e dons</button>
       <button type="button" role="tab" data-gtab="escolhidos">Escolhidos</button>
       <button type="button" role="tab" data-gtab="atos">Grandes atos</button>
+      <button type="button" role="tab" data-gtab="povos">Povos</button>
     </div>
     <div id="deus-body" class="deus-body"></div>
     <div class="modal-actions"><span id="deus-poder" class="small muted"></span><button id="deus-close" class="btn">Fechar</button></div>
@@ -252,7 +255,13 @@
     <p id="narr-desc" class="small muted"></p>
     <label class="small muted" for="menu-offline">Tempo com o jogo fechado</label>
     <select id="menu-offline" class="select"></select>
-    <label class="chk menu-chk" title="Noites a três e noites de muitos na Crônica, sempre só entre adultos e sem parentes, insinuado e nunca descrito."><input type="checkbox" id="menu-picante"> Noites picantes (só adultos)</label>
+    <label class="small muted" for="menu-tom">Tom do mundo</label>
+    <select id="menu-tom" class="select">
+      <option value="leve">Leve: sem noites picantes</option>
+      <option value="picante">Picante: insinuado</option>
+      <option value="adulto">Adulto (+18): sem rodeio</option>
+    </select>
+    <p id="tom-desc" class="small muted"></p>
     <div class="menu-sound" role="group" aria-label="Som">
       <label class="chk"><input type="checkbox" id="snd-on"> Som</label>
       <label class="small muted" for="snd-music">Música</label><input type="range" id="snd-music" min="0" max="100" step="5">
@@ -277,6 +286,23 @@
       <div class="obra-head"><h2 id="obra-title">Obra</h2><button id="obra-close" class="btn btn-small" aria-label="Fechar o painel da obra">Fechar</button></div>
       <div id="obra"></div>
     </aside>
+    <!-- a ficha de quem foi escolhido no mapa ou na lista: caixa própria, no lugar do painel da obra -->
+    <aside id="p-pessoa" class="panel sheet" data-sheet="pessoa" aria-label="Ficha da pessoa">
+      <div class="pessoa-head">
+        <div class="pessoa-id"><h2 id="pessoa-title">Pessoa</h2><p id="pessoa-sub" class="small muted"></p></div>
+        <button id="pessoa-close" class="btn btn-small" aria-label="Fechar a ficha">Fechar</button>
+      </div>
+      <div class="pessoa-tools">
+        <button id="pessoa-follow" class="btn btn-small" type="button" aria-pressed="false" title="A câmera acompanha esta pessoa. Arrastar o mapa solta. No mapa: dois toques na pessoa."><img class="ico" alt=""><span>Seguir</span></button>
+        <button id="pessoa-list" class="btn btn-small" type="button" title="Voltar para a lista do povo">Lista</button>
+        <span class="pessoa-nav">
+          <button id="pessoa-prev" class="btn btn-small" type="button" aria-label="Pessoa anterior" title="Anterior na lista (,)"></button>
+          <span id="pessoa-pos" class="small muted"></span>
+          <button id="pessoa-next" class="btn btn-small" type="button" aria-label="Próxima pessoa" title="Próxima na lista (.)"></button>
+        </span>
+      </div>
+      <div id="inspector"></div>
+    </aside>
     <aside id="p-deus" class="panel sheet" data-sheet="deus">
       <div class="deus-head"><h2 id="deus-title">Deus</h2><span class="small"><b id="poder-num">0</b> de Poder</span></div>
       <p id="deus-sub" class="small deus-sub"></p>
@@ -288,8 +314,17 @@
     </aside>
     <aside id="p-povo" class="panel sheet" data-sheet="povo">
       <div class="povo-head"><h2 id="povo-title">Seu povo</h2><div class="povo-tools"><button id="btn-tree" class="btn btn-small" title="Árvore da família (T)"><img class="ico" alt=""> Árvore</button><button id="btn-disc" class="btn btn-small" title="Descobertas (I)"><img class="ico" alt=""> Descobertas</button></div></div>
+      <div class="povo-filter">
+        <input id="povo-search" type="search" maxlength="14" autocomplete="off" spellcheck="false" placeholder="Buscar pelo nome" aria-label="Buscar pelo nome">
+        <select id="povo-sort" class="select" aria-label="Ordem da lista" title="Ordem da lista">
+          <option value="idade">Idade</option>
+          <option value="nome">Nome</option>
+          <option value="ajuda">Precisa de ajuda</option>
+          <option value="humor">Humor</option>
+        </select>
+      </div>
       <div id="people"></div>
-      <div id="inspector"></div>
+      <p id="povo-empty" class="small muted" hidden>Ninguém com esse nome.</p>
     </aside>
   </div>
 
@@ -343,6 +378,8 @@
 <script src="js/god.js"></script>
 <script src="js/deus.js"></script>
 <script src="js/narrator.js"></script>
+<script src="js/povos.js"></script>
+<script src="js/minas.js"></script>
 <script src="js/save.js"></script>
 <script src="js/offline.js"></script>
 <script src="js/net.js"></script>
