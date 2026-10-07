@@ -1,0 +1,53 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Memória da Etapa 13</title>
+<style>body{margin:0;background:#262b44;color:#ead4aa;font:12px monospace} canvas{image-rendering:pixelated;display:block}</style></head>
+<body><canvas id="sheet"></canvas>
+<script src="../js/core.js"></script><script src="../js/config.js"></script><script src="../js/world.js"></script>
+<script src="../js/sim.js"></script><script src="../js/family.js"></script><script src="../js/life.js"></script><script src="../js/tech.js"></script><script src="../js/invencoes.js"></script>
+<script src="../js/obras.js"></script><script src="../js/fauna.js"></script><script src="../js/bichos.js"></script><script src="../js/campo.js"></script><script src="../js/ai.js"></script>
+<script src="../js/god.js"></script><script src="../js/deus.js"></script><script src="../js/narrator.js"></script><script src="../js/povos.js"></script><script src="../js/minas.js"></script><script src="../js/memoria.js"></script><script src="../js/save.js"></script>
+<script src="../js/art.js"></script>
+<script>
+// folha da Etapa 13: as covas de cada povo (com flores, oferenda e vela), a árvore do elfo, o corpo na esteira, a
+// erva-do-sonho, o marco do cemitério nos dois níveis e os ícones, sobre a grama, a neve e a noite. ?z=6 muda o zoom
+const q = new URLSearchParams(location.search);
+const Z = +(q.get('z') || 5);
+const A = G.Art, S = A.build();
+const W = 1100, H = 760;
+const sh = document.getElementById('sheet'); sh.width = W; sh.height = H;
+const x = sh.getContext('2d'); x.imageSmoothingEnabled = false;
+const bands = [['#58a447', 'grama'], ['#dfe6f0', 'neve'], ['#1d2238', 'noite']];
+let py = 0;
+function label(t, y, col) { x.fillStyle = 'rgba(24,20,37,0.78)'; x.fillRect(0, y, W, 16); x.fillStyle = col || '#ead4aa'; x.font = '12px monospace'; x.textBaseline = 'top'; x.fillText(t, 8, y + 2); }
+for (const [col, nome] of bands) {
+  x.fillStyle = col; x.fillRect(0, py, W, 200);
+  label('covas: humano, elfo (muda), elfo (árvore), anão (laje), anão (sem laje), povo-fera, túmulo antigo · com flores, oferenda e vela · o corpo na esteira · a erva · ' + nome, py);
+  let px = 14; const base = py + 110;
+  const put = (img, dy) => { x.drawImage(img, px, base - img.height * Z + (dy || 0) * Z, img.width * Z, img.height * Z); const w = img.width * Z; px += w + 18; return px - w - 18; };
+  const cv = S.cova;
+  for (const k of ['h', 'e']) put(cv[k]);
+  put(cv.arv);
+  for (const k of ['a', 'a0', 'f']) put(cv[k]);
+  put(S.grave);
+  // com flores, oferenda e vela ao pé
+  for (const k of ['h', 'a', 'f']) {
+    const at = put(cv[k]);
+    x.drawImage(S.florCova, at - 1 * Z, base - 2 * Z, 5 * Z, 3 * Z);
+    x.drawImage(S.ofertaCova, at + 7 * Z, base - 2 * Z, 3 * Z, 3 * Z);
+    x.drawImage(S.velaCova[k === 'a' ? 1 : 0], at + 11 * Z, base - 5 * Z, 3 * Z, 5 * Z);
+  }
+  const at = put(S.corpo);
+  x.drawImage(S.velaCova[0], at - 3 * Z, base - 6 * Z, 3 * Z, 5 * Z); x.drawImage(S.velaCova[1], at + 14 * Z, base - 6 * Z, 3 * Z, 5 * Z);
+  put(S.erva); put(S.erva);
+  // o cemitério nos dois níveis
+  px = 14; const b2 = py + 196;
+  for (const lv of [1, 2]) { const img = S.shop.cemiterio[lv]; x.drawImage(img, px, b2 - img.height * 2.6, img.width * 2.6, img.height * 2.6); px += img.width * 2.6 + 24; }
+  let ix = px + 10;
+  for (const n of ['cemiterio', 'cova', 'vela', 'flor', 'conto', 'erva', 'rito', 'visao']) { const ic = A.icon(n); x.drawImage(ic, ix, b2 - 60, ic.width * 4, ic.height * 4); ix += 56; }
+  py += 200;
+}
+// os ícones em 2x, como aparecem nos painéis
+x.fillStyle = '#262b44'; x.fillRect(0, py, W, H - py);
+label('ícones em 2x (painéis) e em 3x', py);
+let ix = 14;
+for (const n of ['cemiterio', 'cova', 'vela', 'flor', 'conto', 'erva', 'rito', 'visao']) { const ic = A.icon(n); x.drawImage(ic, ix, py + 30, ic.width * 2, ic.height * 2); x.drawImage(ic, ix, py + 70, ic.width * 3, ic.height * 3); x.fillStyle = '#8b9bb4'; x.fillText(n, ix, py + 110); ix += 80; }
+</script></body></html>

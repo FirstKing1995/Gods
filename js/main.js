@@ -141,6 +141,7 @@
     if (g) askChoice(g.id);
     if (S.stats.eraEnd && !S.stats.eraSeen) showEra();   // a era fechou com o jogo fechado
     if (G.Deus && G.Deus.pending(S)) setTimeout(showGodPending, 900);   // Deus subiu de nível com o jogo fechado
+    if (G.Memoria && G.Memoria.pending(S)) setTimeout(showMemPending, 1300);   // Etapa 13: a pergunta do rito ficou esperando
   }
   // uma janela por vez: espera a outra fechar
   const modalOpen = () => ['#modal-birth', '#modal-choice', '#modal-away', '#modal-era', '#modal-dom'].some((id) => !$(id).hidden);
@@ -152,7 +153,16 @@
     $('#modal-deus').hidden = true;
     const before = speed;
     setSpeed(0);
-    UI.godPending(() => { setSpeed(before || 1); save(); });
+    UI.godPending(() => { setSpeed(before || 1); save(); if (G.Memoria && G.Memoria.pending(S)) setTimeout(showMemPending, 500); });
+  }
+  // Etapa 13: o povo achou a erva-do-sonho, ou alguém perguntou no rito: pausa e espera a resposta (uma janela por vez)
+  function showMemPending() {
+    if (!S || S.safe || mode !== 'game' || !G.Memoria || !G.Memoria.pending(S)) return;
+    if (modalOpen()) { setTimeout(showMemPending, 700); return; }
+    $('#modal-deus').hidden = true;
+    const before = speed;
+    setSpeed(0);
+    UI.memPending(() => { setSpeed(before || 1); save(); if (G.Deus && G.Deus.pending(S)) setTimeout(showGodPending, 500); });
   }
   // fim da Era da Família: pausa e mostra o que o povo construiu
   function showEra() {
@@ -787,6 +797,17 @@
       const reach = Math.max(10, 18 / R.scale());
       if (d < reach && d < bd) { bd = d; best = p; }
     }
+    // Etapa 13: quem espera o enterro (no chão ou na esteira do velório): vale o toque mais perto, do corpo ou de quem está ao lado
+    if (G.Memoria && S.memoria && S.memoria.corpos.length) {
+      let corpo = null, cd = bd;
+      for (const id of S.memoria.corpos) {
+        const d = G.Family.person(S, id), c = d && d.corpo;
+        if (!c || c.by || !Sim.isSeen(S, Math.floor(d.x), Math.floor(d.y))) continue;
+        const dist = Math.hypot(d.x * TS - w.x, d.y * TS - 1 - w.y);
+        if (dist < Math.max(9, 14 / R.scale()) && dist < cd) { cd = dist; corpo = d; }
+      }
+      if (corpo) { UI.select(corpo.id, 0); return; }
+    }
     if (best) { UI.select(best.id, 0); tapped(best, sx, sy, now); return; }
     // lobo ou viajante no mapa
     if (S.narr) {
@@ -827,6 +848,20 @@
       if (cap) { UI.toast(G.Bichos.info(S, cap), cap.sp === 'jacare' || cap.state === 'investida' ? 'warn' : ''); return; }
     }
     const tx = Math.floor(w.x / TS), ty = Math.floor(w.y / TS);
+    // Etapa 13: as covas e a erva-do-sonho (a ficha de quem morreu diz onde está a cova e quem volta com flores)
+    if (G.Memoria && S.memoria && tx >= 0 && ty >= 0 && tx < S.world.W && ty < S.world.H) {
+      const o = Sim.isSeen(S, tx, ty) ? G.W.objAt(S.world, ty * S.world.W + tx) : null;
+      if (o && o.k === 'grave') {
+        const g = G.Memoria.graveInfo(S, o);
+        if (g.pid) UI.select(g.pid, 0); else UI.toast('Uma cova antiga: ' + o.name + '.', '');
+        return;
+      }
+      if (o && o.k === 'erva') {
+        const e = S.memoria.erva;
+        UI.toast(!e.known ? 'Uma erva de cheiro forte. Ninguém do povo reparou nela ainda.' : e.lei === 'proibido' ? 'Erva-do-sonho. Você proibiu: ninguém colhe.' : 'Erva-do-sonho. No dia do rito, quem conduz a roda vem colher uma folha. Veja em Deus → Memória.', '');
+        return;
+      }
+    }
     const bid = S.world.bgrid[ty * S.world.W + tx];
     if (bid >= 0) {
       const inside = S.people.find((p) => p.alive && p.inTent === bid);
@@ -990,6 +1025,7 @@
       alarm: () => { if (speed > 1) setSpeed(1); },
       era: showEra,
       godPending: showGodPending,
+      memPending: showMemPending,
       panels: () => { positionHint(); offAt = 0; },   // abriu ou fechou painel: o mapa à vista mudou
       birth: (pid) => {
         if (!S || S.safe || mode !== 'game') return;

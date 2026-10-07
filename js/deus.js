@@ -192,6 +192,7 @@
     const g = S.god, i = g.pending.findIndex((q) => q.k === 'nome');
     if (i >= 0) g.pending.splice(i, 1);
     if (name) D.rename(S, name);
+    if (G.Memoria) G.Memoria.deed(S, 'nome', {});   // Etapa 13: o dia do nome vira conto
     return true;
   };
 
@@ -255,6 +256,7 @@
     for (const q of S.people) if (q.alive && q !== p && Math.hypot(q.x - p.x, q.y - p.y) < 10) { God().faith(S, q, 4); Sim().addMem(S, q, 'viuMilagre'); }
     Sim().say(S, p, 'Eu sinto… ' + D.call(S) + ' está comigo.', true, 'god');
     S.events.push({ k: 'ungir', pid: p.id, x: p.x, y: p.y });
+    if (G.Memoria) G.Memoria.deed(S, 'escolhido', { a: p.name, sx: p.sex, x: p.x, y: p.y });
     return true;
   };
   // a graça vai embora quando a fé esfria (e o dom vai junto)
@@ -389,6 +391,7 @@
     for (const q of S.people) if (q.alive && Math.hypot(q.x - b.x - 1, q.y - b.y - 1) < 12) { God().faith(S, q, 5); Sim().addMem(S, q, 'viuMilagre'); D.sinal(S, q, 'milagre'); }
     God().align(S, kind === 'trovao' ? -3 : 3);
     S.events.push({ k: 'miracle', kind: 'consagrar', x: b.x + 1, y: b.y + 1 });
+    if (G.Memoria) G.Memoria.deed(S, 'estatua', { x: b.x + 1, y: b.y + 1 });
     lightS = null;
     return true;
   };
@@ -537,6 +540,7 @@
     for (const q of S.people) if (q.alive) { God().faith(S, q, 5); Sim().addMem(S, q, 'viuMilagre'); }
     God().align(S, 4);
     S.events.push({ k: 'miracle', kind: 'criar', form, x: S.camp.x + 1, y: S.camp.y + 1 });
+    if (G.Memoria) G.Memoria.deed(S, 'especie', { a: artOf(name) });
     return true;
   };
   // as árvores de Deus: arbustos de fruto (holy) em volta da aldeia, onde há lugar livre e já visto
@@ -586,6 +590,7 @@
     for (const q of S.people) if (q.alive) { Sim().addMem(S, q, 'aprendeu'); God().faith(S, q, 5); }
     God().align(S, 2);
     S.events.push({ k: 'miracle', kind: 'saber', id, x: S.camp.x + 1, y: S.camp.y + 1 });
+    if (G.Memoria) G.Memoria.deed(S, 'saber', { x1: { roda: 'a roda', escrita: 'a escrita', medicina: 'a medicina' }[id] || 'um saber novo' });
     return true;
   };
 

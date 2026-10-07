@@ -102,6 +102,13 @@
     m_ferraria: 'Com a metalurgia, Construir → Ferraria: 20 de pedra e 10 de madeira.',
     m_ferro: 'A forja pede 2 de minério e 1 de carvão, e alguém que saiba forjar: um anão, ou Ofício no nível 4.',
     m_ouro: 'O ouro só aparece na mina funda (nível 2) e na mina de veio (nível 3).',
+    // Etapa 13: memória
+    m_conto: 'Um milagre visto de perto vira conto, e quem viu conta nas noites de história. Veja em Deus → Memória.',
+    m_velar: 'Quem morre é levado para junto do fogo e velado à tardinha. De manhã, o povo enterra.',
+    m_flores: 'Nos dias depois do enterro, a família volta à cova com flores. Toque numa cova para ver de quem é.',
+    m_rito: 'No nível 2 de Deus, o povo acha a erva-do-sonho na mata. No rito, ao escurecer, alguém pergunta: responda.',
+    m_finados: 'No último dia do outono, à tarde, a aldeia vai ao cemitério com uma luz para cada cova.',
+    m_reconto: 'Quem só ouviu um conto passa adiante e muda um detalhe. Veja em Deus → Memória.',
   };
   // estoque: os cinco de sempre e os da Etapa 5, que aparecem quando existem
   const RES = [['madeira', 'madeira'], ['pedra', 'pedra'], ['argila', 'argila'], ['tabuas', 'tabuas'], ['fibra', 'fibra'], ['agua', 'agua'], ['frutas', 'frutas'], ['peixe', 'peixe'], ['carne', 'carne'],
@@ -151,7 +158,7 @@
     });
     // construir (as das descobertas aparecem com elas; o armazém, depois do primeiro inverno) e a ferramenta de caminho
     const builds = [['fogueira', 'fogo'], ['barraca', 'barraca'], ['armazem', 'armazem'], ['moquem', 'moquem'], ['jirau', 'jirau'], ['forno', 'forno'],
-      ['marcenaria', 'marcenaria'], ['tecelagem', 'tecelagem'], ['roca', 'roca'], ['curral', 'curral'], ['mina', 'mina'], ['ferraria', 'ferraria'], ['estatua', 'estatua']];
+      ['marcenaria', 'marcenaria'], ['tecelagem', 'tecelagem'], ['roca', 'roca'], ['curral', 'curral'], ['mina', 'mina'], ['ferraria', 'ferraria'], ['estatua', 'estatua'], ['cemiterio', 'cemiterio']];
     const SHORT = { barraca: 'Barraca', forno: 'Forno' };   // nome curto no botão (o painel fica em duas fileiras)
     $('#builds').innerHTML = builds.map(([t, icn]) => {
       const d = C.BUILD[t];
@@ -191,7 +198,11 @@
     });
     // Etapa 11: a janela de Deus (níveis e dons, escolhidos, grandes atos)
     $('#btn-deus img').src = ic('deus');
-    $('#btn-deus').addEventListener('click', () => { if (S && G.Deus && G.Deus.pending(S) && UI.hooks.godPending) UI.hooks.godPending(); else UI.deus(); });
+    $('#btn-deus').addEventListener('click', () => {
+      if (S && G.Deus && G.Deus.pending(S) && UI.hooks.godPending) UI.hooks.godPending();
+      else if (S && G.Memoria && G.Memoria.pending(S) && UI.hooks.memPending) UI.hooks.memPending();   // Etapa 13
+      else UI.deus();
+    });
     $('#deus-close').addEventListener('click', () => { $('#modal-deus').hidden = true; });
     $('#modal-deus').addEventListener('click', (e) => {
       if (e.target === $('#modal-deus')) { $('#modal-deus').hidden = true; return; }
@@ -247,6 +258,11 @@
         if (kid) UI.birth(kid, null, true);
       }
       if (b.dataset.act === 'ungir') UI.deus('escolhidos');   // Etapa 11
+      if (b.dataset.act === 'vercova') {   // Etapa 13: a câmera vai até a cova (ou até onde o corpo espera)
+        const d = S.people.find((q) => q.id === UI.sel.person);
+        if (d && d.cova) UI.hooks.center((d.cova[0] + 0.5) * C.TILE, (d.cova[1] + 0.5) * C.TILE);
+        else if (d && d.corpo) UI.hooks.center(d.x * C.TILE, d.y * C.TILE);
+      }
     });
     // a obra escolhida no mapa tem painel próprio (a evolução, remover, o que plantar)
     $('#obra-close').addEventListener('click', () => UI.select(0, 0));
@@ -297,6 +313,7 @@
         return;
       }
       if (b.dataset.act === 'back') UI.select(0, 0);
+      if (b.dataset.act === 'pessoa') { if (+b.dataset.pid) UI.select(+b.dataset.pid, 0); return; }   // Etapa 13: do cemitério para a ficha
       if (b.dataset.act === 'consagrar' && G.Deus) {
         // Etapa 11: o milagre próprio da estátua
         const why = G.Deus.consecrateWhy(S, bd, b.dataset.k);
@@ -432,7 +449,7 @@
     $('#menu-offline').value = String(S.opts && S.opts.offline !== undefined ? S.opts.offline : C.OFFLINE_RATE_DEFAULT);
     { const t = ['leve', 'picante', 'adulto'][G.Family.tom(S)]; $('#menu-tom').value = t; $('#tom-desc').textContent = TOM_DESC[t]; }
     UI.sel = { person: 0, building: 0 };
-    lastInsp = ''; listSig = '';
+    lastInsp = ''; listSig = ''; contoKey = ''; covaKey = '';
     // mundo novo: a lista e a ficha começam do zero (a busca e a ordem são da sessão, e ficam)
     cards.clear(); $('#people').innerHTML = ''; selCard = 0; inspPid = 0;
     for (const k of TRANSIENT) UI.toggle(k, false, true);
@@ -578,7 +595,8 @@
       }
       if (b.dataset.tool) { b.classList.toggle('on', !!(UI.hooks.roading && UI.hooks.roading())); return; }
       const d = C.BUILD[b.dataset.build];
-      const open = G.Tech.buildOpen(S, b.dataset.build);
+      // Etapa 13: o cemitério aparece depois do primeiro inverno ou da primeira morte, e some quando já há um (o povo só usa um)
+      const open = G.Tech.buildOpen(S, b.dataset.build) && (b.dataset.build !== 'cemiterio' || !G.Memoria || !S.memoria || (!G.Memoria.cemetery(S) && (S.stats.winters >= 1 || S.stats.lastDeathAt > 0 || S.memoria.corpos.length > 0)));
       if (b.hidden === open) b.hidden = !open;
       b.classList.toggle('on', UI.hooks.placing() === b.dataset.build);
       b.querySelectorAll('[data-c]').forEach((s) => s.classList.toggle('lack', S.stock[s.dataset.c] < d.cost[s.dataset.c]));
@@ -711,7 +729,7 @@
       setText($('#deus-title'), g.name || 'Deus');
       setText($('#deus-sub'), (g.name ? g.epithet + ' · ' : '') + def.name + ', nível ' + lv);
       setText($('#deus-next'), nx ? 'Nível ' + (lv + 1) + ': glória ' + fmtN(g.glory) + '/' + fmtN(nx.glory) + ' · fiéis ' + Dz.fieis(S) + '/' + nx.fieis : 'Níveis, dons e grandes atos');
-      const bd2 = $('#badge-dom'), pend = !!Dz.pending(S);
+      const bd2 = $('#badge-dom'), pend = !!Dz.pending(S) || !!(G.Memoria && G.Memoria.pending(S));
       if (bd2.hidden === pend) bd2.hidden = !pend;
       $('#btn-deus').classList.toggle('pend', pend);
     }
@@ -806,10 +824,12 @@
       // família, as habilidades, as lembranças e a última conversa
       const blocos = {
         faz: `<p class="small">${p.alive ? esc(AI.describe(S, p)) + ' · ' + feel(p.tempHere) : esc(AI.describe(S, p)) + '.'}</p>`,
+        cova: covaHTML(p),   // Etapa 13: o corpo, a cova, quem volta com flores
         estado: state ? `<p class="small preg">${esc(state)}</p>` : '',
         deus: godLine,
+        rito: ritoLine(p),
         reza: p.prayer ? `<p class="story">Reza: “${esc(p.prayer.text)}”</p>` : '',
-        tracos: `<div class="chips">${p.traits.map((t) => `<span class="chip" title="${esc(Sim.TRAIT_DESC[t])}">${esc(t)}</span>`).join('')}</div>`,
+        tracos: `<div class="chips">${p.traits.map((t) => `<span class="chip" title="${esc(Sim.TRAIT_DESC[t])}">${esc(t)}</span>`).join('')}${criadoChip(p)}</div>`,
         povo: povoChips(p),   // Etapa 12: o povo da pessoa e os dons dela
         posses: p.alive ? gear(p) : '',
         barras: p.alive ? `<div class="needs">${needs}</div>` : '',
@@ -817,6 +837,7 @@
         nome: p.alive && (p.mother || p.father) && F.age(S, p) < 3 ? '<div class="chips"><button class="btn btn-small" data-act="rename">Dar outro nome</button></div>' : '',
         saberes: p.carriedBy || !skills ? '' : sec('Habilidades', `<div class="kv">${skills}</div>`),
         lembrancas: mems ? sec('Lembranças', `<ul class="mems">${mems}</ul>`) : '',
+        contos: contosPessoa(p),
         conversa: talk,
       };
       let box = el.firstElementChild;
@@ -879,7 +900,7 @@
       </div>`;
     }
     const st = el.querySelector('#bstatus'); if (st) st.textContent = buildingStatus(b, d, job);
-    const ex = el.querySelector('#bextra'); if (ex) setHTML(ex, b.built ? (b.type === 'estatua' ? estatuaHTML(b) : campoHTML(b)) : '');
+    const ex = el.querySelector('#bextra'); if (ex) setHTML(ex, b.built ? (b.type === 'estatua' ? estatuaHTML(b) : b.type === 'cemiterio' ? cemHTML() : campoHTML(b)) : '');
   }
   function costText(cost) {
     const parts = Object.keys(cost || {}).map((k) => cost[k] + ' de ' + (MAT_WORD[k] || k));
@@ -903,6 +924,7 @@
     }
     if (b.type === 'roca' && G.Campo) return rocaStatus(b);
     if (b.type === 'estatua' && G.Deus) return estatuaStatus(b);
+    if (b.type === 'cemiterio') return G.Memoria && S.memoria ? cemStatus(b, d) : '';   // Etapa 13
     if (b.type === 'curral' && G.Campo) return curralStatus(b, d);
     const f = d.fire;
     if (b.type === 'fogueira') return (b.fuel > 0 ? 'Acesa · lenha ' + b.fuel.toFixed(1) + '/' + C.FIRE_CAP : 'Apagada · o povo reacende quando esfriar') +
@@ -1096,7 +1118,7 @@
     document.querySelectorAll('#modal-deus [data-gtab]').forEach((b) => { b.classList.toggle('on', b.dataset.gtab === deusTab); b.setAttribute('aria-selected', b.dataset.gtab === deusTab ? 'true' : 'false'); });
     $('#deus-mtitle').textContent = g.name ? g.name + ', ' + g.epithet : 'Deus';
     $('#deus-poder').textContent = fmtN(g.poder) + ' de Poder · glória ' + fmtN(g.glory);
-    $('#deus-body').innerHTML = deusTab === 'escolhidos' ? escolhidosHTML(Dz, g) : deusTab === 'atos' ? atosHTML(Dz, g) : deusTab === 'povos' && G.Povos ? povosHTML(Dz, g) : nivelHTML(Dz, g);
+    $('#deus-body').innerHTML = deusTab === 'escolhidos' ? escolhidosHTML(Dz, g) : deusTab === 'atos' ? atosHTML(Dz, g) : deusTab === 'povos' && G.Povos ? povosHTML(Dz, g) : deusTab === 'memoria' && G.Memoria && S.memoria ? memoriaHTML(Dz) : nivelHTML(Dz, g);
     $('#modal-deus').hidden = false;
   };
   // Etapa 12: os povos (quem são, os dons, a convivência entre eles) e o chamado de Deus
@@ -1190,10 +1212,182 @@
       <h3>Espécie nova <span class="small muted">· nível ${C.ESPECIE_LV}</span></h3><ul class="donlist">${forms}</ul>
       <h3>Saber de outra era <span class="small muted">· nível ${C.SABER_LV}</span></h3><ul class="donlist">${sabs}</ul>`;
   }
+  // ---------- Etapa 13: memória (os contos, os mortos, a erva-do-sonho) ----------
+  // a ficha, o cemitério e a aba pedem isto a cada pintura: fica guardado por meia hora de jogo
+  let contoKey = '', contoList = [], covaKey = '', covaList = [];
+  function contos() {
+    const Mm = G.Memoria, m = S.memoria;
+    if (!Mm || !m) return [];
+    const k = m.nc + '|' + m.contos.length + '|' + (S.stats.contados || 0) + '|' + Math.floor(S.t / 30);
+    if (k !== contoKey) { contoKey = k; contoList = Mm.contosInfo(S); }
+    return contoList;
+  }
+  function covas() {
+    const Mm = G.Memoria;
+    if (!Mm || !S.memoria) return [];
+    const k = S.world.objs.length + '|' + Math.floor(S.t / 30);
+    if (k !== covaKey) { covaKey = k; covaList = Mm.buried(S); }
+    return covaList;
+  }
+  // dias até o dia dos mortos (o último dia do outono)
+  const finadosEm = () => ((2 - S.ck.season + 4) % 4) * C.SEASON_DAYS + (C.SEASON_DAYS - S.ck.dos);
+  // a ficha de quem morreu: onde está o corpo, a cova, quem volta com flores
+  function covaHTML(p) {
+    const Mm = G.Memoria;
+    if (!Mm || !S.memoria || p.alive) return '';
+    const oa = p.sex === 'F' ? 'a' : 'o', t = Mm.bodyText(S, p);
+    if (!t) return '';
+    const btn = (lbl) => `<div class="chips"><button class="btn btn-small" data-act="vercova"><img class="ico" src="${ic('cova')}" alt="">${lbl}</button></div>`;
+    if (p.corpo) return `<p class="small cova-line">${esc(t)}.</p>` + (p.corpo.st > 0 ? btn('Ver onde está') : '');
+    if (!p.cova) return '<p class="small cova-line muted">Ninguém achou o corpo: não teve velório nem cova.</p>';
+    const o = G.W.objAt(S.world, p.cova[1] * S.world.W + p.cova[0]);
+    const g = o && o.k === 'grave' ? Mm.graveInfo(S, o) : null;
+    if (!g) return `<p class="small cova-line">${esc(t)}.</p>`;
+    const bits = [(p.diedAt ? esc(Sim.dateText(p.diedAt)) + '. ' : '') + esc(t) + (g.rito.length ? ', com ' + esc(listPT(g.rito)) : '') + '.', g.velado ? 'Foi velad' + oa + ' ao pé do fogo.' : 'Não deu tempo de velar.'];
+    if (g.flores) bits.push('Tem flores frescas na cova.');
+    if (g.oferenda) bits.push('Deixaram uma oferenda.');
+    if (g.kin && g.kin.length) bits.push('Quem volta com flores: ' + esc(listPT(g.kin.slice(0, 5))) + (g.kin.length > 5 ? ' e mais ' + (g.kin.length - 5) : '') + '.');
+    return `<p class="small cova-line">${bits.join(' ')}</p>` + btn('Ver a cova');
+  }
+  // a ficha de quem vive: o rito (a ressaca, o apego) e a criança que cresce ouvindo contos
+  function ritoLine(p) {
+    if (!G.Memoria || !S.memoria || !p.alive) return '';
+    const out = [];
+    if (p.ressaca && p.ressaca > S.t) out.push('Esteve no rito: hoje acorda devagar e trabalha mais lento.');
+    if ((p.rito || 0) >= C.RITO_APEGO) out.push('Apegad' + (p.sex === 'F' ? 'a' : 'o') + ' ao rito: sente falta quando a roda demora, e a erva já pesa na saúde.');
+    else if (p.rito) out.push('Já sentou ' + (p.rito === 1 ? 'uma vez' : p.rito + ' vezes') + ' na roda da erva-do-sonho.');
+    if (p.ouviu && !p.criado && (p.ouviu[0] || p.ouviu[1])) out.push('Cresce vendo e ouvindo: ' + p.ouviu[1] + ' de cuidado, ' + p.ouviu[0] + ' de medo. Aos ' + C.CRIADO_AGE + ' anos, isso fica nel' + (p.sex === 'F' ? 'a' : 'e') + '.');
+    return out.length ? `<p class="small muted mem-line">${esc(out.join(' '))}</p>` : '';
+  }
+  function criadoChip(p) {
+    if (p.criado === 'temente') return `<span class="chip fraq" title="Cresceu vendo e ouvindo um Deus de dar medo: a fé não esfria abaixo de ${C.TEMENTE_FE} e obedece mais às Vontades, mas o humor pesa um pouco.">Temente</span>`;
+    if (p.criado === 'confiante') return `<span class="chip dom" title="Cresceu vendo e ouvindo um Deus que cuida: a fé assenta mais alto, sobe mais depressa, e o humor é melhor.">Confiante</span>`;
+    return '';
+  }
+  function contosPessoa(p) {
+    if (!p.alive || !p.contos) return '';
+    const mine = contos().filter((c) => p.contos[c.id] !== undefined);
+    if (!mine.length) return '';
+    const como = (g) => (g <= 0 ? 'viu' : g === 1 ? 'ouviu de quem viu' : 'ouviu dos antigos');
+    return sec('Contos que sabe', `<ul class="mems contos">${mine.slice(0, 6).map((c) => `<li>${esc(c.titulo)} <span class="muted">· ${como(p.contos[c.id])}</span></li>`).join('')}${mine.length > 6 ? `<li class="muted">e mais ${mine.length - 6}</li>` : ''}</ul>`);
+  }
+  // o painel do cemitério: o estado numa frase e quem está enterrado (toque no nome abre a ficha)
+  function cemStatus(b, d) {
+    const m = S.memoria, n = covas().length, fe = finadosEm(), esp = m.corpos.length;
+    return (n ? (n === 1 ? 'Uma cova' : n + ' covas') : 'Nenhuma cova ainda') + '.' +
+      (esp ? ' ' + (esp === 1 ? 'Uma pessoa espera' : esp + ' pessoas esperam') + ' o velório e o enterro.' : '') +
+      (m.fin.on ? ' Hoje é o dia dos mortos: o povo está aqui, com uma luz em cada cova.' : ' Dia dos mortos: ' + (fe === 0 ? 'hoje, à tarde.' : fe === 1 ? 'amanhã, à tarde.' : 'daqui a ' + fe + ' dias, no último dia do outono.')) +
+      (d.mem && d.mem.vale > 1 ? ' Com a cerca e o portal, a visita consola metade a mais.' : '');
+  }
+  function cemHTML() {
+    const list = covas();
+    if (!list.length) return '<p class="small muted">Quando alguém morrer, o povo vela ao pé do fogo e abre a cova aqui em volta.</p>';
+    const row = (g) => {
+      const marks = (g.flores ? `<img class="ico" src="${ic('flor')}" alt="flores" title="Flores frescas">` : '') + (g.oferenda ? `<img class="ico" src="${ic('frutas')}" alt="oferenda" title="Oferenda">` : '');
+      const sub = g.ate ? 'ano ' + g.ate + ' · ' + anos(g.anos) + (g.causa ? ' · ' + g.causa : '') : 'cova antiga';
+      return `<li><button type="button" class="cova-row" data-act="pessoa" data-pid="${g.pid || 0}"${g.pid ? '' : ' disabled'}><span class="nm">${esc(g.name)}</span><span class="marks">${marks}</span><span class="small muted sub">${esc(sub)}</span></button></li>`;
+    };
+    return sec('Quem está aqui', `<ul class="covalist">${list.slice(0, 40).map(row).join('')}</ul>${list.length > 40 ? `<p class="small muted">E mais ${list.length - 40}, mais antigas.</p>` : ''}`);
+  }
+  // Deus → Memória: o que contam de você, a erva-do-sonho e os mortos
+  const LEI = {
+    bencao: ['Abençoar', 'Abençoado: quem senta na roda sai com mais fé, e o povo te vê mais bondoso.'],
+    livre: ['Deixar com o povo', 'Por conta do povo: fazem o rito quando querem.'],
+    proibido: ['Proibir', 'Proibido: ninguém colhe a erva. Quem se apegou sente falta, e o povo te teme mais.'],
+  };
+  function memoriaHTML(Dz) {
+    const Mm = G.Memoria, m = S.memoria, D = Dz.call(S);
+    const TOM = { 1: ['de cuidado', 'bom'], 0: ['de espanto', ''], '-1': ['de medo', 'temido'] }, MAG = ['como foi', 'aumentado', 'virou lenda'];
+    const list = contos();
+    const row = (c) => {
+      const tm = TOM[c.tone] || TOM[0];
+      const quem = c.perdido ? 'ninguém vivo sabe contar' : (c.sabem === 1 ? '1 pessoa sabe' : c.sabem + ' sabem') + (c.viram ? ', ' + (c.viram === 1 ? '1 viu' : c.viram + ' viram') : ', nenhum viu');
+      return `<li class="conto${c.perdido ? ' lost' : ''}"><img class="ico" src="${ic('conto')}" alt=""><div><b>${esc(c.titulo)}</b>
+        <span class="small muted">${esc(c.quando)} · ${c.n ? 'contado ' + (c.n === 1 ? '1 vez' : c.n + ' vezes') : 'ainda não contado'} · ${quem}</span>
+        <span class="small fala">${esc(c.conta[0])}</span>
+        <span class="small muted">O que foi: ${esc(c.fato)}</span>
+        <span class="small"><span class="side ${tm[1]}">conto ${tm[0]}</span> · ${MAG[Math.min(2, c.mag)]}</span></div></li>`;
+    };
+    const tem = S.people.filter((p) => p.alive && p.criado === 'temente').length, conf = S.people.filter((p) => p.alive && p.criado === 'confiante').length;
+    const pend = Mm.pending(S), r = Mm.ritoInfo(S);
+    let erva;
+    if (!r.known) erva = `<p class="small muted">O povo ainda não conhece. A erva-do-sonho cresce na mata, perto da água. Quando ${esc(D)} chega ao nível ${C.ERVA_LV} e a aldeia tem ${C.RITO_MIN_POP} adultos, quem passa por lá acaba achando.</p>`;
+    else {
+      const btns = ['bencao', 'livre', 'proibido'].map((k) => `<button type="button" class="btn btn-small${r.lei === k ? ' on' : ''}" data-gact="lei" data-k="${k}" aria-pressed="${r.lei === k ? 'true' : 'false'}">${LEI[k][0]}</button>`).join('');
+      const quando = r.lei === 'proibido' ? 'Não há rito.' : r.on ? 'O rito é agora, ao pé do fogo.' : r.hoje ? 'Hoje tem rito, ao escurecer.' : r.falta ? 'O próximo rito sai em ' + (r.falta === 1 ? '1 dia' : r.falta + ' dias') + ', se o dia for calmo.' : 'O próximo rito sai no primeiro dia calmo.';
+      const prom = r.prom.map((x) => `<li class="small">Promessa de pé: ${x.k === 'fome' ? 'não faltar comida' : x.k === 'frio' ? 'ninguém morrer de frio' : 'ninguém morrer de fera'} · ${x.dias === 1 ? 'falta 1 dia' : 'faltam ' + x.dias + ' dias'}</li>`).join('');
+      erva = `<p class="small">${quando} Ritos: ${r.ritos} · perguntas respondidas: ${r.respostas}${r.apegados ? ' · apegados: ' + r.apegados : ''}.</p>
+        <div class="chips lei-row" role="group" aria-label="O que você diz do rito">${btns}</div><p class="small muted">${esc(LEI[r.lei][1])}</p>
+        ${prom ? `<ul class="promlist">${prom}</ul>` : ''}
+        <p class="small muted">A cada ${C.RITO_GAP_D} dias, num dia calmo, até ${C.RITO_MAX} adultos sentam em roda ao escurecer, no lugar da história. Só adulto entra: 18 anos ou mais, e nem grávida nem quem leva bebê. De vez em quando alguém faz uma pergunta, e a sua resposta vira conto. No dia seguinte a roda acorda devagar; quem senta demais se apega.</p>`;
+    }
+    const nc = covas().length, fe = finadosEm();
+    return `${pend ? `<button type="button" class="btn btn-gold" data-gact="pendmem">${pend.k === 'erva' ? 'O povo achou a erva-do-sonho' : 'Uma pergunta espera resposta'}</button>` : ''}
+      <p class="small muted">O que você faz de grande, e alguém vê, vira conto. Nas noites de história, quem viu conta; quem só ouviu passa adiante e muda um detalhe. Criança que cresce vendo e ouvindo um Deus de dar medo fica temente; um Deus que cuida, confiante.${tem || conf ? ' Hoje: ' + listPT([tem ? tem + (tem === 1 ? ' temente' : ' tementes') : '', conf ? conf + (conf === 1 ? ' confiante' : ' confiantes') : ''].filter(Boolean)) + '.' : ''}</p>
+      <h3>A erva-do-sonho</h3>${erva}
+      <h3>Os mortos</h3><p class="small">${nc ? (nc === 1 ? 'Uma cova' : nc + ' covas') : 'Nenhuma cova ainda'} · velórios: ${S.stats.velorios || 0} · dias dos mortos: ${S.stats.finados || 0}. ${m.fin.on ? 'Hoje é o dia dos mortos.' : 'O próximo dia dos mortos é ' + (fe === 0 ? 'hoje, à tarde.' : fe === 1 ? 'amanhã.' : 'daqui a ' + fe + ' dias.')}</p>
+      <p class="small muted">Quem morre é levado para junto do fogo e velado à tardinha; de manhã, enterrado, cada povo do seu jeito. A família volta com flores, e no último dia do outono a aldeia inteira vai ao cemitério. Toque numa cova para ver de quem é.</p>
+      <h3>O que contam de você${list.length ? ' · ' + list.length : ''}</h3>
+      <ul class="donlist contolist">${list.length ? list.map(row).join('') : '<li class="none small muted">Nada ainda. Uma cura, a chuva na seca, o calor na nevasca, um raio: o que alguém vê de perto vira conto.</li>'}</ul>`;
+  }
+  // as três respostas (e o silêncio): o que cada uma faz, numa linha
+  const FX_HINT = {
+    luto: 'Consola quem está de luto.', 'prom:fome': 'É uma promessa: ' + C.PROMESSA_D + ' dias sem ninguém passar fome. Cumprida, a fé sobe; quebrada, cai e vira conto.',
+    'prom:fera': 'É uma promessa: ' + C.PROMESSA_D + ' dias sem ninguém morrer de fera. Cumprida, a fé sobe; quebrada, cai e vira conto.',
+    'prom:frio': 'É uma promessa: ninguém morre de frio até o fim do inverno. Cumprida, a fé sobe; quebrada, cai e vira conto.',
+    'zelo:comida': 'Por ' + C.ZELO_COMIDA_D + ' dias, o povo junta comida com mais afinco.', 'zelo:lenha': 'Por ' + C.ZELO_COMIDA_D + ' dias, o povo junta lenha com mais afinco.',
+    'zelo:tudo': 'Por ' + C.ZELO_TUDO_D + ' dias, todo trabalho rende um pouco mais.', 'conv:3': 'Aproxima os povos.', 'conv:-3': 'Afasta os povos.',
+    'sinal:3': 'Quem perguntou fica bem mais perto de crer.', 'sinal:1': 'Quem perguntou fica um pouco mais perto de crer.', trovao: 'Um trovão cai perto do fogo.', saber: 'Adianta um pouco a descoberta em andamento.',
+  };
+  const MEM_HINT = { aceitou: 'A roda fica em paz.', promessa: 'A roda guarda a sua palavra.', emPaz: 'A roda fica em paz com o fim.' };
+  UI.memPending = function (onDone) {
+    const Mm = G.Memoria, info = S && Mm && Mm.pendingInfo(S);
+    const m = $('#modal-dom'), ok = $('#dom-ok'), body = $('#dom-body');
+    if (!info) { m.hidden = true; if (onDone) onDone(); return false; }
+    const pd = Mm.pending(S);
+    $('#dom-ico').src = ic(info.icon);
+    $('#dom-title').textContent = info.title;
+    $('#dom-lead').textContent = info.lead;
+    const opt = (i, nm, ds, side) => `<button type="button" class="dom-opt mem-opt" role="radio" aria-checked="false" data-i="${i}"><span class="nm">${esc(nm)}</span>${ds ? `<span class="ds small">${esc(ds)}</span>` : ''}${side === 'bom' ? '<span class="side bom small">o povo te vê mais bondoso</span>' : side === 'temido' ? '<span class="side temido small">o povo te teme mais</span>' : ''}</button>`;
+    let html;
+    if (info.k === 'erva') html = info.opts.map((t, i) => { const k = t.indexOf(': '); return opt(i, t.slice(0, k), t.slice(k + 2, k + 3).toUpperCase() + t.slice(k + 3), i === 0 ? 'bom' : i === 2 ? 'temido' : ''); }).join('');
+    else {
+      html = Mm.Q[pd.q].a.map((a, i) => opt(i, '“' + a.t + '”', [FX_HINT[a.fx] || '', MEM_HINT[a.mem] || ''].filter(Boolean).join(' '), a.tone > 0 ? 'bom' : a.tone < 0 ? 'temido' : '')).join('') +
+        opt(-1, info.quiet, 'Quem perguntou fica sem resposta, e a fé da roda esfria um pouco.', '');
+    }
+    body.innerHTML = '<div class="dom-opts" role="radiogroup" aria-label="' + (info.k === 'erva' ? 'O que você diz' : 'Respostas') + '">' + html + '</div>' +
+      (info.k === 'erva' ? '<p class="small muted">Dá para mudar depois, em Deus → Memória.</p>' : '<p class="small muted">A resposta vira conto, e o povo vai repetir.</p>');
+    let pick = null;
+    ok.textContent = info.k === 'erva' ? 'Está dito' : 'Responder';
+    ok.disabled = true;
+    body.querySelectorAll('.dom-opt').forEach((b) => b.addEventListener('click', () => {
+      pick = +b.dataset.i;
+      body.querySelectorAll('.dom-opt').forEach((x) => x.setAttribute('aria-checked', x === b ? 'true' : 'false'));
+      ok.disabled = false;
+    }));
+    $('#form-dom').onsubmit = (e) => {
+      e.preventDefault();
+      if (pick === null) return;
+      Mm.answer(S, pick);
+      m.hidden = true; contoKey = '';
+      UI.update(0, true);
+      if (Mm.pending(S)) UI.memPending(onDone); else if (onDone) onDone();
+    };
+    m.hidden = false;
+    return true;
+  };
   const Fam = () => G.Family;
   function godAct(b) {
     const Dz = G.Deus, a = b.dataset.gact;
     if (a === 'pending') { $('#modal-deus').hidden = true; if (UI.hooks.godPending) UI.hooks.godPending(); return; }
+    // Etapa 13: a pergunta que espera, e o que Deus diz do rito (muda quando quiser)
+    if (a === 'pendmem') { $('#modal-deus').hidden = true; if (UI.hooks.memPending) UI.hooks.memPending(); return; }
+    if (a === 'lei' && G.Memoria) {
+      const Mm = G.Memoria, pd = Mm.pending(S), k = b.dataset.k;
+      if (pd && pd.k === 'erva') Mm.answer(S, ['bencao', 'livre', 'proibido'].indexOf(k)); else Mm.setLei(S, k);
+      UI.deus('memoria'); UI.update(0, true);
+      return;
+    }
     if (a === 'rename') {
       const v = ($('#deus-rename') || {}).value || '';
       if (Dz.rename(S, v)) { UI.refreshChron(); UI.toast('Agora o povo te chama de ' + S.god.name + '.', 'good'); }
@@ -1296,6 +1490,14 @@
       else if (e.k === 'thanks') UI.toast(e.text, e.kind === 'luto' ? 'prayer' : 'thanks');
       else if (e.k === 'oferenda') { UI.toast(e.text, 'thanks'); const ob = Sim.building(state, e.bid); if (ob) UI.float(ob.x + 1, ob.y, '+' + e.poder + ' Poder'); }   // Etapa 12
       else if (e.k === 'povo') { /* só som */ }
+      else if (e.k === 'memoria') {
+        // Etapa 13: a pergunta abre a janela; o conto novo avisa; a resposta solta a fumaça no fogo do rito
+        if (e.ev === 'pend') { if (UI.hooks.memPending && !quiet) setTimeout(UI.hooks.memPending, 900); }
+        else if (e.ev === 'conto' && G.Memoria) { contoKey = ''; const c = contos().find((x) => x.id === e.id); if (c && state.stats.contos > 1) UI.toast('O povo tem um conto novo: “' + c.titulo + '”. Veja em Deus → Memória.', 'good'); }
+        else if (e.ev === 'resposta') { const rt = state.memoria.erva.rite, f = (rt && Sim.building(state, rt.fire)) || (G.Life && G.Life.campFire(state, true)); if (f) { e.x = f.x; e.y = f.y; } }
+        if (!$('#modal-deus').hidden && deusTab === 'memoria') UI.deus();
+        G.R.event(e);
+      }
       else if (e.k === 'festa' || e.k === 'story' || e.k === 'fight' || e.k === 'goal' || e.k === 'moon' || e.k === 'song') { /* só som */ }
       else if (e.k === 'fireLit') G.R.event(e);
       else if (e.k === 'star' || e.k === 'rainbow' || e.k === 'birds') G.R.event(e);

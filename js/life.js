@@ -417,6 +417,7 @@
     const l = S.life;
     if (!l || l.story || l.storyDay === S.ck.day || !calmEvening(S)) return false;
     if (p.carriedBy || p.labor || age(S, p) < 14 || !fine(p)) return false;
+    if (G.Memoria && S.memoria && G.Memoria.blockStory(S)) return false;   // Etapa 13: noite de velório ou de rito não tem história
     if (G.Deus && S.god && S.god.pending && G.Deus.sermonFirst(S, p)) return false;   // Etapa 11: a vez é do profeta
     const f = L.campFire(S, true);
     if (!f) return false;
@@ -464,10 +465,12 @@
   const SERMON_REACT = ['Amém.', 'É verdade.', 'Eu sinto isso.', 'Que bonito…', 'Fala mais!', 'Eu acredito.'];
   // sermon (Etapa 11): o escolhido da Palavra prega em vez de contar
   L.startStory = function (S, p, f, sermon) {
-    const l = S.life, music = !sermon && !!(G.Inv && G.Inv.flute(S)) && S.rng.next() < C.FLAUTA_STORY;
-    const lines = sermon ? G.Deus.sermonLines(S) : music ? [pick(S, MUSIC_OPEN), '', pick(S, MUSIC_END)] : storyLines(S, p);
+    const l = S.life;
+    const mem = !sermon && G.Memoria && S.memoria ? G.Memoria.storyFor(S, p) : null;   // Etapa 13: quem sabe um conto de Deus às vezes conta um
+    const music = !sermon && !mem && !!(G.Inv && G.Inv.flute(S)) && S.rng.next() < C.FLAUTA_STORY;
+    const lines = sermon ? G.Deus.sermonLines(S) : mem ? mem.lines : music ? [pick(S, MUSIC_OPEN), '', pick(S, MUSIC_END)] : storyLines(S, p);
     const dur = C.STORY_MIN[0] + Math.round(S.rng.next() * (C.STORY_MIN[1] - C.STORY_MIN[0]));
-    l.story = { id: l.nextId++, teller: p.id, fire: f.id, on: false, t0: S.t, dur, lines, li: 0, listeners: [], heard: {}, music, sermon: !!sermon };
+    l.story = { id: l.nextId++, teller: p.id, fire: f.id, on: false, t0: S.t, dur, lines, li: 0, listeners: [], heard: {}, music, sermon: !!sermon, conto: mem ? mem.conto : 0 };
     l.storyDay = S.ck.day;
     return l.story;
   };
@@ -508,6 +511,7 @@
     }
     Sm.addMem(S, p, 'contouHistoria');
     for (const q of heard) { Sm.addMem(S, q, 'ouviuHistoria'); q.rel[p.id] = (q.rel[p.id] || 0) + 1; }
+    if (st.conto && G.Memoria) G.Memoria.onStory(S, p, st, heard);   // Etapa 13: o conto passa a quem ouviu
     if (S.povos && S.povos.mixed && G.Povos) G.Povos.onGather(S, heard.concat([p]), C.CONV_HISTORIA);   // Etapa 12
     // histórias espalham o saber: a próxima descoberta anda um pouco
     const open = G.Tech.open(S);

@@ -648,3 +648,30 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 .convlist .bar.mid i { background: var(--gold); }
 .convlist .bar.low i { background: #e43b44; }
 #obra .chips .btn .ico { width: 16px; height: 16px; margin-right: 6px; vertical-align: -3px; }
+
+/* ---------- Etapa 13: memória ---------- */
+/* a ficha de quem morreu, o cemitério, Deus → Memória e a pergunta do rito */
+.cova-line { color: #d9c7a3; }
+#inspector .chips .btn .ico { width: 16px; height: 16px; margin-right: 6px; vertical-align: -3px; }
+.mem-line { font-style: italic; }
+.mems.contos li { color: var(--text); }
+.covalist { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; max-height: 240px; overflow-y: auto; }
+.cova-row { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; width: 100%; text-align: left; padding: 5px 8px; cursor: pointer; font: inherit; color: var(--text); background: var(--night); border: 2px solid var(--edge); }
+.cova-row:hover:not(:disabled), .cova-row:focus-visible { border-color: var(--gold); }
+.cova-row:disabled { cursor: default; opacity: 0.75; }
+.cova-row .nm { font-weight: 600; }
+.cova-row .marks { display: inline-flex; gap: 3px; align-items: center; }
+.cova-row .marks .ico { width: 14px; height: 14px; }
+.cova-row .sub { grid-column: 1 / -1; font-size: 12px; font-weight: 400; }
+.contolist li.conto { grid-template-columns: 26px 1fr; align-items: start; }
+.contolist li.conto.lost { opacity: 0.6; }
+.contolist .fala { font-family: var(--story); font-style: italic; font-size: 15px; line-height: 1.35; color: #d9c7a3; }
+.contolist .side.bom { color: #9be070; }
+.contolist .side.temido { color: #f6a0a4; }
+.lei-row { margin: 4px 0; }
+.lei-row .btn.on { border-color: var(--gold); color: var(--gold-hi); background: var(--panel-2); }
+.promlist { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 2px; color: var(--gold); }
+.dom-opt.mem-opt { grid-template-columns: 1fr; }
+.dom-opt.mem-opt .nm { font-family: var(--story); font-size: 18px; font-weight: 400; line-height: 1.25; }
+@media (max-width: 520px) { .deus-tabs { flex-wrap: wrap; } .deus-tabs button { flex: 1 1 30%; } }
+#dom-ok { white-space: nowrap; }

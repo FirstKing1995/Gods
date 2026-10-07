@@ -3,10 +3,10 @@
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.12.0',
+    VERSION: '0.13.0',
     SAVE_KEY: 'genesis.save.v1',
     // endereço do Web App do Google Apps Script (termina em /exec). Vazio = jogo só local.
-    API_URL: 'https://script.google.com/macros/s/AKfycbzDy7z7jS8Xd9ejZINSNtR6_S7_3zmfqDaPa77NKVEoEFBY8N_F6-EHTvlsbX0-wGsQ/exec',
+    API_URL: '',
     CLOUD_SAVE_SEC: 180,
 
     // ---- mapa ----
@@ -155,6 +155,12 @@
         desc: 'A imagem de Deus em pedra. Consagrada, faz o milagre dela sozinho; quem tem fé reza ali de manhã.',
         up: [{ name: 'Estátua com altar', cost: { pedra: 20, tabuas: 6 }, work: 360, god: { reach: 1.5, reza: 2 },
           desc: 'Um altar de pedra aos pés dela: o milagre da estátua vai metade mais longe, e quem reza ali ganha o dobro de fé.' }] },
+      // Etapa 13: o marco do cemitério. As covas se abrem em volta dele, em fileiras (mem.r: até onde vão; vale: quanto
+      // valem a visita e o dia dos mortos). Se ninguém marcar, o povo escolhe o lugar na primeira morte
+      cemiterio: { name: 'Cemitério', a: 'o', key: '', w: 2, h: 2, cost: { madeira: 4 }, work: 60, mem: { r: 6, vale: 1 },
+        desc: 'O lugar dos que partiram. O povo vela ao pé do fogo, enterra aqui, traz flores e volta todo ano, no último dia do outono.',
+        up: [{ name: 'Cemitério cercado', cost: { madeira: 20 }, work: 300, mem: { r: 8, vale: 1.5 },
+          desc: 'Uma cerca baixa e um portal de madeira: cabe mais gente, e a visita e o dia dos mortos consolam metade a mais.' }] },
     },
     // nível 3 da barraca: a casa que o lugar pede (env: o que precisa ter em volta)
     HOUSES: {
@@ -469,7 +475,7 @@
     // Sinais: um milagre visto de perto (no máximo um a cada 2 dias), a própria oração atendida, a Cura no corpo, a
     // pregação ouvida, o sonho da Revelação
     CONVERTE_SINAIS: 24, CONVERTE_FE: 65,
-    SINAL: { milagre: 1, atendida: 2, curado: 3, sermao: 2, sonho: 4 },
+    SINAL: { milagre: 1, atendida: 2, curado: 3, sermao: 2, sonho: 4, conto: 1, rito: 2, visao: 3 },   // conto, rito e visão: Etapa 13
     // o escolhido: quem chegou à fé inteira (100) nos últimos FE100_DAYS dias e ainda tem 90, com 16 anos ou mais.
     // Ungir custa UNGIR_COST; um por vez no nível 3, dois no 4, três no 5. Abaixo de GRACA_FE, perde a graça
     UNGIR_COST: 150, UNGIR_AGE: 16, FE100_DAYS: 5, GRACA_FE: 70, ESCOLHIDOS: [0, 0, 0, 1, 2, 3],
@@ -488,6 +494,53 @@
     SABER_LV: 5, SABER_COST: 2500,
     RODA_CARRY: 1.4, RODA_BUILD: 1.25, ESCRITA_XP: 1.5, ESCRITA_STORY: 2, ESCRITA_PRAT: 1.25,
     MEDICINA_BIRTH: 0.5, MEDICINA_REGEN: 1.5, MEDICINA_OLD: 0.6,
+    // ---- Etapa 13: Memória ----
+    // o corpo: quem está a até CORPO_VER passos acha na hora (ou se foi perto do acampamento); sem ninguém achar em
+    // CORPO_MAX_D dias, não há velório nem cova e o luto da família dobra. Achado, alguém leva para junto do fogo
+    CORPO_VER: 10, CORPO_CAMP: 14, CORPO_MAX_D: 3, CARREGA_AGE: 16,
+    // o velório: de VELORIO_H[0] a VELORIO_H[1], ao pé do fogo. Quem fica VELAR_MIN minutos (a família, VELAR_FAM) sofre
+    // o luto por VELORIO_LUTO do tempo que faltava e ganha VELORIO_FE de fé. Enterro na manhã seguinte (ENTERRO_H)
+    VELORIO_H: [17, 21], VELAR_MIN: 30, VELAR_FAM: 60, VELORIO_LUTO: 0.5, VELORIO_FE: 1,
+    ENTERRO_H: [6, 17], ENTERRO_MIN: 45, LAJE_PEDRA: 2, ARVORE_COVA_D: 20,
+    // a visita à cova: no dia do enterro, a cada VISITA_LUTO_D dias nos primeiros VISITA_LUTO_ATE, e todo ano no dia em
+    // que a pessoa se foi (quem não deixou família é lembrado pelo amigo mais chegado, com VISITA_AMIGO de amizade).
+    // Fica VISITA_MIN minutos, deixa flores por FLOR_D dias (e uma fruta, se sobram FRUTA_SOBRA),
+    // e o luto encurta VISITA_CURA dias
+    VISITA_H: [7, 16], VISITA_MIN: 15, VISITA_LUTO_D: 5, VISITA_LUTO_ATE: 20, VISITA_CURA: 4, VISITA_FE: 1, VISITA_AMIGO: 6, FLOR_D: 6, FRUTA_SOBRA: 10,
+    // o dia dos mortos: no último dia do outono, das FINADOS_H[0] às FINADOS_H[1], com FINADOS_MIN_POP vivos e uma cova
+    FINADOS_H: [15, 18], FINADOS_MIN: 40, FINADOS_MIN_POP: 4, FINADOS_FE: 2, FINADOS_CURA: 10, FINADOS_VELAS_H: 6,
+    CONV_FINADOS: 1, CONV_RITO: 1.5,      // convivência: o dia dos mortos junto, e o casal de dois povos que junta os dois ritos
+    // a História de Deus: um ato grande visto por alguém vira conto (um de cada tipo a cada CONTO_GAP_D dias; no máximo
+    // CONTO_MAX guardados). Na noite de história, quem sabe um conto conta um com chance CONTO_CHANCE (o mesmo conto
+    // só volta à roda depois de CONTO_REPETE_D dias). Quem conta sem
+    // ter visto muda um detalhe com chance CONTO_DERIVA. Ouvir dá CONTO_FE de fé (o de medo, menos, e assusta)
+    CONTO_GAP_D: 240, CONTO_MAX: 18, CONTO_VER: 12, CONTO_CURA: 40, CONTO_CHANCE: 0.4, CONTO_REPETE_D: 20, CONTO_DERIVA: 0.5, CONTO_FE: 1.5,
+    // a criança que cresce ouvindo contos (dos 3 anos até CRIADO_AGE, o fim da infância): com CRIADO_MIN contos de um
+    // tom e metade a mais que do outro, fica temente (a fé não cai de TEMENTE_FE, obedece mais, humor -CRIADO_HUMOR)
+    // ou confiante (a fé esfria até CONFIANTE_FE acima do comum, ganha fé 20% mais depressa, humor +CRIADO_HUMOR).
+    // O conto sem tom próprio (o raio na fera, o nome, a estátua...) nasce com o tom de como o povo vê Deus, quando o
+    // alinhamento passa de CONTO_TOM_ALIGN para um lado
+    CRIADO_AGE: 12, CONTO_TOM_ALIGN: 15, CRIADO_MIN: 3, CRIADO_HUMOR: 3, TEMENTE_FE: 50, TEMENTE_OBED: 0.15, CONFIANTE_FE: 10, CONFIANTE_GANHO: 1.2,
+    // a erva-do-sonho: ERVA_SPOTS canteiros na mata úmida, de ERVA_DIST passos do acampamento. Quem passa a ERVA_VER
+    // passos acha (com Deus no nível ERVA_LV e gente bastante para a roda; sem ninguém passar, em ERVA_ACASO_D dias
+    // um caçador acha)
+    ERVA_SPOTS: 3, ERVA_DIST: [9, 32], ERVA_VER: 4, ERVA_LV: 2, ERVA_ACASO_D: 60, ERVA_MIN: 20,
+    // o rito: no máximo um a cada RITO_GAP_D dias, das RITO_H[0] às RITO_H[1] (ao cair da noite, no lugar da
+    // história: quem já foi dormir não levanta para ele), só adultos (18 anos de verdade), de
+    // RITO_MIN_POP a RITO_MAX pessoas (quem está a até RITO_PERTO passos do fogo; anda-se devagar), RITO_MIN minutos
+    // ao pé do fogo. Dá fé, uma lembrança boa (ou ruim: RITO_RUIM,
+    // a segunda chance para quem já se apegou) e um pouco de prática (RITO_SABER do que falta). No dia seguinte o
+    // trabalho rende RITO_RESSACA por RITO_RESSACA_H horas. Com RITO_APEGO ritos seguidos a saúde paga (RITO_APEGO_SAUDE)
+    // e, sem rito por RITO_FALTA_D dias, vem a falta. O costume esfria um rito a cada RITO_ESQUECE_D dias (quem vai a
+    // todos os ritos soma mais depressa do que esfria: aldeia pequena, ou quem conduz, acaba se apegando)
+    RITO_GAP_D: 15, RITO_H: [18, 21], RITO_MIN: 60, RITO_MIN_POP: 3, RITO_MAX: 6, RITO_PERTO: 10, RITO_FE: 2, RITO_RUIM: [0.1, 0.3], RITO_SAUDE: 6,
+    RITO_SABER: 0.03, RITO_RESSACA: 0.8, RITO_RESSACA_H: 14, RITO_APEGO: 4, RITO_APEGO_SAUDE: 3, RITO_FALTA_D: 15, RITO_ESQUECE_D: 30,
+    // a pergunta do rito espera a resposta até VISAO_ESPERA_H horas (depois, vale o silêncio). As respostas: uma
+    // promessa vale PROMESSA_D dias (a do frio, até o fim do inverno; cumprida, +PROMESSA_FE de fé; quebrada,
+    // -PROMESSA_QUEBRA); o zelo faz o trabalho render ZELO_COMIDA (só a comida, ou só a lenha, ZELO_COMIDA_D dias) ou
+    // ZELO_TUDO (tudo, ZELO_TUDO_D dias)
+    // (uma pergunta a cada VISAO_GAP_D dias, no máximo: nos outros ritos o povo só vê coisas na fumaça)
+    VISAO_ESPERA_H: 10, VISAO_GAP_D: 30, PROMESSA_D: 30, PROMESSA_FE: 3, PROMESSA_QUEBRA: 6, ZELO_COMIDA: 1.1, ZELO_COMIDA_D: 10, ZELO_TUDO: 1.05, ZELO_TUDO_D: 5,
     // os dons (um a cada nível, do 2 ao 5): os números de cada um
     DOM: {
       fogoH: 24, fogoR: 7,                        // Fogo Sagrado: o Calor dura 24 h e vai a 7 passos

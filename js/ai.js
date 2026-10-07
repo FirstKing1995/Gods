@@ -110,6 +110,7 @@
     if (curS && wk) s *= Tech.speed(curS, p, wk);   // ferramenta de pedra
     if (curS && wk && curS.god && curS.god.blessings && curS.god.blessings.length && G.Deus) s *= G.Deus.blessAt(curS, p.x, p.y);   // a Bênção (Etapa 11)
     if (curS && wk && p.sangue && G.Povos) s *= G.Povos.speed(curS, p, wk);   // os dons de cada povo (Etapa 12)
+    if (curS && wk && curS.memoria && G.Memoria && (p.ressaca || curS.memoria.zelo)) s *= G.Memoria.speed(curS, p, wk);   // a manhã depois do rito e o zelo de uma resposta de Deus (Etapa 13)
     if (has(p, 'Trabalhador')) s *= 1.15;
     if (has(p, 'Preguiçoso')) s *= 0.85;
     if (p.needs.energia < 15) s *= 0.8;
@@ -782,6 +783,52 @@
       if (a.t >= C.REZA_MIN) { G.Deus.onPrayed(S, p, b); return DONE; }
       return RUN;
     },
+  };
+  // ---------- Etapa 13: Memória ----------
+  // uma ação só para tudo o que a Memória pede: ir até um lugar, ficar um tempo e avisar (velar, visitar a cova, o
+  // dia dos mortos, colher a erva, o rito). Buscar o corpo e enterrar têm um passo a mais: o corpo vai junto.
+  // a.hint diz qual tarefa; o lugar e o tempo vêm de G.Memoria.task
+  ACT.memoria = {
+    start(S, p, a) {
+      const Mm = G.Memoria, m = Mm ? Mm.task(S, p, a.hint) : null;
+      if (!m) return false;
+      a.m = m;
+      const ok = m.carry ? toRing(S, p, m.bx, m.by, 0, 1.6, m.far) : toRing(S, p, m.x, m.y, m.r0, m.r1, m.far);
+      if (!ok) { Mm.drop(S, p, a, true); return false; }
+      if (!p.path) setPath(p, [tileOf(S, p)]);
+      a.stage = m.carry ? 'fetch' : 'go';
+      return true;
+    },
+    run(S, p, a, dt) {
+      const Mm = G.Memoria, m = a.m;
+      if (!Mm || !Mm.valid(S, p, a)) return FAIL;
+      if (a.stage === 'fetch') {
+        a.walk = (a.walk || 0) + dt;
+        if (a.walk > m.walk) return FAIL;
+        if (moving(p)) return RUN;
+        if (p.stuck) return FAIL;
+        Mm.lift(S, p, a);
+        if (!toRing(S, p, m.x, m.y, m.r0, m.r1, m.far)) return FAIL;
+        if (!p.path) setPath(p, [tileOf(S, p)]);
+        a.stage = 'carry'; a.walk = 0;
+        return RUN;
+      }
+      if (a.stage === 'go' || a.stage === 'carry') {
+        a.walk = (a.walk || 0) + dt;
+        if (a.stage === 'carry') Mm.carried(S, p, a);
+        if (a.walk > m.walk) return FAIL;
+        if (moving(p)) return RUN;
+        if (p.stuck) return FAIL;
+        a.stage = 'stay'; a.t = 0;
+        face(p, Math.floor(m.x), Math.floor(m.y));
+        Mm.arrive(S, p, a);
+      }
+      a.t += dt;
+      Mm.stay(S, p, a, dt);
+      if (a.t >= m.min) { a.fim = true; Mm.done(S, p, a); return DONE; }
+      return RUN;
+    },
+    end(S, p, a) { if (!a.fim && a.m && G.Memoria) G.Memoria.drop(S, p, a); },
   };
   // o escolhido que cura: vai até quem está doente ou num parto difícil e cura com as mãos
   const healSpot = (S, t) => (t.carriedBy ? person(S, t.carriedBy) || t : t);
@@ -1971,6 +2018,8 @@
       const pr = G.Deus.wantPray(S, p);
       if (pr > 0) add('rezar', pr);
     }
+    // Etapa 13: velar, enterrar, visitar a cova, o dia dos mortos, colher a erva, o rito
+    if (G.Memoria && S.memoria && st !== 'bebe') { const mm = G.Memoria.want(S, p); if (mm) add('memoria', mm.score, { hint: mm.k }); }
     for (const wk of WORK) {
       const v = S.vontades[VONT[wk] || wk] | 0;
       if (!v || !Fam.canWork(S, p, wk) || !Tech.workOpen(S, wk)) continue;
@@ -2094,7 +2143,7 @@
           const cs = cur ? cur.score : 0;
           // festa e história chamam: basta valer um pouco mais que o que está fazendo
           // o profeta larga o trabalho para pregar, e quem cura, para curar (Etapa 11)
-          const call = (best.type === 'festa' || best.type === 'ouvir' || best.type === 'curar' || (best.type === 'historia' && best.hint === 'sermao')) && best.score > cs + 5;
+          const call = (best.type === 'festa' || best.type === 'ouvir' || best.type === 'curar' || best.type === 'memoria' || (best.type === 'historia' && best.hint === 'sermao')) && best.score > cs + 5;
           if (call || best.score > cs * 1.3 + 10) { end(S, p, 0); AI.decide(S, p); }
         }
       }
@@ -2136,6 +2185,7 @@
     const st = a.stage;
     switch (a.type) {
       case 'chegar': return 'Chegando ao novo lar';
+      case 'memoria': return G.Memoria ? G.Memoria.describe(S, p, a) : 'Pensando no que fazer';
       case 'depositar': return 'Guardando no estoque';
       case 'beber': return st === 'go' ? 'Indo beber água' : 'Bebendo água';
       case 'comer': return st === 'go' ? 'Indo comer' : a.src === 'arbusto' ? 'Comendo frutas no pé' : a.hot === 'carne' ? 'Comendo carne assada' : a.hot ? 'Comendo peixe assado' :

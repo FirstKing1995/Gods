@@ -63,6 +63,13 @@
     if (out.party && out.party.on) out.party = null;
     return out;
   }
+  // a Memória vai inteira, menos o rito e o dia dos mortos em andamento (recomeçam do zero ao abrir)
+  function packMem(m) {
+    const out = Object.assign({}, m);
+    out.erva = Object.assign({}, m.erva, { rite: null });
+    out.fin = { year: m.fin.year || 0, velas: m.fin.velas || 0, day: m.fin.day || 0 };
+    return out;
+  }
   Save.serialize = function (S) {
     const w = S.world, objs = [], extra = [], holy = [];
     for (let i = 0; i < w.objs.length; i++) {
@@ -70,7 +77,12 @@
       if (i < w.genCount) {
         const c = CODE[o.k] !== undefined ? CODE[o.k] : 0;
         objs.push(c, c === 2 ? (o.regrow || 0) : c === 3 ? o.ch : c === 4 ? o.fruit : 0, c === 4 ? Math.round(o.grow * 100) : 0);
-      } else if (o.k === 'grave') extra.push({ x: o.x, y: o.y, name: o.name });
+      } else if (o.k === 'grave') {
+        // Etapa 13: a cova guarda quem é, quando foi, o rito e as flores
+        const g = { x: o.x, y: o.y, name: o.name };
+        for (const f of ['pid', 't', 'r', 'vel', 'laje', 'fl', 'of']) if (o[f]) g[f] = o[f];
+        extra.push(g);
+      }
       else if (o.k === 'bush' && o.holy) holy.push([o.x, o.y, o.v || 0, o.fruit, Math.round(o.grow * 100)]);   // as árvores de Deus (Etapa 11)
     }
     const people = S.people.map((p) => {
@@ -90,6 +102,7 @@
       goalsPhase: S.goalsPhase || 1, era: S.era || '', famInit: !!S.famInit, savedAt: G.Net ? G.Net.now() : Date.now(),
       hist: S.hist ? { day: S.hist.day, s: S.hist.s, n: S.hist.n } : null,   // a memória da aldeia (0.12), para o jogo fechado
       povos: S.povos || null,   // Etapa 12: a convivência e as caravanas
+      memoria: G.Memoria && S.memoria ? packMem(S.memoria) : null,   // Etapa 13: corpos, contos, a erva e o rito
     };
   };
 
@@ -107,7 +120,7 @@
       else if (k === 'bush') { o.fruit = a; o.grow = b / 100; }
       G.W.refreshBlock(w, o.y * w.W + o.x);
     }
-    for (const g of d.graves || []) G.W.addObj(w, 'grave', g.x, g.y, { name: g.name });
+    for (const g of d.graves || []) { const o = G.W.addObj(w, 'grave', g.x, g.y, { name: g.name }); for (const f of ['pid', 't', 'r', 'vel', 'laje', 'fl', 'of']) if (g[f]) o[f] = g[f]; }
     for (const h of d.holy || []) { const o = G.W.addObj(w, 'bush', h[0], h[1], { v: h[2], fruit: h[3], grow: h[4] / 100, holy: 1 }); G.W.refreshBlock(w, h[1] * w.W + h[0]); }
     for (const b of d.buildings) {
       for (let dy = 0; dy < b.h; dy++) for (let dx = 0; dx < b.w; dx++) {
@@ -126,6 +139,7 @@
       goalsPhase: d.goalsPhase || 1, era: d.era || '', famInit: !!d.famInit,
       hist: d.hist ? { day: -2, s: d.hist.s || [null, null, null, null], n: d.hist.n || [0, 0, 0, 0] } : null,
       povos: d.povos || null,
+      memoria: d.memoria || null,
     };
     for (const p of S.people) {
       p.path = null; p.pathI = 0; p.act = null; p.px = p.x; p.py = p.y; p.fail = {}; p.stuck = false;

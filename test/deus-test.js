@@ -9,7 +9,7 @@
 const path = require('path');
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 globalThis.G = globalThis.G || {};
-for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
+for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
 const { W, Sim, CFG: C, Family: F, God, Save, AI, Tech: T, Inv: I, Life: L, Fauna: FA, Campo: K, Narr: N, Deus: D } = G;
 const Y = 60 * 1440, DAYM = 1440;
 
@@ -663,7 +663,10 @@ if (isMainThread) {
         check(tag + 'grandes atos (espécie ou saber)', r.species.length + r.saber.length >= 1);
         check(tag + 'a fé média fica alta', r.feAvg >= 70, r.feAvg);
       }
-      if (r.mode === 'largado' && YEARS >= 20) check(tag + 'largado, Deus não passa do nível 2 e ninguém é escolhido', r.lv <= 2 && r.anointed === 0, 'nível ' + r.lv);
+      // O Deus largado só sobe pelos fiéis que a aldeia tem sozinha: os devotos (a fé deles se mantém com os agradecimentos
+      // e as pequenas graças) e, desde a 0.13, um pouco pelo rito. Na 0.12 parava no nível 2, num mundo a um fiel do 3;
+      // na 0.13 esse mundo chega ao 3 no ano 10. Não pode chegar ao 4 (7 fiéis) nem ter escolhido.
+      if (r.mode === 'largado' && YEARS >= 20) check(tag + 'largado, Deus não passa do nível 3 e ninguém é escolhido', r.lv <= 3 && r.anointed === 0, 'nível ' + r.lv + ', ' + r.fieis + ' fiéis');
     }
     for (const seed of Object.keys(bySeed)) {
       const m = bySeed[seed];

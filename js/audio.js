@@ -236,6 +236,17 @@
     oferenda(t, o, v) { bell(hz(84), t, 0.11 * v, o, 1.8); bell(hz(91), t + 0.2, 0.09 * v, o, 2.2); noise(t + 0.1, 0.8, 'highpass', 8000, 1, 0.2, 0.05 * v, o); return 2.4; },
     uniao(t, o, v) { pad([hz(60), hz(64), hz(67), hz(72)], t, 2.2, 0.1 * v, o, 2200); [72, 76, 79, 84].forEach((m, i) => bell(hz(m), t + 0.3 + i * 0.18, 0.1 * v, o, 1.8)); return 3; },
     sino(t, o, v) { bell(hz(88), t, 0.08 * v, o, 0.8); bell(hz(88), t + 0.22, 0.07 * v, o, 0.8); bell(hz(91), t + 0.44, 0.06 * v, o, 1); return 1.4; },
+    // Etapa 13: o velório (dois sinos graves), a terra da cova, as flores, o dia dos mortos, o rito e a pergunta na fumaça
+    velorio(t, o, v) { bell(hz(50), t, 0.2 * v, o, 3.6); bell(hz(50), t + 1.5, 0.15 * v, o, 3.6); pad([hz(50), hz(57)], t, 3.8, 0.05 * v, o, 1200); return 5.2; },
+    enterro(t, o, v) { SFX.cavar(t, o, v); SFX.cavar(t + 0.4, o, v * 0.8); SFX.cavar(t + 0.8, o, v * 0.6); bell(hz(57), t + 1.2, 0.13 * v, o, 3); return 4.2; },
+    flores(t, o, v) { pluck(hz(76), t, 0.6, 0.1 * v, o); pluck(hz(79), t + 0.15, 0.7, 0.09 * v, o); pluck(hz(83), t + 0.32, 0.9, 0.08 * v, o); return 1.3; },
+    finados(t, o, v) { [57, 60, 64, 67].forEach((m, i) => bell(hz(m), t + i * 0.75, 0.13 * v, o, 3)); pad([hz(45), hz(52), hz(57)], t, 4.2, 0.06 * v, o, 1400); return 5.4; },
+    rito(t, o, v) { pad([hz(43), hz(50), hz(55)], t, 3.8, 0.09 * v, o, 900); [62, 65, 67, 65, 62].forEach((m, i) => flute(hz(m), t + 0.4 + i * 0.5, 0.45, 0.07 * v, o)); return 4.2; },
+    visao(t, o, v) { tone('sine', hz(69), t, 0.3, 1.6, 0.08 * v, o, hz(81)); [81, 84, 88].forEach((m, i) => bell(hz(m), t + 0.5 + i * 0.18, 0.08 * v, o, 2)); noise(t + 0.2, 1.4, 'highpass', 6000, 1, 0.4, 0.04 * v, o); return 2.8; },
+    respBoa(t, o, v) { pad([hz(60), hz(64), hz(67)], t, 2.4, 0.08 * v, o, 2200); [72, 76, 79, 84].forEach((m, i) => bell(hz(m), t + 0.2 + i * 0.16, 0.1 * v, o, 2)); return 3; },
+    respMeio(t, o, v) { pad([hz(57), hz(62), hz(69)], t, 2.2, 0.07 * v, o, 1800); bell(hz(74), t + 0.3, 0.1 * v, o, 2); bell(hz(69), t + 0.7, 0.08 * v, o, 2); return 2.8; },
+    respMedo(t, o, v) { bell(hz(45), t, 0.2 * v, o, 3.2); bell(hz(51), t + 0.5, 0.13 * v, o, 3); noise(t, 1.6, 'lowpass', 400, 1, 0.3, 0.16 * v, o, 120); return 3.6; },
+    conto(t, o, v) { [62, 67, 69, 74].forEach((m, i) => pluck(hz(m), t + i * 0.17, 0.7, 0.12 * v, o)); return 1.5; },
   };
   function bandOut(o, f, q) { const b = ctx.createBiquadFilter(); b.type = 'bandpass'; b.frequency.value = f; b.Q.value = q; b.connect(o); return b; }
   function crackle(t, o, v) { noise(t, 0.012 + Math.random() * 0.02, 'highpass', 2000 + Math.random() * 3000, 1, 0.001, (0.1 + Math.random() * 0.25) * v, o); }
@@ -318,7 +329,7 @@
     const p = place(x, y);
     if (p.g < 0.04) return;
     lastPlay[name] = now;
-    const wet = { nivel: 0.6, dom: 0.5, ungir: 0.5, converte: 0.5, consagrar: 0.6, criar: 0.6, saber: 0.6, bencao: 0.4, nascimento: 0.5, morte: 0.6, descoberta: 0.4, era: 0.5, cura: 0.5, revelacao: 0.6, oracao: 0.5, atendida: 0.4, obrigado: 0.4, uivo: 0.5, lua: 0.5, canto: 0.4, arcoiris: 0.5, estrela: 0.4, esturro: 0.45 }[name] || 0.1;
+    const wet = { nivel: 0.6, dom: 0.5, ungir: 0.5, converte: 0.5, consagrar: 0.6, criar: 0.6, saber: 0.6, bencao: 0.4, nascimento: 0.5, morte: 0.6, descoberta: 0.4, era: 0.5, cura: 0.5, revelacao: 0.6, oracao: 0.5, atendida: 0.4, obrigado: 0.4, uivo: 0.5, lua: 0.5, canto: 0.4, arcoiris: 0.5, estrela: 0.4, esturro: 0.45, velorio: 0.6, enterro: 0.4, flores: 0.4, finados: 0.6, rito: 0.5, visao: 0.6, respBoa: 0.5, respMeio: 0.5, respMedo: 0.6, conto: 0.4 }[name] || 0.1;
     SFX[name](now + 0.02 + (delay || 0), out(bus.sfx, p.pan, wet), p.g * (vol === undefined ? 1 : vol));
   };
   A.ui = function (name) { if (name === 'click') A.sfx('clique'); };
@@ -385,6 +396,17 @@
       case 'upgrade': A.sfx('obra', e.x, e.y); break;
       case 'oferenda': A.sfx('oferenda'); break;   // Etapa 12
       case 'povo': A.sfx('atendida'); break;
+      case 'memoria':   // Etapa 13
+        if (e.ev === 'velorio') { if (e.on) A.sfx('velorio'); }
+        else if (e.ev === 'uivo') A.sfx('uivo');
+        else if (e.ev === 'enterro') A.sfx('enterro', e.x + 0.5, e.y + 0.5);
+        else if (e.ev === 'flores') A.sfx('flores', e.x + 0.5, e.y + 0.5);
+        else if (e.ev === 'finados') { if (e.on) A.sfx('finados'); }
+        else if (e.ev === 'rito') { if (e.on) A.sfx('rito'); }
+        else if (e.ev === 'pend') A.sfx('visao');
+        else if (e.ev === 'conto') A.sfx('conto');
+        else if (e.ev === 'resposta') A.sfx(e.tone > 0 ? 'respBoa' : e.tone < 0 ? 'respMedo' : 'respMeio');
+        break;
       case 'narr': if (e.on && e.ev === 'lobos') A.sfx('uivo'); else if (e.on && e.ev === 'mascate') A.sfx('sino'); else if (e.on && e.ev === 'povo') A.sfx('caravana'); else if (e.warn && (e.ev === 'nevasca' || e.ev === 'tempestade')) A.sfx('aviso'); break;
       // Etapa 10
       case 'harvest': A.sfx('colheita', e.x, e.y); break;

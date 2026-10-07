@@ -308,6 +308,16 @@
       for (let i = 0; i < 12; i++) spawn({ x: e.x * TS + 8 + (Math.random() - 0.5) * 8, y: e.y * TS + 8, vx: (Math.random() - 0.5) * 14, vy: -18 - Math.random() * 22, g: -4, life: 0.9 + Math.random() * 0.6, col: Math.random() < 0.5 ? '#feae34' : '#fee761' });
       return;
     }
+    if (e.k === 'memoria') {
+      // Etapa 13: a terra da cova, as pétalas de quem visita, a fumaça que responde
+      if (e.ev === 'enterro') for (let i = 0; i < 12; i++) spawn({ x: e.x * TS + 8 + (Math.random() - 0.5) * 12, y: e.y * TS + 10, vx: (Math.random() - 0.5) * 16, vy: -8 - Math.random() * 12, g: 40, life: 0.8, col: Math.random() < 0.6 ? '#6b4a36' : '#8a6a4a' });
+      else if (e.ev === 'flores') for (let i = 0; i < 7; i++) spawn({ x: e.x * TS + 8 + (Math.random() - 0.5) * 12, y: e.y * TS + 6, vx: (Math.random() - 0.5) * 8, vy: -6 - Math.random() * 8, g: 6, life: 1.4 + Math.random() * 0.6, col: ['#f6757a', '#fee761', '#ffffff'][i % 3] });
+      else if (e.ev === 'resposta' && e.x !== undefined) {
+        const col = e.tone > 0 ? '#fee761' : e.tone < 0 ? '#e43b44' : '#b58be0';
+        for (let i = 0; i < 32; i++) spawn({ x: e.x * TS + 8 + (Math.random() - 0.5) * 14, y: e.y * TS + 4 - Math.random() * 6, vx: (Math.random() - 0.5) * 10, vy: -14 - Math.random() * 24, g: 0, life: 1.4 + Math.random() * 1.4, col: Math.random() < 0.3 ? '#ffffff' : col });
+      }
+      return;
+    }
     if (e.k === 'fell') {
       for (let i = 0; i < 10; i++) spawn({ x: e.x * TS + 8 + (Math.random() - 0.5) * 10, y: e.y * TS + 2, vx: (Math.random() - 0.5) * 20, vy: -10 - Math.random() * 20, g: 40, life: 1.2, col: Math.random() < 0.6 ? '#3e8948' : '#733e39' });
     } else if (e.k === 'splash') {
@@ -451,6 +461,7 @@
     if (S && S.god) drawAuras(S, now);
     // lista ordenada por y
     const list = [], fence = S ? w.fence : null;
+    const levado = {};
     for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
       if (fence && fence[ty * w.W + tx]) list.push({ y: ty * TS + 13, fe: ty * w.W + tx });   // cercas (Etapa 10)
       const oi = w.objGrid[ty * w.W + tx];
@@ -471,6 +482,12 @@
         if (!p.alive || p.inTent || p.carriedBy) continue;
         const x = U.lerp(p.px, p.x, alpha), y = U.lerp(p.py, p.y, alpha);
         list.push({ y: y * TS + 4, p, x, y });
+      }
+      // Etapa 13: quem morreu e espera o enterro (no chão, na esteira do velório, ou no ombro de quem leva)
+      if (S.memoria && S.memoria.corpos.length) for (const id of S.memoria.corpos) {
+        const d = G.Family.person(S, id), c = d && d.corpo;
+        if (!c || !G.Sim.isSeen(S, Math.floor(d.x), Math.floor(d.y))) continue;
+        if (c.by) levado[c.by] = d; else list.push({ y: d.y * TS + 2, corpo: d });
       }
       // bichos: só onde o povo já viu (a paca de dia fica na toca)
       if (S.fauna) for (const e of S.fauna.ents) {
@@ -497,13 +514,20 @@
     list.sort((a, b) => a.y - b.y);
     const snow = season === 3;
     for (const it of list) {
-      if (it.o) drawObj(it.o, season, snow, sc < 1);
+      if (it.o) drawObj(it.o, season, snow, sc < 1, S, now);
+      else if (it.corpo) drawCorpo(it.corpo, now);
       else if (it.b) drawBuilding(S, it.b, now, it.row, it.part);
       else if (it.e) drawEnt(S, it.e, it.x, it.y, now);
       else if (it.c) drawBicho(it.c, it.x, it.y, now);
       else if (it.fe !== undefined) drawFence(S, it.fe, snow);
       else if (it.cr) drawCria(S, it.cr, it.x, it.y);
-      else drawPerson(S, it.p, it.x, it.y, now);
+      else { drawPerson(S, it.p, it.x, it.y, now); if (levado[it.p.id]) blit(A.spr.corpo, it.x * TS - 7, it.y * TS - 15); }
+    }
+    // Etapa 13: a fumaça do rito sobe do fogo, lilás e cinza
+    const rito = S && S.memoria && S.memoria.erva.rite;
+    if (rito && rito.on && Math.random() < 0.35) {
+      const f = G.Sim.building(S, rito.fire);
+      if (f) spawn({ x: (f.x + 0.5) * TS + (Math.random() - 0.5) * 10, y: (f.y + 0.2) * TS, vx: (Math.random() - 0.5) * 5, vy: -9, g: 0, life: 2.6, col: Math.random() < 0.5 ? 'rgba(181,139,224,0.55)' : 'rgba(192,203,220,0.4)' });
     }
     if (spears.length) drawSpears(now);
     // partículas
@@ -731,7 +755,30 @@
     for (let i = 0; i < Hd; i += seg * 2) { ctx.fillRect(X, Y + i, t, Math.min(seg, Hd - i)); ctx.fillRect(X + Wd - t, Y + i, t, Math.min(seg, Hd - i)); }
   }
 
-  function drawObj(o, season, snow, tiny) {
+  // Etapa 13: o corpo enrolado na esteira; no velório, uma vela de cada lado
+  function drawCorpo(d, now) {
+    const S = A.spr, wx = d.x * TS, wy = d.y * TS;
+    blit(S.corpo, wx - 7, wy - 3);
+    if (d.corpo.st === 2) {
+      const f = Math.floor(now / 260) % 2;
+      blit(S.velaCova[f], wx - 11, wy - 4); blit(S.velaCova[1 - f], wx + 8, wy - 4);
+    }
+  }
+  // o cemitério cercado: a cerca baixa dá a volta nas covas
+  function cercaCem(S, b) {
+    let x0 = b.x, y0 = b.y, x1 = b.x + 1, y1 = b.y + 1;
+    for (const o of G.Memoria.graves(S)) {
+      if (!o.pid || Math.abs(o.x - b.x) > 20 || Math.abs(o.y - b.y) > 20) continue;
+      x0 = Math.min(x0, o.x); y0 = Math.min(y0, o.y); x1 = Math.max(x1, o.x); y1 = Math.max(y1, o.y);
+    }
+    const X0 = x0 * TS - 6, Y0 = y0 * TS - 5, X1 = (x1 + 1) * TS + 5, Y1 = (y1 + 1) * TS + 4;
+    const post = (x, y) => { rect(x, y - 4, 2, 5, '#9a5e42'); rect(x, y - 4, 2, 1, '#d49a6a'); };
+    rect(X0, Y0 - 2, X1 - X0 + 1, 1, '#733e39'); rect(X0, Y1 - 2, X1 - X0 + 1, 1, '#733e39');
+    rect(X0, Y0 - 2, 1, Y1 - Y0, '#733e39'); rect(X1, Y0 - 2, 1, Y1 - Y0, '#733e39');
+    for (let x = X0; x <= X1; x += 8) { post(x, Y0); post(x, Y1); }
+    for (let y = Y0 + 8; y < Y1; y += 8) { post(X0, y); post(X1 - 1, y); }
+  }
+  function drawObj(o, season, snow, tiny, st, now) {
     const bx = o.x * TS, by = o.y * TS;
     const S = A.spr;
     switch (o.k) {
@@ -756,7 +803,20 @@
         blit(img, bx + 8 - img.width / 2, by + 14 - img.height);
         break;
       }
-      case 'grave': blit(S.grave, bx + 3, by + 3); break;
+      case 'grave': {
+        // Etapa 13: a cova de cada povo (a antiga, sem rito, segue com a lápide de sempre), flores, oferenda e vela
+        const r = o.r ? o.r.charAt(0) : '';
+        if (!r) blit(S.grave, bx + 3, by + 3);
+        else if (r === 'e' && st && st.t - o.t > G.CFG.ARVORE_COVA_D * G.CFG.DAY_MIN) blit(S.cova.arv, bx + 2, by - 1);
+        else blit(r === 'a' && !o.laje ? S.cova.a0 : S.cova[r] || S.cova.h, bx + 3, by + 3);
+        if (st && !tiny) {
+          if (o.fl > st.t) blit(S.florCova, bx + 1, by + 12);
+          if (o.of > st.t) blit(S.ofertaCova, bx + 11, by + 12);
+          if (st.memoria && (st.memoria.fin.velas || 0) > st.t) blit(S.velaCova[Math.floor((now || 0) / 260 + o.id) % 2], bx + 12, by + 8);
+        }
+        break;
+      }
+      case 'erva': if (!tiny) blit(S.erva, bx + 3, by + 5); break;
     }
   }
 
@@ -987,6 +1047,7 @@
   function drawShop(S, S2, b, bx, by, ghost, lv, now) {
     const imgs = S2.shop[b.type], img = imgs[Math.min(imgs.length - 1, lv)], top = by + 31 - img.height;
     blit(S2.bigShadow, bx + 5, by + 26, ghost ? 0.4 : undefined);
+    if (b.type === 'cemiterio' && !ghost && lv >= 2 && G.Memoria) cercaCem(S, b);   // Etapa 13
     blit(img, bx, top, ghost ? 0.45 : undefined);
     if (ghost) return;
     const st = S.stock, it = S2.item;
@@ -1162,7 +1223,8 @@
     const swing = work ? Math.floor(now / 260) % 2 : 0;
     const drummer = a && a.type === 'festa' && S.life && S.life.party && S.life.party.drummer === p.id && !moving;   // Etapa 8
     const dance = a && a.type === 'festa' && a.stage === 'dance' && !moving && !drummer;
-    const dy = work && swing ? 1 : dance ? -((Math.floor(now / 170) + p.id) % 2) * 2 : 0;
+    const trance = a && a.type === 'memoria' && a.m && a.m.k === 'rito' && a.stage === 'stay' && !moving;   // Etapa 13: a roda balança devagar
+    const dy = work && swing ? 1 : dance ? -((Math.floor(now / 170) + p.id) % 2) * 2 : trance ? (Math.floor(now / 520) + p.id) % 2 : 0;
     const img = sheet.sheet;
     const sx = frame * fw, sy = p.dir * fh, top = kid ? wy - 7 : wy - 10;
     ctx.drawImage(img, sx, sy, fw, fh, Math.round((wx - fw / 2) * sc + ox), Math.round((top + dy) * sc + oy), Math.round(fw * sc), Math.round(fh * sc));
@@ -1190,6 +1252,13 @@
       const hy = top - 2 + dy + Math.round(Math.sin(now / 400) * 0.5);
       rect(wx - 2, hy, 4, 1, col); rect(wx - 3, hy + 1, 1, 1, col); rect(wx + 2, hy + 1, 1, 1, col);
     }
+    // Etapa 13: a vela de quem vela e de quem lembra os mortos, as flores de quem visita, a fumaça na cabeça de quem está na roda
+    if (a && a.type === 'memoria' && a.m && !moving && p.dir !== 1) {
+      const mk = a.m.k, hx = p.dir === 3 ? wx - 4 : wx + 3;
+      if ((mk === 'velar' || mk === 'finados') && a.stage === 'stay') { rect(hx, top + 6, 1, 2, '#ead4aa'); rect(hx, top + 5, 1, 1, (Math.floor(now / 200) + p.id) % 2 ? '#fee761' : '#feae34'); }
+      else if (mk === 'cova' && a.stage === 'stay') { rect(hx, top + 6, 1, 2, '#3e8948'); rect(hx, top + 5, 1, 1, ['#f6757a', '#fee761', '#ffffff'][p.id % 3]); }
+    }
+    if (trance && Math.random() < 0.04) spawn({ x: wx + (Math.random() - 0.5) * 6, y: top - 1, vx: (Math.random() - 0.5) * 3, vy: -6, g: 0, life: 1.4, col: 'rgba(181,139,224,0.7)' });
     if (a && a.type === 'rezar' && a.stage === 'pray' && Math.random() < 0.03) spawn({ x: wx + (Math.random() - 0.5) * 6, y: top + 2, vx: 0, vy: -9, g: 0, life: 1, col: '#fee761' });
     if (a && a.type === 'curar' && a.stage === 'heal' && Math.random() < 0.2) spawn({ x: wx + (Math.random() - 0.5) * 10, y: top + 6, vx: (Math.random() - 0.5) * 4, vy: -7, g: 0, life: 0.9, col: '#9be070' });
     if (work && S.god && S.god.blessings && S.god.blessings.length && G.Deus && G.Deus.blessAt(S, p.x, p.y) > 1 && Math.random() < 0.05) spawn({ x: wx + (Math.random() - 0.5) * 8, y: top + 4, vx: 0, vy: -8, g: 0, life: 0.8, col: '#fee761' });
@@ -1495,6 +1564,12 @@
     if (G.Deus && S.god && S.god.pending) for (const L of G.Deus.lights(S)) {
       const cx = (L.x * TS * sc + ox) / 4, cy = (L.y * TS * sc + oy) / 4, r = L.r * TS * sc / 4;
       for (const [f, al] of [[1.0, 0.3], [0.7, 0.6], [0.4, 0.9]]) { lctx.fillStyle = 'rgba(0,0,0,' + al + ')'; lctx.beginPath(); lctx.arc(cx, cy, r * f, 0, Math.PI * 2); lctx.fill(); }
+    }
+    // Etapa 13: as velas do velório e as das covas na noite do dia dos mortos
+    if (G.Memoria && S.memoria && (S.memoria.corpos.length || (S.memoria.fin.velas || 0) > S.t)) for (const L of G.Memoria.lights(S)) {
+      const fl = 1 + Math.sin(now / 110 + L.x * 7) * 0.07;
+      const cx = (L.x * TS * sc + ox) / 4, cy = (L.y * TS * sc + oy) / 4, r = L.r * TS * sc * fl / 4;
+      for (const [f, al] of [[1.0, 0.25], [0.55, 0.6]]) { lctx.fillStyle = 'rgba(0,0,0,' + al + ')'; lctx.beginPath(); lctx.arc(cx, cy, r * f, 0, Math.PI * 2); lctx.fill(); }
     }
     for (const b of fires) {
       const fl = 1 + Math.sin(now / 90 + b.id) * 0.04 + Math.sin(now / 37) * 0.02;

@@ -82,7 +82,7 @@
   God.faith = function (S, p, delta) {
     if (!p.alive || !delta) return;
     let d = delta;
-    if (d > 0) { if (has(p, 'Devoto')) d *= 1.5; if (has(p, 'Cético')) d *= 0.5; if (S.god.align > 30) d *= 1.2; }
+    if (d > 0) { if (has(p, 'Devoto')) d *= 1.5; if (has(p, 'Cético')) d *= 0.5; if (S.god.align > 30) d *= 1.2; if (p.criado === 'confiante') d *= C.CONFIANTE_GANHO; }
     else { if (has(p, 'Devoto')) d *= 0.5; if (has(p, 'Cético')) d *= 1.5; if (S.god.align < -30) d *= 0.7; }
     p.fe = U.clamp(p.fe + d, 0, 100);
     if (p.fe >= 99.5) p.fe100At = S.t;   // Etapa 11: fé inteira (quem chega lá pode virar escolhido)
@@ -95,6 +95,7 @@
     if (has(p, 'Devoto')) o += 0.2;
     if (has(p, 'Cético')) o -= 0.25;
     if (S.god && S.god.align < -30) o += 0.15;
+    if (p.criado === 'temente') o += C.TEMENTE_OBED;   // Etapa 13: cresceu ouvindo contos de medo
     if (dom(S, 'temor')) o += DM().temorObed;
     return U.clamp(o, 0.35, 1.8);
   };
@@ -220,7 +221,8 @@
     for (const p of S.people) {
       if (!p.alive) continue;
       // sem sinal de Deus a fé esfria até 35; com sinais recentes, aquece até 70; o escolhido fica perto de 90
-      const target = p.escolhido ? Math.max(base, 90) : base;
+      let target = p.escolhido ? Math.max(base, 90) : base;
+      if (p.criado && G.Memoria) target = G.Memoria.feAlvo(p, target);   // Etapa 13: temente não desce de 50; confiante esfria menos
       if (p.fe > target) p.fe = Math.max(target, p.fe - 0.7);
       else p.fe = Math.min(target, p.fe + 0.7);
     }
@@ -362,6 +364,7 @@
     }
     if (kind === 'revelacao') {
       const id = G.Tech.reveal(S, dreamer);
+      if (G.Memoria) G.Memoria.deed(S, 'sonho', { a: dreamer.name, sx: dreamer.sex, x1: G.Tech.DISC[id] ? G.Tech.DISC[id].name.toLowerCase() : '' });
       God.faith(S, dreamer, C.FAITH_ANSWER);
       for (const q of S.people) if (q.alive && q !== dreamer) God.faith(S, q, C.FAITH_MIRACLE_SEEN);
       God.align(S, 3);
@@ -371,6 +374,7 @@
       S.events.push({ k: 'miracle', kind, x: Math.floor(dreamer.x), y: Math.floor(dreamer.y) });
     } else if (kind === 'cura') {
       const h = healed, wasLabor = !!(h.labor && h.labor.hard && !h.labor.helped);
+      if (G.Memoria && (h.needs.saude < C.CONTO_CURA || wasLabor)) G.Memoria.deed(S, 'cura', { a: h.name, sx: h.sex, x: h.x, y: h.y });   // Etapa 13: quem estava mal
       h.needs.saude = Math.min(100, h.needs.saude + C.CURA_HEAL);
       h.dmg.raio = 0; h.dmg.parto = 0;
       if (h.labor) h.labor.helped = true;
@@ -397,6 +401,7 @@
     } else if (kind === 'calor') {
       const r = God.radius(S, 'calor'), hours = dom(S, 'fogo') ? dm.fogoH : C.CALOR_HOURS;
       g.auras.push({ x, y, r, until: S.t + hours * 60 });
+      if (G.Memoria && G.Narr && G.Narr.is(S, 'nevasca')) G.Memoria.deed(S, 'calor', { x, y });
       God.align(S, 3);
       const n = answer(S, 'frio lobos', x, y, r);
       msg = 'Calor sobre o lugar por ' + hours + ' horas.' + (n ? '' : '');
@@ -427,6 +432,7 @@
       answer(S, 'fome sede', x, y, C.CHUVA_R);
       Sm.refresh(S);
       const dry = G.Narr ? G.Narr.onChuva(S) : '';
+      if (dry && G.Memoria) G.Memoria.deed(S, 'chuva', {});   // a chuva que acabou com a seca
       const rocas = G.Campo ? G.Campo.onChuva(S, x, y, ceu ? dm.ceuRoca : 0) : 0;   // Etapa 10: a roça molhada cresce uns dias de uma vez
       msg = 'Chuva abençoada: ' + fruits + ' frutas nasceram nos arbustos.' + (rocas ? (rocas === 1 ? ' A roça cresceu a olhos vistos.' : ' As roças cresceram a olhos vistos.') : '') + (dry ? ' ' + dry : '');
       S.events.push({ k: 'miracle', kind, x, y });
@@ -439,7 +445,7 @@
       const hit = wolf ? null : S.people.find((p) => p.alive && !p.inTent && near(p, x, y, C.RAIO_R));
       const game = wolf || hit || !G.Fauna ? null : G.Fauna.onRaio(S, x, y);   // capivara: carne e couro
       const o = wolf || game ? null : G.W.objAt(w, i);
-      if (wolf) msg = wolf;
+      if (wolf) { msg = wolf; if (G.Memoria) G.Memoria.deed(S, 'raioFera', { x1: /onça/.test(wolf) ? 'onca' : 'lobos', x, y }); }
       else if (game) msg = game;
       else if (hit) {
         hit.needs.saude -= C.RAIO_DAMAGE;
@@ -449,6 +455,7 @@
         for (const q of S.people) if (q !== hit && q.alive) { Sm.addMem(S, q, 'viuRaio'); God.faith(S, q, 4); }
         God.align(S, -15);
         Sm.say(S, hit, 'Perdão! Perdão!', true);
+        if (G.Memoria) G.Memoria.deed(S, 'castigo', { a: hit.name, sx: hit.sex, x, y });
         msg = 'O raio atingiu ' + hit.name + '. O povo teme você.';
       } else if (o && o.k === 'tree') {
         o.k = 'stump'; o.regrow = 0; G.W.refreshBlock(w, i);

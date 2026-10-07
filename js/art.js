@@ -1750,6 +1750,15 @@
     return (statueCache[key] = fromRows(rows, map).canvas());
   };
   const iconCache = {};
+  // Etapa 13: ícones da Memória
+  ICONS.cemiterio = [['kkkkkkkkkk', 'kWWWWWWWWk', '.kk.YY.kk.', '.kw.YY.kw.', '.kw....kw.', '.kw....kw.', '.kw....kw.', '.kw....kw.', 'dddddddddd', '.dddddddd.'], { k: P.bark, W: P.tan, w: P.wood, Y: P.gold, d: '#6b4a36' }];
+  ICONS.cova = [['....kk....', '...kYYk...', '...kYYk...', '....kk....', '....ww....', '....ww....', '..kkwwkk..', '.kddddddk.', 'kddddddddk', '.kkkkkkkk.'], { k: P.ink2, Y: P.gold, w: P.wood, d: P.bark }];
+  ICONS.vela = [['....Y.....', '...YYY....', '...YoY....', '....o.....', '...kwwk...', '...kwwk...', '...kwwk...', '...kwwk...', '..kkwwkk..', '..kkkkkk..'], { Y: P.yellow, o: P.ember, w: P.parch, k: P.ink2 }];
+  ICONS.flor = [['..........', '..pp..yy..', '.pPPpyYYy.', '.pPPpyYYy.', '..pp..yy..', '...g..g...', '...gg.g...', '....ggg...', '....gg....', '....g.....'], { p: P.rose, P: '#ffd6e0', y: P.gold, Y: P.yellow, g: P.green }];
+  ICONS.conto = [['..........', '.kkkkkkkk.', 'kppppppppk', 'kpkkkpkkpk', 'kppppppppk', 'kpkkpkkkpk', 'kppppppppk', '.kkkkppkk.', '.....kpk..', '......k...'], { k: P.ink2, p: P.parch }];
+  ICONS.erva = [['....v.....', '.g..g..v..', '.gG.g.g...', '..gGgGg.v.', '.v.gGGg.g.', '..ggGGgg..', '...gGGg...', '....GG....', '....GG....', '...kkkk...'], { g: '#4fa88a', G: '#2f7a6a', v: '#b58be0', k: P.bark }];
+  ICONS.rito = [['...v......', '..v.v..v..', '...v..v.v.', '..v....v..', '...v.v....', '....YY....', '...YooY...', '..kYooYk..', '.kbbbbbbk.', '..kkkkkk..'], { v: '#b58be0', Y: P.yellow, o: P.ember, b: P.bark, k: P.ink2 }];
+  ICONS.visao = [['....Y.....', '.Y..Y..Y..', '..........', '..kkkkkk..', '.kWWvvWWk.', 'kWWvKKvWWk', '.kWWvvWWk.', '..kkkkkk..', '..........', '.Y..Y..Y..'], { k: P.ink2, W: P.white, v: '#b58be0', K: P.ink, Y: P.gold }];
   A.icon = function (name) {
     if (iconCache[name]) return iconCache[name];
     if (name.indexOf('cria:') === 0) return (iconCache[name] = criaIcon(name.slice(5)));   // bicho de criação (Etapa 10)
@@ -1974,6 +1983,63 @@
   });
 
   // ---------- construção de todos os sprites ----------
+  // ---------- Etapa 13: Memória ----------
+  // a cova de cada povo (10 x 11, do tamanho do túmulo antigo): o marco de madeira com o sinal de Deus, a muda que o
+  // elfo planta, a laje do anão (sem pedra no estoque, um monte de pedra solta) e o mastro de chifre e pena do povo-fera
+  const COVA_MAP = { k: P.ink2, w: P.wood, W: P.tan, Y: P.gold, d: P.bark, D: '#5a3028', g: P.green, L: P.leaf, b: P.bark, s: '#8f98ac', S: '#b9c1d0', x: '#676e84', o: P.silver, r: P.red, R: P.wine };
+  function cova(kind) {
+    const rows = {
+      h: ['....kk....', '...kYYk...', '...kYYk...', '....kk....', '....wW....', '...kwWk...', '....wW....', '....wW....', '.kddwWddk.', 'kdDddddDdk', '.kkkkkkkk.'],
+      e: ['..........', '.....L....', '....LgL...', '.....gL...', '....Lg....', '.....b....', '.....b....', '.....b....', '.kddbbddk.', 'kdDddddDdk', '.kkkkkkkk.'],
+      a: ['..........', '..........', '...kkkk...', '..kSssSk..', '.kSssssSk.', '.kssxxssk.', '.kssxxssk.', '.kSssssSk.', 'kkkkkkkkkk', 'kdDddddDdk', '.kkkkkkkk.'],
+      a0: ['..........', '..........', '..........', '....kk....', '...kSsk...', '..kksskk..', '.kSskxSsk.', 'kssxkssxsk', 'kkkkkkkkkk', 'kdDddddDdk', '.kkkkkkkk.'],
+      f: ['.o......o.', '.oo....oo.', '..okwWko..', '...kwWk.r.', '....wW.rR.', '....wW.r..', '....wW....', '....wW....', '.kddwWddk.', 'kdDddddDdk', '.kkkkkkkk.'],
+    }[kind];
+    return fromRows(rows, COVA_MAP).canvas();
+  }
+  // a árvore que o elfo plantou, já crescida (12 x 15): copa redonda em cima do montinho
+  function covaArvore() {
+    return fromRows(['....kkkk....', '..kkLLLLkk..', '.kLLLgLLLLk.', 'kLLgLLLLgLLk', 'kLLLLLgLLLLk', 'kgLLLLLLLLgk', '.kLLgLLLgLk.', '..kkLLLLkk..', '....kbbk....', '.....bb.....', '.....bb.....', '.....bb.....', '..kddbbddk..', '.kdDddddDdk.', '..kkkkkkkk..'], COVA_MAP).canvas();
+  }
+  // as flores ao pé da cova, a fruta de oferenda, a vela (dois quadros da chama) e o corpo enrolado na esteira
+  function florCova() { return fromRows(['.p.y.', 'pgygp', '.g.g.'], { p: P.rose, y: P.yellow, g: P.leaf }).canvas(); }
+  function ofertaCova() { return fromRows(['.g.', 'rRr', '.r.'], { g: P.leaf, r: P.red, R: P.rose }).canvas(); }
+  function velaCova(f) { return fromRows(f ? ['.Y.', '.o.', '.w.', '.w.', 'kwk'] : ['Y..', '.o.', '.w.', '.w.', 'kwk'], { Y: P.yellow, o: P.ember, w: P.parch, k: P.ink2 }).canvas(); }
+  function corpoEsteira() {
+    return fromRows(['..kkkkkkkkkk..', '.kppppPpppppk.', 'kppPppkppkpPpk', '.kppppPpppppk.', 'mMmmMmmmMmmMmm', '.mmMmmmMmmmMm.'], { k: P.ink2, p: P.parch, P: P.tan, m: P.gourd, M: '#a8824e' }).canvas();
+  }
+  // a erva-do-sonho (10 x 9): folha fina, verde-azulada, com flor miúda lilás
+  function ervaSonho() {
+    return fromRows(['....v.....', '.g..g..v..', '.gG.g.g...', '..gGgGg.v.', '.v.gGGg.g.', '..ggGGgg..', '...gGGg...', '....GG....', '..kkkkkk..'], { g: '#4fa88a', G: '#2f7a6a', v: '#b58be0', k: 'rgba(24,20,37,0.25)' }).canvas();
+  }
+  // o marco do cemitério (32 x 30): o portal de madeira com o sinal de Deus pendurado
+  function portalCem(b, x0, x1, y0) {
+    for (let y = y0 + 2; y <= 27; y++) for (const x of [x0, x1]) { b.set(x, y, PLANK[1]); b.set(x + 1, y, PLANK[3]); b.set(x + 2, y, PLANK[2]); }
+    for (let x = x0 - 3; x <= x1 + 5; x++) { b.set(x, y0, PLANK[0]); b.set(x, y0 + 1, PLANK[4]); b.set(x, y0 + 2, PLANK[3]); b.set(x, y0 + 3, PLANK[1]); }
+    const cx = Math.round((x0 + x1 + 2) / 2);
+    b.set(cx, y0 + 4, PLANK[0]);
+    stamp(b, ['.k.', 'kYk', 'YWY', 'kYk', '.k.'], { k: PLANK[0], Y: P.gold, W: P.yellow }, cx - 1, y0 + 5);
+    stamp(b, ['.kk.', 'kSsk'], { k: '#2a2c3a', S: '#b9c1d0', s: '#8f98ac' }, x0 - 1, 26);
+    stamp(b, ['.kk.', 'ksSk'], { k: '#2a2c3a', S: '#b9c1d0', s: '#8f98ac' }, x1 - 1, 26);
+    for (let x = x0 - 4; x <= x1 + 6; x++) b.set(x, 28, x % 3 ? '#6b4a36' : '#5a3d2c');
+  }
+  function cemiterio1() {
+    const b = new Buf(32, 30);
+    portalCem(b, 8, 21, 7);
+    return b.canvas();
+  }
+  // cercado: portal mais alto, com cumeeira, duas lanternas e o começo da cerca de cada lado
+  function cemiterio2() {
+    const b = new Buf(32, 30);
+    portalCem(b, 8, 21, 7);
+    line(b, 4, 6, 15, 1, PLANK[1]); line(b, 16, 1, 27, 6, PLANK[1]);
+    line(b, 4, 5, 15, 0, PLANK[4]); line(b, 16, 0, 27, 5, PLANK[4]);
+    for (const x of [6, 25]) stamp(b, ['.k.', 'kYk', 'kYk', '.k.'], { k: P.ink2, Y: P.yellow }, x - 1, 12);
+    for (const x of [0, 2, 4, 27, 29, 31]) { for (let y = 21; y <= 27; y++) b.set(x, y, y === 21 ? PLANK[4] : PLANK[2]); }
+    for (const x of [1, 3, 28, 30]) { b.set(x, 23, PLANK[3]); b.set(x, 26, PLANK[1]); }
+    return b.canvas();
+  }
+
   A.build = function () {
     const S = A.spr = {};
     S.broad = [0, 1, 2, 3].map((s) => [0, 1, 2].map((v) => broadTree(v, s)));
@@ -1996,6 +2062,10 @@
     // Etapa 12: a ferraria (com ourives no nível 2) e a mina (três níveis), e as marcas de demolir e de mudar de lugar
     S.shop.ferraria = [null, ferraria1(), ferraria2()];
     S.shop.mina = [null, mina1(), mina2(), mina3()];
+    // Etapa 13: as covas de cada povo, as flores, a oferenda, a vela, o corpo na esteira, a erva e o marco do cemitério
+    S.cova = { h: cova('h'), e: cova('e'), a: cova('a'), a0: cova('a0'), f: cova('f'), arv: covaArvore() };
+    S.florCova = florCova(); S.ofertaCova = ofertaCova(); S.velaCova = [velaCova(0), velaCova(1)]; S.corpo = corpoEsteira(); S.erva = ervaSonho();
+    S.shop.cemiterio = [null, cemiterio1(), cemiterio2()];
     S.demolir = markDemolir(); S.mover = markMover();
     S.bench = { h: benchH(), v: benchV() };
     S.mat = mat();

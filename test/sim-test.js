@@ -2,7 +2,7 @@
 // Uso: node test/sim-test.js [seed...]
 const path = require('path');
 globalThis.G = {};
-for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'save']) require(path.join(__dirname, '..', 'js', f + '.js'));
+for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'save']) require(path.join(__dirname, '..', 'js', f + '.js'));
 const G = globalThis.G, C = G.CFG;
 
 function worldStats(seed) {

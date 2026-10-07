@@ -254,6 +254,15 @@
   };
   // a festa: um acontecimento, soma por fora do teto do dia
   Pv.onParty = (S, list, d) => Pv.onGather(S, list, d, true);
+  // Etapa 13: o casal de dois povos junta os dois ritos na despedida (a, b: a letra do rito de cada povo)
+  const RITO_POVO = { h: 'humano', e: 'elfo', a: 'anao', f: 'fera' };
+  Pv.onRite = function (S, a, b) { if (Pv.mixed(S) && RITO_POVO[a] && RITO_POVO[b]) addConv(S, RITO_POVO[a], RITO_POVO[b], C.CONV_RITO); };
+  // uma resposta de Deus no rito aproxima ou afasta todos os povos que moram aqui
+  Pv.shift = function (S, d) {
+    if (!Pv.mixed(S)) return;
+    const here = Pv.ORDER.filter((k) => Pv.count(S, k) > 0);
+    for (let i = 0; i < here.length; i++) for (let j = i + 1; j < here.length; j++) addConv(S, here[i], here[j], d);
+  };
   Pv.onBond = function (S, a, b) {
     if (!Pv.mixed(S) || !diff(a, b)) return;
     between(S, a, b, C.CONV_CASAL);
@@ -325,6 +334,7 @@
     if (!g) return null;
     const st = P.st[kind];
     st.state = 'vindo'; st.gid = g.id; st.at = S.t; st.n = (st.n || 0) + 1;
+    st.cham = P.called ? 1 : 0;   // veio porque Deus chamou (Etapa 13: vira conto)
     P.due = null; P.called = false;
     return g;
   }
@@ -358,6 +368,8 @@
     if (S.vontades && S.vontades.mina === undefined) S.vontades.mina = C.DEFAULT_VONTADES.mina || 2;
     P.next = S.t + Math.round((C.POVO_GAP_D[0] + S.rng.next() * (C.POVO_GAP_D[1] - C.POVO_GAP_D[0])) * DAY());
     S.events.push({ k: 'povo', kind, on: true });
+    if (st.cham && G.Memoria) G.Memoria.deed(S, 'chamado', { x1: Pv.DEF[kind].os });
+    st.cham = 0;
   };
   Pv.onRefused = function (S, kind) {
     const P = S.povos, st = P.st[kind];

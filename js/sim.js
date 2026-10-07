@@ -47,6 +47,21 @@
     dormiuBem: { t: 'Dormiu bem abrigado', v: 6, d: 1440 },
     dormiuRelento: { t: 'Dormiu ao relento', v: -6, d: 1440 },
     passouFrio: { t: 'Passou frio', v: -8, d: 1440 },
+    // Etapa 13: Memória
+    velou: { t: 'Velou quem partiu', v: 2, d: 3 * 1440 },
+    semDespedida: { t: 'Não pôde se despedir', v: -8, d: 20 * 1440 },
+    visitouCova: { t: 'Levou flores a quem partiu', v: 3, d: 3 * 1440 },
+    diaDosMortos: { t: 'Lembrou os que partiram', v: 5, d: 6 * 1440 },
+    viagem: { t: 'Viu coisas na fumaça do rito', v: 4, d: 3 * 1440 },
+    visaoRuim: { t: 'Teve uma visão ruim no rito', v: -6, d: 3 * 1440 },
+    semRito: { t: 'Sente falta do rito', v: -4, d: 10 * 1440 },
+    aceitou: { t: 'Ouviu Deus e ficou em paz', v: 4, d: 5 * 1440 },
+    temeu: { t: 'Ouviu Deus e teve medo', v: -3, d: 3 * 1440 },
+    promessa: { t: 'Ouviu uma promessa de Deus', v: 5, d: 5 * 1440 },
+    promessaQuebrada: { t: 'Viu Deus faltar com a palavra', v: -6, d: 10 * 1440 },
+    emPaz: { t: 'Está em paz com o fim', v: 6, d: 10 * 1440 },
+    semResposta: { t: 'Perguntou e Deus não respondeu', v: -3, d: 3 * 1440 },
+    contoMedo: { t: 'Ouviu um conto de dar medo', v: -2, d: 1440 },
     // Etapa 12
     povoUnido: { t: 'Viu dois povos virarem um só', v: 8, d: 7200 },
     tesouro: { t: 'Viu o brilho que saiu da mina', v: 4, d: 2880 },
@@ -633,6 +648,8 @@
         // roça e curral (Etapa 10)
       } else if (G.Deus && G.Deus.onBuilt(S, b)) {
         // a estátua (Etapa 11)
+      } else if (G.Memoria && G.Memoria.onBuilt(S, b)) {
+        // o cemitério (Etapa 13)
       } else {
         if (!S.stats.firstTent) { S.stats.firstTent = true; Sim.chron(S, 'Ergueram a primeira barraca.'); }
         else Sim.toast(S, C.BUILD[b.type].name + ' pronta.');
@@ -750,6 +767,7 @@
     if (n.calor < 20) Sim.addMem(S, p, 'passouFrio');
     let m = 50;
     for (const me of p.mem) m += MEM[me.k].v;
+    if (p.criado && G.Memoria) m += G.Memoria.mood(p);   // Etapa 13: quem cresceu ouvindo contos de medo ou de cuidado
     if (Sim.has(p, 'Otimista')) m += 8;
     if (Sim.has(p, 'Pessimista')) m -= 8;
     for (const k of ['fome', 'sede', 'calor', 'energia']) if (n[k] < 25) m -= 6;
@@ -885,6 +903,7 @@
     if (G.Campo) G.Campo.daily(S);   // Etapa 10: roça, criação, descobertas do campo
     if (G.Minas) G.Minas.daily(S);   // Etapa 12: as descobertas da mina
     if (G.Povos) G.Povos.daily(S);   // a convivência e as caravanas
+    if (G.Memoria) G.Memoria.daily(S);   // Etapa 13: visitas à cova, promessas, o costume do rito
     if (G.Life) G.Life.daily(S);
   }
   function rot(S, k, rate) {
@@ -911,6 +930,7 @@
     if (h % 6 === 0) for (const p of S.people) if (p.alive) hourlyPerson(S, p);
     G.Family.hourly(S);
     if (G.Narr) G.Narr.hourly(S);
+    if (G.Memoria) G.Memoria.hourly(S);   // Etapa 13: sem cerimônia com o jogo fechado
     if (G.Life) G.Life.hourly(S);
     if (h === 12) checkGoals(S);
   }
@@ -928,6 +948,7 @@
     if (G.Campo) G.Campo.hourly(S);
     if (G.Minas) G.Minas.hourly(S);   // Etapa 12: a ferramenta de ferro e a joia de quem passa pelo acampamento
     if (G.Povos) G.Povos.hourly(S);   // e a caravana que está para chegar
+    if (G.Memoria) G.Memoria.hourly(S);   // Etapa 13: o corpo, o velório, o rito, o dia dos mortos
     if (G.Life) G.Life.hourly(S);
     checkGoals(S);
   }
@@ -955,7 +976,7 @@
   function checkGoals(S) {
     for (const g of S.goals) {
       if (g.done) continue;
-      const fn = GOAL_TEST[g.id] || G.Family.goalTest[g.id] || G.Tech.goalTest[g.id] || (G.Obras && G.Obras.goalTest[g.id]) || (G.Inv && G.Inv.goalTest[g.id]) || (G.Bichos && G.Bichos.goalTest[g.id]) || (G.Campo && G.Campo.goalTest[g.id]) || (G.Deus && G.Deus.goalTest[g.id]) || (G.Povos && G.Povos.goalTest[g.id]) || (G.Minas && G.Minas.goalTest[g.id]);
+      const fn = GOAL_TEST[g.id] || G.Family.goalTest[g.id] || G.Tech.goalTest[g.id] || (G.Obras && G.Obras.goalTest[g.id]) || (G.Inv && G.Inv.goalTest[g.id]) || (G.Bichos && G.Bichos.goalTest[g.id]) || (G.Campo && G.Campo.goalTest[g.id]) || (G.Deus && G.Deus.goalTest[g.id]) || (G.Povos && G.Povos.goalTest[g.id]) || (G.Minas && G.Minas.goalTest[g.id]) || (G.Memoria && G.Memoria.goalTest[g.id]);
       if (!fn || !fn(S)) continue;
       g.done = true;
       if (g.reward && S.god && !g.paid) { g.paid = true; G.God.gain(S, g.reward); }
@@ -1000,7 +1021,7 @@
   }
   // missões pequenas das obras que entram em cada fase (Etapa 7)
   const missions = (S, phase) => (G.Obras ? G.Obras.missions(phase) : []).concat(G.Inv ? G.Inv.missions(phase) : [], G.Bichos ? G.Bichos.missions(phase) : [],
-    G.Campo ? G.Campo.missions(phase) : [], G.Deus ? G.Deus.missions(phase) : [], G.Povos ? G.Povos.missions(phase) : [], G.Minas ? G.Minas.missions(phase) : [])
+    G.Campo ? G.Campo.missions(phase) : [], G.Deus ? G.Deus.missions(phase) : [], G.Povos ? G.Povos.missions(phase) : [], G.Minas ? G.Minas.missions(phase) : [], G.Memoria ? G.Memoria.missions(phase) : [])
     .filter((m) => !S.goals.some((g) => g.id === m.id));
   Sim.checkGoals = checkGoals;
   Sim.daily = (S) => daily(S);   // para os testes
@@ -1036,9 +1057,12 @@
     if (p.inTent) { const b = Sim.building(S, p.inTent); if (b) { p.x = b.x + 1; p.y = b.y + b.h + 0.5; } p.inTent = 0; }
     for (const b of S.buildings) b.beds = b.beds.filter((id) => id !== p.id);
     const w = S.world;
-    const r = G.W.findNearest(w, Math.floor(p.y) * w.W + Math.floor(p.x),
-      (i) => (!G.W.objAt(w, i) && w.bgrid[i] < 0 && !Sim.isCamp(S, i) && !G.IS_WATER[w.tile[i]] ? 1 : 0), 30);
-    if (r) G.W.addObj(w, 'grave', r.idx % w.W, (r.idx / w.W) | 0, { name: p.name });
+    // Etapa 13: o corpo espera o velório e o enterro. Com o jogo fechado, ou sem ninguém para carregar, a cova nasce ali
+    if (!(G.Memoria && G.Memoria.onDeath(S, p))) {
+      const r = G.W.findNearest(w, Math.floor(p.y) * w.W + Math.floor(p.x),
+        (i) => (!G.W.objAt(w, i) && w.bgrid[i] < 0 && !Sim.isCamp(S, i) && !G.IS_WATER[w.tile[i]] ? 1 : 0), 30);
+      if (r) G.W.addObj(w, 'grave', r.idx % w.W, (r.idx / w.W) | 0, { name: p.name, pid: p.id, t: S.t });
+    }
     const causeTxt = { frio: 'de frio', sede: 'de sede', fome: 'de fome', raio: 'atingid' + (p.sex === 'F' ? 'a' : 'o') + ' por um raio', parto: 'no parto', velhice: 'de velhice', lobos: 'no ataque dos lobos',
       onca: 'no ataque da onça', jacare: 'no ataque de um jacaré', bicho: 'atacad' + (p.sex === 'F' ? 'a' : 'o') + ' por um bicho' }[p.cause];
     const age = Sim.ageOf(S, p);
@@ -1148,6 +1172,7 @@
     if (G.Minas) G.Minas.init(S);   // Etapa 12: metais
     if (G.Povos) G.Povos.init(S);   // Etapa 12: povos
     if (G.Life) G.Life.init(S);
+    if (G.Memoria) G.Memoria.init(S);   // Etapa 13: corpos, contos, a erva e o rito
     fixGoals(S);
     if (!S.seen) {
       S.seen = new Uint8Array(S.world.W * S.world.H);

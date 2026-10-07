@@ -670,6 +670,33 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 .convlist .bar.low i { background: #e43b44; }
 #obra .chips .btn .ico { width: 16px; height: 16px; margin-right: 6px; vertical-align: -3px; }
 
+/* ---------- Etapa 13: memória ---------- */
+/* a ficha de quem morreu, o cemitério, Deus → Memória e a pergunta do rito */
+.cova-line { color: #d9c7a3; }
+#inspector .chips .btn .ico { width: 16px; height: 16px; margin-right: 6px; vertical-align: -3px; }
+.mem-line { font-style: italic; }
+.mems.contos li { color: var(--text); }
+.covalist { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; max-height: 240px; overflow-y: auto; }
+.cova-row { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; width: 100%; text-align: left; padding: 5px 8px; cursor: pointer; font: inherit; color: var(--text); background: var(--night); border: 2px solid var(--edge); }
+.cova-row:hover:not(:disabled), .cova-row:focus-visible { border-color: var(--gold); }
+.cova-row:disabled { cursor: default; opacity: 0.75; }
+.cova-row .nm { font-weight: 600; }
+.cova-row .marks { display: inline-flex; gap: 3px; align-items: center; }
+.cova-row .marks .ico { width: 14px; height: 14px; }
+.cova-row .sub { grid-column: 1 / -1; font-size: 12px; font-weight: 400; }
+.contolist li.conto { grid-template-columns: 26px 1fr; align-items: start; }
+.contolist li.conto.lost { opacity: 0.6; }
+.contolist .fala { font-family: var(--story); font-style: italic; font-size: 15px; line-height: 1.35; color: #d9c7a3; }
+.contolist .side.bom { color: #9be070; }
+.contolist .side.temido { color: #f6a0a4; }
+.lei-row { margin: 4px 0; }
+.lei-row .btn.on { border-color: var(--gold); color: var(--gold-hi); background: var(--panel-2); }
+.promlist { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 2px; color: var(--gold); }
+.dom-opt.mem-opt { grid-template-columns: 1fr; }
+.dom-opt.mem-opt .nm { font-family: var(--story); font-size: 18px; font-weight: 400; line-height: 1.25; }
+@media (max-width: 520px) { .deus-tabs { flex-wrap: wrap; } .deus-tabs button { flex: 1 1 30%; } }
+#dom-ok { white-space: nowrap; }
+
 </style>
 </head>
 <body data-mode="title">
@@ -852,6 +879,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       <button type="button" role="tab" data-gtab="escolhidos">Escolhidos</button>
       <button type="button" role="tab" data-gtab="atos">Grandes atos</button>
       <button type="button" role="tab" data-gtab="povos">Povos</button>
+      <button type="button" role="tab" data-gtab="memoria">Memória</button>
     </div>
     <div id="deus-body" class="deus-body"></div>
     <div class="modal-actions"><span id="deus-poder" class="small muted"></span><button id="deus-close" class="btn">Fechar</button></div>
@@ -1141,7 +1169,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.12.0',
+    VERSION: '0.13.0',
     SAVE_KEY: 'genesis.save.v1',
     // endereço do Web App do Google Apps Script (termina em /exec). Vazio = jogo só local.
     API_URL: '',
@@ -1293,6 +1321,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         desc: 'A imagem de Deus em pedra. Consagrada, faz o milagre dela sozinho; quem tem fé reza ali de manhã.',
         up: [{ name: 'Estátua com altar', cost: { pedra: 20, tabuas: 6 }, work: 360, god: { reach: 1.5, reza: 2 },
           desc: 'Um altar de pedra aos pés dela: o milagre da estátua vai metade mais longe, e quem reza ali ganha o dobro de fé.' }] },
+      // Etapa 13: o marco do cemitério. As covas se abrem em volta dele, em fileiras (mem.r: até onde vão; vale: quanto
+      // valem a visita e o dia dos mortos). Se ninguém marcar, o povo escolhe o lugar na primeira morte
+      cemiterio: { name: 'Cemitério', a: 'o', key: '', w: 2, h: 2, cost: { madeira: 4 }, work: 60, mem: { r: 6, vale: 1 },
+        desc: 'O lugar dos que partiram. O povo vela ao pé do fogo, enterra aqui, traz flores e volta todo ano, no último dia do outono.',
+        up: [{ name: 'Cemitério cercado', cost: { madeira: 20 }, work: 300, mem: { r: 8, vale: 1.5 },
+          desc: 'Uma cerca baixa e um portal de madeira: cabe mais gente, e a visita e o dia dos mortos consolam metade a mais.' }] },
     },
     // nível 3 da barraca: a casa que o lugar pede (env: o que precisa ter em volta)
     HOUSES: {
@@ -1607,7 +1641,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     // Sinais: um milagre visto de perto (no máximo um a cada 2 dias), a própria oração atendida, a Cura no corpo, a
     // pregação ouvida, o sonho da Revelação
     CONVERTE_SINAIS: 24, CONVERTE_FE: 65,
-    SINAL: { milagre: 1, atendida: 2, curado: 3, sermao: 2, sonho: 4 },
+    SINAL: { milagre: 1, atendida: 2, curado: 3, sermao: 2, sonho: 4, conto: 1, rito: 2, visao: 3 },   // conto, rito e visão: Etapa 13
     // o escolhido: quem chegou à fé inteira (100) nos últimos FE100_DAYS dias e ainda tem 90, com 16 anos ou mais.
     // Ungir custa UNGIR_COST; um por vez no nível 3, dois no 4, três no 5. Abaixo de GRACA_FE, perde a graça
     UNGIR_COST: 150, UNGIR_AGE: 16, FE100_DAYS: 5, GRACA_FE: 70, ESCOLHIDOS: [0, 0, 0, 1, 2, 3],
@@ -1626,6 +1660,53 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     SABER_LV: 5, SABER_COST: 2500,
     RODA_CARRY: 1.4, RODA_BUILD: 1.25, ESCRITA_XP: 1.5, ESCRITA_STORY: 2, ESCRITA_PRAT: 1.25,
     MEDICINA_BIRTH: 0.5, MEDICINA_REGEN: 1.5, MEDICINA_OLD: 0.6,
+    // ---- Etapa 13: Memória ----
+    // o corpo: quem está a até CORPO_VER passos acha na hora (ou se foi perto do acampamento); sem ninguém achar em
+    // CORPO_MAX_D dias, não há velório nem cova e o luto da família dobra. Achado, alguém leva para junto do fogo
+    CORPO_VER: 10, CORPO_CAMP: 14, CORPO_MAX_D: 3, CARREGA_AGE: 16,
+    // o velório: de VELORIO_H[0] a VELORIO_H[1], ao pé do fogo. Quem fica VELAR_MIN minutos (a família, VELAR_FAM) sofre
+    // o luto por VELORIO_LUTO do tempo que faltava e ganha VELORIO_FE de fé. Enterro na manhã seguinte (ENTERRO_H)
+    VELORIO_H: [17, 21], VELAR_MIN: 30, VELAR_FAM: 60, VELORIO_LUTO: 0.5, VELORIO_FE: 1,
+    ENTERRO_H: [6, 17], ENTERRO_MIN: 45, LAJE_PEDRA: 2, ARVORE_COVA_D: 20,
+    // a visita à cova: no dia do enterro, a cada VISITA_LUTO_D dias nos primeiros VISITA_LUTO_ATE, e todo ano no dia em
+    // que a pessoa se foi (quem não deixou família é lembrado pelo amigo mais chegado, com VISITA_AMIGO de amizade).
+    // Fica VISITA_MIN minutos, deixa flores por FLOR_D dias (e uma fruta, se sobram FRUTA_SOBRA),
+    // e o luto encurta VISITA_CURA dias
+    VISITA_H: [7, 16], VISITA_MIN: 15, VISITA_LUTO_D: 5, VISITA_LUTO_ATE: 20, VISITA_CURA: 4, VISITA_FE: 1, VISITA_AMIGO: 6, FLOR_D: 6, FRUTA_SOBRA: 10,
+    // o dia dos mortos: no último dia do outono, das FINADOS_H[0] às FINADOS_H[1], com FINADOS_MIN_POP vivos e uma cova
+    FINADOS_H: [15, 18], FINADOS_MIN: 40, FINADOS_MIN_POP: 4, FINADOS_FE: 2, FINADOS_CURA: 10, FINADOS_VELAS_H: 6,
+    CONV_FINADOS: 1, CONV_RITO: 1.5,      // convivência: o dia dos mortos junto, e o casal de dois povos que junta os dois ritos
+    // a História de Deus: um ato grande visto por alguém vira conto (um de cada tipo a cada CONTO_GAP_D dias; no máximo
+    // CONTO_MAX guardados). Na noite de história, quem sabe um conto conta um com chance CONTO_CHANCE (o mesmo conto
+    // só volta à roda depois de CONTO_REPETE_D dias). Quem conta sem
+    // ter visto muda um detalhe com chance CONTO_DERIVA. Ouvir dá CONTO_FE de fé (o de medo, menos, e assusta)
+    CONTO_GAP_D: 240, CONTO_MAX: 18, CONTO_VER: 12, CONTO_CURA: 40, CONTO_CHANCE: 0.4, CONTO_REPETE_D: 20, CONTO_DERIVA: 0.5, CONTO_FE: 1.5,
+    // a criança que cresce ouvindo contos (dos 3 anos até CRIADO_AGE, o fim da infância): com CRIADO_MIN contos de um
+    // tom e metade a mais que do outro, fica temente (a fé não cai de TEMENTE_FE, obedece mais, humor -CRIADO_HUMOR)
+    // ou confiante (a fé esfria até CONFIANTE_FE acima do comum, ganha fé 20% mais depressa, humor +CRIADO_HUMOR).
+    // O conto sem tom próprio (o raio na fera, o nome, a estátua...) nasce com o tom de como o povo vê Deus, quando o
+    // alinhamento passa de CONTO_TOM_ALIGN para um lado
+    CRIADO_AGE: 12, CONTO_TOM_ALIGN: 15, CRIADO_MIN: 3, CRIADO_HUMOR: 3, TEMENTE_FE: 50, TEMENTE_OBED: 0.15, CONFIANTE_FE: 10, CONFIANTE_GANHO: 1.2,
+    // a erva-do-sonho: ERVA_SPOTS canteiros na mata úmida, de ERVA_DIST passos do acampamento. Quem passa a ERVA_VER
+    // passos acha (com Deus no nível ERVA_LV e gente bastante para a roda; sem ninguém passar, em ERVA_ACASO_D dias
+    // um caçador acha)
+    ERVA_SPOTS: 3, ERVA_DIST: [9, 32], ERVA_VER: 4, ERVA_LV: 2, ERVA_ACASO_D: 60, ERVA_MIN: 20,
+    // o rito: no máximo um a cada RITO_GAP_D dias, das RITO_H[0] às RITO_H[1] (ao cair da noite, no lugar da
+    // história: quem já foi dormir não levanta para ele), só adultos (18 anos de verdade), de
+    // RITO_MIN_POP a RITO_MAX pessoas (quem está a até RITO_PERTO passos do fogo; anda-se devagar), RITO_MIN minutos
+    // ao pé do fogo. Dá fé, uma lembrança boa (ou ruim: RITO_RUIM,
+    // a segunda chance para quem já se apegou) e um pouco de prática (RITO_SABER do que falta). No dia seguinte o
+    // trabalho rende RITO_RESSACA por RITO_RESSACA_H horas. Com RITO_APEGO ritos seguidos a saúde paga (RITO_APEGO_SAUDE)
+    // e, sem rito por RITO_FALTA_D dias, vem a falta. O costume esfria um rito a cada RITO_ESQUECE_D dias (quem vai a
+    // todos os ritos soma mais depressa do que esfria: aldeia pequena, ou quem conduz, acaba se apegando)
+    RITO_GAP_D: 15, RITO_H: [18, 21], RITO_MIN: 60, RITO_MIN_POP: 3, RITO_MAX: 6, RITO_PERTO: 10, RITO_FE: 2, RITO_RUIM: [0.1, 0.3], RITO_SAUDE: 6,
+    RITO_SABER: 0.03, RITO_RESSACA: 0.8, RITO_RESSACA_H: 14, RITO_APEGO: 4, RITO_APEGO_SAUDE: 3, RITO_FALTA_D: 15, RITO_ESQUECE_D: 30,
+    // a pergunta do rito espera a resposta até VISAO_ESPERA_H horas (depois, vale o silêncio). As respostas: uma
+    // promessa vale PROMESSA_D dias (a do frio, até o fim do inverno; cumprida, +PROMESSA_FE de fé; quebrada,
+    // -PROMESSA_QUEBRA); o zelo faz o trabalho render ZELO_COMIDA (só a comida, ou só a lenha, ZELO_COMIDA_D dias) ou
+    // ZELO_TUDO (tudo, ZELO_TUDO_D dias)
+    // (uma pergunta a cada VISAO_GAP_D dias, no máximo: nos outros ritos o povo só vê coisas na fumaça)
+    VISAO_ESPERA_H: 10, VISAO_GAP_D: 30, PROMESSA_D: 30, PROMESSA_FE: 3, PROMESSA_QUEBRA: 6, ZELO_COMIDA: 1.1, ZELO_COMIDA_D: 10, ZELO_TUDO: 1.05, ZELO_TUDO_D: 5,
     // os dons (um a cada nível, do 2 ao 5): os números de cada um
     DOM: {
       fogoH: 24, fogoR: 7,                        // Fogo Sagrado: o Calor dura 24 h e vai a 7 passos
@@ -2015,6 +2096,21 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     dormiuBem: { t: 'Dormiu bem abrigado', v: 6, d: 1440 },
     dormiuRelento: { t: 'Dormiu ao relento', v: -6, d: 1440 },
     passouFrio: { t: 'Passou frio', v: -8, d: 1440 },
+    // Etapa 13: Memória
+    velou: { t: 'Velou quem partiu', v: 2, d: 3 * 1440 },
+    semDespedida: { t: 'Não pôde se despedir', v: -8, d: 20 * 1440 },
+    visitouCova: { t: 'Levou flores a quem partiu', v: 3, d: 3 * 1440 },
+    diaDosMortos: { t: 'Lembrou os que partiram', v: 5, d: 6 * 1440 },
+    viagem: { t: 'Viu coisas na fumaça do rito', v: 4, d: 3 * 1440 },
+    visaoRuim: { t: 'Teve uma visão ruim no rito', v: -6, d: 3 * 1440 },
+    semRito: { t: 'Sente falta do rito', v: -4, d: 10 * 1440 },
+    aceitou: { t: 'Ouviu Deus e ficou em paz', v: 4, d: 5 * 1440 },
+    temeu: { t: 'Ouviu Deus e teve medo', v: -3, d: 3 * 1440 },
+    promessa: { t: 'Ouviu uma promessa de Deus', v: 5, d: 5 * 1440 },
+    promessaQuebrada: { t: 'Viu Deus faltar com a palavra', v: -6, d: 10 * 1440 },
+    emPaz: { t: 'Está em paz com o fim', v: 6, d: 10 * 1440 },
+    semResposta: { t: 'Perguntou e Deus não respondeu', v: -3, d: 3 * 1440 },
+    contoMedo: { t: 'Ouviu um conto de dar medo', v: -2, d: 1440 },
     // Etapa 12
     povoUnido: { t: 'Viu dois povos virarem um só', v: 8, d: 7200 },
     tesouro: { t: 'Viu o brilho que saiu da mina', v: 4, d: 2880 },
@@ -2601,6 +2697,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         // roça e curral (Etapa 10)
       } else if (G.Deus && G.Deus.onBuilt(S, b)) {
         // a estátua (Etapa 11)
+      } else if (G.Memoria && G.Memoria.onBuilt(S, b)) {
+        // o cemitério (Etapa 13)
       } else {
         if (!S.stats.firstTent) { S.stats.firstTent = true; Sim.chron(S, 'Ergueram a primeira barraca.'); }
         else Sim.toast(S, C.BUILD[b.type].name + ' pronta.');
@@ -2718,6 +2816,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (n.calor < 20) Sim.addMem(S, p, 'passouFrio');
     let m = 50;
     for (const me of p.mem) m += MEM[me.k].v;
+    if (p.criado && G.Memoria) m += G.Memoria.mood(p);   // Etapa 13: quem cresceu ouvindo contos de medo ou de cuidado
     if (Sim.has(p, 'Otimista')) m += 8;
     if (Sim.has(p, 'Pessimista')) m -= 8;
     for (const k of ['fome', 'sede', 'calor', 'energia']) if (n[k] < 25) m -= 6;
@@ -2853,6 +2952,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (G.Campo) G.Campo.daily(S);   // Etapa 10: roça, criação, descobertas do campo
     if (G.Minas) G.Minas.daily(S);   // Etapa 12: as descobertas da mina
     if (G.Povos) G.Povos.daily(S);   // a convivência e as caravanas
+    if (G.Memoria) G.Memoria.daily(S);   // Etapa 13: visitas à cova, promessas, o costume do rito
     if (G.Life) G.Life.daily(S);
   }
   function rot(S, k, rate) {
@@ -2879,6 +2979,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (h % 6 === 0) for (const p of S.people) if (p.alive) hourlyPerson(S, p);
     G.Family.hourly(S);
     if (G.Narr) G.Narr.hourly(S);
+    if (G.Memoria) G.Memoria.hourly(S);   // Etapa 13: sem cerimônia com o jogo fechado
     if (G.Life) G.Life.hourly(S);
     if (h === 12) checkGoals(S);
   }
@@ -2896,6 +2997,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (G.Campo) G.Campo.hourly(S);
     if (G.Minas) G.Minas.hourly(S);   // Etapa 12: a ferramenta de ferro e a joia de quem passa pelo acampamento
     if (G.Povos) G.Povos.hourly(S);   // e a caravana que está para chegar
+    if (G.Memoria) G.Memoria.hourly(S);   // Etapa 13: o corpo, o velório, o rito, o dia dos mortos
     if (G.Life) G.Life.hourly(S);
     checkGoals(S);
   }
@@ -2923,7 +3025,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   function checkGoals(S) {
     for (const g of S.goals) {
       if (g.done) continue;
-      const fn = GOAL_TEST[g.id] || G.Family.goalTest[g.id] || G.Tech.goalTest[g.id] || (G.Obras && G.Obras.goalTest[g.id]) || (G.Inv && G.Inv.goalTest[g.id]) || (G.Bichos && G.Bichos.goalTest[g.id]) || (G.Campo && G.Campo.goalTest[g.id]) || (G.Deus && G.Deus.goalTest[g.id]) || (G.Povos && G.Povos.goalTest[g.id]) || (G.Minas && G.Minas.goalTest[g.id]);
+      const fn = GOAL_TEST[g.id] || G.Family.goalTest[g.id] || G.Tech.goalTest[g.id] || (G.Obras && G.Obras.goalTest[g.id]) || (G.Inv && G.Inv.goalTest[g.id]) || (G.Bichos && G.Bichos.goalTest[g.id]) || (G.Campo && G.Campo.goalTest[g.id]) || (G.Deus && G.Deus.goalTest[g.id]) || (G.Povos && G.Povos.goalTest[g.id]) || (G.Minas && G.Minas.goalTest[g.id]) || (G.Memoria && G.Memoria.goalTest[g.id]);
       if (!fn || !fn(S)) continue;
       g.done = true;
       if (g.reward && S.god && !g.paid) { g.paid = true; G.God.gain(S, g.reward); }
@@ -2968,7 +3070,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   }
   // missões pequenas das obras que entram em cada fase (Etapa 7)
   const missions = (S, phase) => (G.Obras ? G.Obras.missions(phase) : []).concat(G.Inv ? G.Inv.missions(phase) : [], G.Bichos ? G.Bichos.missions(phase) : [],
-    G.Campo ? G.Campo.missions(phase) : [], G.Deus ? G.Deus.missions(phase) : [], G.Povos ? G.Povos.missions(phase) : [], G.Minas ? G.Minas.missions(phase) : [])
+    G.Campo ? G.Campo.missions(phase) : [], G.Deus ? G.Deus.missions(phase) : [], G.Povos ? G.Povos.missions(phase) : [], G.Minas ? G.Minas.missions(phase) : [], G.Memoria ? G.Memoria.missions(phase) : [])
     .filter((m) => !S.goals.some((g) => g.id === m.id));
   Sim.checkGoals = checkGoals;
   Sim.daily = (S) => daily(S);   // para os testes
@@ -3004,9 +3106,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (p.inTent) { const b = Sim.building(S, p.inTent); if (b) { p.x = b.x + 1; p.y = b.y + b.h + 0.5; } p.inTent = 0; }
     for (const b of S.buildings) b.beds = b.beds.filter((id) => id !== p.id);
     const w = S.world;
-    const r = G.W.findNearest(w, Math.floor(p.y) * w.W + Math.floor(p.x),
-      (i) => (!G.W.objAt(w, i) && w.bgrid[i] < 0 && !Sim.isCamp(S, i) && !G.IS_WATER[w.tile[i]] ? 1 : 0), 30);
-    if (r) G.W.addObj(w, 'grave', r.idx % w.W, (r.idx / w.W) | 0, { name: p.name });
+    // Etapa 13: o corpo espera o velório e o enterro. Com o jogo fechado, ou sem ninguém para carregar, a cova nasce ali
+    if (!(G.Memoria && G.Memoria.onDeath(S, p))) {
+      const r = G.W.findNearest(w, Math.floor(p.y) * w.W + Math.floor(p.x),
+        (i) => (!G.W.objAt(w, i) && w.bgrid[i] < 0 && !Sim.isCamp(S, i) && !G.IS_WATER[w.tile[i]] ? 1 : 0), 30);
+      if (r) G.W.addObj(w, 'grave', r.idx % w.W, (r.idx / w.W) | 0, { name: p.name, pid: p.id, t: S.t });
+    }
     const causeTxt = { frio: 'de frio', sede: 'de sede', fome: 'de fome', raio: 'atingid' + (p.sex === 'F' ? 'a' : 'o') + ' por um raio', parto: 'no parto', velhice: 'de velhice', lobos: 'no ataque dos lobos',
       onca: 'no ataque da onça', jacare: 'no ataque de um jacaré', bicho: 'atacad' + (p.sex === 'F' ? 'a' : 'o') + ' por um bicho' }[p.cause];
     const age = Sim.ageOf(S, p);
@@ -3116,6 +3221,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (G.Minas) G.Minas.init(S);   // Etapa 12: metais
     if (G.Povos) G.Povos.init(S);   // Etapa 12: povos
     if (G.Life) G.Life.init(S);
+    if (G.Memoria) G.Memoria.init(S);   // Etapa 13: corpos, contos, a erva e o rito
     fixGoals(S);
     if (!S.seen) {
       S.seen = new Uint8Array(S.world.W * S.world.H);
@@ -4259,6 +4365,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const l = S.life;
     if (!l || l.story || l.storyDay === S.ck.day || !calmEvening(S)) return false;
     if (p.carriedBy || p.labor || age(S, p) < 14 || !fine(p)) return false;
+    if (G.Memoria && S.memoria && G.Memoria.blockStory(S)) return false;   // Etapa 13: noite de velório ou de rito não tem história
     if (G.Deus && S.god && S.god.pending && G.Deus.sermonFirst(S, p)) return false;   // Etapa 11: a vez é do profeta
     const f = L.campFire(S, true);
     if (!f) return false;
@@ -4306,10 +4413,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   const SERMON_REACT = ['Amém.', 'É verdade.', 'Eu sinto isso.', 'Que bonito…', 'Fala mais!', 'Eu acredito.'];
   // sermon (Etapa 11): o escolhido da Palavra prega em vez de contar
   L.startStory = function (S, p, f, sermon) {
-    const l = S.life, music = !sermon && !!(G.Inv && G.Inv.flute(S)) && S.rng.next() < C.FLAUTA_STORY;
-    const lines = sermon ? G.Deus.sermonLines(S) : music ? [pick(S, MUSIC_OPEN), '', pick(S, MUSIC_END)] : storyLines(S, p);
+    const l = S.life;
+    const mem = !sermon && G.Memoria && S.memoria ? G.Memoria.storyFor(S, p) : null;   // Etapa 13: quem sabe um conto de Deus às vezes conta um
+    const music = !sermon && !mem && !!(G.Inv && G.Inv.flute(S)) && S.rng.next() < C.FLAUTA_STORY;
+    const lines = sermon ? G.Deus.sermonLines(S) : mem ? mem.lines : music ? [pick(S, MUSIC_OPEN), '', pick(S, MUSIC_END)] : storyLines(S, p);
     const dur = C.STORY_MIN[0] + Math.round(S.rng.next() * (C.STORY_MIN[1] - C.STORY_MIN[0]));
-    l.story = { id: l.nextId++, teller: p.id, fire: f.id, on: false, t0: S.t, dur, lines, li: 0, listeners: [], heard: {}, music, sermon: !!sermon };
+    l.story = { id: l.nextId++, teller: p.id, fire: f.id, on: false, t0: S.t, dur, lines, li: 0, listeners: [], heard: {}, music, sermon: !!sermon, conto: mem ? mem.conto : 0 };
     l.storyDay = S.ck.day;
     return l.story;
   };
@@ -4350,6 +4459,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     }
     Sm.addMem(S, p, 'contouHistoria');
     for (const q of heard) { Sm.addMem(S, q, 'ouviuHistoria'); q.rel[p.id] = (q.rel[p.id] || 0) + 1; }
+    if (st.conto && G.Memoria) G.Memoria.onStory(S, p, st, heard);   // Etapa 13: o conto passa a quem ouviu
     if (S.povos && S.povos.mixed && G.Povos) G.Povos.onGather(S, heard.concat([p]), C.CONV_HISTORIA);   // Etapa 12
     // histórias espalham o saber: a próxima descoberta anda um pouco
     const open = G.Tech.open(S);
@@ -7431,6 +7541,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (curS && wk) s *= Tech.speed(curS, p, wk);   // ferramenta de pedra
     if (curS && wk && curS.god && curS.god.blessings && curS.god.blessings.length && G.Deus) s *= G.Deus.blessAt(curS, p.x, p.y);   // a Bênção (Etapa 11)
     if (curS && wk && p.sangue && G.Povos) s *= G.Povos.speed(curS, p, wk);   // os dons de cada povo (Etapa 12)
+    if (curS && wk && curS.memoria && G.Memoria && (p.ressaca || curS.memoria.zelo)) s *= G.Memoria.speed(curS, p, wk);   // a manhã depois do rito e o zelo de uma resposta de Deus (Etapa 13)
     if (has(p, 'Trabalhador')) s *= 1.15;
     if (has(p, 'Preguiçoso')) s *= 0.85;
     if (p.needs.energia < 15) s *= 0.8;
@@ -8103,6 +8214,52 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       if (a.t >= C.REZA_MIN) { G.Deus.onPrayed(S, p, b); return DONE; }
       return RUN;
     },
+  };
+  // ---------- Etapa 13: Memória ----------
+  // uma ação só para tudo o que a Memória pede: ir até um lugar, ficar um tempo e avisar (velar, visitar a cova, o
+  // dia dos mortos, colher a erva, o rito). Buscar o corpo e enterrar têm um passo a mais: o corpo vai junto.
+  // a.hint diz qual tarefa; o lugar e o tempo vêm de G.Memoria.task
+  ACT.memoria = {
+    start(S, p, a) {
+      const Mm = G.Memoria, m = Mm ? Mm.task(S, p, a.hint) : null;
+      if (!m) return false;
+      a.m = m;
+      const ok = m.carry ? toRing(S, p, m.bx, m.by, 0, 1.6, m.far) : toRing(S, p, m.x, m.y, m.r0, m.r1, m.far);
+      if (!ok) { Mm.drop(S, p, a, true); return false; }
+      if (!p.path) setPath(p, [tileOf(S, p)]);
+      a.stage = m.carry ? 'fetch' : 'go';
+      return true;
+    },
+    run(S, p, a, dt) {
+      const Mm = G.Memoria, m = a.m;
+      if (!Mm || !Mm.valid(S, p, a)) return FAIL;
+      if (a.stage === 'fetch') {
+        a.walk = (a.walk || 0) + dt;
+        if (a.walk > m.walk) return FAIL;
+        if (moving(p)) return RUN;
+        if (p.stuck) return FAIL;
+        Mm.lift(S, p, a);
+        if (!toRing(S, p, m.x, m.y, m.r0, m.r1, m.far)) return FAIL;
+        if (!p.path) setPath(p, [tileOf(S, p)]);
+        a.stage = 'carry'; a.walk = 0;
+        return RUN;
+      }
+      if (a.stage === 'go' || a.stage === 'carry') {
+        a.walk = (a.walk || 0) + dt;
+        if (a.stage === 'carry') Mm.carried(S, p, a);
+        if (a.walk > m.walk) return FAIL;
+        if (moving(p)) return RUN;
+        if (p.stuck) return FAIL;
+        a.stage = 'stay'; a.t = 0;
+        face(p, Math.floor(m.x), Math.floor(m.y));
+        Mm.arrive(S, p, a);
+      }
+      a.t += dt;
+      Mm.stay(S, p, a, dt);
+      if (a.t >= m.min) { a.fim = true; Mm.done(S, p, a); return DONE; }
+      return RUN;
+    },
+    end(S, p, a) { if (!a.fim && a.m && G.Memoria) G.Memoria.drop(S, p, a); },
   };
   // o escolhido que cura: vai até quem está doente ou num parto difícil e cura com as mãos
   const healSpot = (S, t) => (t.carriedBy ? person(S, t.carriedBy) || t : t);
@@ -9292,6 +9449,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       const pr = G.Deus.wantPray(S, p);
       if (pr > 0) add('rezar', pr);
     }
+    // Etapa 13: velar, enterrar, visitar a cova, o dia dos mortos, colher a erva, o rito
+    if (G.Memoria && S.memoria && st !== 'bebe') { const mm = G.Memoria.want(S, p); if (mm) add('memoria', mm.score, { hint: mm.k }); }
     for (const wk of WORK) {
       const v = S.vontades[VONT[wk] || wk] | 0;
       if (!v || !Fam.canWork(S, p, wk) || !Tech.workOpen(S, wk)) continue;
@@ -9415,7 +9574,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
           const cs = cur ? cur.score : 0;
           // festa e história chamam: basta valer um pouco mais que o que está fazendo
           // o profeta larga o trabalho para pregar, e quem cura, para curar (Etapa 11)
-          const call = (best.type === 'festa' || best.type === 'ouvir' || best.type === 'curar' || (best.type === 'historia' && best.hint === 'sermao')) && best.score > cs + 5;
+          const call = (best.type === 'festa' || best.type === 'ouvir' || best.type === 'curar' || best.type === 'memoria' || (best.type === 'historia' && best.hint === 'sermao')) && best.score > cs + 5;
           if (call || best.score > cs * 1.3 + 10) { end(S, p, 0); AI.decide(S, p); }
         }
       }
@@ -9457,6 +9616,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const st = a.stage;
     switch (a.type) {
       case 'chegar': return 'Chegando ao novo lar';
+      case 'memoria': return G.Memoria ? G.Memoria.describe(S, p, a) : 'Pensando no que fazer';
       case 'depositar': return 'Guardando no estoque';
       case 'beber': return st === 'go' ? 'Indo beber água' : 'Bebendo água';
       case 'comer': return st === 'go' ? 'Indo comer' : a.src === 'arbusto' ? 'Comendo frutas no pé' : a.hot === 'carne' ? 'Comendo carne assada' : a.hot ? 'Comendo peixe assado' :
@@ -9615,7 +9775,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   God.faith = function (S, p, delta) {
     if (!p.alive || !delta) return;
     let d = delta;
-    if (d > 0) { if (has(p, 'Devoto')) d *= 1.5; if (has(p, 'Cético')) d *= 0.5; if (S.god.align > 30) d *= 1.2; }
+    if (d > 0) { if (has(p, 'Devoto')) d *= 1.5; if (has(p, 'Cético')) d *= 0.5; if (S.god.align > 30) d *= 1.2; if (p.criado === 'confiante') d *= C.CONFIANTE_GANHO; }
     else { if (has(p, 'Devoto')) d *= 0.5; if (has(p, 'Cético')) d *= 1.5; if (S.god.align < -30) d *= 0.7; }
     p.fe = U.clamp(p.fe + d, 0, 100);
     if (p.fe >= 99.5) p.fe100At = S.t;   // Etapa 11: fé inteira (quem chega lá pode virar escolhido)
@@ -9628,6 +9788,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (has(p, 'Devoto')) o += 0.2;
     if (has(p, 'Cético')) o -= 0.25;
     if (S.god && S.god.align < -30) o += 0.15;
+    if (p.criado === 'temente') o += C.TEMENTE_OBED;   // Etapa 13: cresceu ouvindo contos de medo
     if (dom(S, 'temor')) o += DM().temorObed;
     return U.clamp(o, 0.35, 1.8);
   };
@@ -9753,7 +9914,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     for (const p of S.people) {
       if (!p.alive) continue;
       // sem sinal de Deus a fé esfria até 35; com sinais recentes, aquece até 70; o escolhido fica perto de 90
-      const target = p.escolhido ? Math.max(base, 90) : base;
+      let target = p.escolhido ? Math.max(base, 90) : base;
+      if (p.criado && G.Memoria) target = G.Memoria.feAlvo(p, target);   // Etapa 13: temente não desce de 50; confiante esfria menos
       if (p.fe > target) p.fe = Math.max(target, p.fe - 0.7);
       else p.fe = Math.min(target, p.fe + 0.7);
     }
@@ -9895,6 +10057,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     }
     if (kind === 'revelacao') {
       const id = G.Tech.reveal(S, dreamer);
+      if (G.Memoria) G.Memoria.deed(S, 'sonho', { a: dreamer.name, sx: dreamer.sex, x1: G.Tech.DISC[id] ? G.Tech.DISC[id].name.toLowerCase() : '' });
       God.faith(S, dreamer, C.FAITH_ANSWER);
       for (const q of S.people) if (q.alive && q !== dreamer) God.faith(S, q, C.FAITH_MIRACLE_SEEN);
       God.align(S, 3);
@@ -9904,6 +10067,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       S.events.push({ k: 'miracle', kind, x: Math.floor(dreamer.x), y: Math.floor(dreamer.y) });
     } else if (kind === 'cura') {
       const h = healed, wasLabor = !!(h.labor && h.labor.hard && !h.labor.helped);
+      if (G.Memoria && (h.needs.saude < C.CONTO_CURA || wasLabor)) G.Memoria.deed(S, 'cura', { a: h.name, sx: h.sex, x: h.x, y: h.y });   // Etapa 13: quem estava mal
       h.needs.saude = Math.min(100, h.needs.saude + C.CURA_HEAL);
       h.dmg.raio = 0; h.dmg.parto = 0;
       if (h.labor) h.labor.helped = true;
@@ -9930,6 +10094,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     } else if (kind === 'calor') {
       const r = God.radius(S, 'calor'), hours = dom(S, 'fogo') ? dm.fogoH : C.CALOR_HOURS;
       g.auras.push({ x, y, r, until: S.t + hours * 60 });
+      if (G.Memoria && G.Narr && G.Narr.is(S, 'nevasca')) G.Memoria.deed(S, 'calor', { x, y });
       God.align(S, 3);
       const n = answer(S, 'frio lobos', x, y, r);
       msg = 'Calor sobre o lugar por ' + hours + ' horas.' + (n ? '' : '');
@@ -9960,6 +10125,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       answer(S, 'fome sede', x, y, C.CHUVA_R);
       Sm.refresh(S);
       const dry = G.Narr ? G.Narr.onChuva(S) : '';
+      if (dry && G.Memoria) G.Memoria.deed(S, 'chuva', {});   // a chuva que acabou com a seca
       const rocas = G.Campo ? G.Campo.onChuva(S, x, y, ceu ? dm.ceuRoca : 0) : 0;   // Etapa 10: a roça molhada cresce uns dias de uma vez
       msg = 'Chuva abençoada: ' + fruits + ' frutas nasceram nos arbustos.' + (rocas ? (rocas === 1 ? ' A roça cresceu a olhos vistos.' : ' As roças cresceram a olhos vistos.') : '') + (dry ? ' ' + dry : '');
       S.events.push({ k: 'miracle', kind, x, y });
@@ -9972,7 +10138,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       const hit = wolf ? null : S.people.find((p) => p.alive && !p.inTent && near(p, x, y, C.RAIO_R));
       const game = wolf || hit || !G.Fauna ? null : G.Fauna.onRaio(S, x, y);   // capivara: carne e couro
       const o = wolf || game ? null : G.W.objAt(w, i);
-      if (wolf) msg = wolf;
+      if (wolf) { msg = wolf; if (G.Memoria) G.Memoria.deed(S, 'raioFera', { x1: /onça/.test(wolf) ? 'onca' : 'lobos', x, y }); }
       else if (game) msg = game;
       else if (hit) {
         hit.needs.saude -= C.RAIO_DAMAGE;
@@ -9982,6 +10148,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         for (const q of S.people) if (q !== hit && q.alive) { Sm.addMem(S, q, 'viuRaio'); God.faith(S, q, 4); }
         God.align(S, -15);
         Sm.say(S, hit, 'Perdão! Perdão!', true);
+        if (G.Memoria) G.Memoria.deed(S, 'castigo', { a: hit.name, sx: hit.sex, x, y });
         msg = 'O raio atingiu ' + hit.name + '. O povo teme você.';
       } else if (o && o.k === 'tree') {
         o.k = 'stump'; o.regrow = 0; G.W.refreshBlock(w, i);
@@ -10200,6 +10367,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const g = S.god, i = g.pending.findIndex((q) => q.k === 'nome');
     if (i >= 0) g.pending.splice(i, 1);
     if (name) D.rename(S, name);
+    if (G.Memoria) G.Memoria.deed(S, 'nome', {});   // Etapa 13: o dia do nome vira conto
     return true;
   };
 
@@ -10263,6 +10431,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     for (const q of S.people) if (q.alive && q !== p && Math.hypot(q.x - p.x, q.y - p.y) < 10) { God().faith(S, q, 4); Sim().addMem(S, q, 'viuMilagre'); }
     Sim().say(S, p, 'Eu sinto… ' + D.call(S) + ' está comigo.', true, 'god');
     S.events.push({ k: 'ungir', pid: p.id, x: p.x, y: p.y });
+    if (G.Memoria) G.Memoria.deed(S, 'escolhido', { a: p.name, sx: p.sex, x: p.x, y: p.y });
     return true;
   };
   // a graça vai embora quando a fé esfria (e o dom vai junto)
@@ -10397,6 +10566,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     for (const q of S.people) if (q.alive && Math.hypot(q.x - b.x - 1, q.y - b.y - 1) < 12) { God().faith(S, q, 5); Sim().addMem(S, q, 'viuMilagre'); D.sinal(S, q, 'milagre'); }
     God().align(S, kind === 'trovao' ? -3 : 3);
     S.events.push({ k: 'miracle', kind: 'consagrar', x: b.x + 1, y: b.y + 1 });
+    if (G.Memoria) G.Memoria.deed(S, 'estatua', { x: b.x + 1, y: b.y + 1 });
     lightS = null;
     return true;
   };
@@ -10545,6 +10715,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     for (const q of S.people) if (q.alive) { God().faith(S, q, 5); Sim().addMem(S, q, 'viuMilagre'); }
     God().align(S, 4);
     S.events.push({ k: 'miracle', kind: 'criar', form, x: S.camp.x + 1, y: S.camp.y + 1 });
+    if (G.Memoria) G.Memoria.deed(S, 'especie', { a: artOf(name) });
     return true;
   };
   // as árvores de Deus: arbustos de fruto (holy) em volta da aldeia, onde há lugar livre e já visto
@@ -10594,6 +10765,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     for (const q of S.people) if (q.alive) { Sim().addMem(S, q, 'aprendeu'); God().faith(S, q, 5); }
     God().align(S, 2);
     S.events.push({ k: 'miracle', kind: 'saber', id, x: S.camp.x + 1, y: S.camp.y + 1 });
+    if (G.Memoria) G.Memoria.deed(S, 'saber', { x1: { roda: 'a roda', escrita: 'a escrita', medicina: 'a medicina' }[id] || 'um saber novo' });
     return true;
   };
 
@@ -12062,6 +12234,15 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   };
   // a festa: um acontecimento, soma por fora do teto do dia
   Pv.onParty = (S, list, d) => Pv.onGather(S, list, d, true);
+  // Etapa 13: o casal de dois povos junta os dois ritos na despedida (a, b: a letra do rito de cada povo)
+  const RITO_POVO = { h: 'humano', e: 'elfo', a: 'anao', f: 'fera' };
+  Pv.onRite = function (S, a, b) { if (Pv.mixed(S) && RITO_POVO[a] && RITO_POVO[b]) addConv(S, RITO_POVO[a], RITO_POVO[b], C.CONV_RITO); };
+  // uma resposta de Deus no rito aproxima ou afasta todos os povos que moram aqui
+  Pv.shift = function (S, d) {
+    if (!Pv.mixed(S)) return;
+    const here = Pv.ORDER.filter((k) => Pv.count(S, k) > 0);
+    for (let i = 0; i < here.length; i++) for (let j = i + 1; j < here.length; j++) addConv(S, here[i], here[j], d);
+  };
   Pv.onBond = function (S, a, b) {
     if (!Pv.mixed(S) || !diff(a, b)) return;
     between(S, a, b, C.CONV_CASAL);
@@ -12133,6 +12314,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (!g) return null;
     const st = P.st[kind];
     st.state = 'vindo'; st.gid = g.id; st.at = S.t; st.n = (st.n || 0) + 1;
+    st.cham = P.called ? 1 : 0;   // veio porque Deus chamou (Etapa 13: vira conto)
     P.due = null; P.called = false;
     return g;
   }
@@ -12166,6 +12348,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (S.vontades && S.vontades.mina === undefined) S.vontades.mina = C.DEFAULT_VONTADES.mina || 2;
     P.next = S.t + Math.round((C.POVO_GAP_D[0] + S.rng.next() * (C.POVO_GAP_D[1] - C.POVO_GAP_D[0])) * DAY());
     S.events.push({ k: 'povo', kind, on: true });
+    if (st.cham && G.Memoria) G.Memoria.deed(S, 'chamado', { x1: Pv.DEF[kind].os });
+    st.cham = 0;
   };
   Pv.onRefused = function (S, kind) {
     const P = S.povos, st = P.st[kind];
@@ -12550,6 +12734,1120 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   };
 })(globalThis.G = globalThis.G || {});
 
+/* ---- js/memoria.js ---- */
+/* Gods · Memória (Etapa 13): a morte ganha rito, e o que Deus faz vira história contada.
+   1) Quem morre deixa um corpo. Achado, alguém leva para junto do fogo; à tardinha o povo vela, na manhã seguinte
+      enterra no cemitério (o marco é uma obra; sem marco, o povo escolhe o lugar). Cada povo se despede do seu jeito.
+      A família volta à cova com flores, e todo ano, no último dia do outono, a aldeia vai junta: o dia dos mortos.
+   2) Um ato grande de Deus, visto por alguém, vira conto. Nas noites de história o conto passa adiante; quem conta
+      sem ter visto muda um detalhe. A criança que cresce ouvindo contos de medo fica temente; de cuidado, confiante.
+   3) A erva-do-sonho nasce na mata úmida. Achada, vira rito: à noite, só adultos, ao pé do fogo. No meio do rito
+      alguém faz uma pergunta a Deus, e o jogo pausa para o jogador escolher uma de três respostas.
+   Com o jogo fechado não há velório, visita, rito nem pergunta: os corpos são enterrados sem cerimônia. Sem DOM. */
+(function (G) {
+  'use strict';
+  const C = G.CFG, U = G.U;
+  const M = G.Memoria = {};
+  const Sim = () => G.Sim, Fam = () => G.Family, Wd = () => G.W, Pv = () => G.Povos, Dz = () => G.Deus, Gd = () => G.God, Lf = () => G.Life;
+  const DAY = C.DAY_MIN;
+  const age = (S, p) => Fam().age(S, p);
+  const person = (S, id) => Fam().person(S, id);
+  const has = (p, t) => p.traits && p.traits.indexOf(t) >= 0;
+  const oa = (p) => (p.sex === 'F' ? 'a' : 'o');
+  const ela = (p) => (p.sex === 'F' ? 'ela' : 'ele');
+  const rest = (S) => !!(S.safe || S.resumido);
+  const ev = (S, o) => { if (!S.safe) S.events.push(Object.assign({ k: 'memoria' }, o)); };
+  const hourOf = (S) => Math.floor(S.ck.hour + 1e-6);
+  const within = (S, r) => S.ck.hour >= r[0] && S.ck.hour < r[1];
+  // sorteio que não mexe no sorteio do mundo (para falas e para a forma do conto)
+  const pk = (arr, n) => arr[Math.abs(Math.floor(n)) % arr.length];
+  const GRIEF = { perdeuAlguem: 1, perdeuCompanheiro: 1, perdeuFamilia: 1, perdeuBebe: 1 };
+  const KIN = { 'mãe': 1, pai: 1, filha: 1, filho: 1, 'irmã': 1, 'irmão': 1, 'avó': 1, 'avô': 1, neta: 1, neto: 1 };
+
+  // ---------- estado ----------
+  M.init = function (S) {
+    const m = S.memoria || (S.memoria = {});
+    m.corpos = m.corpos || []; m.contos = m.contos || []; m.nc = m.nc || 1; m.kindAt = m.kindAt || {};
+    m.pend = m.pend || []; m.prom = m.prom || []; m.fin = m.fin || { year: 0 };
+    m.erva = m.erva || { known: 0, lei: '', last: -1e9, tem: -1, hoje: -1 };
+    m.corpos = m.corpos.filter((id) => { const d = person(S, id); return d && !d.alive && d.corpo; });
+    for (const id of m.corpos) { const d = person(S, id); if (d.corpo.res && !levando(S, d)) solta(S, d); }   // ao abrir o save, ninguém está com o corpo no colo
+    ervaSpots(S);
+    const st = S.stats;
+    for (const k of ['velorios', 'enterros', 'visitas', 'finados', 'contos', 'contados', 'recontos', 'ritos', 'respostas']) st[k] = st[k] || 0;
+    // save de antes da 0.13 numa fase adiantada: ganha as missões da Memória (uma vez)
+    if (!st.memMissions) {
+      st.memMissions = true;
+      const ph = S.goalsPhase || 1;
+      if (S.goals) for (let f = 2; f <= ph; f++) for (const g of M.missions(f)) if (!S.goals.some((x) => x.id === g.id)) S.goals.push(g);
+    }
+  };
+
+  // ---------- parentes, povos e ritos ----------
+  function kinIds(S, d) {
+    const out = new Set();
+    for (const q of Fam().partners(S, d)) out.add(q.id);
+    for (const k of Fam().family(S, d)) if (k.q && k.q.alive && KIN[k.r]) out.add(k.q.id);
+    return out;
+  }
+  const isKin = (d, p) => !!(d.corpo && d.corpo.kin && d.corpo.kin.indexOf(p.id) >= 0);
+  // quem volta à cova: a família viva (de 7 anos para cima); quem não deixou família é lembrado pelo amigo mais chegado
+  function visitantes(S, d) {
+    const kin = [...kinIds(S, d)].map((id) => person(S, id)).filter((q) => q && q.alive && age(S, q) >= 7);
+    if (kin.length) return kin.sort((a, b) => (Fam().isPartner(b, d) ? 1 : 0) - (Fam().isPartner(a, d) ? 1 : 0) || a.id - b.id);
+    const am = S.people.filter((q) => q.alive && !q.carriedBy && age(S, q) >= 7 && ((q.rel && q.rel[d.id]) || 0) >= C.VISITA_AMIGO).sort((a, b) => b.rel[d.id] - a.rel[d.id] || a.id - b.id)[0];
+    return am ? [am] : [];
+  }
+  // o povo que manda no rito: o do morto (o mestiço, pelo sangue que tem mais)
+  function povoDe(p) {
+    if (!p.povo) return 'humano';
+    if (p.povo !== 'meio' || !p.sangue) return p.povo;
+    return Object.keys(p.sangue).sort((a, b) => p.sangue[b] - p.sangue[a] || a.localeCompare(b))[0] || 'humano';
+  }
+  const RITO_LETRA = { humano: 'h', elfo: 'e', anao: 'a', fera: 'f' };
+  const RITO_NOME = { h: 'uma vela acesa', e: 'uma árvore plantada em cima', a: 'uma laje de pedra', f: 'os uivos do povo-fera' };
+  M.RITO_NOME = RITO_NOME;
+  const canCarry = (S, p) => p.alive && !p.carriedBy && !p.labor && !p.sleeping && age(S, p) >= C.CARREGA_AGE && !Fam().carrying(S, p) && p.needs.saude >= 40 && p.needs.energia >= 15;
+
+  // ---------- o chão ----------
+  function freeTile(S, i) {
+    const w = S.world;
+    return i >= 0 && i < w.W * w.H && !Wd().objAt(w, i) && w.bgrid[i] < 0 && !Sim().isCamp(S, i) && !G.IS_WATER[w.tile[i]] && w.tile[i] !== G.T.MOUNTAIN;
+  }
+  // onde o corpo fica no velório: um lugar livre a dois ou três passos do fogo (de preferência do lado de baixo)
+  function wakeSpot(S) {
+    const w = S.world, L = Lf();
+    const f = (L && L.campFire(S, true)) || S.buildings.find((b) => b.type === 'fogueira' && b.built);
+    const cx = f ? f.x : S.camp.x + 1, cy = f ? f.y : S.camp.y + 1;
+    let best = -1, bd = 1e9;
+    for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
+      const d = Math.hypot(dx, dy), i = (cy + dy) * w.W + cx + dx;
+      if (d < 2 || d > 4.2 || cx + dx < 1 || cy + dy < 1 || cx + dx >= w.W - 1 || cy + dy >= w.H - 1 || !freeTile(S, i)) continue;
+      const s = d + (dy < 0 ? 0.7 : 0) + (S.memoria.corpos.some((id) => { const q = person(S, id); return q && q.corpo && q.corpo.wi === i; }) ? 9 : 0);
+      if (s < bd) { bd = s; best = i; }
+    }
+    return best >= 0 ? best : (cy + 2) * w.W + cx;
+  }
+  // o marco do cemitério (a obra); pronto ou ainda marcado, é em volta dele que as covas se abrem
+  function cemB(S) {
+    const m = S.memoria;
+    let b = m.cem ? Sim().building(S, m.cem) : null;
+    if (b && b.type !== 'cemiterio') b = null;
+    if (!b) { b = S.buildings.find((x) => x.type === 'cemiterio' && x.built) || S.buildings.find((x) => x.type === 'cemiterio' && !x.site) || null; m.cem = b ? b.id : 0; }
+    return b;
+  }
+  M.cemetery = cemB;
+  // sem marco, o povo escolhe o lugar: perto, mas fora da aldeia, em chão livre e longe da água
+  function autoCem(S) {
+    const w = S.world, Sm = Sim();
+    let best = null, bs = 1e9;
+    for (let r = 7; r <= 22 && !best; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+      const x = S.camp.x + dx, y = S.camp.y + dy;
+      if (x < 4 || y < 4 || x >= w.W - 5 || y >= w.H - 5 || Sm.canPlace(S, 'cemiterio', x, y)) continue;
+      let free = 0, wet = 0;
+      for (let yy = y - 4; yy <= y + 5; yy++) for (let xx = x - 4; xx <= x + 5; xx++) {
+        const i = yy * w.W + xx;
+        if (G.IS_WATER[w.tile[i]]) wet++;
+        else if (!((xx - x) & 1) && !((yy - y) & 1) && freeTile(S, i)) free++;
+      }
+      if (free < 10 || wet > 4) continue;
+      const s = Math.abs(Math.hypot(dx, dy) - 10) + wet * 0.5 - free * 0.05;
+      if (s < bs) { bs = s; best = { x, y }; }
+    }
+    if (!best) return null;
+    const b = Sm.placeBlueprint(S, 'cemiterio', best.x, best.y);
+    if (!b) return null;
+    b.auto = 1;
+    Sm.complete(S, b);
+    return b;
+  }
+  // a próxima cova: em fileiras, com um passo de folga, o mais perto possível do marco
+  function plotNear(S, b) {
+    const w = S.world, ax = b.x, ay = b.y, r0 = (Sim().def(b).mem || { r: 6 }).r;
+    for (let rr = r0; rr <= r0 + 10; rr += 2) {
+      let best = -1, bd = 1e9;
+      for (let y = ay - rr; y <= ay + 1 + rr; y++) for (let x = ax - rr; x <= ax + 1 + rr; x++) {
+        if (x < 1 || y < 1 || x >= w.W - 1 || y >= w.H - 1 || ((x - ax) & 1) || ((y - ay) & 1)) continue;
+        const i = y * w.W + x, d = Math.hypot(x - ax - 0.5, y - ay - 0.5);
+        if (d < 2.4 || d > rr + 0.5 || !freeTile(S, i) || taken(S, i)) continue;
+        if (d < bd) { bd = d; best = i; }
+      }
+      if (best >= 0) return best;
+    }
+    return -1;
+  }
+  const taken = (S, i) => S.memoria.corpos.some((id) => { const q = person(S, id); return q && q.corpo && q.corpo.pi === i; });
+  // todas as covas com nome (as do cemitério e as antigas, de antes da 0.13)
+  function graves(S) {
+    const w = S.world, out = [];
+    for (let i = w.genCount; i < w.objs.length; i++) if (w.objs[i].k === 'grave') out.push(w.objs[i]);
+    return out;
+  }
+  M.graves = graves;
+  const graveAt = (S, x, y) => { const o = Wd().objAt(S.world, y * S.world.W + x); return o && o.k === 'grave' ? o : null; };
+
+  // ---------- a morte ----------
+  const seenBy = (S, d) => Math.hypot(d.x - S.camp.x - 1, d.y - S.camp.y - 1) <= C.CORPO_CAMP ||
+    S.people.some((q) => q.alive && q !== d && !q.carriedBy && age(S, q) >= 7 && Math.hypot(q.x - d.x, q.y - d.y) <= C.CORPO_VER);
+  // chamado por Sim quando alguém morre. true: o corpo espera o velório e o enterro (a cova não nasce na hora)
+  M.onDeath = function (S, p) {
+    const m = S.memoria;
+    if (!m) return false;
+    // morreu de fome, frio ou sede depois de rezar sem resposta: o silêncio de Deus vira conto
+    if (!S.safe && (p.cause === 'fome' || p.cause === 'frio' || p.cause === 'sede') && (p.prayer || p.mem.some((x) => x.k === 'oracaoIgnorada'))) m.calou = { a: p.name, sx: p.sex };   // vira conto na hora seguinte
+    if (rest(S)) return false;
+    if (!S.people.some((q) => q.alive && q !== p && !q.carriedBy && age(S, q) >= C.CARREGA_AGE)) return false;   // não sobrou quem carregue
+    const c = p.corpo = { st: 0, t: S.t, kin: [...kinIds(S, p)], r: RITO_LETRA[povoDe(p)] || 'h' };
+    const par = Fam().partners(S, p).map((q) => RITO_LETRA[povoDe(q)] || 'h').find((l) => l !== c.r);
+    if (par) c.r2 = par;
+    if (seenBy(S, p)) c.st = 1;
+    m.corpos.push(p.id);
+    return true;
+  };
+  // cova sem cerimônia (jogo fechado, ninguém para carregar, tempo demais): no cemitério, se houver; senão, ali mesmo
+  function quickBury(S, d) {
+    const w = S.world, b = cemB(S);
+    let i = b ? plotNear(S, b) : -1;
+    if (i < 0) {
+      const r = Wd().findNearest(w, Math.floor(d.y) * w.W + Math.floor(d.x), (j) => (freeTile(S, j) ? 1 : 0), 30);
+      i = r ? r.idx : -1;
+    }
+    grave(S, d, i, null);
+  }
+  function grave(S, d, i, by) {
+    const w = S.world, m = S.memoria, c = d.corpo || {};
+    m.corpos = m.corpos.filter((id) => id !== d.id);
+    delete d.corpo;
+    if (i < 0) { d.semCova = 1; return null; }
+    const x = i % w.W, y = (i / w.W) | 0;
+    const o = Wd().addObj(w, 'grave', x, y, { name: d.name, pid: d.id, t: S.t, r: (c.r || 'h') + (c.r2 || '') });
+    if (c.velado) o.vel = 1;
+    if (c.r === 'a' && by && S.stock.pedra >= C.LAJE_PEDRA) { S.stock.pedra -= C.LAJE_PEDRA; o.laje = 1; }
+    d.x = x + 0.5; d.y = y + 0.5; d.cova = [x, y];
+    S.stats.enterros++;
+    return o;
+  }
+  // o enterro de verdade: quem cavou, a família que vem depois, a primeira cova na Crônica
+  function bury(S, d, i, by) {
+    const Sm = Sim();
+    const o = grave(S, d, i, by);
+    if (!o) return;
+    for (const q of visitantes(S, d)) q.vis = { x: o.x, y: o.y, d: S.ck.day, pid: d.id };
+    const onde = cemB(S) ? 'no cemitério' : 'perto de onde caiu';
+    if (S.stats.enterros === 1) Sm.chron(S, by.name + ' abriu a primeira cova ' + onde + ', e ' + d.name + ' ficou ali, com ' + RITO_NOME[o.r.charAt(0)] + '. Quem ficou vai voltar com flores.');
+    else Sm.toast(S, d.name + ' foi enterrad' + oa(d) + ' ' + onde + '.', '');
+    ev(S, { ev: 'enterro', x: o.x, y: o.y, r: o.r });
+  }
+  // ninguém achou o corpo: sem despedida, o luto da família dura o dobro
+  function lost(S, d) {
+    const m = S.memoria, kin = d.corpo.kin;
+    m.corpos = m.corpos.filter((id) => id !== d.id);
+    delete d.corpo;
+    d.semCova = 1;
+    for (const id of kin) {
+      const q = person(S, id);
+      if (!q || !q.alive) continue;
+      Sim().addMem(S, q, 'semDespedida');
+      for (const x of q.mem) if (GRIEF[x.k]) x.until = S.t + (x.until - S.t) * 2;
+    }
+    Sim().chron(S, 'Ninguém achou ' + d.name + '. Não houve velório nem cova, e a família vai demorar mais a se consolar.');
+  }
+  // a vaga do corpo só vale enquanto quem reservou está mesmo com a tarefa (o save não guarda a ação de ninguém)
+  function levando(S, d) {
+    const q = d.corpo.res ? person(S, d.corpo.res) : null, a = q && q.alive ? q.act : null;
+    return !!(a && a.type === 'memoria' && a.m && a.m.carry === d.id);
+  }
+  // a vaga se perdeu (o save, um susto): quem levava tem a vez de retomar por uma hora
+  function solta(S, d) {
+    const c = d.corpo;
+    if (c.by) { c.pref = c.by; c.prefT = S.t; }
+    c.res = 0; c.by = 0;
+  }
+  const vez = (S, c, p) => !c.pref || c.pref === p.id || S.t - c.prefT > 60 || !person(S, c.pref) || !canCarry(S, person(S, c.pref));
+  // de hora em hora: achar, velar, enterrar (as tarefas em si são da IA: M.want e M.task)
+  function bodies(S) {
+    const m = S.memoria, h = hourOf(S), day = S.ck.day, Sm = Sim();
+    for (const id of m.corpos.slice()) {
+      const d = person(S, id), c = d && d.corpo;
+      if (!c) { m.corpos = m.corpos.filter((x) => x !== id); continue; }
+      if (rest(S)) { quickBury(S, d); continue; }
+      const dias = (S.t - c.t) / DAY;
+      if (c.st === 0) {
+        if (seenBy(S, d)) c.st = 1;
+        else if (dias >= C.CORPO_MAX_D) { lost(S, d); continue; }
+      }
+      if (c.res && !levando(S, d)) solta(S, d);
+      // passou tempo demais (ninguém pôde carregar): enterra sem cerimônia
+      if (c.st >= 1 && dias >= C.CORPO_MAX_D + 1 && !c.by) { quickBury(S, d); continue; }
+      if (c.st === 2 && !c.fim && (day > c.vel || (day === c.vel && h >= C.VELORIO_H[1]))) endWake(S, d);
+      else if (c.st === 2 && !c.sino && day === c.vel && h >= C.VELORIO_H[0] && h < C.VELORIO_H[1]) { c.sino = 1; ev(S, { ev: 'velorio', on: true, pid: d.id }); Sm.toast(S, 'O povo se junta ao pé do fogo para velar ' + d.name + '.', ''); }
+    }
+  }
+  function endWake(S, d) {
+    const c = d.corpo, Sm = Sim();
+    c.fim = 1;
+    c.velado = (c.n || 0) >= 1;
+    if (!c.velado) return;
+    S.stats.velorios++;
+    if (S.stats.velorios === 1) Sm.chron(S, 'O povo passou a tardinha ao lado de ' + d.name + ', ao pé do fogo, e cada um disse a sua despedida. Foi o primeiro velório.');
+    // o povo-fera uiva; o casal de dois povos junta os dois ritos, e isso aproxima os povos
+    if (c.r === 'f' || c.r2 === 'f') { ev(S, { ev: 'uivo' }); for (const q of S.people) if (q.alive && !q.sleeping && q.povo === 'fera') Sm.say(S, q, 'Auuuu…', true); }
+    if (c.r2 && Pv() && Pv().onRite) Pv().onRite(S, c.r, c.r2);
+    ev(S, { ev: 'velorio', on: false, pid: d.id });
+  }
+  // o velório ou o rito desta noite seguram a história (hoje a roda é deles)
+  M.blockStory = function (S) {
+    const m = S.memoria, e = m.erva;
+    if (e.rite || (e.hoje === S.ck.day && e.tem === S.ck.day)) return true;
+    return !!(m.corpos.length && m.corpos.some((id) => { const d = person(S, id); return d && d.corpo && d.corpo.st === 2 && d.corpo.vel === S.ck.day && !d.corpo.fim; }));
+  };
+
+  // ---------- o que cada um quer fazer (para a IA) ----------
+  const ADULTO = 18;
+  // quem pode entrar no rito: só adulto (18 anos de verdade), acordado, com saúde, sem bebê no colo e sem barriga
+  const apto = (S, p) => p.alive && !p.carriedBy && !p.labor && !p.preg && age(S, p) >= ADULTO && p.needs.saude >= 50 && !Fam().carrying(S, p);
+  M.canRite = (S, p) => apto(S, p) && !p.sleeping;
+  M.want = function (S, p) {
+    const m = S.memoria;
+    if (!m || rest(S)) return null;
+    const e = m.erva, day = S.ck.day;
+    if (!m.corpos.length && !m.fin.on && !e.rite && e.hoje !== day && !p.vis) return null;
+    const a = age(S, p);
+    if (m.fin.on && a >= 5 && !(m.fin.foi && m.fin.foi[p.id])) return { k: 'finados', score: 78 };
+    if (e.rite && p.ritoDia !== day && e.rite.part.indexOf(p.id) >= 0 && M.canRite(S, p)) {
+      // os convidados vêm para o fogo antes de a roda abrir (anda-se devagar) e esperam sentados
+      if (!e.rite.on || S.t - e.rite.t0 < 120) return { k: 'rito', score: 88 };
+    }
+    for (const id of m.corpos) {
+      const d = person(S, id), c = d && d.corpo;
+      if (!c) continue;
+      if (c.st === 2 && !c.fim && c.vel === day && within(S, C.VELORIO_H) && p.velou !== d.id && a >= 5) return { k: 'velar', score: isKin(d, p) ? 96 : a < 12 ? 60 : 80 };
+      if (c.st === 1 && !c.res && canCarry(S, p) && vez(S, c, p)) return { k: 'corpo', score: 90 };
+      if (c.st === 2 && c.fim && !c.res && within(S, C.ENTERRO_H) && canCarry(S, p) && vez(S, c, p)) return { k: 'enterrar', score: 90 };
+    }
+    if (p.vis) {
+      if (day - p.vis.d > 2 || !graveAt(S, p.vis.x, p.vis.y)) delete p.vis;
+      else if (within(S, C.VISITA_H) && a >= 7) return { k: 'cova', score: 62 };
+    }
+    if (e.hoje === day && e.cond === p.id && e.tem !== day && S.ck.hour >= 7 && S.ck.hour < 16) return { k: 'erva', score: 70 };
+    return null;
+  };
+  // o lugar e o tempo de cada tarefa. carry: o corpo vai junto (busca em bx, by; leva até x, y)
+  M.task = function (S, p, k) {
+    const m = S.memoria, w = S.world, e = m.erva, day = S.ck.day;
+    if (!m || rest(S)) return null;
+    if (k === 'finados') {
+      if (!m.fin.on) return null;
+      return { k, x: m.fin.x, y: m.fin.y, r0: 1.4, r1: 5.5, min: C.FINADOS_MIN, far: 300, walk: 360 };
+    }
+    if (k === 'rito') {
+      const f = e.rite && Sim().building(S, e.rite.fire);
+      if (!f || e.rite.part.indexOf(p.id) < 0 || !M.canRite(S, p)) return null;
+      return { k, x: f.x + 0.5, y: f.y + 0.5, r0: 1.2, r1: 3.4, min: C.RITO_MIN, far: 320, walk: 400 };
+    }
+    if (k === 'cova') {
+      const v = p.vis, o = v && graveAt(S, v.x, v.y);
+      if (!o) { delete p.vis; return null; }
+      return { k, x: v.x + 0.5, y: v.y + 0.5, r0: 0.7, r1: 1.6, min: C.VISITA_MIN, pid: o.pid || 0, far: 300, walk: 360 };
+    }
+    if (k === 'erva') {
+      if (e.hoje !== day || e.cond !== p.id) return null;
+      const spots = (e.spots || []).map((s, si) => ({ s, si, d: Math.hypot(s[0] - p.x, s[1] - p.y) })).filter((o) => !(e.ruim && e.ruim[o.si])).sort((a, b) => a.d - b.d);
+      if (!spots.length) return null;
+      const t = spots[0];
+      return { k, x: t.s[0] + 0.5, y: t.s[1] + 0.5, r0: 0.7, r1: 1.6, min: C.ERVA_MIN, si: t.si, far: 320, walk: 480 };
+    }
+    for (const id of m.corpos) {
+      const d = person(S, id), c = d && d.corpo;
+      if (!c) continue;
+      if (k === 'velar' && c.st === 2 && !c.fim && c.vel === day && p.velou !== d.id) {
+        return { k, x: d.x, y: d.y, r0: 1.1, r1: 3.6, min: isKin(d, p) ? C.VELAR_FAM : C.VELAR_MIN, pid: d.id, far: 240, walk: 300 };
+      }
+      if (k === 'corpo' && c.st === 1 && !c.res && canCarry(S, p)) {
+        if (c.wi === undefined) c.wi = wakeSpot(S);
+        c.res = p.id; c.resT = S.t;
+        return { k, carry: d.id, pid: d.id, bx: d.x, by: d.y, x: c.wi % w.W + 0.5, y: ((c.wi / w.W) | 0) + 0.5, r0: 0, r1: 1.2, min: 5, far: 420, walk: 600 };
+      }
+      if (k === 'enterrar' && c.st === 2 && c.fim && !c.res && canCarry(S, p)) {
+        const b = cemB(S) || autoCem(S);
+        const pi = b ? plotNear(S, b) : -1;
+        if (pi < 0) { quickBury(S, d); return null; }
+        c.pi = pi; c.res = p.id; c.resT = S.t;
+        return { k, carry: d.id, pid: d.id, bx: d.x, by: d.y, x: pi % w.W + 0.5, y: ((pi / w.W) | 0) + 0.5, r0: 0.6, r1: 1.7, min: C.ENTERRO_MIN, far: 420, walk: 600 };
+      }
+    }
+    return null;
+  };
+  // a tarefa ainda vale? (a cada passo de quem a faz)
+  M.valid = function (S, p, a) {
+    const m = S.memoria, t = a.m, e = m.erva;
+    if (!t || rest(S)) return false;
+    if (t.k === 'finados') return m.fin.on || a.stage === 'stay';
+    if (t.k === 'rito') return !!e.rite;
+    if (t.k === 'cova') return !!graveAt(S, Math.floor(t.x), Math.floor(t.y));
+    if (t.k === 'erva') return e.hoje === S.ck.day;
+    const d = person(S, t.pid), c = d && d.corpo;
+    if (!c) return false;
+    if (t.k === 'velar') return c.st === 2 && (!c.fim || a.stage === 'stay');
+    if (t.k === 'corpo') return c.st === 1 && c.res === p.id;
+    return c.st === 2 && !!c.fim && c.res === p.id;
+  };
+  // pegou o corpo; enquanto anda, o corpo vai junto
+  M.lift = function (S, p, a) { const d = person(S, a.m.carry); if (d && d.corpo) { d.corpo.by = p.id; d.corpo.resT = S.t; } };
+  M.carried = function (S, p, a) { const d = person(S, a.m.carry); if (d && d.corpo) { d.x = p.x; d.y = p.y; d.corpo.resT = S.t; } };
+  const OFICIO = { coleta: 'achar fruta', pesca: 'pescar', caca: 'caçar', construcao: 'erguer uma casa', oficio: 'lascar a pedra', plantio: 'plantar', criacao: 'cuidar dos bichos', mineracao: 'tirar pedra da serra' };
+  function wakeLine(S, p, d) {
+    const n = p.id * 7 + d.id * 3 + S.ck.day, a = age(S, p), D = Dz() ? Dz().call(S) : 'Deus';
+    if (a < 10) return pk(['El' + (d.sex === 'F' ? 'a' : 'e') + ' não vai acordar?', 'Por que tá todo mundo quieto?', 'Tá dormindo?'], n);
+    const meu = p.povo || 'humano';
+    if (meu === 'elfo' && n % 3 === 0) return 'Vira árvore, ' + d.name + '.';
+    if (meu === 'anao' && n % 3 === 0) return 'Pedra sobre pedra, ' + d.name + '.';
+    if (meu === 'fera' && n % 3 === 0) return 'Corre livre, ' + d.name + '.';
+    if (isKin(d, p)) {
+      let best = '', bv = 0;
+      if (d.skills) for (const k in OFICIO) if ((d.skills[k] || 0) > bv) { bv = d.skills[k]; best = k; }
+      const arr = ['Vai em paz, ' + d.name + '.', 'Ainda ontem a gente conversava.', 'Descansa. A gente cuida do resto.'];
+      if (best && age(S, d) >= 12) arr.push('Ninguém sabia ' + OFICIO[best] + ' como ' + ela(d) + '.');
+      return pk(arr, n);
+    }
+    return pk(['Vai em paz.', 'Era gente boa.', 'A gente cuida dos teus.', 'Que ' + D + ' te receba.', 'Um dia sou eu.'], n);
+  }
+  const RITO_FALA = ['Vejo o rio subindo pro céu…', 'As estrelas estão descendo.', 'Minha mão tem luz.', 'O fogo está falando.', 'Tudo é uma coisa só.', 'Eu ouço alguém respirando lá em cima.', 'O chão está cantando.'];
+  // chegou ao lugar: uma fala
+  M.arrive = function (S, p, a) {
+    const t = a.m, Sm = Sim(), n = p.id * 5 + S.ck.day;
+    if (t.k === 'velar') { const d = person(S, t.pid); if (d) Sm.say(S, p, wakeLine(S, p, d), true); }
+    else if (t.k === 'cova') Sm.say(S, p, pk(['Trouxe flor pra você.', 'Por aqui está tudo bem.', 'Sinto sua falta.', 'Vim contar as novidades.', 'Queria que você visse a aldeia agora.'], n), true);
+    else if (t.k === 'finados') { if (n % 3 === 0) Sm.say(S, p, pk(['Lembro de todos.', 'Um dia a gente se vê.', 'Cada cova aqui tem um nome.', 'Estamos aqui por causa deles.'], n), false); }
+    else if (t.k === 'enterrar') { const d = person(S, t.pid); if (d) Sm.say(S, p, 'Descansa, ' + d.name + '.', true); }
+  };
+  // enquanto fica: no rito, de vez em quando alguém diz o que vê
+  M.stay = function (S, p, a, dt) {
+    if (a.m.k !== 'rito') return;
+    const r = S.memoria.erva.rite;
+    if (!r || !r.on) { a.t = 0; return; }   // a roda ainda não abriu: espera sentado
+    a.fala = (a.fala || 12 + (p.id % 9)) - dt;
+    if (a.fala <= 0) { a.fala = 22 + (p.id % 7) * 3; Sim().say(S, p, pk(RITO_FALA, p.id + Math.floor(S.t / 20)), false, 'god'); }
+  };
+  // terminou: o efeito de cada tarefa
+  M.done = function (S, p, a) {
+    const m = S.memoria, t = a.m, Sm = Sim(), w = S.world;
+    if (t.k === 'corpo') {
+      const d = person(S, t.carry), c = d && d.corpo;
+      if (!c) return;
+      d.x = t.x; d.y = t.y; c.by = 0; c.res = 0; c.st = 2;
+      c.vel = S.ck.hour < C.VELORIO_H[1] - 2 ? S.ck.day : S.ck.day + 1;
+      Sm.toast(S, p.name + ' trouxe ' + d.name + ' para junto do fogo. O velório é ' + (c.vel === S.ck.day ? 'hoje' : 'amanhã') + ', à tardinha.', '');
+    } else if (t.k === 'enterrar') {
+      const d = person(S, t.carry), c = d && d.corpo;
+      if (!c) return;
+      const pi = c.pi !== undefined && freeTile(S, c.pi) ? c.pi : -1;
+      if (pi < 0) quickBury(S, d); else bury(S, d, pi, p);
+    } else if (t.k === 'velar') {
+      const d = person(S, t.pid), c = d && d.corpo;
+      if (!c) return;
+      c.n = (c.n || 0) + 1;
+      p.velou = d.id;
+      Sm.addMem(S, p, 'velou');
+      // quem velou sofre o luto pela metade do tempo que faltava
+      for (const x of p.mem) if (GRIEF[x.k]) x.until = S.t + (x.until - S.t) * C.VELORIO_LUTO;
+      Gd().faith(S, p, C.VELORIO_FE);
+    } else if (t.k === 'cova') {
+      const o = graveAt(S, Math.floor(t.x), Math.floor(t.y));
+      delete p.vis;
+      if (!o) return;
+      const vale = cemVale(S, o);
+      o.fl = S.t + C.FLOR_D * DAY;
+      if (S.stock.frutas >= C.FRUTA_SOBRA) { S.stock.frutas--; o.of = S.t + 3 * DAY; }
+      Sm.addMem(S, p, 'visitouCova');
+      for (const x of p.mem) if (GRIEF[x.k]) x.until = Math.max(S.t + DAY, x.until - C.VISITA_CURA * vale * DAY);
+      Gd().faith(S, p, C.VISITA_FE * vale);
+      S.stats.visitas++;
+      if (S.stats.visitas === 1) Sm.chron(S, p.name + ' voltou à cova de ' + o.name + ' com flores. Quem partiu não foi esquecido.');
+      ev(S, { ev: 'flores', x: o.x, y: o.y });
+    } else if (t.k === 'finados') {
+      const f = m.fin;
+      (f.foi || (f.foi = {}))[p.id] = 1; f.n = (f.n || 0) + 1;
+      const vale = cemB(S) ? (Sim().def(cemB(S)).mem || { vale: 1 }).vale : 1;
+      Sm.addMem(S, p, 'diaDosMortos');
+      for (const x of p.mem) if (GRIEF[x.k]) x.until = Math.max(S.t + DAY, x.until - C.FINADOS_CURA * vale * DAY);
+      Gd().faith(S, p, C.FINADOS_FE * vale);
+    } else if (t.k === 'erva') {
+      m.erva.tem = S.ck.day;
+      Sm.say(S, p, 'Hoje tem rito.', true, 'god');
+    } else if (t.k === 'rito') viajou(S, p);
+  };
+  // largou no meio: o corpo fica onde está, a vaga volta
+  M.drop = function (S, p, a, noWay) {
+    const m = S.memoria, t = a.m;
+    if (!m || !t) return;
+    if (t.carry) { const d = person(S, t.carry), c = d && d.corpo; if (c && c.res === p.id) { c.res = 0; c.by = 0; } }
+    else if (t.k === 'erva' && noWay) (m.erva.ruim || (m.erva.ruim = {}))[t.si] = 1;
+  };
+  M.describe = function (S, p, a) {
+    const t = a.m, st = a.stage;
+    if (!t) return 'Pensando no que fazer';
+    const d = t.pid ? person(S, t.pid) : null, nm = d ? d.name : 'quem partiu';
+    switch (t.k) {
+      case 'corpo': return st === 'fetch' ? 'Indo buscar ' + nm : st === 'carry' ? 'Levando ' + nm + ' para junto do fogo' : 'Deitando ' + nm + ' ao pé do fogo';
+      case 'enterrar': return st === 'fetch' ? 'Indo buscar ' + nm + ' para o enterro' : st === 'carry' ? 'Levando ' + nm + ' ao cemitério' : 'Abrindo a cova de ' + nm;
+      case 'velar': return st === 'go' ? 'Indo ao velório de ' + nm : 'Velando ' + nm;
+      case 'cova': return st === 'go' ? 'Indo à cova de ' + nm + ', com flores' : 'Na cova de ' + nm;
+      case 'finados': return st === 'go' ? 'Indo ao cemitério' : 'Lembrando os que partiram';
+      case 'erva': return st === 'go' ? 'Indo colher a erva-do-sonho' : 'Colhendo a erva-do-sonho';
+      case 'rito': return st === 'go' ? 'Indo para o rito' : 'No rito, ao pé do fogo';
+    }
+    return 'Pensando no que fazer';
+  };
+  // quanto a visita vale nesta cova (o cemitério cercado consola mais)
+  function cemVale(S, o) {
+    const b = cemB(S);
+    if (!b || !b.built || Math.hypot(o.x - b.x, o.y - b.y) > 20) return 1;
+    return (Sim().def(b).mem || { vale: 1 }).vale || 1;
+  }
+  // o trabalho de quem acordou do rito (rende menos) e o zelo que uma resposta de Deus deixou
+  const COMIDA = { frutas: 1, pesca: 1, caca: 1, roca: 1, criacao: 1, conservar: 1 };
+  M.speed = function (S, p, wk) {
+    let k = 1;
+    if (p.ressaca && p.ressaca > S.t) k *= C.RITO_RESSACA;
+    const z = S.memoria && S.memoria.zelo;
+    if (z && z.until > S.t) { if (z.k === 'tudo') k *= C.ZELO_TUDO; else if (z.k === 'lenha' ? wk === 'madeira' || wk === 'fogo' : COMIDA[wk]) k *= C.ZELO_COMIDA; }
+    return k;
+  };
+  // como a criança foi criada (pelos contos que ouviu): pesa no humor
+  M.mood = (p) => (p.criado === 'temente' ? -C.CRIADO_HUMOR : p.criado === 'confiante' ? C.CRIADO_HUMOR : 0);
+
+  // ---------- visitas e o dia dos mortos ----------
+  function flagVisits(S) {
+    const day = S.ck.day;
+    for (const o of graves(S)) {
+      if (!o.pid) continue;
+      const d = person(S, o.pid);
+      if (!d || d.alive) continue;
+      const dias = day - Math.floor(o.t / DAY);
+      if (dias <= 0) continue;
+      const ano = dias % C.YEAR_DAYS === 0, luto = dias <= C.VISITA_LUTO_ATE && dias % C.VISITA_LUTO_D === 0;
+      if (!ano && !luto) continue;
+      // no luto, só quem era mais chegado (até dois); no dia em que faz um ano, a família toda
+      const kin = visitantes(S, d), who = ano ? kin : kin.slice(0, 2);
+      for (const q of who) if (!q.vis) q.vis = { x: o.x, y: o.y, d: day, pid: d.id };
+    }
+  }
+  function finados(S) {
+    const m = S.memoria, f = m.fin, h = hourOf(S), Sm = Sim();
+    if (f.on) {
+      if (h < C.FINADOS_H[1] && h >= C.FINADOS_H[0]) return;
+      f.on = false;
+      const ps = Object.keys(f.foi || {}).map((id) => person(S, +id)).filter((p) => p && p.alive);
+      f.foi = null;
+      if (ps.length < 3) return;
+      S.stats.finados++;
+      f.velas = S.t + C.FINADOS_VELAS_H * 60;
+      if (Pv() && S.povos && S.povos.mixed) Pv().onParty(S, ps, C.CONV_FINADOS);
+      if (S.stats.finados === 1) Sm.chron(S, 'No último dia do outono, o povo foi junto ao lugar dos mortos, acendeu uma luz em cada cova e ficou até escurecer. Vai ser assim todo ano: é o dia dos mortos.');
+      else Sm.toast(S, 'Dia dos mortos: ' + ps.length + ' pessoas foram lembrar os que partiram.', '');
+      ev(S, { ev: 'finados', on: false });
+      return;
+    }
+    if (h !== C.FINADOS_H[0] || f.year === S.ck.year || S.ck.season !== 2 || S.ck.dos !== C.SEASON_DAYS) return;
+    f.year = S.ck.year;
+    const gs = graves(S);
+    if (!gs.length || S.people.filter((p) => p.alive).length < C.FINADOS_MIN_POP || m.corpos.length) return;
+    if (G.Narr && (G.Narr.beastsOut(S) || G.Narr.is(S, 'nevasca') || G.Narr.is(S, 'tempestade'))) return;
+    // o lugar: o marco do cemitério; sem marco, a cova mais nova
+    const b = cemB(S), last = gs[gs.length - 1];
+    f.x = b ? b.x + 1 : last.x + 0.5; f.y = b ? b.y + 1 : last.y + 0.5;
+    f.on = true; f.foi = {}; f.n = 0; f.day = S.ck.day;
+    Sm.toast(S, 'É o último dia do outono: o povo vai ao lugar dos mortos.', '');
+    ev(S, { ev: 'finados', on: true });
+  }
+  // velas acesas (para o desenho da noite): o velório e as covas na noite do dia dos mortos
+  M.lights = function (S) {
+    const m = S.memoria, out = [];
+    if (!m) return out;
+    for (const id of m.corpos) { const d = person(S, id), c = d && d.corpo; if (c && c.st === 2 && !c.by) out.push({ x: d.x, y: d.y, r: 2.4, vela: 1 }); }
+    if (m.fin.velas && m.fin.velas > S.t) { let n = 0; for (const o of graves(S)) { if (n++ >= 30) break; out.push({ x: o.x + 0.5, y: o.y + 0.5, r: 1.5, vela: 1 }); } }
+    return out;
+  };
+
+  // ---------- a História de Deus ----------
+  // o tom com que o conto nasce: +1 cuidado, -1 medo, 0 espanto
+  const TOM = { cura: 1, chuva: 1, calor: 1, raioFera: 0, castigo: -1, sonho: 1, nome: 0, escolhido: 0, estatua: 0, especie: 1, saber: 1, chamado: 0, visao: 0, silencio: -1, promessa: 0 };
+  const FERA = { onca: ['a onça', 'onças', 'a onça'], lobos: ['a matilha', 'lobos', 'o lobo'] };
+  const eE = (c) => (c.sx === 'F' ? 'ela' : 'ele');
+  const oE = (c) => (c.sx === 'F' ? 'a' : 'o');
+  // o miolo do conto, em três tamanhos: como foi, aumentado, lenda
+  const CORE = {
+    cura: [(c, D) => c.a + ' estava para morrer, e ' + D + ' pôs a mão nel' + (c.sx === 'F' ? 'a' : 'e') + '. Levantou no mesmo dia.',
+      (c, D) => c.a + ' já não respirava. ' + D + ' soprou, e ' + eE(c) + ' abriu os olhos.',
+      (c, D) => c.a + ' tinha morrido fazia três dias. ' + D + ' chamou pelo nome, e ' + eE(c) + ' voltou andando.'],
+    chuva: [(c, D) => 'a terra rachava de seca, e ' + D + ' mandou chuva.',
+      (c, D) => 'não chovia fazia um ano inteiro. ' + D + ' chorou por nós, e o rio voltou a correr.',
+      (c, D) => 'o rio tinha virado pó. ' + D + ' abriu o céu com as mãos, e choveu quarenta dias.'],
+    calor: [(c, D) => 'na pior noite do inverno, ' + D + ' acendeu um calor no meio de nós.',
+      (c, D) => 'a neve já cobria as casas. ' + D + ' desceu e passou a noite aquecendo cada um.',
+      (c, D) => 'o mundo tinha virado gelo. ' + D + ' pôs um pedaço do sol no meio da aldeia.'],
+    raioFera: [(c, D) => FERA[c.x1 || 'lobos'][0] + ' rondava o fogo, e ' + D + ' derrubou com um raio.',
+      (c, D) => 'eram mais de vinte ' + FERA[c.x1 || 'lobos'][1] + '. ' + D + ' mandou um raio para cada.',
+      (c, D) => FERA[c.x1 || 'lobos'][2] + ' era do tamanho de uma casa. ' + D + ' partiu ao meio com o trovão.'],
+    castigo: [(c, D) => D + ' mandou um raio em ' + c.a + '. Ninguém soube bem por quê.',
+      (c, D) => c.a + ' zombou de ' + D + ', e o raio veio na mesma hora.',
+      (c, D) => c.a + ' quis ser maior que ' + D + '. Sobrou só a sombra no chão.'],
+    sonho: [(c, D) => c.a + ' dormiu sem saber e acordou sabendo. Foi ' + D + ' que ensinou no sonho.',
+      (c, D) => D + ' sentou ao lado de ' + c.a + ' a noite inteira, ensinando.',
+      (c, D) => D + ' levou ' + c.a + ' até o céu e mostrou como se faz tudo o que a gente sabe.'],
+    nome: [(c, D) => 'foi ' + c.w + ' quem primeiro chamou ' + D + ' pelo nome, e ' + D + ' ouviu.',
+      (c, D) => D + ' disse o próprio nome no ouvido de ' + c.w + ', e ninguém mais esqueceu.',
+      (c, D) => 'antes do nome não tinha nada. ' + D + ' falou o nome, e o mundo começou.'],
+    escolhido: [(c, D) => D + ' escolheu ' + c.a + ' no meio de todos.',
+      (c, D) => 'uma luz desceu em ' + c.a + ', e desde então ' + eE(c) + ' não é como nós.',
+      (c, D) => c.a + ' já nasceu marcad' + oE(c) + ' por ' + D + ', e os bichos baixavam a cabeça quando ' + eE(c) + ' passava.'],
+    estatua: [(c, D) => 'o povo ergueu a estátua, e ' + D + ' entrou nela.',
+      (c, D) => 'a estátua abriu os olhos no dia em que ficou pronta.',
+      (c, D) => 'ninguém ergueu a estátua. Ela nasceu da pedra numa noite, do tamanho de ' + D + '.'],
+    especie: [(c, D) => D + ' fez ' + (c.a || 'um bicho novo') + ' com as próprias mãos e soltou no mundo para nós.',
+      (c, D) => D + ' tirou ' + (c.a || 'um bicho novo') + ' de dentro de um sonho e deu de presente.',
+      (c, D) => 'no começo não tinha ' + (c.a || 'bicho nenhum') + '. ' + D + ' riu, e do riso nasceu.'],
+    saber: [(c, D) => 'todo mundo sonhou o mesmo sonho, e de manhã a gente conhecia ' + (c.x1 || 'uma coisa nova') + '.',
+      (c, D) => D + ' desceu de noite e mostrou ' + (c.x1 || 'uma coisa nova') + ' a cada um, de casa em casa.',
+      (c, D) => 'a gente não sabia nada. ' + D + ' abriu a cabeça do povo e pôs lá dentro ' + (c.x1 || 'o que a gente sabe') + '.'],
+    chamado: [(c, D) => D + ' chamou ' + (c.x1 || 'os de fora') + ', e eles vieram de longe.',
+      (c, D) => (c.x1 || 'os de fora') + ' andaram um ano inteiro atrás da voz de ' + D + '.',
+      (c, D) => D + ' fez ' + (c.x1 || 'os de fora') + ' de outro barro, do outro lado do mundo, e mandou para cá.'],
+    visao: [(c, D) => c.a + ' perguntou na fumaça, e ' + D + ' respondeu: “' + c.r + '”',
+      (c, D) => D + ' apareceu no meio da fumaça e disse a ' + c.a + ': “' + c.r + '”',
+      (c, D) => D + ' sentou com a gente em volta do fogo e disse: “' + c.r + '”'],
+    silencio: [(c, D) => c.a + ' rezou até o fim, e ' + D + ' não respondeu.',
+      (c, D) => c.a + ' chamou por ' + D + ' três noites. O céu ficou calado.',
+      (c, D) => D + ' virou o rosto, e ' + c.a + ' se foi sem resposta. Por isso a gente reza baixo.'],
+    promessa: [(c, D) => (c.r ? D + ' prometeu, e cumpriu.' : D + ' prometeu, e não cumpriu.'),
+      (c, D) => (c.r ? 'o que ' + D + ' diz na fumaça acontece. Sempre aconteceu.' : D + ' disse uma coisa na fumaça e fez outra.'),
+      (c, D) => (c.r ? 'a palavra de ' + D + ' é mais firme que a serra.' : 'houve um tempo em que ' + D + ' mentiu para nós. Os antigos não esquecem.')],
+  };
+  const TITULO = {
+    cura: (c) => 'A cura de ' + c.a, chuva: () => 'A chuva na seca', calor: () => 'O fogo na nevasca', raioFera: (c) => 'O raio e ' + FERA[c.x1 || 'lobos'][0],
+    castigo: (c) => 'O castigo de ' + c.a, sonho: (c) => 'O sonho de ' + c.a, nome: () => 'O nome', escolhido: (c) => c.a + ', ' + (c.sx === 'F' ? 'a escolhida' : 'o escolhido'),
+    estatua: () => 'A estátua', especie: (c) => 'A criação' + (c.a ? ': ' + c.a : ''), saber: () => 'O sonho de todos', chamado: () => 'O chamado',
+    visao: () => 'A resposta na fumaça', silencio: (c) => 'O silêncio', promessa: (c) => (c.r ? 'A promessa cumprida' : 'A promessa quebrada'),
+  };
+  // o que aconteceu de verdade (para pôr ao lado do que o povo conta)
+  const FATO = {
+    cura: (c) => 'Você curou ' + c.a + ', que estava mal.', chuva: () => 'Você mandou chuva no meio da seca.', calor: () => 'Você pôs o Calor sobre a aldeia na nevasca.',
+    raioFera: (c) => 'Seu raio caiu sobre ' + FERA[c.x1 || 'lobos'][0] + '.', castigo: (c) => 'Seu raio atingiu ' + c.a + '.', sonho: (c) => 'Você revelou a ' + c.a + ', em sonho, uma descoberta' + (c.x1 ? ': ' + c.x1 : '') + '.',
+    nome: (c) => 'O povo passou a te chamar pelo nome; ' + c.w + ' foi quem começou.', escolhido: (c) => 'Você deu um poder a ' + c.a + '.', estatua: () => 'Você consagrou uma estátua.',
+    especie: (c) => 'Você criou uma espécie nova' + (c.a ? ': ' + c.a : '') + '.', saber: (c) => 'Você ensinou ' + (c.x1 || 'um saber') + ' ao povo inteiro, num sonho.', chamado: (c) => 'Você chamou ' + (c.x1 || 'um povo de fora') + ', e a caravana foi acolhida.',
+    visao: (c) => 'No rito, ' + c.a + ' fez uma pergunta e você respondeu: “' + c.r + '”', silencio: (c) => c.a + ' rezou, ninguém respondeu, e ' + eE(c) + ' morreu.',
+    promessa: (c) => (c.r ? 'Você fez uma promessa no rito, e ela se cumpriu.' : 'Você fez uma promessa no rito, e ela não se cumpriu.'),
+  };
+  const FIM = [['É bom não deixar %D zangado.', 'Por isso não se brinca com o céu.', 'Quando troveja, a gente baixa a cabeça.'],
+    ['E foi assim.', 'Quem estava lá lembra.', 'Nunca esqueçam disso.'],
+    ['Por isso ninguém aqui dorme com medo.', '%D cuida de nós.', 'Quem tem %D não está sozinho.']];
+  const conto = (S, id) => S.memoria.contos.find((c) => c.id === id) || null;
+  const sabem = (S, c) => S.people.filter((p) => p.alive && p.contos && p.contos[c.id] !== undefined);
+  // um ato grande, visto por alguém, vira conto. d: { a, sx, x1, r, x, y } (x, y: onde foi; sem eles, todo mundo viu)
+  M.deed = function (S, k, d) {
+    const m = S.memoria;
+    if (!m || S.safe || !CORE[k]) return null;
+    d = d || {};
+    if (m.kindAt[k] !== undefined && S.t - m.kindAt[k] < C.CONTO_GAP_D * DAY) return null;
+    const wit = S.people.filter((p) => p.alive && !p.carriedBy && age(S, p) >= 5 && (d.x === undefined || Math.hypot(p.x - d.x, p.y - d.y) <= C.CONTO_VER));
+    if (!wit.length) return null;
+    m.kindAt[k] = S.t;
+    // o tom com que nasce: o que veio dito (a resposta do rito, a promessa), ou o do ato; o ato sem tom próprio pega
+    // o de como o povo vê Deus (temido ou bondoso)
+    const al = S.god ? S.god.align : 0;
+    const c = { id: m.nc++, k, t: S.t, tone: d.tone !== undefined ? d.tone : TOM[k] || (Math.abs(al) >= C.CONTO_TOM_ALIGN ? Math.sign(al) : 0), mag: 0, gen: 0, n: 0, last: 0 };
+    for (const f of ['a', 'sx', 'x1', 'r']) if (d[f] !== undefined) c[f] = d[f];
+    c.w = wit.slice().sort((a, b) => b.fe - a.fe || a.id - b.id)[0].name;
+    m.contos.push(c);
+    for (const p of wit) {
+      (p.contos || (p.contos = {}))[c.id] = 0;
+      // a criança que vê o ato guarda o tom dele, como guarda o do conto que ouve
+      if (c.tone && !p.criado && age(S, p) < C.CRIADO_AGE) { const o = p.ouviu || (p.ouviu = [0, 0]); o[c.tone < 0 ? 0 : 1]++; }
+    }
+    S.stats.contos++;
+    trim(S);
+    if (S.stats.contos === 1) Sim().chron(S, 'O povo já tem o que contar de ' + Dz().call(S) + ': “' + TITULO[k](c) + '”. Nas noites de história o conto vai passar adiante, e cada um conta do seu jeito.');
+    ev(S, { ev: 'conto', id: c.id });
+    return c;
+  };
+  // passou do limite: sai primeiro o conto que ninguém mais sabe; depois o mais antigo de um tipo que tem outro mais
+  // novo ("O raio e a matilha" de dez anos atrás); por fim, o mais antigo de todos
+  function trim(S) {
+    const m = S.memoria;
+    while (m.contos.length > C.CONTO_MAX) {
+      const n = {};
+      for (const c of m.contos) n[c.k] = (n[c.k] || 0) + 1;
+      const sai = m.contos.find((c) => !sabem(S, c).length) || m.contos.find((c) => n[c.k] > 1) || m.contos[0];
+      m.contos.splice(m.contos.indexOf(sai), 1);
+      for (const p of S.people) if (p.contos) delete p.contos[sai.id];
+    }
+  }
+  // as três falas de quem conta: a abertura diz de onde veio (vi, me contaram, dizem os antigos)
+  function tell(S, c, g) {
+    const D = Dz() ? Dz().call(S) : 'Deus', n = c.id * 7 + c.n;
+    const core = CORE[c.k][Math.min(c.mag, CORE[c.k].length - 1)](c, D);
+    const open = g <= 0 ? 'Eu vi com estes olhos: ' : g === 1 ? pk(['Minha mãe contava que ', 'Meu pai contava que ', 'Quem me contou viu: '], n) : pk(['Dizem os antigos que ', 'Contam que ', 'Os antigos juram que '], n);
+    const mid = g <= 0 ? pk(['Eu estava lá.', 'Parece que foi ontem.', 'Quem estava lá lembra.'], n) : g === 1 ? pk(['Eu era criança quando ouvi.', 'Contaram pra mim, eu conto pra vocês.', 'Foi antes de vocês nascerem.'], n) : pk(['Faz tanto tempo que ninguém sabe o ano.', 'Assim me contaram.', 'É mais velho que a aldeia.'], n);
+    return [open + core, mid, pk(FIM[c.tone + 1], n).replace('%D', D)];
+  }
+  // na noite de história, quem sabe um conto às vezes conta um (o que faz mais tempo que não se ouve)
+  M.storyFor = function (S, p) {
+    const m = S.memoria;
+    if (!m || !m.contos.length || !p.contos) return null;
+    const mine = m.contos.filter((c) => p.contos[c.id] !== undefined && (!c.last || S.t - c.last >= C.CONTO_REPETE_D * DAY));
+    if (!mine.length) return null;
+    if (m.fin.day !== S.ck.day && S.rng.next() >= C.CONTO_CHANCE) return null;   // no dia dos mortos, a noite é dos contos
+    mine.sort((a, b) => a.last - b.last || a.id - b.id);
+    return { conto: mine[0].id, lines: tell(S, mine[0], p.contos[mine[0].id]) };
+  };
+  // quem conta sem ter visto muda um detalhe: aumenta, ou puxa para o jeito como o povo vê Deus
+  function drift(S, c, p) {
+    const al = S.god ? S.god.align : 0, r = S.rng.next();
+    if (r < 0.5 && c.mag < 2) { c.mag++; return; }
+    const puxa = Math.abs(al) >= 15 ? Math.sign(al) : has(p, 'Pessimista') ? -1 : has(p, 'Otimista') ? 1 : 0;
+    if (puxa && Math.abs(c.tone + puxa) <= 1) c.tone += puxa;
+    else if (c.mag < 2) c.mag++;
+  }
+  // a história acabou: quem ouviu passa a saber o conto (uma geração depois de quem contou)
+  M.onStory = function (S, p, st, heard) {
+    const c = conto(S, st.conto), Sm = Sim();
+    if (!c || !p.contos) return;
+    const g = p.contos[c.id] || 0;
+    c.n++; c.last = S.t; S.stats.contados++;
+    if (g > 0) { S.stats.recontos++; if (S.rng.next() < C.CONTO_DERIVA) drift(S, c, p); }
+    for (const q of heard) {
+      const a = age(S, q);
+      if (a < 3) continue;
+      if (!q.contos || q.contos[c.id] === undefined) { (q.contos || (q.contos = {}))[c.id] = g + 1; if (g + 1 > c.gen) c.gen = g + 1; }
+      if (c.tone < 0) { Gd().faith(S, q, C.CONTO_FE * 0.6); Sm.addMem(S, q, 'contoMedo'); } else Gd().faith(S, q, C.CONTO_FE * (c.tone > 0 ? 1 : 0.6));
+      if (Dz()) Dz().sinal(S, q, 'conto');
+      if (a < C.CRIADO_AGE && c.tone && !q.criado) { const o = q.ouviu || (q.ouviu = [0, 0]); o[c.tone < 0 ? 0 : 1]++; }
+    }
+    if (S.stats.contados === 1) Sm.chron(S, 'Pela primeira vez, ' + p.name + ' contou ao pé do fogo um feito de ' + Dz().call(S) + ': “' + TITULO[c.k](c) + '”.');
+  };
+  // para a tela "O que contam de você"
+  M.contosInfo = function (S) {
+    const m = S.memoria;
+    if (!m) return [];
+    return m.contos.slice().sort((a, b) => b.t - a.t).map((c) => {
+      const s = sabem(S, c), g = s.length ? Math.min.apply(null, s.map((p) => p.contos[c.id])) : c.gen;
+      const best = s.length ? Math.max.apply(null, s.map((p) => p.contos[c.id])) : c.gen;
+      return { id: c.id, titulo: TITULO[c.k](c), conta: tell(S, c, best), fato: FATO[c.k](c), quando: Sim().dateText(c.t), n: c.n, sabem: s.length, viram: s.filter((p) => p.contos[c.id] === 0).length,
+        gen: best, tone: c.tone, mag: c.mag, perdido: !s.length, minGen: g };
+    });
+  };
+  // no fim da infância (CRIADO_AGE), os contos que a criança ouviu deixam marca
+  function criar(S, p) {
+    const o = p.ouviu || [0, 0];
+    delete p.ouviu;
+    p.criado = o[0] >= C.CRIADO_MIN && o[0] >= o[1] * 1.5 ? 'temente' : o[1] >= C.CRIADO_MIN && o[1] >= o[0] * 1.5 ? 'confiante' : 'livre';
+    if (p.criado === 'livre') return;
+    S.stats.criados = (S.stats.criados || 0) + 1;
+    if (S.stats.criados === 1) Sim().chron(S, p.name + ' cresceu entre contos de ' + (p.criado === 'temente' ? 'medo, e ficou temente a ' : 'cuidado, e ficou confiante em ') + Dz().call(S) + '. O que a criança vê e ouve de ' + Dz().call(S) + ' fica nela.');
+  }
+  // para Deus: a fé de quem foi criado nos contos
+  M.feAlvo = (p, base) => (p.criado === 'temente' ? Math.max(base, C.TEMENTE_FE) : p.criado === 'confiante' ? base + C.CONFIANTE_FE : base);
+
+  // ---------- a erva-do-sonho e o rito ----------
+  const wet = (w, x, y) => { for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (G.IS_WATER[w.tile[(y + dy) * w.W + x + dx]]) return true; return false; };
+  // os canteiros saem do mundo e do acampamento: sempre os mesmos, sem mexer no sorteio do jogo
+  function ervaSpots(S) {
+    const w = S.world, e = S.memoria.erva;
+    if (!e.spots) {
+      const find = (needWet) => {
+        const cand = [];
+        for (let y = 3; y < w.H - 3; y++) for (let x = 3; x < w.W - 3; x++) {
+          const i = y * w.W + x;
+          if (w.tile[i] !== G.T.FOREST || Wd().objAt(w, i) || w.bgrid[i] >= 0) continue;
+          const d = Math.hypot(x - S.camp.x, y - S.camp.y);
+          if (d < C.ERVA_DIST[0] || d > C.ERVA_DIST[1] || (needWet && !wet(w, x, y))) continue;
+          cand.push([x, y, d + G.hash2(x, y, S.seed) * 8]);
+        }
+        cand.sort((a, b) => a[2] - b[2]);
+        const out = [];
+        for (const c of cand) { if (out.length >= C.ERVA_SPOTS) break; if (out.every((s) => Math.hypot(s[0] - c[0], s[1] - c[1]) >= 8)) out.push([c[0], c[1]]); }
+        return out;
+      };
+      e.spots = find(true);
+      if (!e.spots.length) e.spots = find(false);
+    }
+    for (const s of e.spots) { const i = s[1] * w.W + s[0], o = Wd().objAt(w, i); if (!o) Wd().addObj(w, 'erva', s[0], s[1], {}); }
+  }
+  function discover(S, p) {
+    const m = S.memoria, e = m.erva, D = Dz().call(S);
+    e.known = S.t;
+    Sim().chron(S, p.name + ' achou na mata uma erva de cheiro forte, que ninguém conhecia. Mascou uma folha e passou a noite conversando com ' + D + '. O povo chamou de erva-do-sonho.');
+    Sim().addMem(S, p, 'viagem');
+    // o jogador decide o que o rito vai ser (sem resposta em um dia, o povo segue por conta própria)
+    m.pend.push({ k: 'erva', pid: p.id, t: S.t, until: S.t + DAY });
+    ev(S, { ev: 'pend' });
+  }
+  function ervaHourly(S) {
+    const e = S.memoria.erva;
+    if (e.known || !e.spots || !e.spots.length || !Dz() || Dz().level(S) < C.ERVA_LV) return;
+    if (S.people.filter((p) => apto(S, p)).length < C.RITO_MIN_POP) return;   // ainda não há gente para a roda
+    for (const p of S.people) {
+      if (!p.alive || p.carriedBy || age(S, p) < 14) continue;
+      for (const s of e.spots) if (Math.hypot(p.x - s[0] - 0.5, p.y - s[1] - 0.5) <= C.ERVA_VER) { discover(S, p); return; }
+    }
+    // ninguém passa por lá: depois de um tempo, alguém que anda longe acaba achando
+    if (!e.wait) e.wait = S.t;
+    if (S.t - e.wait < C.ERVA_ACASO_D * DAY) return;
+    const who = S.people.filter((p) => p.alive && !p.carriedBy && age(S, p) >= ADULTO).sort((a, b) => ((b.skills && b.skills.caca) || 0) - ((a.skills && a.skills.caca) || 0) || a.id - b.id)[0];
+    if (who) discover(S, who);
+  }
+  // o jogador muda a lei do rito: abençoado, livre ou proibido
+  M.setLei = function (S, lei) {
+    const m = S.memoria, e = m.erva, D = Dz().call(S), Sm = Sim();
+    if (!e.known || ['bencao', 'livre', 'proibido'].indexOf(lei) < 0 || e.lei === lei) return false;
+    const antes = e.lei;
+    e.lei = lei;
+    if (lei === 'bencao') { Gd().align(S, 3); Sm.chron(S, D + ' abençoou o rito da erva-do-sonho: quem senta na roda sai com mais fé.'); }
+    else if (lei === 'proibido') {
+      Gd().align(S, -3);
+      e.rite = null; e.hoje = -1;
+      Sm.chron(S, D + ' proibiu a erva-do-sonho. Ninguém mais colhe.');
+      for (const p of S.people) if (p.alive && (p.rito || 0) >= C.RITO_APEGO) Sm.addMem(S, p, 'semRito');
+    } else if (antes) Sm.toast(S, 'O rito da erva-do-sonho fica por conta do povo.', '');
+    return true;
+  };
+  // quem conduz: o profeta, se houver; senão, o adulto mais velho com alguma fé
+  function condutor(S, ok) {
+    return ok.find((p) => p.escolhido && p.escolhido.power === 'palavra') || ok.filter((p) => p.fe >= 30).sort((a, b) => a.born - b.born || a.id - b.id)[0] || null;
+  }
+  function riteTick(S) {
+    const m = S.memoria, e = m.erva, h = hourOf(S), day = S.ck.day, N = G.Narr, H0 = C.RITO_H[0];
+    if (!e.known || e.lei === 'proibido' || (m.pend[0] && m.pend[0].k === 'erva')) { e.rite = null; return; }
+    const adia = () => { e.rite = null; e.hoje = -1; e.last = S.t - (C.RITO_GAP_D - 3) * DAY; };   // fica para daqui a três dias
+    if (e.rite && e.rite.on) {
+      if (h >= C.RITO_H[1] || h < H0) endRite(S);
+      else if (!e.rite.asked && S.t - e.rite.t0 >= 45) ask(S);
+      return;
+    }
+    if (h === 7 && e.hoje !== day && S.t - e.last >= C.RITO_GAP_D * DAY) {
+      // hoje tem rito? só em dia calmo, sem morto por enterrar, sem festa, com fogo e gente bastante
+      const calm = !(N && (N.beastsOut(S) || N.is(S, 'nevasca') || N.is(S, 'tempestade'))) && !m.corpos.length && !(S.life && S.life.party) && !(S.ck.season === 2 && S.ck.dos === C.SEASON_DAYS);
+      const fire = S.buildings.some((b) => b.type === 'fogueira' && b.built);
+      const ok = calm && fire ? S.people.filter((p) => apto(S, p)) : [];
+      const c = ok.length >= C.RITO_MIN_POP ? condutor(S, ok) : null;
+      if (c) {
+        // quem conduz convida: os de mais fé primeiro, com um pouco de acaso (às vezes um cético senta na roda)
+        const rest2 = ok.filter((p) => p !== c).sort((a, b) => (b.fe + G.hash2(b.id, day, S.seed) * 50) - (a.fe + G.hash2(a.id, day, S.seed) * 50) || a.id - b.id);
+        e.hoje = day; e.cond = c.id; e.conv = [c.id].concat(rest2.slice(0, C.RITO_MAX - 1).map((p) => p.id));
+      }
+    }
+    if (e.hoje !== day) return;
+    // duas horas antes, com a erva colhida, a roda fica marcada e os convidados vêm vindo
+    if (!e.rite && h >= H0 - 2 && h < H0 && e.tem === day) {
+      const f = Lf().campFire(S, true);
+      if (f) e.rite = { t0: Math.floor(S.t / DAY) * DAY + H0 * 60, fire: f.id, part: (e.conv || []).slice(), fez: 0, asked: false, on: false };
+    }
+    // os convidados largam o trabalho e vêm (quem come, bebe ou dorme termina primeiro)
+    if (e.rite && !e.rite.on && h < H0 && G.AI) {
+      for (const id of e.rite.part) {
+        const p = person(S, id), a = p && p.act;
+        if (a && M.canRite(S, p) && (G.AI.WORK.indexOf(a.type) >= 0 || a.type === 'vagar' || a.type === 'conversar')) G.AI.abort(S, p);
+      }
+    }
+    if (h === H0) {
+      if (!e.rite || S.precip || !Sim().building(S, e.rite.fire)) { adia(); return; }   // sem erva, sem fogo ou com chuva
+      e.rite.on = true; e.rite.t0 = S.t;
+      ev(S, { ev: 'rito', on: true });
+    } else if (h > H0 && e.rite && !e.rite.on) adia();
+  }
+  // cada um que ficou até o fim da roda
+  function viajou(S, p) {
+    const e = S.memoria.erva, Sm = Sim();
+    if (!p.rito) p.ritoD = S.t;
+    p.rito = (p.rito || 0) + 1; p.ritoT = S.t; p.ritoDia = S.ck.day;
+    p.ressaca = S.t + C.RITO_RESSACA_H * 60;
+    const apego = p.rito >= C.RITO_APEGO;
+    const ruim = S.rng.next() < C.RITO_RUIM[apego ? 1 : 0];
+    Sm.addMem(S, p, ruim ? 'visaoRuim' : 'viagem');
+    if (ruim) p.needs.saude = Math.max(5, p.needs.saude - C.RITO_SAUDE);
+    if (apego) p.needs.saude = Math.max(5, p.needs.saude - C.RITO_APEGO_SAUDE);
+    Gd().faith(S, p, C.RITO_FE + (e.lei === 'bencao' ? 1 : 0));
+    if (Dz()) Dz().sinal(S, p, 'rito');
+    if (e.rite) e.rite.fez++;
+  }
+  function endRite(S) {
+    const m = S.memoria, e = m.erva, r = e.rite, Sm = Sim();
+    e.rite = null; e.last = S.t; e.hoje = -1;
+    ev(S, { ev: 'rito', on: false });
+    if (!r || r.fez < 2) return;
+    S.stats.ritos++;
+    // a roda abre a cabeça: um pouco de prática para o que o povo está perto de descobrir
+    const open = G.Tech && G.Tech.open(S), c = person(S, e.cond);
+    if (open && G.Tech.need) G.Tech.addPractice(S, open, G.Tech.need(open) * C.RITO_SABER, c && c.alive ? c : null);
+    if (S.stats.ritos === 1) Sm.chron(S, 'De noite, ao pé do fogo, ' + r.fez + ' adultos sentaram em roda com a erva-do-sonho. Viram coisas, riram, choraram. Amanhã vão acordar devagar. Foi o primeiro rito.');
+  }
+
+  // ---------- a pergunta e as três respostas ----------
+  // fe: a fé de quem estava na roda · al: como o povo te vê · mem: a lembrança que fica · fx: o que mais acontece
+  const Q = {
+    morte: { q: (c) => 'Para onde foi ' + c.m + '?', a: [
+      { t: 'Está comigo.', tone: 1, fe: 3, al: 10, fx: 'luto' },
+      { t: 'Voltou para a terra, e a terra é de vocês.', tone: 0, fe: 1, mem: 'aceitou' },
+      { t: 'Isso não se pergunta.', tone: -1, fe: 2, al: -15, mem: 'temeu' }] },
+    fome: { q: () => 'Vai faltar comida?', a: [
+      { t: 'Não vai faltar.', tone: 1, fe: 2, al: 8, mem: 'promessa', fx: 'prom:fome' },
+      { t: 'Guardem mais do que comem.', tone: 0, fe: 1, fx: 'zelo:comida' },
+      { t: 'Quem trabalha, come.', tone: -1, fe: 2, al: -12, mem: 'temeu', fx: 'zelo:tudo' }] },
+    fera: { q: () => 'A fera vai voltar?', a: [
+      { t: 'Eu vigio por vocês.', tone: 1, fe: 2, al: 8, mem: 'promessa', fx: 'prom:fera' },
+      { t: 'Fiquem perto do fogo.', tone: 0, fe: 1, mem: 'aceitou' },
+      { t: 'A fera também é minha.', tone: -1, fe: 2, al: -12, mem: 'temeu' }] },
+    inverno: { q: () => 'O inverno vai ser duro?', a: [
+      { t: 'Eu aqueço vocês.', tone: 1, fe: 2, al: 8, mem: 'promessa', fx: 'prom:frio' },
+      { t: 'Juntem lenha enquanto é tempo.', tone: 0, fe: 1, fx: 'zelo:lenha' },
+      { t: 'O frio também é meu.', tone: -1, fe: 2, al: -12, mem: 'temeu' }] },
+    povos: { q: (c) => (c.fora ? 'A gente, que veio de longe, também é teu?' : 'Os que vieram de fora também são teus?'), a: [
+      { t: 'Todos são meus.', tone: 1, fe: 1, al: 8, fx: 'conv:3' },
+      { t: 'Vocês que se entendam.', tone: 0, fe: -1 },
+      { t: 'Os primeiros são os primeiros.', tone: -1, fe: 1, al: -10, fx: 'conv:-3' }] },
+    duvida: { q: () => 'Você existe mesmo, ou é só a fumaça?', a: [
+      { t: 'Olhe a sua mão. Fui eu que fiz.', tone: 1, fe: 2, al: 6, fx: 'sinal:3' },
+      { t: 'Acredite no que você vê.', tone: 0, fe: 0, mem: 'aceitou', fx: 'sinal:1' },
+      { t: 'Escute o trovão.', tone: -1, fe: 3, al: -12, mem: 'temeu', fx: 'trovao' }] },
+    filhos: { q: () => 'Meus filhos vão viver mais do que eu?', a: [
+      { t: 'Vão, e os filhos deles também.', tone: 1, fe: 3, al: 8, mem: 'promessa' },
+      { t: 'Depende do que vocês fizerem hoje.', tone: 0, fe: 1, fx: 'zelo:tudo' },
+      { t: 'Não queira saber.', tone: -1, fe: 2, al: -12, mem: 'temeu' }] },
+    depois: { q: () => 'O que tem depois da morte?', a: [
+      { t: 'Tem eu, esperando.', tone: 1, fe: 3, al: 8, mem: 'emPaz' },
+      { t: 'Tem a lembrança de quem fica.', tone: 0, fe: 1, mem: 'aceitou' },
+      { t: 'Nada que seja da sua conta.', tone: -1, fe: 2, al: -15, mem: 'temeu' }] },
+    porque: { q: () => 'Por que você fez a gente?', a: [
+      { t: 'Para não ficar só.', tone: 1, fe: 3, al: 10 },
+      { t: 'Para ver o que vocês fazem.', tone: 0, fe: 1, fx: 'saber' },
+      { t: 'Para me servir.', tone: -1, fe: 2, al: -15, mem: 'temeu', fx: 'zelo:tudo' }] },
+    querer: { q: () => 'O que você quer de nós?', a: [
+      { t: 'Que cuidem uns dos outros.', tone: 1, fe: 2, al: 10, mem: 'aceitou' },
+      { t: 'Que aprendam.', tone: 0, fe: 1, fx: 'saber' },
+      { t: 'Que me obedeçam.', tone: -1, fe: 2, al: -15, mem: 'temeu', fx: 'zelo:tudo' }] },
+  };
+  M.Q = Q;
+  // a pergunta sai do que a aldeia está vivendo; não repete a última se houver outra. part: quem está na roda
+  M.pickQ = function (S, part) {
+    const e = S.memoria.erva, N = G.Narr, c = [];
+    const recent = S.people.filter((p) => !p.alive && S.t - p.diedAt < 30 * DAY).sort((a, b) => b.diedAt - a.diedAt)[0];
+    if (recent) c.push({ q: 'morte', who: part.find((p) => kinIds(S, recent).has(p.id)) || null, c: { m: recent.name } });
+    if (S.ctx && S.ctx.foodDays < 10) c.push({ q: 'fome' });
+    if (S.ck.season === 2) c.push({ q: 'inverno' });   // no outono, o medo é o inverno
+    if ((N && N.beastsOut(S)) || S.people.some((p) => !p.alive && S.t - p.diedAt < 30 * DAY && (p.cause === 'lobos' || p.cause === 'onca' || p.cause === 'jacare' || p.cause === 'bicho'))) c.push({ q: 'fera' });
+    if (S.povos && S.povos.mixed && Pv()) {
+      let low = 100;
+      for (const k in S.povos.conv) low = Math.min(low, S.povos.conv[k]);
+      const fora = part.find((p) => p.povo && p.povo !== 'meio'), hum = part.find((p) => !p.povo);
+      if (low < 60 && (fora || hum)) c.push({ q: 'povos', who: (S.ck.day % 2 && fora) || hum || fora });
+    }
+    const cet = part.find((p) => has(p, 'Cético'));
+    if (cet) c.push({ q: 'duvida', who: cet });
+    const pai = part.find((p) => Fam().childrenOf(S, p).some((k) => k.alive && age(S, k) < 12));
+    if (pai) c.push({ q: 'filhos', who: pai });
+    const velho = part.find((p) => Fam().stage(S, p) === 'idoso');
+    if (velho) c.push({ q: 'depois', who: velho });
+    c.push({ q: 'porque' }, { q: 'querer' });   // as de sempre, uma de cada vez
+    const pick = c.find((x) => x.q !== e.lastQ) || c[0];
+    const who = pick.who || part.slice().sort((a, b) => b.fe - a.fe || a.id - b.id)[0];
+    return { q: pick.q, who, c: pick.q === 'povos' ? { fora: !!who.povo } : pick.c || {} };
+  };
+  function ask(S) {
+    const m = S.memoria, r = m.erva.rite;
+    // só pergunta quem já está sentado na roda (ou já esteve); com menos de dois, espera a hora seguinte
+    const part = r.part.map((id) => person(S, id)).filter((p) => p && p.alive && (p.ritoDia === S.ck.day || (p.act && p.act.type === 'memoria' && p.act.m && p.act.m.k === 'rito' && p.act.stage === 'stay')));
+    if (part.length < 2) return;
+    r.asked = true;
+    if (S.t - (m.erva.lastAsk || -1e9) < C.VISAO_GAP_D * DAY) return;   // desta vez a roda só vê coisas na fumaça
+    m.erva.lastAsk = S.t;
+    const k = M.pickQ(S, part);
+    const pd = { k: 'visao', q: k.q, pid: k.who.id, part: part.map((p) => p.id), c: k.c, t: S.t, until: S.t + C.VISAO_ESPERA_H * 60 };
+    m.pend.push(pd);
+    Sim().say(S, k.who, Q[pd.q].q(pd.c), true, 'god');
+    ev(S, { ev: 'pend' });
+  }
+  // o que mais uma resposta faz
+  function fx(S, f, pd, part, who) {
+    const m = S.memoria, Sm = Sim();
+    if (!f) return;
+    const [k, v] = f.split(':');
+    if (k === 'luto') { for (const p of S.people) if (p.alive) for (const x of p.mem) if (GRIEF[x.k]) x.until = Math.max(S.t + DAY, x.until - 15 * DAY); }
+    else if (k === 'prom') {
+      // a promessa do frio vale até o fim do inverno que vem
+      const fimInverno = (Math.floor(S.t / (DAY * C.YEAR_DAYS)) + 1) * DAY * C.YEAR_DAYS;
+      m.prom = m.prom.filter((x) => x.k !== v);
+      m.prom.push({ k: v, t: S.t, until: v === 'frio' ? fimInverno : S.t + C.PROMESSA_D * DAY });
+    }
+    else if (k === 'zelo') m.zelo = { k: v, until: S.t + (v === 'tudo' ? C.ZELO_TUDO_D : C.ZELO_COMIDA_D) * DAY };
+    else if (k === 'conv') { if (Pv() && Pv().shift) Pv().shift(S, +v); }
+    else if (k === 'sinal') { if (who && Dz()) for (let i = 0; i < +v; i++) Dz().sinal(S, who, 'visao'); }
+    else if (k === 'trovao') { const f0 = S.memoria.erva.rite && Sm.building(S, S.memoria.erva.rite.fire); S.events.push({ k: 'bolt', x: f0 ? f0.x + 3 : S.camp.x, y: f0 ? f0.y - 2 : S.camp.y, far: 1 }); for (const p of part) Sm.addMem(S, p, 'viuRaio'); }
+    else if (k === 'saber') { const open = G.Tech && G.Tech.open(S); if (open && G.Tech.need) G.Tech.addPractice(S, open, G.Tech.need(open) * C.RITO_SABER, who || null); }
+  }
+  M.pending = (S) => (S.memoria && S.memoria.pend && S.memoria.pend[0]) || null;
+  // o que a janela mostra: título, a fala, as três respostas (e o silêncio)
+  M.pendingInfo = function (S) {
+    const pd = M.pending(S);
+    if (!pd) return null;
+    const who = person(S, pd.pid), D = Dz().call(S), nm = who ? who.name : 'Alguém';
+    if (pd.k === 'erva') return { k: 'erva', icon: 'erva', title: 'A erva-do-sonho', lead: nm + ' achou na mata uma erva que faz sonhar acordado. O povo quer sentar em roda com ela, à noite, para falar com ' + D + '. Só os adultos. O que você diz?',
+      opts: ['Abençoar o rito: quem senta na roda sai com mais fé.', 'Deixar com eles: o povo faz o rito quando quiser.', 'Proibir: ninguém colhe a erva.'], quiet: '' };
+    return { k: 'visao', icon: 'visao', title: 'Uma pergunta na fumaça', lead: 'No meio do rito, ' + nm + ' olha para cima e pergunta: “' + Q[pd.q].q(pd.c) + '”', opts: Q[pd.q].a.map((x) => x.t), quiet: 'Ficar em silêncio' };
+  };
+  // a resposta do jogador (0, 1 ou 2); qualquer outra coisa é o silêncio
+  M.answer = function (S, i) {
+    const m = S.memoria, pd = m && m.pend[0], Sm = Sim();
+    if (!pd) return false;
+    m.pend.shift();
+    if (pd.k === 'erva') { M.setLei(S, ['bencao', 'livre', 'proibido'][i] || 'livre'); return true; }
+    const part = pd.part.map((id) => person(S, id)).filter((p) => p && p.alive), who = person(S, pd.pid), D = Dz().call(S);
+    m.erva.lastQ = pd.q;
+    const A = i === 0 || i === 1 || i === 2 ? Q[pd.q].a[i] : null;
+    if (!A) {
+      // o silêncio: quem perguntou fica sem resposta, e a fé da roda esfria um pouco
+      if (who && who.alive) Sm.addMem(S, who, 'semResposta');
+      for (const p of part) Gd().faith(S, p, -2);
+      if (!S.safe) Sm.toast(S, (who ? who.name : 'Alguém') + ' perguntou na fumaça, e ' + D + ' ficou em silêncio.', 'warn');
+      return true;
+    }
+    for (const p of part) {
+      if (A.fe) Gd().faith(S, p, A.fe);
+      if (A.mem) Sm.addMem(S, p, A.mem);
+      if (Dz()) Dz().sinal(S, p, 'visao');
+    }
+    if (A.al) Gd().align(S, A.al);
+    fx(S, A.fx, pd, part, who);
+    S.stats.respostas++;
+    M.deed(S, 'visao', { a: who ? who.name : 'alguém', sx: who ? who.sex : 'M', r: A.t, tone: A.tone });
+    Sm.toast(S, D + ' respondeu a ' + (who ? who.name : 'quem perguntou') + ': “' + A.t + '”', A.tone < 0 ? 'warn' : 'good');
+    if (S.stats.respostas === 1) Sm.chron(S, 'No rito, ' + (who ? who.name : 'alguém') + ' perguntou: “' + Q[pd.q].q(pd.c) + '” E ' + D + ' respondeu: “' + A.t + '” Foi a primeira vez que o povo ouviu uma resposta.');
+    ev(S, { ev: 'resposta', tone: A.tone });
+    return true;
+  };
+  // promessa feita no rito: cumprida, a fé sobe; quebrada, cai, e vira conto
+  function promises(S) {
+    const m = S.memoria, Sm = Sim(), D = Dz().call(S);
+    for (const pr of m.prom.slice()) {
+      let broken = false;
+      if (pr.k === 'fome') broken = S.people.some((p) => p.alive && !p.carriedBy && p.needs.fome < 8);   // alguém passando fome de verdade
+      else if (pr.k === 'fera') broken = S.people.some((p) => !p.alive && p.diedAt > pr.t && (p.cause === 'lobos' || p.cause === 'onca' || p.cause === 'jacare' || p.cause === 'bicho'));
+      else if (pr.k === 'frio') broken = S.people.some((p) => !p.alive && p.diedAt > pr.t && p.cause === 'frio');
+      if (!broken && S.t < pr.until) continue;
+      m.prom.splice(m.prom.indexOf(pr), 1);
+      const txt = pr.k === 'fome' ? 'que não ia faltar comida' : pr.k === 'frio' ? 'que ia aquecer o povo no inverno' : 'que ia vigiar contra a fera';
+      for (const p of S.people) {
+        if (!p.alive || age(S, p) < 7) continue;
+        Gd().faith(S, p, broken ? -C.PROMESSA_QUEBRA : C.PROMESSA_FE);
+        if (broken) Sm.addMem(S, p, 'promessaQuebrada');
+      }
+      if (broken) { Gd().align(S, -10); Sm.chron(S, D + ' prometeu ' + txt + (pr.k === 'fome' ? ', e faltou.' : pr.k === 'frio' ? ', e o frio levou gente.' : ', e a fera levou gente.') + ' O povo não esquece.'); }
+      else Sm.toast(S, D + ' prometeu ' + txt + ', e cumpriu. A fé do povo cresce.', 'good');
+      M.deed(S, 'promessa', { r: broken ? 0 : 1, tone: broken ? -1 : 1 });
+    }
+  }
+
+  // ---------- hora e dia ----------
+  M.hourly = function (S) {
+    const m = S.memoria;
+    if (!m) return;
+    bodies(S);
+    if (rest(S)) {
+      // jogo fechado: a pergunta fica sem resposta, o rito e o dia dos mortos não acontecem
+      while (m.pend.length) M.answer(S, -1);
+      m.erva.rite = null; m.fin.on = false; m.fin.foi = null;
+      return;
+    }
+    while (m.pend.length && S.t >= m.pend[0].until) M.answer(S, -1);
+    if (m.calou) { M.deed(S, 'silencio', m.calou); m.calou = null; }
+    ervaHourly(S);
+    riteTick(S);
+    finados(S);
+  };
+  M.daily = function (S) {
+    const m = S.memoria;
+    if (!m) return;
+    if (m.zelo && m.zelo.until <= S.t) m.zelo = null;
+    for (const p of S.people) {
+      if (!p.alive) continue;
+      // o costume do rito esfria com o tempo; quem se apegou sente falta
+      if (p.rito && S.t - (p.ritoD || p.ritoT || 0) > C.RITO_ESQUECE_D * DAY) { p.rito--; p.ritoD = S.t; if (!p.rito) { delete p.rito; delete p.ritoT; delete p.ritoD; } }
+      if ((p.rito || 0) >= C.RITO_APEGO && S.t - (p.ritoT || 0) > C.RITO_FALTA_D * DAY && !rest(S)) Sim().addMem(S, p, 'semRito');
+      if (p.ouviu && !p.criado && age(S, p) >= C.CRIADO_AGE) criar(S, p);
+    }
+    if (rest(S)) return;
+    flagVisits(S);
+    if (m.prom.length) promises(S);
+  };
+
+  // ---------- obra, metas, interface ----------
+  M.onBuilt = function (S, b) {
+    if (b.type !== 'cemiterio') return false;
+    const m = S.memoria, Sm = Sim();
+    if (!m.cem || !Sm.building(S, m.cem)) m.cem = b.id;
+    if ((b.lv || 1) >= 2) Sm.chron(S, 'O cemitério ganhou cerca e portal. Quem vem lembrar os seus se consola mais.');
+    else if (b.auto) Sm.chron(S, 'O povo separou um canto para os seus mortos, ' + lado(S, b) + ' da aldeia. É ali que vão abrir as covas.');
+    else Sm.chron(S, 'O povo marcou o lugar do cemitério, ' + lado(S, b) + ' da aldeia.');
+    return true;
+  };
+  function lado(S, b) {
+    const dx = b.x - S.camp.x, dy = b.y - S.camp.y;
+    return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'a leste' : 'a oeste') : dy > 0 ? 'ao sul' : 'ao norte';
+  }
+  const CAUSA = { frio: 'de frio', sede: 'de sede', fome: 'de fome', raio: 'de um raio', parto: 'no parto', velhice: 'de velhice', lobos: 'no ataque dos lobos', onca: 'no ataque da onça', jacare: 'no ataque de um jacaré', bicho: 'atacado por um bicho' };
+  // o que a cova mostra ao toque
+  M.graveInfo = function (S, o) {
+    const d = (o.pid && person(S, o.pid)) || S.people.find((p) => !p.alive && p.name === o.name && !p.corpo) || null;
+    const out = { name: o.name, antiga: !o.pid, flores: !!(o.fl && o.fl > S.t), oferenda: !!(o.of && o.of > S.t), rito: o.r ? o.r.split('').map((l) => RITO_NOME[l]).filter(Boolean) : [], velado: !!o.vel, laje: !!o.laje };
+    if (!d) return out;
+    const Y = DAY * C.YEAR_DAYS, y0 = Math.floor(d.born / Y) + 1, y1 = Math.floor(d.diedAt / Y) + 1;
+    out.pid = d.id; out.sex = d.sex; out.povo = Pv() ? Pv().label(d) : '';
+    out.de = y0; out.ate = y1; out.anos = Math.floor((d.diedAt - d.born) / Y);
+    out.causa = (CAUSA[d.cause] || '').replace('atacado', 'atacad' + oa(d));
+    out.kin = [...kinIds(S, d)].map((id) => person(S, id)).filter((q) => q && q.alive).map((q) => q.name);
+    const line = S.chron.find((c) => Math.abs(c.t - d.diedAt) < 2 && c.text.indexOf(d.name) === 0);
+    out.cron = line ? line.text : '';
+    return out;
+  };
+  // quem está enterrado (mais novo primeiro), para o painel do cemitério
+  M.buried = (S) => graves(S).slice().sort((a, b) => (b.t || 0) - (a.t || 0)).map((o) => M.graveInfo(S, o));
+  // o estado do corpo de quem morreu (para a ficha)
+  M.bodyText = function (S, d) {
+    const c = d.corpo;
+    if (c) return c.st === 0 ? 'Ninguém achou ainda' : c.by ? 'Sendo levad' + oa(d) : c.st === 1 ? 'Espera quem ' + oa(d) + ' leve para junto do fogo' : c.fim ? 'Espera o enterro' : 'No velório, ao pé do fogo';
+    if (d.cova) return 'Enterrad' + oa(d) + (cemB(S) ? ' no cemitério' : '');
+    return d.semCova ? 'Sem cova' : '';
+  };
+  // o rito numa frase (para a aba de Deus)
+  M.ritoInfo = function (S) {
+    const m = S.memoria, e = m.erva;
+    if (!e.known) return { known: false };
+    const falta = Math.max(0, Math.ceil((C.RITO_GAP_D * DAY - (S.t - e.last)) / DAY));
+    return { known: true, lei: e.lei || 'livre', ritos: S.stats.ritos, respostas: S.stats.respostas, on: !!e.rite, hoje: e.hoje === S.ck.day, falta, apegados: S.people.filter((p) => p.alive && (p.rito || 0) >= C.RITO_APEGO).length,
+      prom: m.prom.map((x) => ({ k: x.k, dias: Math.max(0, Math.ceil((x.until - S.t) / DAY)) })) };
+  };
+  M.missions = function (phase) {
+    if (phase === 2) return [{ id: 'm_conto', text: 'Ouça o povo contar um feito seu', opt: true, reward: 6, done: false }];
+    if (phase === 3) return [
+      { id: 'm_velar', text: 'Veja o povo velar quem partiu', opt: true, reward: 6, done: false },
+      { id: 'm_flores', text: 'Veja alguém levar flores a uma cova', opt: true, reward: 5, done: false }];
+    if (phase === 4) return [
+      { id: 'm_rito', text: 'Responda a uma pergunta do rito', opt: true, reward: 8, done: false },
+      { id: 'm_finados', text: 'Passe um dia dos mortos com o povo', opt: true, reward: 8, done: false },
+      { id: 'm_reconto', text: 'Veja um conto ser contado por quem não viu', opt: true, reward: 8, done: false }];
+    return [];
+  };
+  M.goalTest = {
+    m_conto: (S) => (S.stats.contados || 0) > 0,
+    m_velar: (S) => (S.stats.velorios || 0) > 0,
+    m_flores: (S) => (S.stats.visitas || 0) > 0,
+    m_rito: (S) => (S.stats.respostas || 0) > 0,
+    m_finados: (S) => (S.stats.finados || 0) > 0,
+    m_reconto: (S) => (S.stats.recontos || 0) > 0,
+  };
+})(globalThis.G = globalThis.G || {});
+
 /* ---- js/save.js ---- */
 /* Gods · save: seed + o que mudou. O mundo é regerado pela seed ao carregar. */
 (function (G) {
@@ -12616,6 +13914,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (out.party && out.party.on) out.party = null;
     return out;
   }
+  // a Memória vai inteira, menos o rito e o dia dos mortos em andamento (recomeçam do zero ao abrir)
+  function packMem(m) {
+    const out = Object.assign({}, m);
+    out.erva = Object.assign({}, m.erva, { rite: null });
+    out.fin = { year: m.fin.year || 0, velas: m.fin.velas || 0, day: m.fin.day || 0 };
+    return out;
+  }
   Save.serialize = function (S) {
     const w = S.world, objs = [], extra = [], holy = [];
     for (let i = 0; i < w.objs.length; i++) {
@@ -12623,7 +13928,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       if (i < w.genCount) {
         const c = CODE[o.k] !== undefined ? CODE[o.k] : 0;
         objs.push(c, c === 2 ? (o.regrow || 0) : c === 3 ? o.ch : c === 4 ? o.fruit : 0, c === 4 ? Math.round(o.grow * 100) : 0);
-      } else if (o.k === 'grave') extra.push({ x: o.x, y: o.y, name: o.name });
+      } else if (o.k === 'grave') {
+        // Etapa 13: a cova guarda quem é, quando foi, o rito e as flores
+        const g = { x: o.x, y: o.y, name: o.name };
+        for (const f of ['pid', 't', 'r', 'vel', 'laje', 'fl', 'of']) if (o[f]) g[f] = o[f];
+        extra.push(g);
+      }
       else if (o.k === 'bush' && o.holy) holy.push([o.x, o.y, o.v || 0, o.fruit, Math.round(o.grow * 100)]);   // as árvores de Deus (Etapa 11)
     }
     const people = S.people.map((p) => {
@@ -12643,6 +13953,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       goalsPhase: S.goalsPhase || 1, era: S.era || '', famInit: !!S.famInit, savedAt: G.Net ? G.Net.now() : Date.now(),
       hist: S.hist ? { day: S.hist.day, s: S.hist.s, n: S.hist.n } : null,   // a memória da aldeia (0.12), para o jogo fechado
       povos: S.povos || null,   // Etapa 12: a convivência e as caravanas
+      memoria: G.Memoria && S.memoria ? packMem(S.memoria) : null,   // Etapa 13: corpos, contos, a erva e o rito
     };
   };
 
@@ -12660,7 +13971,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       else if (k === 'bush') { o.fruit = a; o.grow = b / 100; }
       G.W.refreshBlock(w, o.y * w.W + o.x);
     }
-    for (const g of d.graves || []) G.W.addObj(w, 'grave', g.x, g.y, { name: g.name });
+    for (const g of d.graves || []) { const o = G.W.addObj(w, 'grave', g.x, g.y, { name: g.name }); for (const f of ['pid', 't', 'r', 'vel', 'laje', 'fl', 'of']) if (g[f]) o[f] = g[f]; }
     for (const h of d.holy || []) { const o = G.W.addObj(w, 'bush', h[0], h[1], { v: h[2], fruit: h[3], grow: h[4] / 100, holy: 1 }); G.W.refreshBlock(w, h[1] * w.W + h[0]); }
     for (const b of d.buildings) {
       for (let dy = 0; dy < b.h; dy++) for (let dx = 0; dx < b.w; dx++) {
@@ -12679,6 +13990,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       goalsPhase: d.goalsPhase || 1, era: d.era || '', famInit: !!d.famInit,
       hist: d.hist ? { day: -2, s: d.hist.s || [null, null, null, null], n: d.hist.n || [0, 0, 0, 0] } : null,
       povos: d.povos || null,
+      memoria: d.memoria || null,
     };
     for (const p of S.people) {
       p.path = null; p.pathI = 0; p.act = null; p.px = p.x; p.py = p.y; p.fail = {}; p.stuck = false;
@@ -14877,6 +16189,15 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     return (statueCache[key] = fromRows(rows, map).canvas());
   };
   const iconCache = {};
+  // Etapa 13: ícones da Memória
+  ICONS.cemiterio = [['kkkkkkkkkk', 'kWWWWWWWWk', '.kk.YY.kk.', '.kw.YY.kw.', '.kw....kw.', '.kw....kw.', '.kw....kw.', '.kw....kw.', 'dddddddddd', '.dddddddd.'], { k: P.bark, W: P.tan, w: P.wood, Y: P.gold, d: '#6b4a36' }];
+  ICONS.cova = [['....kk....', '...kYYk...', '...kYYk...', '....kk....', '....ww....', '....ww....', '..kkwwkk..', '.kddddddk.', 'kddddddddk', '.kkkkkkkk.'], { k: P.ink2, Y: P.gold, w: P.wood, d: P.bark }];
+  ICONS.vela = [['....Y.....', '...YYY....', '...YoY....', '....o.....', '...kwwk...', '...kwwk...', '...kwwk...', '...kwwk...', '..kkwwkk..', '..kkkkkk..'], { Y: P.yellow, o: P.ember, w: P.parch, k: P.ink2 }];
+  ICONS.flor = [['..........', '..pp..yy..', '.pPPpyYYy.', '.pPPpyYYy.', '..pp..yy..', '...g..g...', '...gg.g...', '....ggg...', '....gg....', '....g.....'], { p: P.rose, P: '#ffd6e0', y: P.gold, Y: P.yellow, g: P.green }];
+  ICONS.conto = [['..........', '.kkkkkkkk.', 'kppppppppk', 'kpkkkpkkpk', 'kppppppppk', 'kpkkpkkkpk', 'kppppppppk', '.kkkkppkk.', '.....kpk..', '......k...'], { k: P.ink2, p: P.parch }];
+  ICONS.erva = [['....v.....', '.g..g..v..', '.gG.g.g...', '..gGgGg.v.', '.v.gGGg.g.', '..ggGGgg..', '...gGGg...', '....GG....', '....GG....', '...kkkk...'], { g: '#4fa88a', G: '#2f7a6a', v: '#b58be0', k: P.bark }];
+  ICONS.rito = [['...v......', '..v.v..v..', '...v..v.v.', '..v....v..', '...v.v....', '....YY....', '...YooY...', '..kYooYk..', '.kbbbbbbk.', '..kkkkkk..'], { v: '#b58be0', Y: P.yellow, o: P.ember, b: P.bark, k: P.ink2 }];
+  ICONS.visao = [['....Y.....', '.Y..Y..Y..', '..........', '..kkkkkk..', '.kWWvvWWk.', 'kWWvKKvWWk', '.kWWvvWWk.', '..kkkkkk..', '..........', '.Y..Y..Y..'], { k: P.ink2, W: P.white, v: '#b58be0', K: P.ink, Y: P.gold }];
   A.icon = function (name) {
     if (iconCache[name]) return iconCache[name];
     if (name.indexOf('cria:') === 0) return (iconCache[name] = criaIcon(name.slice(5)));   // bicho de criação (Etapa 10)
@@ -15101,6 +16422,63 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   });
 
   // ---------- construção de todos os sprites ----------
+  // ---------- Etapa 13: Memória ----------
+  // a cova de cada povo (10 x 11, do tamanho do túmulo antigo): o marco de madeira com o sinal de Deus, a muda que o
+  // elfo planta, a laje do anão (sem pedra no estoque, um monte de pedra solta) e o mastro de chifre e pena do povo-fera
+  const COVA_MAP = { k: P.ink2, w: P.wood, W: P.tan, Y: P.gold, d: P.bark, D: '#5a3028', g: P.green, L: P.leaf, b: P.bark, s: '#8f98ac', S: '#b9c1d0', x: '#676e84', o: P.silver, r: P.red, R: P.wine };
+  function cova(kind) {
+    const rows = {
+      h: ['....kk....', '...kYYk...', '...kYYk...', '....kk....', '....wW....', '...kwWk...', '....wW....', '....wW....', '.kddwWddk.', 'kdDddddDdk', '.kkkkkkkk.'],
+      e: ['..........', '.....L....', '....LgL...', '.....gL...', '....Lg....', '.....b....', '.....b....', '.....b....', '.kddbbddk.', 'kdDddddDdk', '.kkkkkkkk.'],
+      a: ['..........', '..........', '...kkkk...', '..kSssSk..', '.kSssssSk.', '.kssxxssk.', '.kssxxssk.', '.kSssssSk.', 'kkkkkkkkkk', 'kdDddddDdk', '.kkkkkkkk.'],
+      a0: ['..........', '..........', '..........', '....kk....', '...kSsk...', '..kksskk..', '.kSskxSsk.', 'kssxkssxsk', 'kkkkkkkkkk', 'kdDddddDdk', '.kkkkkkkk.'],
+      f: ['.o......o.', '.oo....oo.', '..okwWko..', '...kwWk.r.', '....wW.rR.', '....wW.r..', '....wW....', '....wW....', '.kddwWddk.', 'kdDddddDdk', '.kkkkkkkk.'],
+    }[kind];
+    return fromRows(rows, COVA_MAP).canvas();
+  }
+  // a árvore que o elfo plantou, já crescida (12 x 15): copa redonda em cima do montinho
+  function covaArvore() {
+    return fromRows(['....kkkk....', '..kkLLLLkk..', '.kLLLgLLLLk.', 'kLLgLLLLgLLk', 'kLLLLLgLLLLk', 'kgLLLLLLLLgk', '.kLLgLLLgLk.', '..kkLLLLkk..', '....kbbk....', '.....bb.....', '.....bb.....', '.....bb.....', '..kddbbddk..', '.kdDddddDdk.', '..kkkkkkkk..'], COVA_MAP).canvas();
+  }
+  // as flores ao pé da cova, a fruta de oferenda, a vela (dois quadros da chama) e o corpo enrolado na esteira
+  function florCova() { return fromRows(['.p.y.', 'pgygp', '.g.g.'], { p: P.rose, y: P.yellow, g: P.leaf }).canvas(); }
+  function ofertaCova() { return fromRows(['.g.', 'rRr', '.r.'], { g: P.leaf, r: P.red, R: P.rose }).canvas(); }
+  function velaCova(f) { return fromRows(f ? ['.Y.', '.o.', '.w.', '.w.', 'kwk'] : ['Y..', '.o.', '.w.', '.w.', 'kwk'], { Y: P.yellow, o: P.ember, w: P.parch, k: P.ink2 }).canvas(); }
+  function corpoEsteira() {
+    return fromRows(['..kkkkkkkkkk..', '.kppppPpppppk.', 'kppPppkppkpPpk', '.kppppPpppppk.', 'mMmmMmmmMmmMmm', '.mmMmmmMmmmMm.'], { k: P.ink2, p: P.parch, P: P.tan, m: P.gourd, M: '#a8824e' }).canvas();
+  }
+  // a erva-do-sonho (10 x 9): folha fina, verde-azulada, com flor miúda lilás
+  function ervaSonho() {
+    return fromRows(['....v.....', '.g..g..v..', '.gG.g.g...', '..gGgGg.v.', '.v.gGGg.g.', '..ggGGgg..', '...gGGg...', '....GG....', '..kkkkkk..'], { g: '#4fa88a', G: '#2f7a6a', v: '#b58be0', k: 'rgba(24,20,37,0.25)' }).canvas();
+  }
+  // o marco do cemitério (32 x 30): o portal de madeira com o sinal de Deus pendurado
+  function portalCem(b, x0, x1, y0) {
+    for (let y = y0 + 2; y <= 27; y++) for (const x of [x0, x1]) { b.set(x, y, PLANK[1]); b.set(x + 1, y, PLANK[3]); b.set(x + 2, y, PLANK[2]); }
+    for (let x = x0 - 3; x <= x1 + 5; x++) { b.set(x, y0, PLANK[0]); b.set(x, y0 + 1, PLANK[4]); b.set(x, y0 + 2, PLANK[3]); b.set(x, y0 + 3, PLANK[1]); }
+    const cx = Math.round((x0 + x1 + 2) / 2);
+    b.set(cx, y0 + 4, PLANK[0]);
+    stamp(b, ['.k.', 'kYk', 'YWY', 'kYk', '.k.'], { k: PLANK[0], Y: P.gold, W: P.yellow }, cx - 1, y0 + 5);
+    stamp(b, ['.kk.', 'kSsk'], { k: '#2a2c3a', S: '#b9c1d0', s: '#8f98ac' }, x0 - 1, 26);
+    stamp(b, ['.kk.', 'ksSk'], { k: '#2a2c3a', S: '#b9c1d0', s: '#8f98ac' }, x1 - 1, 26);
+    for (let x = x0 - 4; x <= x1 + 6; x++) b.set(x, 28, x % 3 ? '#6b4a36' : '#5a3d2c');
+  }
+  function cemiterio1() {
+    const b = new Buf(32, 30);
+    portalCem(b, 8, 21, 7);
+    return b.canvas();
+  }
+  // cercado: portal mais alto, com cumeeira, duas lanternas e o começo da cerca de cada lado
+  function cemiterio2() {
+    const b = new Buf(32, 30);
+    portalCem(b, 8, 21, 7);
+    line(b, 4, 6, 15, 1, PLANK[1]); line(b, 16, 1, 27, 6, PLANK[1]);
+    line(b, 4, 5, 15, 0, PLANK[4]); line(b, 16, 0, 27, 5, PLANK[4]);
+    for (const x of [6, 25]) stamp(b, ['.k.', 'kYk', 'kYk', '.k.'], { k: P.ink2, Y: P.yellow }, x - 1, 12);
+    for (const x of [0, 2, 4, 27, 29, 31]) { for (let y = 21; y <= 27; y++) b.set(x, y, y === 21 ? PLANK[4] : PLANK[2]); }
+    for (const x of [1, 3, 28, 30]) { b.set(x, 23, PLANK[3]); b.set(x, 26, PLANK[1]); }
+    return b.canvas();
+  }
+
   A.build = function () {
     const S = A.spr = {};
     S.broad = [0, 1, 2, 3].map((s) => [0, 1, 2].map((v) => broadTree(v, s)));
@@ -15123,6 +16501,10 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     // Etapa 12: a ferraria (com ourives no nível 2) e a mina (três níveis), e as marcas de demolir e de mudar de lugar
     S.shop.ferraria = [null, ferraria1(), ferraria2()];
     S.shop.mina = [null, mina1(), mina2(), mina3()];
+    // Etapa 13: as covas de cada povo, as flores, a oferenda, a vela, o corpo na esteira, a erva e o marco do cemitério
+    S.cova = { h: cova('h'), e: cova('e'), a: cova('a'), a0: cova('a0'), f: cova('f'), arv: covaArvore() };
+    S.florCova = florCova(); S.ofertaCova = ofertaCova(); S.velaCova = [velaCova(0), velaCova(1)]; S.corpo = corpoEsteira(); S.erva = ervaSonho();
+    S.shop.cemiterio = [null, cemiterio1(), cemiterio2()];
     S.demolir = markDemolir(); S.mover = markMover();
     S.bench = { h: benchH(), v: benchV() };
     S.mat = mat();
@@ -15477,6 +16859,16 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       for (let i = 0; i < 12; i++) spawn({ x: e.x * TS + 8 + (Math.random() - 0.5) * 8, y: e.y * TS + 8, vx: (Math.random() - 0.5) * 14, vy: -18 - Math.random() * 22, g: -4, life: 0.9 + Math.random() * 0.6, col: Math.random() < 0.5 ? '#feae34' : '#fee761' });
       return;
     }
+    if (e.k === 'memoria') {
+      // Etapa 13: a terra da cova, as pétalas de quem visita, a fumaça que responde
+      if (e.ev === 'enterro') for (let i = 0; i < 12; i++) spawn({ x: e.x * TS + 8 + (Math.random() - 0.5) * 12, y: e.y * TS + 10, vx: (Math.random() - 0.5) * 16, vy: -8 - Math.random() * 12, g: 40, life: 0.8, col: Math.random() < 0.6 ? '#6b4a36' : '#8a6a4a' });
+      else if (e.ev === 'flores') for (let i = 0; i < 7; i++) spawn({ x: e.x * TS + 8 + (Math.random() - 0.5) * 12, y: e.y * TS + 6, vx: (Math.random() - 0.5) * 8, vy: -6 - Math.random() * 8, g: 6, life: 1.4 + Math.random() * 0.6, col: ['#f6757a', '#fee761', '#ffffff'][i % 3] });
+      else if (e.ev === 'resposta' && e.x !== undefined) {
+        const col = e.tone > 0 ? '#fee761' : e.tone < 0 ? '#e43b44' : '#b58be0';
+        for (let i = 0; i < 32; i++) spawn({ x: e.x * TS + 8 + (Math.random() - 0.5) * 14, y: e.y * TS + 4 - Math.random() * 6, vx: (Math.random() - 0.5) * 10, vy: -14 - Math.random() * 24, g: 0, life: 1.4 + Math.random() * 1.4, col: Math.random() < 0.3 ? '#ffffff' : col });
+      }
+      return;
+    }
     if (e.k === 'fell') {
       for (let i = 0; i < 10; i++) spawn({ x: e.x * TS + 8 + (Math.random() - 0.5) * 10, y: e.y * TS + 2, vx: (Math.random() - 0.5) * 20, vy: -10 - Math.random() * 20, g: 40, life: 1.2, col: Math.random() < 0.6 ? '#3e8948' : '#733e39' });
     } else if (e.k === 'splash') {
@@ -15620,6 +17012,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (S && S.god) drawAuras(S, now);
     // lista ordenada por y
     const list = [], fence = S ? w.fence : null;
+    const levado = {};
     for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
       if (fence && fence[ty * w.W + tx]) list.push({ y: ty * TS + 13, fe: ty * w.W + tx });   // cercas (Etapa 10)
       const oi = w.objGrid[ty * w.W + tx];
@@ -15640,6 +17033,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         if (!p.alive || p.inTent || p.carriedBy) continue;
         const x = U.lerp(p.px, p.x, alpha), y = U.lerp(p.py, p.y, alpha);
         list.push({ y: y * TS + 4, p, x, y });
+      }
+      // Etapa 13: quem morreu e espera o enterro (no chão, na esteira do velório, ou no ombro de quem leva)
+      if (S.memoria && S.memoria.corpos.length) for (const id of S.memoria.corpos) {
+        const d = G.Family.person(S, id), c = d && d.corpo;
+        if (!c || !G.Sim.isSeen(S, Math.floor(d.x), Math.floor(d.y))) continue;
+        if (c.by) levado[c.by] = d; else list.push({ y: d.y * TS + 2, corpo: d });
       }
       // bichos: só onde o povo já viu (a paca de dia fica na toca)
       if (S.fauna) for (const e of S.fauna.ents) {
@@ -15666,13 +17065,20 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     list.sort((a, b) => a.y - b.y);
     const snow = season === 3;
     for (const it of list) {
-      if (it.o) drawObj(it.o, season, snow, sc < 1);
+      if (it.o) drawObj(it.o, season, snow, sc < 1, S, now);
+      else if (it.corpo) drawCorpo(it.corpo, now);
       else if (it.b) drawBuilding(S, it.b, now, it.row, it.part);
       else if (it.e) drawEnt(S, it.e, it.x, it.y, now);
       else if (it.c) drawBicho(it.c, it.x, it.y, now);
       else if (it.fe !== undefined) drawFence(S, it.fe, snow);
       else if (it.cr) drawCria(S, it.cr, it.x, it.y);
-      else drawPerson(S, it.p, it.x, it.y, now);
+      else { drawPerson(S, it.p, it.x, it.y, now); if (levado[it.p.id]) blit(A.spr.corpo, it.x * TS - 7, it.y * TS - 15); }
+    }
+    // Etapa 13: a fumaça do rito sobe do fogo, lilás e cinza
+    const rito = S && S.memoria && S.memoria.erva.rite;
+    if (rito && rito.on && Math.random() < 0.35) {
+      const f = G.Sim.building(S, rito.fire);
+      if (f) spawn({ x: (f.x + 0.5) * TS + (Math.random() - 0.5) * 10, y: (f.y + 0.2) * TS, vx: (Math.random() - 0.5) * 5, vy: -9, g: 0, life: 2.6, col: Math.random() < 0.5 ? 'rgba(181,139,224,0.55)' : 'rgba(192,203,220,0.4)' });
     }
     if (spears.length) drawSpears(now);
     // partículas
@@ -15900,7 +17306,30 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     for (let i = 0; i < Hd; i += seg * 2) { ctx.fillRect(X, Y + i, t, Math.min(seg, Hd - i)); ctx.fillRect(X + Wd - t, Y + i, t, Math.min(seg, Hd - i)); }
   }
 
-  function drawObj(o, season, snow, tiny) {
+  // Etapa 13: o corpo enrolado na esteira; no velório, uma vela de cada lado
+  function drawCorpo(d, now) {
+    const S = A.spr, wx = d.x * TS, wy = d.y * TS;
+    blit(S.corpo, wx - 7, wy - 3);
+    if (d.corpo.st === 2) {
+      const f = Math.floor(now / 260) % 2;
+      blit(S.velaCova[f], wx - 11, wy - 4); blit(S.velaCova[1 - f], wx + 8, wy - 4);
+    }
+  }
+  // o cemitério cercado: a cerca baixa dá a volta nas covas
+  function cercaCem(S, b) {
+    let x0 = b.x, y0 = b.y, x1 = b.x + 1, y1 = b.y + 1;
+    for (const o of G.Memoria.graves(S)) {
+      if (!o.pid || Math.abs(o.x - b.x) > 20 || Math.abs(o.y - b.y) > 20) continue;
+      x0 = Math.min(x0, o.x); y0 = Math.min(y0, o.y); x1 = Math.max(x1, o.x); y1 = Math.max(y1, o.y);
+    }
+    const X0 = x0 * TS - 6, Y0 = y0 * TS - 5, X1 = (x1 + 1) * TS + 5, Y1 = (y1 + 1) * TS + 4;
+    const post = (x, y) => { rect(x, y - 4, 2, 5, '#9a5e42'); rect(x, y - 4, 2, 1, '#d49a6a'); };
+    rect(X0, Y0 - 2, X1 - X0 + 1, 1, '#733e39'); rect(X0, Y1 - 2, X1 - X0 + 1, 1, '#733e39');
+    rect(X0, Y0 - 2, 1, Y1 - Y0, '#733e39'); rect(X1, Y0 - 2, 1, Y1 - Y0, '#733e39');
+    for (let x = X0; x <= X1; x += 8) { post(x, Y0); post(x, Y1); }
+    for (let y = Y0 + 8; y < Y1; y += 8) { post(X0, y); post(X1 - 1, y); }
+  }
+  function drawObj(o, season, snow, tiny, st, now) {
     const bx = o.x * TS, by = o.y * TS;
     const S = A.spr;
     switch (o.k) {
@@ -15925,7 +17354,20 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         blit(img, bx + 8 - img.width / 2, by + 14 - img.height);
         break;
       }
-      case 'grave': blit(S.grave, bx + 3, by + 3); break;
+      case 'grave': {
+        // Etapa 13: a cova de cada povo (a antiga, sem rito, segue com a lápide de sempre), flores, oferenda e vela
+        const r = o.r ? o.r.charAt(0) : '';
+        if (!r) blit(S.grave, bx + 3, by + 3);
+        else if (r === 'e' && st && st.t - o.t > G.CFG.ARVORE_COVA_D * G.CFG.DAY_MIN) blit(S.cova.arv, bx + 2, by - 1);
+        else blit(r === 'a' && !o.laje ? S.cova.a0 : S.cova[r] || S.cova.h, bx + 3, by + 3);
+        if (st && !tiny) {
+          if (o.fl > st.t) blit(S.florCova, bx + 1, by + 12);
+          if (o.of > st.t) blit(S.ofertaCova, bx + 11, by + 12);
+          if (st.memoria && (st.memoria.fin.velas || 0) > st.t) blit(S.velaCova[Math.floor((now || 0) / 260 + o.id) % 2], bx + 12, by + 8);
+        }
+        break;
+      }
+      case 'erva': if (!tiny) blit(S.erva, bx + 3, by + 5); break;
     }
   }
 
@@ -16156,6 +17598,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   function drawShop(S, S2, b, bx, by, ghost, lv, now) {
     const imgs = S2.shop[b.type], img = imgs[Math.min(imgs.length - 1, lv)], top = by + 31 - img.height;
     blit(S2.bigShadow, bx + 5, by + 26, ghost ? 0.4 : undefined);
+    if (b.type === 'cemiterio' && !ghost && lv >= 2 && G.Memoria) cercaCem(S, b);   // Etapa 13
     blit(img, bx, top, ghost ? 0.45 : undefined);
     if (ghost) return;
     const st = S.stock, it = S2.item;
@@ -16331,7 +17774,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const swing = work ? Math.floor(now / 260) % 2 : 0;
     const drummer = a && a.type === 'festa' && S.life && S.life.party && S.life.party.drummer === p.id && !moving;   // Etapa 8
     const dance = a && a.type === 'festa' && a.stage === 'dance' && !moving && !drummer;
-    const dy = work && swing ? 1 : dance ? -((Math.floor(now / 170) + p.id) % 2) * 2 : 0;
+    const trance = a && a.type === 'memoria' && a.m && a.m.k === 'rito' && a.stage === 'stay' && !moving;   // Etapa 13: a roda balança devagar
+    const dy = work && swing ? 1 : dance ? -((Math.floor(now / 170) + p.id) % 2) * 2 : trance ? (Math.floor(now / 520) + p.id) % 2 : 0;
     const img = sheet.sheet;
     const sx = frame * fw, sy = p.dir * fh, top = kid ? wy - 7 : wy - 10;
     ctx.drawImage(img, sx, sy, fw, fh, Math.round((wx - fw / 2) * sc + ox), Math.round((top + dy) * sc + oy), Math.round(fw * sc), Math.round(fh * sc));
@@ -16359,6 +17803,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       const hy = top - 2 + dy + Math.round(Math.sin(now / 400) * 0.5);
       rect(wx - 2, hy, 4, 1, col); rect(wx - 3, hy + 1, 1, 1, col); rect(wx + 2, hy + 1, 1, 1, col);
     }
+    // Etapa 13: a vela de quem vela e de quem lembra os mortos, as flores de quem visita, a fumaça na cabeça de quem está na roda
+    if (a && a.type === 'memoria' && a.m && !moving && p.dir !== 1) {
+      const mk = a.m.k, hx = p.dir === 3 ? wx - 4 : wx + 3;
+      if ((mk === 'velar' || mk === 'finados') && a.stage === 'stay') { rect(hx, top + 6, 1, 2, '#ead4aa'); rect(hx, top + 5, 1, 1, (Math.floor(now / 200) + p.id) % 2 ? '#fee761' : '#feae34'); }
+      else if (mk === 'cova' && a.stage === 'stay') { rect(hx, top + 6, 1, 2, '#3e8948'); rect(hx, top + 5, 1, 1, ['#f6757a', '#fee761', '#ffffff'][p.id % 3]); }
+    }
+    if (trance && Math.random() < 0.04) spawn({ x: wx + (Math.random() - 0.5) * 6, y: top - 1, vx: (Math.random() - 0.5) * 3, vy: -6, g: 0, life: 1.4, col: 'rgba(181,139,224,0.7)' });
     if (a && a.type === 'rezar' && a.stage === 'pray' && Math.random() < 0.03) spawn({ x: wx + (Math.random() - 0.5) * 6, y: top + 2, vx: 0, vy: -9, g: 0, life: 1, col: '#fee761' });
     if (a && a.type === 'curar' && a.stage === 'heal' && Math.random() < 0.2) spawn({ x: wx + (Math.random() - 0.5) * 10, y: top + 6, vx: (Math.random() - 0.5) * 4, vy: -7, g: 0, life: 0.9, col: '#9be070' });
     if (work && S.god && S.god.blessings && S.god.blessings.length && G.Deus && G.Deus.blessAt(S, p.x, p.y) > 1 && Math.random() < 0.05) spawn({ x: wx + (Math.random() - 0.5) * 8, y: top + 4, vx: 0, vy: -8, g: 0, life: 0.8, col: '#fee761' });
@@ -16664,6 +18115,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (G.Deus && S.god && S.god.pending) for (const L of G.Deus.lights(S)) {
       const cx = (L.x * TS * sc + ox) / 4, cy = (L.y * TS * sc + oy) / 4, r = L.r * TS * sc / 4;
       for (const [f, al] of [[1.0, 0.3], [0.7, 0.6], [0.4, 0.9]]) { lctx.fillStyle = 'rgba(0,0,0,' + al + ')'; lctx.beginPath(); lctx.arc(cx, cy, r * f, 0, Math.PI * 2); lctx.fill(); }
+    }
+    // Etapa 13: as velas do velório e as das covas na noite do dia dos mortos
+    if (G.Memoria && S.memoria && (S.memoria.corpos.length || (S.memoria.fin.velas || 0) > S.t)) for (const L of G.Memoria.lights(S)) {
+      const fl = 1 + Math.sin(now / 110 + L.x * 7) * 0.07;
+      const cx = (L.x * TS * sc + ox) / 4, cy = (L.y * TS * sc + oy) / 4, r = L.r * TS * sc * fl / 4;
+      for (const [f, al] of [[1.0, 0.25], [0.55, 0.6]]) { lctx.fillStyle = 'rgba(0,0,0,' + al + ')'; lctx.beginPath(); lctx.arc(cx, cy, r * f, 0, Math.PI * 2); lctx.fill(); }
     }
     for (const b of fires) {
       const fl = 1 + Math.sin(now / 90 + b.id) * 0.04 + Math.sin(now / 37) * 0.02;
@@ -16999,6 +18456,17 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     oferenda(t, o, v) { bell(hz(84), t, 0.11 * v, o, 1.8); bell(hz(91), t + 0.2, 0.09 * v, o, 2.2); noise(t + 0.1, 0.8, 'highpass', 8000, 1, 0.2, 0.05 * v, o); return 2.4; },
     uniao(t, o, v) { pad([hz(60), hz(64), hz(67), hz(72)], t, 2.2, 0.1 * v, o, 2200); [72, 76, 79, 84].forEach((m, i) => bell(hz(m), t + 0.3 + i * 0.18, 0.1 * v, o, 1.8)); return 3; },
     sino(t, o, v) { bell(hz(88), t, 0.08 * v, o, 0.8); bell(hz(88), t + 0.22, 0.07 * v, o, 0.8); bell(hz(91), t + 0.44, 0.06 * v, o, 1); return 1.4; },
+    // Etapa 13: o velório (dois sinos graves), a terra da cova, as flores, o dia dos mortos, o rito e a pergunta na fumaça
+    velorio(t, o, v) { bell(hz(50), t, 0.2 * v, o, 3.6); bell(hz(50), t + 1.5, 0.15 * v, o, 3.6); pad([hz(50), hz(57)], t, 3.8, 0.05 * v, o, 1200); return 5.2; },
+    enterro(t, o, v) { SFX.cavar(t, o, v); SFX.cavar(t + 0.4, o, v * 0.8); SFX.cavar(t + 0.8, o, v * 0.6); bell(hz(57), t + 1.2, 0.13 * v, o, 3); return 4.2; },
+    flores(t, o, v) { pluck(hz(76), t, 0.6, 0.1 * v, o); pluck(hz(79), t + 0.15, 0.7, 0.09 * v, o); pluck(hz(83), t + 0.32, 0.9, 0.08 * v, o); return 1.3; },
+    finados(t, o, v) { [57, 60, 64, 67].forEach((m, i) => bell(hz(m), t + i * 0.75, 0.13 * v, o, 3)); pad([hz(45), hz(52), hz(57)], t, 4.2, 0.06 * v, o, 1400); return 5.4; },
+    rito(t, o, v) { pad([hz(43), hz(50), hz(55)], t, 3.8, 0.09 * v, o, 900); [62, 65, 67, 65, 62].forEach((m, i) => flute(hz(m), t + 0.4 + i * 0.5, 0.45, 0.07 * v, o)); return 4.2; },
+    visao(t, o, v) { tone('sine', hz(69), t, 0.3, 1.6, 0.08 * v, o, hz(81)); [81, 84, 88].forEach((m, i) => bell(hz(m), t + 0.5 + i * 0.18, 0.08 * v, o, 2)); noise(t + 0.2, 1.4, 'highpass', 6000, 1, 0.4, 0.04 * v, o); return 2.8; },
+    respBoa(t, o, v) { pad([hz(60), hz(64), hz(67)], t, 2.4, 0.08 * v, o, 2200); [72, 76, 79, 84].forEach((m, i) => bell(hz(m), t + 0.2 + i * 0.16, 0.1 * v, o, 2)); return 3; },
+    respMeio(t, o, v) { pad([hz(57), hz(62), hz(69)], t, 2.2, 0.07 * v, o, 1800); bell(hz(74), t + 0.3, 0.1 * v, o, 2); bell(hz(69), t + 0.7, 0.08 * v, o, 2); return 2.8; },
+    respMedo(t, o, v) { bell(hz(45), t, 0.2 * v, o, 3.2); bell(hz(51), t + 0.5, 0.13 * v, o, 3); noise(t, 1.6, 'lowpass', 400, 1, 0.3, 0.16 * v, o, 120); return 3.6; },
+    conto(t, o, v) { [62, 67, 69, 74].forEach((m, i) => pluck(hz(m), t + i * 0.17, 0.7, 0.12 * v, o)); return 1.5; },
   };
   function bandOut(o, f, q) { const b = ctx.createBiquadFilter(); b.type = 'bandpass'; b.frequency.value = f; b.Q.value = q; b.connect(o); return b; }
   function crackle(t, o, v) { noise(t, 0.012 + Math.random() * 0.02, 'highpass', 2000 + Math.random() * 3000, 1, 0.001, (0.1 + Math.random() * 0.25) * v, o); }
@@ -17081,7 +18549,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const p = place(x, y);
     if (p.g < 0.04) return;
     lastPlay[name] = now;
-    const wet = { nivel: 0.6, dom: 0.5, ungir: 0.5, converte: 0.5, consagrar: 0.6, criar: 0.6, saber: 0.6, bencao: 0.4, nascimento: 0.5, morte: 0.6, descoberta: 0.4, era: 0.5, cura: 0.5, revelacao: 0.6, oracao: 0.5, atendida: 0.4, obrigado: 0.4, uivo: 0.5, lua: 0.5, canto: 0.4, arcoiris: 0.5, estrela: 0.4, esturro: 0.45 }[name] || 0.1;
+    const wet = { nivel: 0.6, dom: 0.5, ungir: 0.5, converte: 0.5, consagrar: 0.6, criar: 0.6, saber: 0.6, bencao: 0.4, nascimento: 0.5, morte: 0.6, descoberta: 0.4, era: 0.5, cura: 0.5, revelacao: 0.6, oracao: 0.5, atendida: 0.4, obrigado: 0.4, uivo: 0.5, lua: 0.5, canto: 0.4, arcoiris: 0.5, estrela: 0.4, esturro: 0.45, velorio: 0.6, enterro: 0.4, flores: 0.4, finados: 0.6, rito: 0.5, visao: 0.6, respBoa: 0.5, respMeio: 0.5, respMedo: 0.6, conto: 0.4 }[name] || 0.1;
     SFX[name](now + 0.02 + (delay || 0), out(bus.sfx, p.pan, wet), p.g * (vol === undefined ? 1 : vol));
   };
   A.ui = function (name) { if (name === 'click') A.sfx('clique'); };
@@ -17148,6 +18616,17 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       case 'upgrade': A.sfx('obra', e.x, e.y); break;
       case 'oferenda': A.sfx('oferenda'); break;   // Etapa 12
       case 'povo': A.sfx('atendida'); break;
+      case 'memoria':   // Etapa 13
+        if (e.ev === 'velorio') { if (e.on) A.sfx('velorio'); }
+        else if (e.ev === 'uivo') A.sfx('uivo');
+        else if (e.ev === 'enterro') A.sfx('enterro', e.x + 0.5, e.y + 0.5);
+        else if (e.ev === 'flores') A.sfx('flores', e.x + 0.5, e.y + 0.5);
+        else if (e.ev === 'finados') { if (e.on) A.sfx('finados'); }
+        else if (e.ev === 'rito') { if (e.on) A.sfx('rito'); }
+        else if (e.ev === 'pend') A.sfx('visao');
+        else if (e.ev === 'conto') A.sfx('conto');
+        else if (e.ev === 'resposta') A.sfx(e.tone > 0 ? 'respBoa' : e.tone < 0 ? 'respMedo' : 'respMeio');
+        break;
       case 'narr': if (e.on && e.ev === 'lobos') A.sfx('uivo'); else if (e.on && e.ev === 'mascate') A.sfx('sino'); else if (e.on && e.ev === 'povo') A.sfx('caravana'); else if (e.warn && (e.ev === 'nevasca' || e.ev === 'tempestade')) A.sfx('aviso'); break;
       // Etapa 10
       case 'harvest': A.sfx('colheita', e.x, e.y); break;
@@ -17579,6 +19058,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     m_ferraria: 'Com a metalurgia, Construir → Ferraria: 20 de pedra e 10 de madeira.',
     m_ferro: 'A forja pede 2 de minério e 1 de carvão, e alguém que saiba forjar: um anão, ou Ofício no nível 4.',
     m_ouro: 'O ouro só aparece na mina funda (nível 2) e na mina de veio (nível 3).',
+    // Etapa 13: memória
+    m_conto: 'Um milagre visto de perto vira conto, e quem viu conta nas noites de história. Veja em Deus → Memória.',
+    m_velar: 'Quem morre é levado para junto do fogo e velado à tardinha. De manhã, o povo enterra.',
+    m_flores: 'Nos dias depois do enterro, a família volta à cova com flores. Toque numa cova para ver de quem é.',
+    m_rito: 'No nível 2 de Deus, o povo acha a erva-do-sonho na mata. No rito, ao escurecer, alguém pergunta: responda.',
+    m_finados: 'No último dia do outono, à tarde, a aldeia vai ao cemitério com uma luz para cada cova.',
+    m_reconto: 'Quem só ouviu um conto passa adiante e muda um detalhe. Veja em Deus → Memória.',
   };
   // estoque: os cinco de sempre e os da Etapa 5, que aparecem quando existem
   const RES = [['madeira', 'madeira'], ['pedra', 'pedra'], ['argila', 'argila'], ['tabuas', 'tabuas'], ['fibra', 'fibra'], ['agua', 'agua'], ['frutas', 'frutas'], ['peixe', 'peixe'], ['carne', 'carne'],
@@ -17628,7 +19114,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     });
     // construir (as das descobertas aparecem com elas; o armazém, depois do primeiro inverno) e a ferramenta de caminho
     const builds = [['fogueira', 'fogo'], ['barraca', 'barraca'], ['armazem', 'armazem'], ['moquem', 'moquem'], ['jirau', 'jirau'], ['forno', 'forno'],
-      ['marcenaria', 'marcenaria'], ['tecelagem', 'tecelagem'], ['roca', 'roca'], ['curral', 'curral'], ['mina', 'mina'], ['ferraria', 'ferraria'], ['estatua', 'estatua']];
+      ['marcenaria', 'marcenaria'], ['tecelagem', 'tecelagem'], ['roca', 'roca'], ['curral', 'curral'], ['mina', 'mina'], ['ferraria', 'ferraria'], ['estatua', 'estatua'], ['cemiterio', 'cemiterio']];
     const SHORT = { barraca: 'Barraca', forno: 'Forno' };   // nome curto no botão (o painel fica em duas fileiras)
     $('#builds').innerHTML = builds.map(([t, icn]) => {
       const d = C.BUILD[t];
@@ -17668,7 +19154,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     });
     // Etapa 11: a janela de Deus (níveis e dons, escolhidos, grandes atos)
     $('#btn-deus img').src = ic('deus');
-    $('#btn-deus').addEventListener('click', () => { if (S && G.Deus && G.Deus.pending(S) && UI.hooks.godPending) UI.hooks.godPending(); else UI.deus(); });
+    $('#btn-deus').addEventListener('click', () => {
+      if (S && G.Deus && G.Deus.pending(S) && UI.hooks.godPending) UI.hooks.godPending();
+      else if (S && G.Memoria && G.Memoria.pending(S) && UI.hooks.memPending) UI.hooks.memPending();   // Etapa 13
+      else UI.deus();
+    });
     $('#deus-close').addEventListener('click', () => { $('#modal-deus').hidden = true; });
     $('#modal-deus').addEventListener('click', (e) => {
       if (e.target === $('#modal-deus')) { $('#modal-deus').hidden = true; return; }
@@ -17724,6 +19214,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         if (kid) UI.birth(kid, null, true);
       }
       if (b.dataset.act === 'ungir') UI.deus('escolhidos');   // Etapa 11
+      if (b.dataset.act === 'vercova') {   // Etapa 13: a câmera vai até a cova (ou até onde o corpo espera)
+        const d = S.people.find((q) => q.id === UI.sel.person);
+        if (d && d.cova) UI.hooks.center((d.cova[0] + 0.5) * C.TILE, (d.cova[1] + 0.5) * C.TILE);
+        else if (d && d.corpo) UI.hooks.center(d.x * C.TILE, d.y * C.TILE);
+      }
     });
     // a obra escolhida no mapa tem painel próprio (a evolução, remover, o que plantar)
     $('#obra-close').addEventListener('click', () => UI.select(0, 0));
@@ -17774,6 +19269,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         return;
       }
       if (b.dataset.act === 'back') UI.select(0, 0);
+      if (b.dataset.act === 'pessoa') { if (+b.dataset.pid) UI.select(+b.dataset.pid, 0); return; }   // Etapa 13: do cemitério para a ficha
       if (b.dataset.act === 'consagrar' && G.Deus) {
         // Etapa 11: o milagre próprio da estátua
         const why = G.Deus.consecrateWhy(S, bd, b.dataset.k);
@@ -17909,7 +19405,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     $('#menu-offline').value = String(S.opts && S.opts.offline !== undefined ? S.opts.offline : C.OFFLINE_RATE_DEFAULT);
     { const t = ['leve', 'picante', 'adulto'][G.Family.tom(S)]; $('#menu-tom').value = t; $('#tom-desc').textContent = TOM_DESC[t]; }
     UI.sel = { person: 0, building: 0 };
-    lastInsp = ''; listSig = '';
+    lastInsp = ''; listSig = ''; contoKey = ''; covaKey = '';
     // mundo novo: a lista e a ficha começam do zero (a busca e a ordem são da sessão, e ficam)
     cards.clear(); $('#people').innerHTML = ''; selCard = 0; inspPid = 0;
     for (const k of TRANSIENT) UI.toggle(k, false, true);
@@ -18055,7 +19551,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       }
       if (b.dataset.tool) { b.classList.toggle('on', !!(UI.hooks.roading && UI.hooks.roading())); return; }
       const d = C.BUILD[b.dataset.build];
-      const open = G.Tech.buildOpen(S, b.dataset.build);
+      // Etapa 13: o cemitério aparece depois do primeiro inverno ou da primeira morte, e some quando já há um (o povo só usa um)
+      const open = G.Tech.buildOpen(S, b.dataset.build) && (b.dataset.build !== 'cemiterio' || !G.Memoria || !S.memoria || (!G.Memoria.cemetery(S) && (S.stats.winters >= 1 || S.stats.lastDeathAt > 0 || S.memoria.corpos.length > 0)));
       if (b.hidden === open) b.hidden = !open;
       b.classList.toggle('on', UI.hooks.placing() === b.dataset.build);
       b.querySelectorAll('[data-c]').forEach((s) => s.classList.toggle('lack', S.stock[s.dataset.c] < d.cost[s.dataset.c]));
@@ -18188,7 +19685,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       setText($('#deus-title'), g.name || 'Deus');
       setText($('#deus-sub'), (g.name ? g.epithet + ' · ' : '') + def.name + ', nível ' + lv);
       setText($('#deus-next'), nx ? 'Nível ' + (lv + 1) + ': glória ' + fmtN(g.glory) + '/' + fmtN(nx.glory) + ' · fiéis ' + Dz.fieis(S) + '/' + nx.fieis : 'Níveis, dons e grandes atos');
-      const bd2 = $('#badge-dom'), pend = !!Dz.pending(S);
+      const bd2 = $('#badge-dom'), pend = !!Dz.pending(S) || !!(G.Memoria && G.Memoria.pending(S));
       if (bd2.hidden === pend) bd2.hidden = !pend;
       $('#btn-deus').classList.toggle('pend', pend);
     }
@@ -18283,10 +19780,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       // família, as habilidades, as lembranças e a última conversa
       const blocos = {
         faz: `<p class="small">${p.alive ? esc(AI.describe(S, p)) + ' · ' + feel(p.tempHere) : esc(AI.describe(S, p)) + '.'}</p>`,
+        cova: covaHTML(p),   // Etapa 13: o corpo, a cova, quem volta com flores
         estado: state ? `<p class="small preg">${esc(state)}</p>` : '',
         deus: godLine,
+        rito: ritoLine(p),
         reza: p.prayer ? `<p class="story">Reza: “${esc(p.prayer.text)}”</p>` : '',
-        tracos: `<div class="chips">${p.traits.map((t) => `<span class="chip" title="${esc(Sim.TRAIT_DESC[t])}">${esc(t)}</span>`).join('')}</div>`,
+        tracos: `<div class="chips">${p.traits.map((t) => `<span class="chip" title="${esc(Sim.TRAIT_DESC[t])}">${esc(t)}</span>`).join('')}${criadoChip(p)}</div>`,
         povo: povoChips(p),   // Etapa 12: o povo da pessoa e os dons dela
         posses: p.alive ? gear(p) : '',
         barras: p.alive ? `<div class="needs">${needs}</div>` : '',
@@ -18294,6 +19793,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         nome: p.alive && (p.mother || p.father) && F.age(S, p) < 3 ? '<div class="chips"><button class="btn btn-small" data-act="rename">Dar outro nome</button></div>' : '',
         saberes: p.carriedBy || !skills ? '' : sec('Habilidades', `<div class="kv">${skills}</div>`),
         lembrancas: mems ? sec('Lembranças', `<ul class="mems">${mems}</ul>`) : '',
+        contos: contosPessoa(p),
         conversa: talk,
       };
       let box = el.firstElementChild;
@@ -18356,7 +19856,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       </div>`;
     }
     const st = el.querySelector('#bstatus'); if (st) st.textContent = buildingStatus(b, d, job);
-    const ex = el.querySelector('#bextra'); if (ex) setHTML(ex, b.built ? (b.type === 'estatua' ? estatuaHTML(b) : campoHTML(b)) : '');
+    const ex = el.querySelector('#bextra'); if (ex) setHTML(ex, b.built ? (b.type === 'estatua' ? estatuaHTML(b) : b.type === 'cemiterio' ? cemHTML() : campoHTML(b)) : '');
   }
   function costText(cost) {
     const parts = Object.keys(cost || {}).map((k) => cost[k] + ' de ' + (MAT_WORD[k] || k));
@@ -18380,6 +19880,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     }
     if (b.type === 'roca' && G.Campo) return rocaStatus(b);
     if (b.type === 'estatua' && G.Deus) return estatuaStatus(b);
+    if (b.type === 'cemiterio') return G.Memoria && S.memoria ? cemStatus(b, d) : '';   // Etapa 13
     if (b.type === 'curral' && G.Campo) return curralStatus(b, d);
     const f = d.fire;
     if (b.type === 'fogueira') return (b.fuel > 0 ? 'Acesa · lenha ' + b.fuel.toFixed(1) + '/' + C.FIRE_CAP : 'Apagada · o povo reacende quando esfriar') +
@@ -18573,7 +20074,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     document.querySelectorAll('#modal-deus [data-gtab]').forEach((b) => { b.classList.toggle('on', b.dataset.gtab === deusTab); b.setAttribute('aria-selected', b.dataset.gtab === deusTab ? 'true' : 'false'); });
     $('#deus-mtitle').textContent = g.name ? g.name + ', ' + g.epithet : 'Deus';
     $('#deus-poder').textContent = fmtN(g.poder) + ' de Poder · glória ' + fmtN(g.glory);
-    $('#deus-body').innerHTML = deusTab === 'escolhidos' ? escolhidosHTML(Dz, g) : deusTab === 'atos' ? atosHTML(Dz, g) : deusTab === 'povos' && G.Povos ? povosHTML(Dz, g) : nivelHTML(Dz, g);
+    $('#deus-body').innerHTML = deusTab === 'escolhidos' ? escolhidosHTML(Dz, g) : deusTab === 'atos' ? atosHTML(Dz, g) : deusTab === 'povos' && G.Povos ? povosHTML(Dz, g) : deusTab === 'memoria' && G.Memoria && S.memoria ? memoriaHTML(Dz) : nivelHTML(Dz, g);
     $('#modal-deus').hidden = false;
   };
   // Etapa 12: os povos (quem são, os dons, a convivência entre eles) e o chamado de Deus
@@ -18667,10 +20168,182 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       <h3>Espécie nova <span class="small muted">· nível ${C.ESPECIE_LV}</span></h3><ul class="donlist">${forms}</ul>
       <h3>Saber de outra era <span class="small muted">· nível ${C.SABER_LV}</span></h3><ul class="donlist">${sabs}</ul>`;
   }
+  // ---------- Etapa 13: memória (os contos, os mortos, a erva-do-sonho) ----------
+  // a ficha, o cemitério e a aba pedem isto a cada pintura: fica guardado por meia hora de jogo
+  let contoKey = '', contoList = [], covaKey = '', covaList = [];
+  function contos() {
+    const Mm = G.Memoria, m = S.memoria;
+    if (!Mm || !m) return [];
+    const k = m.nc + '|' + m.contos.length + '|' + (S.stats.contados || 0) + '|' + Math.floor(S.t / 30);
+    if (k !== contoKey) { contoKey = k; contoList = Mm.contosInfo(S); }
+    return contoList;
+  }
+  function covas() {
+    const Mm = G.Memoria;
+    if (!Mm || !S.memoria) return [];
+    const k = S.world.objs.length + '|' + Math.floor(S.t / 30);
+    if (k !== covaKey) { covaKey = k; covaList = Mm.buried(S); }
+    return covaList;
+  }
+  // dias até o dia dos mortos (o último dia do outono)
+  const finadosEm = () => ((2 - S.ck.season + 4) % 4) * C.SEASON_DAYS + (C.SEASON_DAYS - S.ck.dos);
+  // a ficha de quem morreu: onde está o corpo, a cova, quem volta com flores
+  function covaHTML(p) {
+    const Mm = G.Memoria;
+    if (!Mm || !S.memoria || p.alive) return '';
+    const oa = p.sex === 'F' ? 'a' : 'o', t = Mm.bodyText(S, p);
+    if (!t) return '';
+    const btn = (lbl) => `<div class="chips"><button class="btn btn-small" data-act="vercova"><img class="ico" src="${ic('cova')}" alt="">${lbl}</button></div>`;
+    if (p.corpo) return `<p class="small cova-line">${esc(t)}.</p>` + (p.corpo.st > 0 ? btn('Ver onde está') : '');
+    if (!p.cova) return '<p class="small cova-line muted">Ninguém achou o corpo: não teve velório nem cova.</p>';
+    const o = G.W.objAt(S.world, p.cova[1] * S.world.W + p.cova[0]);
+    const g = o && o.k === 'grave' ? Mm.graveInfo(S, o) : null;
+    if (!g) return `<p class="small cova-line">${esc(t)}.</p>`;
+    const bits = [(p.diedAt ? esc(Sim.dateText(p.diedAt)) + '. ' : '') + esc(t) + (g.rito.length ? ', com ' + esc(listPT(g.rito)) : '') + '.', g.velado ? 'Foi velad' + oa + ' ao pé do fogo.' : 'Não deu tempo de velar.'];
+    if (g.flores) bits.push('Tem flores frescas na cova.');
+    if (g.oferenda) bits.push('Deixaram uma oferenda.');
+    if (g.kin && g.kin.length) bits.push('Quem volta com flores: ' + esc(listPT(g.kin.slice(0, 5))) + (g.kin.length > 5 ? ' e mais ' + (g.kin.length - 5) : '') + '.');
+    return `<p class="small cova-line">${bits.join(' ')}</p>` + btn('Ver a cova');
+  }
+  // a ficha de quem vive: o rito (a ressaca, o apego) e a criança que cresce ouvindo contos
+  function ritoLine(p) {
+    if (!G.Memoria || !S.memoria || !p.alive) return '';
+    const out = [];
+    if (p.ressaca && p.ressaca > S.t) out.push('Esteve no rito: hoje acorda devagar e trabalha mais lento.');
+    if ((p.rito || 0) >= C.RITO_APEGO) out.push('Apegad' + (p.sex === 'F' ? 'a' : 'o') + ' ao rito: sente falta quando a roda demora, e a erva já pesa na saúde.');
+    else if (p.rito) out.push('Já sentou ' + (p.rito === 1 ? 'uma vez' : p.rito + ' vezes') + ' na roda da erva-do-sonho.');
+    if (p.ouviu && !p.criado && (p.ouviu[0] || p.ouviu[1])) out.push('Cresce vendo e ouvindo: ' + p.ouviu[1] + ' de cuidado, ' + p.ouviu[0] + ' de medo. Aos ' + C.CRIADO_AGE + ' anos, isso fica nel' + (p.sex === 'F' ? 'a' : 'e') + '.');
+    return out.length ? `<p class="small muted mem-line">${esc(out.join(' '))}</p>` : '';
+  }
+  function criadoChip(p) {
+    if (p.criado === 'temente') return `<span class="chip fraq" title="Cresceu vendo e ouvindo um Deus de dar medo: a fé não esfria abaixo de ${C.TEMENTE_FE} e obedece mais às Vontades, mas o humor pesa um pouco.">Temente</span>`;
+    if (p.criado === 'confiante') return `<span class="chip dom" title="Cresceu vendo e ouvindo um Deus que cuida: a fé assenta mais alto, sobe mais depressa, e o humor é melhor.">Confiante</span>`;
+    return '';
+  }
+  function contosPessoa(p) {
+    if (!p.alive || !p.contos) return '';
+    const mine = contos().filter((c) => p.contos[c.id] !== undefined);
+    if (!mine.length) return '';
+    const como = (g) => (g <= 0 ? 'viu' : g === 1 ? 'ouviu de quem viu' : 'ouviu dos antigos');
+    return sec('Contos que sabe', `<ul class="mems contos">${mine.slice(0, 6).map((c) => `<li>${esc(c.titulo)} <span class="muted">· ${como(p.contos[c.id])}</span></li>`).join('')}${mine.length > 6 ? `<li class="muted">e mais ${mine.length - 6}</li>` : ''}</ul>`);
+  }
+  // o painel do cemitério: o estado numa frase e quem está enterrado (toque no nome abre a ficha)
+  function cemStatus(b, d) {
+    const m = S.memoria, n = covas().length, fe = finadosEm(), esp = m.corpos.length;
+    return (n ? (n === 1 ? 'Uma cova' : n + ' covas') : 'Nenhuma cova ainda') + '.' +
+      (esp ? ' ' + (esp === 1 ? 'Uma pessoa espera' : esp + ' pessoas esperam') + ' o velório e o enterro.' : '') +
+      (m.fin.on ? ' Hoje é o dia dos mortos: o povo está aqui, com uma luz em cada cova.' : ' Dia dos mortos: ' + (fe === 0 ? 'hoje, à tarde.' : fe === 1 ? 'amanhã, à tarde.' : 'daqui a ' + fe + ' dias, no último dia do outono.')) +
+      (d.mem && d.mem.vale > 1 ? ' Com a cerca e o portal, a visita consola metade a mais.' : '');
+  }
+  function cemHTML() {
+    const list = covas();
+    if (!list.length) return '<p class="small muted">Quando alguém morrer, o povo vela ao pé do fogo e abre a cova aqui em volta.</p>';
+    const row = (g) => {
+      const marks = (g.flores ? `<img class="ico" src="${ic('flor')}" alt="flores" title="Flores frescas">` : '') + (g.oferenda ? `<img class="ico" src="${ic('frutas')}" alt="oferenda" title="Oferenda">` : '');
+      const sub = g.ate ? 'ano ' + g.ate + ' · ' + anos(g.anos) + (g.causa ? ' · ' + g.causa : '') : 'cova antiga';
+      return `<li><button type="button" class="cova-row" data-act="pessoa" data-pid="${g.pid || 0}"${g.pid ? '' : ' disabled'}><span class="nm">${esc(g.name)}</span><span class="marks">${marks}</span><span class="small muted sub">${esc(sub)}</span></button></li>`;
+    };
+    return sec('Quem está aqui', `<ul class="covalist">${list.slice(0, 40).map(row).join('')}</ul>${list.length > 40 ? `<p class="small muted">E mais ${list.length - 40}, mais antigas.</p>` : ''}`);
+  }
+  // Deus → Memória: o que contam de você, a erva-do-sonho e os mortos
+  const LEI = {
+    bencao: ['Abençoar', 'Abençoado: quem senta na roda sai com mais fé, e o povo te vê mais bondoso.'],
+    livre: ['Deixar com o povo', 'Por conta do povo: fazem o rito quando querem.'],
+    proibido: ['Proibir', 'Proibido: ninguém colhe a erva. Quem se apegou sente falta, e o povo te teme mais.'],
+  };
+  function memoriaHTML(Dz) {
+    const Mm = G.Memoria, m = S.memoria, D = Dz.call(S);
+    const TOM = { 1: ['de cuidado', 'bom'], 0: ['de espanto', ''], '-1': ['de medo', 'temido'] }, MAG = ['como foi', 'aumentado', 'virou lenda'];
+    const list = contos();
+    const row = (c) => {
+      const tm = TOM[c.tone] || TOM[0];
+      const quem = c.perdido ? 'ninguém vivo sabe contar' : (c.sabem === 1 ? '1 pessoa sabe' : c.sabem + ' sabem') + (c.viram ? ', ' + (c.viram === 1 ? '1 viu' : c.viram + ' viram') : ', nenhum viu');
+      return `<li class="conto${c.perdido ? ' lost' : ''}"><img class="ico" src="${ic('conto')}" alt=""><div><b>${esc(c.titulo)}</b>
+        <span class="small muted">${esc(c.quando)} · ${c.n ? 'contado ' + (c.n === 1 ? '1 vez' : c.n + ' vezes') : 'ainda não contado'} · ${quem}</span>
+        <span class="small fala">${esc(c.conta[0])}</span>
+        <span class="small muted">O que foi: ${esc(c.fato)}</span>
+        <span class="small"><span class="side ${tm[1]}">conto ${tm[0]}</span> · ${MAG[Math.min(2, c.mag)]}</span></div></li>`;
+    };
+    const tem = S.people.filter((p) => p.alive && p.criado === 'temente').length, conf = S.people.filter((p) => p.alive && p.criado === 'confiante').length;
+    const pend = Mm.pending(S), r = Mm.ritoInfo(S);
+    let erva;
+    if (!r.known) erva = `<p class="small muted">O povo ainda não conhece. A erva-do-sonho cresce na mata, perto da água. Quando ${esc(D)} chega ao nível ${C.ERVA_LV} e a aldeia tem ${C.RITO_MIN_POP} adultos, quem passa por lá acaba achando.</p>`;
+    else {
+      const btns = ['bencao', 'livre', 'proibido'].map((k) => `<button type="button" class="btn btn-small${r.lei === k ? ' on' : ''}" data-gact="lei" data-k="${k}" aria-pressed="${r.lei === k ? 'true' : 'false'}">${LEI[k][0]}</button>`).join('');
+      const quando = r.lei === 'proibido' ? 'Não há rito.' : r.on ? 'O rito é agora, ao pé do fogo.' : r.hoje ? 'Hoje tem rito, ao escurecer.' : r.falta ? 'O próximo rito sai em ' + (r.falta === 1 ? '1 dia' : r.falta + ' dias') + ', se o dia for calmo.' : 'O próximo rito sai no primeiro dia calmo.';
+      const prom = r.prom.map((x) => `<li class="small">Promessa de pé: ${x.k === 'fome' ? 'não faltar comida' : x.k === 'frio' ? 'ninguém morrer de frio' : 'ninguém morrer de fera'} · ${x.dias === 1 ? 'falta 1 dia' : 'faltam ' + x.dias + ' dias'}</li>`).join('');
+      erva = `<p class="small">${quando} Ritos: ${r.ritos} · perguntas respondidas: ${r.respostas}${r.apegados ? ' · apegados: ' + r.apegados : ''}.</p>
+        <div class="chips lei-row" role="group" aria-label="O que você diz do rito">${btns}</div><p class="small muted">${esc(LEI[r.lei][1])}</p>
+        ${prom ? `<ul class="promlist">${prom}</ul>` : ''}
+        <p class="small muted">A cada ${C.RITO_GAP_D} dias, num dia calmo, até ${C.RITO_MAX} adultos sentam em roda ao escurecer, no lugar da história. Só adulto entra: 18 anos ou mais, e nem grávida nem quem leva bebê. De vez em quando alguém faz uma pergunta, e a sua resposta vira conto. No dia seguinte a roda acorda devagar; quem senta demais se apega.</p>`;
+    }
+    const nc = covas().length, fe = finadosEm();
+    return `${pend ? `<button type="button" class="btn btn-gold" data-gact="pendmem">${pend.k === 'erva' ? 'O povo achou a erva-do-sonho' : 'Uma pergunta espera resposta'}</button>` : ''}
+      <p class="small muted">O que você faz de grande, e alguém vê, vira conto. Nas noites de história, quem viu conta; quem só ouviu passa adiante e muda um detalhe. Criança que cresce vendo e ouvindo um Deus de dar medo fica temente; um Deus que cuida, confiante.${tem || conf ? ' Hoje: ' + listPT([tem ? tem + (tem === 1 ? ' temente' : ' tementes') : '', conf ? conf + (conf === 1 ? ' confiante' : ' confiantes') : ''].filter(Boolean)) + '.' : ''}</p>
+      <h3>A erva-do-sonho</h3>${erva}
+      <h3>Os mortos</h3><p class="small">${nc ? (nc === 1 ? 'Uma cova' : nc + ' covas') : 'Nenhuma cova ainda'} · velórios: ${S.stats.velorios || 0} · dias dos mortos: ${S.stats.finados || 0}. ${m.fin.on ? 'Hoje é o dia dos mortos.' : 'O próximo dia dos mortos é ' + (fe === 0 ? 'hoje, à tarde.' : fe === 1 ? 'amanhã.' : 'daqui a ' + fe + ' dias.')}</p>
+      <p class="small muted">Quem morre é levado para junto do fogo e velado à tardinha; de manhã, enterrado, cada povo do seu jeito. A família volta com flores, e no último dia do outono a aldeia inteira vai ao cemitério. Toque numa cova para ver de quem é.</p>
+      <h3>O que contam de você${list.length ? ' · ' + list.length : ''}</h3>
+      <ul class="donlist contolist">${list.length ? list.map(row).join('') : '<li class="none small muted">Nada ainda. Uma cura, a chuva na seca, o calor na nevasca, um raio: o que alguém vê de perto vira conto.</li>'}</ul>`;
+  }
+  // as três respostas (e o silêncio): o que cada uma faz, numa linha
+  const FX_HINT = {
+    luto: 'Consola quem está de luto.', 'prom:fome': 'É uma promessa: ' + C.PROMESSA_D + ' dias sem ninguém passar fome. Cumprida, a fé sobe; quebrada, cai e vira conto.',
+    'prom:fera': 'É uma promessa: ' + C.PROMESSA_D + ' dias sem ninguém morrer de fera. Cumprida, a fé sobe; quebrada, cai e vira conto.',
+    'prom:frio': 'É uma promessa: ninguém morre de frio até o fim do inverno. Cumprida, a fé sobe; quebrada, cai e vira conto.',
+    'zelo:comida': 'Por ' + C.ZELO_COMIDA_D + ' dias, o povo junta comida com mais afinco.', 'zelo:lenha': 'Por ' + C.ZELO_COMIDA_D + ' dias, o povo junta lenha com mais afinco.',
+    'zelo:tudo': 'Por ' + C.ZELO_TUDO_D + ' dias, todo trabalho rende um pouco mais.', 'conv:3': 'Aproxima os povos.', 'conv:-3': 'Afasta os povos.',
+    'sinal:3': 'Quem perguntou fica bem mais perto de crer.', 'sinal:1': 'Quem perguntou fica um pouco mais perto de crer.', trovao: 'Um trovão cai perto do fogo.', saber: 'Adianta um pouco a descoberta em andamento.',
+  };
+  const MEM_HINT = { aceitou: 'A roda fica em paz.', promessa: 'A roda guarda a sua palavra.', emPaz: 'A roda fica em paz com o fim.' };
+  UI.memPending = function (onDone) {
+    const Mm = G.Memoria, info = S && Mm && Mm.pendingInfo(S);
+    const m = $('#modal-dom'), ok = $('#dom-ok'), body = $('#dom-body');
+    if (!info) { m.hidden = true; if (onDone) onDone(); return false; }
+    const pd = Mm.pending(S);
+    $('#dom-ico').src = ic(info.icon);
+    $('#dom-title').textContent = info.title;
+    $('#dom-lead').textContent = info.lead;
+    const opt = (i, nm, ds, side) => `<button type="button" class="dom-opt mem-opt" role="radio" aria-checked="false" data-i="${i}"><span class="nm">${esc(nm)}</span>${ds ? `<span class="ds small">${esc(ds)}</span>` : ''}${side === 'bom' ? '<span class="side bom small">o povo te vê mais bondoso</span>' : side === 'temido' ? '<span class="side temido small">o povo te teme mais</span>' : ''}</button>`;
+    let html;
+    if (info.k === 'erva') html = info.opts.map((t, i) => { const k = t.indexOf(': '); return opt(i, t.slice(0, k), t.slice(k + 2, k + 3).toUpperCase() + t.slice(k + 3), i === 0 ? 'bom' : i === 2 ? 'temido' : ''); }).join('');
+    else {
+      html = Mm.Q[pd.q].a.map((a, i) => opt(i, '“' + a.t + '”', [FX_HINT[a.fx] || '', MEM_HINT[a.mem] || ''].filter(Boolean).join(' '), a.tone > 0 ? 'bom' : a.tone < 0 ? 'temido' : '')).join('') +
+        opt(-1, info.quiet, 'Quem perguntou fica sem resposta, e a fé da roda esfria um pouco.', '');
+    }
+    body.innerHTML = '<div class="dom-opts" role="radiogroup" aria-label="' + (info.k === 'erva' ? 'O que você diz' : 'Respostas') + '">' + html + '</div>' +
+      (info.k === 'erva' ? '<p class="small muted">Dá para mudar depois, em Deus → Memória.</p>' : '<p class="small muted">A resposta vira conto, e o povo vai repetir.</p>');
+    let pick = null;
+    ok.textContent = info.k === 'erva' ? 'Está dito' : 'Responder';
+    ok.disabled = true;
+    body.querySelectorAll('.dom-opt').forEach((b) => b.addEventListener('click', () => {
+      pick = +b.dataset.i;
+      body.querySelectorAll('.dom-opt').forEach((x) => x.setAttribute('aria-checked', x === b ? 'true' : 'false'));
+      ok.disabled = false;
+    }));
+    $('#form-dom').onsubmit = (e) => {
+      e.preventDefault();
+      if (pick === null) return;
+      Mm.answer(S, pick);
+      m.hidden = true; contoKey = '';
+      UI.update(0, true);
+      if (Mm.pending(S)) UI.memPending(onDone); else if (onDone) onDone();
+    };
+    m.hidden = false;
+    return true;
+  };
   const Fam = () => G.Family;
   function godAct(b) {
     const Dz = G.Deus, a = b.dataset.gact;
     if (a === 'pending') { $('#modal-deus').hidden = true; if (UI.hooks.godPending) UI.hooks.godPending(); return; }
+    // Etapa 13: a pergunta que espera, e o que Deus diz do rito (muda quando quiser)
+    if (a === 'pendmem') { $('#modal-deus').hidden = true; if (UI.hooks.memPending) UI.hooks.memPending(); return; }
+    if (a === 'lei' && G.Memoria) {
+      const Mm = G.Memoria, pd = Mm.pending(S), k = b.dataset.k;
+      if (pd && pd.k === 'erva') Mm.answer(S, ['bencao', 'livre', 'proibido'].indexOf(k)); else Mm.setLei(S, k);
+      UI.deus('memoria'); UI.update(0, true);
+      return;
+    }
     if (a === 'rename') {
       const v = ($('#deus-rename') || {}).value || '';
       if (Dz.rename(S, v)) { UI.refreshChron(); UI.toast('Agora o povo te chama de ' + S.god.name + '.', 'good'); }
@@ -18773,6 +20446,14 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       else if (e.k === 'thanks') UI.toast(e.text, e.kind === 'luto' ? 'prayer' : 'thanks');
       else if (e.k === 'oferenda') { UI.toast(e.text, 'thanks'); const ob = Sim.building(state, e.bid); if (ob) UI.float(ob.x + 1, ob.y, '+' + e.poder + ' Poder'); }   // Etapa 12
       else if (e.k === 'povo') { /* só som */ }
+      else if (e.k === 'memoria') {
+        // Etapa 13: a pergunta abre a janela; o conto novo avisa; a resposta solta a fumaça no fogo do rito
+        if (e.ev === 'pend') { if (UI.hooks.memPending && !quiet) setTimeout(UI.hooks.memPending, 900); }
+        else if (e.ev === 'conto' && G.Memoria) { contoKey = ''; const c = contos().find((x) => x.id === e.id); if (c && state.stats.contos > 1) UI.toast('O povo tem um conto novo: “' + c.titulo + '”. Veja em Deus → Memória.', 'good'); }
+        else if (e.ev === 'resposta') { const rt = state.memoria.erva.rite, f = (rt && Sim.building(state, rt.fire)) || (G.Life && G.Life.campFire(state, true)); if (f) { e.x = f.x; e.y = f.y; } }
+        if (!$('#modal-deus').hidden && deusTab === 'memoria') UI.deus();
+        G.R.event(e);
+      }
       else if (e.k === 'festa' || e.k === 'story' || e.k === 'fight' || e.k === 'goal' || e.k === 'moon' || e.k === 'song') { /* só som */ }
       else if (e.k === 'fireLit') G.R.event(e);
       else if (e.k === 'star' || e.k === 'rainbow' || e.k === 'birds') G.R.event(e);
@@ -19452,6 +21133,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (g) askChoice(g.id);
     if (S.stats.eraEnd && !S.stats.eraSeen) showEra();   // a era fechou com o jogo fechado
     if (G.Deus && G.Deus.pending(S)) setTimeout(showGodPending, 900);   // Deus subiu de nível com o jogo fechado
+    if (G.Memoria && G.Memoria.pending(S)) setTimeout(showMemPending, 1300);   // Etapa 13: a pergunta do rito ficou esperando
   }
   // uma janela por vez: espera a outra fechar
   const modalOpen = () => ['#modal-birth', '#modal-choice', '#modal-away', '#modal-era', '#modal-dom'].some((id) => !$(id).hidden);
@@ -19463,7 +21145,16 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     $('#modal-deus').hidden = true;
     const before = speed;
     setSpeed(0);
-    UI.godPending(() => { setSpeed(before || 1); save(); });
+    UI.godPending(() => { setSpeed(before || 1); save(); if (G.Memoria && G.Memoria.pending(S)) setTimeout(showMemPending, 500); });
+  }
+  // Etapa 13: o povo achou a erva-do-sonho, ou alguém perguntou no rito: pausa e espera a resposta (uma janela por vez)
+  function showMemPending() {
+    if (!S || S.safe || mode !== 'game' || !G.Memoria || !G.Memoria.pending(S)) return;
+    if (modalOpen()) { setTimeout(showMemPending, 700); return; }
+    $('#modal-deus').hidden = true;
+    const before = speed;
+    setSpeed(0);
+    UI.memPending(() => { setSpeed(before || 1); save(); if (G.Deus && G.Deus.pending(S)) setTimeout(showGodPending, 500); });
   }
   // fim da Era da Família: pausa e mostra o que o povo construiu
   function showEra() {
@@ -20098,6 +21789,17 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       const reach = Math.max(10, 18 / R.scale());
       if (d < reach && d < bd) { bd = d; best = p; }
     }
+    // Etapa 13: quem espera o enterro (no chão ou na esteira do velório): vale o toque mais perto, do corpo ou de quem está ao lado
+    if (G.Memoria && S.memoria && S.memoria.corpos.length) {
+      let corpo = null, cd = bd;
+      for (const id of S.memoria.corpos) {
+        const d = G.Family.person(S, id), c = d && d.corpo;
+        if (!c || c.by || !Sim.isSeen(S, Math.floor(d.x), Math.floor(d.y))) continue;
+        const dist = Math.hypot(d.x * TS - w.x, d.y * TS - 1 - w.y);
+        if (dist < Math.max(9, 14 / R.scale()) && dist < cd) { cd = dist; corpo = d; }
+      }
+      if (corpo) { UI.select(corpo.id, 0); return; }
+    }
     if (best) { UI.select(best.id, 0); tapped(best, sx, sy, now); return; }
     // lobo ou viajante no mapa
     if (S.narr) {
@@ -20138,6 +21840,20 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       if (cap) { UI.toast(G.Bichos.info(S, cap), cap.sp === 'jacare' || cap.state === 'investida' ? 'warn' : ''); return; }
     }
     const tx = Math.floor(w.x / TS), ty = Math.floor(w.y / TS);
+    // Etapa 13: as covas e a erva-do-sonho (a ficha de quem morreu diz onde está a cova e quem volta com flores)
+    if (G.Memoria && S.memoria && tx >= 0 && ty >= 0 && tx < S.world.W && ty < S.world.H) {
+      const o = Sim.isSeen(S, tx, ty) ? G.W.objAt(S.world, ty * S.world.W + tx) : null;
+      if (o && o.k === 'grave') {
+        const g = G.Memoria.graveInfo(S, o);
+        if (g.pid) UI.select(g.pid, 0); else UI.toast('Uma cova antiga: ' + o.name + '.', '');
+        return;
+      }
+      if (o && o.k === 'erva') {
+        const e = S.memoria.erva;
+        UI.toast(!e.known ? 'Uma erva de cheiro forte. Ninguém do povo reparou nela ainda.' : e.lei === 'proibido' ? 'Erva-do-sonho. Você proibiu: ninguém colhe.' : 'Erva-do-sonho. No dia do rito, quem conduz a roda vem colher uma folha. Veja em Deus → Memória.', '');
+        return;
+      }
+    }
     const bid = S.world.bgrid[ty * S.world.W + tx];
     if (bid >= 0) {
       const inside = S.people.find((p) => p.alive && p.inTent === bid);
@@ -20301,6 +22017,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       alarm: () => { if (speed > 1) setSpeed(1); },
       era: showEra,
       godPending: showGodPending,
+      memPending: showMemPending,
       panels: () => { positionHint(); offAt = 0; },   // abriu ou fechou painel: o mapa à vista mudou
       birth: (pid) => {
         if (!S || S.safe || mode !== 'game') return;
