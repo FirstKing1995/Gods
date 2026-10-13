@@ -8,7 +8,7 @@
 const path = require('path');
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 globalThis.G = {};
-for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'sociedade', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
+for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'sociedade', 'gente', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
 const { W, Sim, CFG: C, Family: F, God, Save, AI, Tech: T, Inv: I, Life: L, Obras: O, Fauna: FA } = G;
 const Y = 60 * 1440, D = 1440;
 
@@ -248,9 +248,19 @@ if (isMainThread) {
       S.life.party = null; S.life.lastParty = -1e9;
       const [a, b] = S.people;
       L.party(S, 'fartura');
-      const r0 = a.rel[b.id] || 0;
-      days(S, 2);
-      return (a.rel[b.id] || 0) - r0;
+      // descansados para a festa (0.15: com os gostos, o dia de cada um muda, e às vezes alguém deitava antes)
+      for (let i = 0; i < 360 && S.ck.hour < 17; i++) { Sim.step(S, 2); S.events.length = 0; }
+      for (const q of S.people) q.needs.energia = Math.max(q.needs.energia, 90);
+      // o que a festa em si aproxima: a estima de um pelo outro no passo em que ela acaba (0.15: as conversas novas
+      // também mexem na estima, e o saldo de dois dias deixou de medir a festa)
+      for (let i = 0; i < 2 * 720; i++) {
+        const r0 = a.rel[b.id] || 0;
+        Sim.step(S, 2);
+        const fim = S.events.some((e) => e.k === 'festa' && e.on === false);
+        S.events.length = 0;
+        if (fim) return (a.rel[b.id] || 0) - r0;
+      }
+      return 0;
     };
     const r0 = bond(false), r1 = bond(true);
     check('com o tambor, a festa aproxima mais', r1 > r0 * 1.2, r0.toFixed(1) + ' → ' + r1.toFixed(1));

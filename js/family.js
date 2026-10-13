@@ -75,7 +75,7 @@
     if (p.sangue && G.Povos) f *= G.Povos.body(p).walk;   // Etapa 12: o passo de cada povo
     return f;
   };
-  F.carryCap = (S, p) => Math.round((F.stage(S, p) === 'crianca' ? C.CARRY_CHILD : C.CARRY) * (G.Tech ? G.Tech.carryMult(S) : 1) * (p.sangue && G.Povos ? G.Povos.body(p).carry : 1));   // cestos: metade a mais; o anão carrega mais
+  F.carryCap = (S, p) => Math.round((F.stage(S, p) === 'crianca' ? C.CARRY_CHILD : C.CARRY) * (G.Tech ? G.Tech.carryMult(S, p) : 1) * (p.sangue && G.Povos ? G.Povos.body(p).carry : 1));   // cestos: metade a mais; o anão carrega mais
   // aprender: jovem aprende mais rápido, e mais ainda perto de um idoso
   F.xpFactor = function (S, p) {
     const st = F.stage(S, p);

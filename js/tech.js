@@ -225,19 +225,21 @@
     }
   };
   T.hasTool = (S, p) => !!(p.tool && T.known(S, 'pedra'));
+  // Etapa 15: o ganho de uma técnica depende de quanto a pessoa a domina (metade sem domínio, inteiro com ele)
+  const ganho = (S, p, id, base, cheio) => (G.Gente && p ? G.Gente.ganho(S, p, id, base, cheio) : cheio);
   // bônus de velocidade no trabalho: a ferramenta de pedra e, na Etapa 8, o machado, a corda e a faca
   T.speed = function (S, p, wk) {
     let s = 1;
     if (T.hasTool(S, p) && (wk === 'madeira' || wk === 'pedra' || wk === 'construir' || wk === 'argila' || wk === 'caca' || wk === 'roca' || wk === 'mina'))
-      s = p.tool.fe ? (wk === 'madeira' && T.known(S, 'machado') ? C.FERRO_MACHADO : C.FERRO_BONUS) : wk === 'madeira' && T.known(S, 'machado') ? C.MACHADO_BONUS : C.TOOL_BONUS;   // a de ferro rende mais (Etapa 12)
+      s = p.tool.fe ? (wk === 'madeira' && T.known(S, 'machado') ? ganho(S, p, 'machado', C.FERRO_BONUS, C.FERRO_MACHADO) : C.FERRO_BONUS) : wk === 'madeira' && T.known(S, 'machado') ? ganho(S, p, 'machado', C.TOOL_BONUS, C.MACHADO_BONUS) : C.TOOL_BONUS;   // a de ferro rende mais (Etapa 12)
     if (wk === 'construir' && T.known(S, 'corda')) s *= C.CORDA_BUILD;
     if (wk === 'construir' && G.Deus && G.Deus.saber(S, 'roda')) s *= C.RODA_BUILD;   // o carrinho de mão (Etapa 11)
     if (wk === 'oficio' && T.known(S, 'faca')) s *= C.FACA_OFICIO;
     return s;
   };
   // Etapa 11: o peixe criado por Deus, o carrinho de mão (a roda) e a Sentinela
-  T.fishMult = (S, p) => (T.known(S, 'anzol') && T.hasTool(S, p) ? C.ANZOL_FISH : 1) * (T.known(S, 'rede') ? C.REDE_FISH : 1) * (G.Deus && G.Deus.species(S, 'peixe') ? C.PEIXE_FISH : 1);
-  T.carryMult = (S) => (T.known(S, 'cestos') ? C.CESTO_CARRY : 1) * (G.Deus && G.Deus.saber(S, 'roda') ? C.RODA_CARRY : 1);
+  T.fishMult = (S, p) => (T.known(S, 'anzol') && T.hasTool(S, p) ? ganho(S, p, 'anzol', 1, C.ANZOL_FISH) : 1) * (T.known(S, 'rede') ? ganho(S, p, 'rede', 1, C.REDE_FISH) : 1) * (G.Deus && G.Deus.species(S, 'peixe') ? C.PEIXE_FISH : 1);
+  T.carryMult = (S, p) => (T.known(S, 'cestos') ? ganho(S, p, 'cestos', 1, C.CESTO_CARRY) : 1) * (G.Deus && G.Deus.saber(S, 'roda') ? C.RODA_CARRY : 1);   // com p (Etapa 15): o domínio dos cestos
   T.biteMult = (S, p) => (T.known(S, 'lanca') && T.hasTool(S, p) ? C.LANCA_BITE * (p.tool.fe ? C.FERRO_BITE : 1) : 1) * (G.Deus && G.Deus.dom(S, 'sentinela') ? C.DOM.sentinelaBite : 1) *
     (p.sangue && G.Povos ? G.Povos.bite(p) : 1);   // Etapa 12: a lança de ferro e as garras do povo-fera
   T.coldMult = (p, S) => (p.roupa ? (S && T.known(S, 'agulha') ? C.AGULHA_COLD : C.ROUPA_COLD) : 1);   // costurada com agulha, mais quente

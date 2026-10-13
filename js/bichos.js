@@ -58,7 +58,7 @@
     B.strike(S, p, tgt, true);
     return true;
   };
-  B.hitChance = (S, p) => C.LUTA_HIT + C.CACA_HIT_LVL * G.AI.lvl(p, 'caca') + (Tech().known(S, 'arco') ? C.ARCO_HIT : 0) +
+  B.hitChance = (S, p) => C.LUTA_HIT + C.CACA_HIT_LVL * G.AI.lvl(p, 'caca') + (Tech().known(S, 'arco') ? C.ARCO_HIT * (G.Gente ? 0.5 + 0.5 * G.Gente.dom(S, p, 'arco') : 1) : 0) +   // Etapa 15: pelo domínio
     (p.tool && p.tool.fe ? C.FERRO_LUTA : 0) + (p.sangue && G.Povos ? G.Povos.lutaHit(p) : 0);   // Etapa 12: a lança de ferro e as garras
 
   // um golpe (lança) ou uma flechada, já decidido que acertou (sure) ou jogando a chance

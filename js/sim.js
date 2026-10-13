@@ -47,6 +47,13 @@
     dormiuBem: { t: 'Dormiu bem abrigado', v: 6, d: 1440 },
     dormiuRelento: { t: 'Dormiu ao relento', v: -6, d: 1440 },
     passouFrio: { t: 'Passou frio', v: -8, d: 1440 },
+    // Etapa 15: Gente viva
+    comeuOQueGosta: { t: 'Comeu o que mais gosta', v: 4, d: 1440 },
+    comeuOQueNaoGosta: { t: 'Comeu o que não desce', v: -2, d: 720 },
+    estacaoQueGosta: { t: 'É a estação de que mais gosta', v: 2, d: 1440 },
+    tentou: { t: 'Tentou uma coisa nova e errou', v: 2, d: 2 * 1440 },
+    trabalhouJunto: { t: 'Trabalhou junto com quem combinou', v: 3, d: 1440 },
+    desabafou: { t: 'Desabafou com alguém', v: 3, d: 1440 },
     // Etapa 14: Sociedade
     apanhou: { t: 'Apanhou de alguém', v: -12, d: 4 * 1440 },
     feridoProp: { t: 'Foi ferido de propósito', tf: 'Foi ferida de propósito', v: -18, d: 8 * 1440 },
@@ -409,6 +416,7 @@
   // ---------- memórias, fala, eventos ----------
   Sim.addMem = function (S, p, k) {
     const def = MEM[k]; if (!def) return;
+    if ((k === 'mordido' || k === 'atacadoBicho') && G.Gente) G.Gente.onHurt(S, p);   // Etapa 15: aprende a evitar
     const ex = p.mem.find((m) => m.k === k);
     if (ex) ex.until = S.t + def.d; else p.mem.push({ k, until: S.t + def.d });
   };
@@ -1004,6 +1012,7 @@
     if (G.Povos) G.Povos.daily(S);   // a convivência e as caravanas
     if (G.Memoria) G.Memoria.daily(S);   // Etapa 13: visitas à cova, promessas, o costume do rito
     if (G.Soc) G.Soc.daily(S);   // Etapa 14: a índole, o descontentamento, as penas, a vila de fora
+    if (G.Gente) { if (S.resumido) G.Gente.resumo(S); else G.Gente.daily(S); }   // Etapa 15: tentativas, a estação de que gosta
     if (G.Life) G.Life.daily(S);
   }
   function rot(S, k, rate) {
@@ -1050,6 +1059,7 @@
     if (G.Povos) G.Povos.hourly(S);   // e a caravana que está para chegar
     if (G.Memoria) G.Memoria.hourly(S);   // Etapa 13: o corpo, o velório, o rito, o dia dos mortos
     if (G.Soc) G.Soc.hourly(S);   // Etapa 14: os crimes, o julgamento, o líder, as obras do povo
+    if (G.Gente) G.Gente.hourly(S);   // Etapa 15: aprender vendo, o combinado, o que se pensa em voz alta
     if (G.Life) G.Life.hourly(S);
     checkGoals(S);
   }
@@ -1284,6 +1294,7 @@
     if (G.Life) G.Life.init(S);
     if (G.Memoria) G.Memoria.init(S);   // Etapa 13: corpos, contos, a erva e o rito
     if (G.Soc) G.Soc.init(S);   // Etapa 14: índole, crimes, líder, quem foi embora
+    if (G.Gente) G.Gente.init(S);   // Etapa 15: gostos, jeito, o saber nas pessoas
     fixGoals(S);
     if (!S.seen) {
       S.seen = new Uint8Array(S.world.W * S.world.H);

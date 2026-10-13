@@ -33,6 +33,7 @@ p { margin: 0; }
 .muted { color: var(--muted); }
 .warn { color: var(--ember); }
 .story { font-family: var(--story); font-style: italic; font-size: 16px; line-height: 1.4; color: #d9c7a3; }
+.story.pensa .small { font-family: var(--px); font-style: normal; font-size: 12px; }
 .ico { width: 20px; height: 20px; image-rendering: pixelated; vertical-align: middle; flex: none; }
 .ico-lg { width: 30px; height: 30px; }
 button { font: inherit; color: inherit; }
@@ -221,6 +222,9 @@ body[data-placing] #view { cursor: crosshair; }
 .povo-head .ico { width: 16px; height: 16px; }
 .insp .preg { color: #f6a0b4; }
 .kv.fam span:nth-child(odd) { color: var(--muted); }
+/* Etapa 15: o jeito da pessoa: o rótulo numa linha só, o resto quebra */
+.kv.jeito { grid-template-columns: auto 1fr; }
+.kv.jeito span:nth-child(odd) { white-space: nowrap; color: var(--muted); }
 .birth-card { text-align: left; }
 /* narrador */
 .narr-pick { border: 0; padding: 0; margin: 8px 0 0; min-width: 0; }
@@ -398,6 +402,9 @@ body[data-sheet="cronica"] .drawer { display: flex; }
 .bubble.casal { background: #ffe3ea; }
 .bubble.festa { background: #fff1b8; }
 .bubble.consolo { background: #dfe9f5; }
+/* Etapa 15: o que a pessoa pensa em voz alta: balão de pensamento (borda tracejada, sem bico, letra de história) */
+.bubble.pensa { background: #f4f0e6; border-style: dashed; font-family: var(--story); font-style: italic; }
+.bubble.pensa::after { content: none; }
 .bubble.historia { background: #ead4aa; font-family: var(--story); font-style: italic; font-size: 15px; max-width: 280px; }
 /* balão empurrado para cima numa conversa: diz quem fala e perde a ponta */
 .bubble.up::after { display: none; }
