@@ -839,6 +839,7 @@
       // família, as habilidades, as lembranças e a última conversa
       const blocos = {
         faz: `<p class="small">${p.alive ? esc(AI.describe(S, p)) + ' · ' + feel(p.tempHere) : esc(AI.describe(S, p)) + '.'}</p>`,
+        pensa: pensaHTML(p),   // Etapa 15: o que está pensando, e por quê
         cova: covaHTML(p),   // Etapa 13: o corpo, a cova, quem volta com flores
         estado: state ? `<p class="small preg">${esc(state)}</p>` : '',
         deus: godLine,
@@ -852,6 +853,7 @@
         familia: fam ? sec('Família', `<div class="kv fam">${fam}</div>`) : '',
         nome: p.alive && (p.mother || p.father) && F.age(S, p) < 3 ? '<div class="chips"><button class="btn btn-small" data-act="rename">Dar outro nome</button></div>' : '',
         saberes: p.carriedBy || !skills ? '' : sec('Habilidades', `<div class="kv">${skills}</div>`),
+        jeito: jeitoHTML(p),   // Etapa 15: os gostos, o jeito que aprendeu, as técnicas que domina
         lembrancas: mems ? sec('Lembranças', `<ul class="mems">${mems}</ul>`) : '',
         contos: contosPessoa(p),
         conversa: talk,
@@ -863,6 +865,34 @@
       return;
     }
     if (inspPid) { inspPid = 0; el.innerHTML = ''; }
+  }
+  // Etapa 15: o que a pessoa está pensando agora (com o porquê) e o jeito dela
+  function pensaHTML(p) {
+    const Ge = G.Gente;
+    if (!Ge || !p.alive) return '';
+    const pz = Ge.pensa(S, p);
+    if (!pz) return '';
+    return `<p class="story pensa">Pensando: “${esc(pz.txt)}”${pz.why ? ` <span class="small muted">${esc(pz.why)}</span>` : ''}</p>`;
+  }
+  function jeitoHTML(p) {
+    const Ge = G.Gente;
+    if (!Ge || !p.alive || G.Family.age(S, p) < 3) return '';
+    const g = Ge.gosto(S, p), j = Ge.jeito(S, p), rows = [];
+    rows.push(['Gosta de', [Ge.COMIDA[g.comida], Ge.TRAB[g.trabalho], Ge.EST[g.estacao]].join(', ')]);
+    rows.push(['Não gosta', [Ge.COMIDA[g.enjoa], Ge.TRAB[g.detesta]].join(', ')]);
+    const bons = Object.keys(j).filter((k) => j[k] >= 0.25 && Ge.TRAB[k]).sort((a, b) => j[b] - j[a]).slice(0, 3).map((k) => Ge.TRAB[k]);
+    if (bons.length) rows.push(['Bom em', bons.join(', ')]);
+    const evita = Object.keys(j).filter((k) => j[k] <= -0.4 && Ge.TRAB[k]).map((k) => Ge.TRAB[k]);
+    if (evita.length) rows.push(['Evita', evita.join(', ')]);
+    // as técnicas, pelo quanto domina cada uma
+    const CURTO = { machado: 'machado', rede: 'rede', anzol: 'anzol', arco: 'arco', cestos: 'cestos' }, grupo = { d: [], a: [], n: [] };
+    for (const id of Ge.TECNICAS) { if (!G.Tech.known(S, id)) continue; const d = Ge.dom(S, p, id); grupo[d >= C.DOM_MESTRE ? 'd' : d >= 0.3 ? 'a' : 'n'].push(CURTO[id]); }
+    if (grupo.d.length) rows.push(['Domina', grupo.d.join(', ')]);
+    if (grupo.a.length) rows.push(['Aprendendo', grupo.a.join(', ')]);
+    if (grupo.n.length) rows.push(['Ainda não', grupo.n.join(', ')]);
+    const cb = p.combina;
+    if (cb && cb.ate > S.t) { const q = G.Family.person(S, cb.com); if (q) rows.push(['Combinou', Ge.TRAB[cb.wk] + ' com ' + q.name + (cb.de > S.t ? ', amanhã cedo' : '')]); }
+    return sec('Jeito', `<div class="kv jeito">${rows.map(([k, v]) => `<span>${k}</span><span>${esc(v)}</span>`).join('')}</div>`);
   }
   // os botões da ficha: seguir (liga e desliga), a posição entre os vivos na ordem da lista, anterior e próximo
   function paintSheetTools(p) {

@@ -606,6 +606,21 @@
     SOC_TETO: 0.4, PEDIDO_D: 5, RECUSA_D: 10, SOC_FOGO_LONGE: 9, SOC_ROT: 3, SOC_PEDRA: 6,
     // 0.14: o padrão é "o povo decide"; obras do povo ao mesmo tempo: 1 + adultos / SOC_OBRAS_POR, até SOC_OBRAS_MAX
     SOC_OBRAS_POR: 12, SOC_OBRAS_MAX: 8,
+
+    // ---- Etapa 15 · Gente viva: gostos, jeito, pensamentos, conversas, tentativas e o saber nas pessoas ----
+    GOSTO_HERDA: 0.35,            // chance de cada gosto puxar a um dos pais
+    GOSTO_TRAB: 1.15, DETESTA_TRAB: 0.8, GOSTO_RENDE: 1.1,   // o trabalho de que gosta pontua mais e rende mais
+    GOSTO_COMIDA_DIAS: 6,         // com comida para menos dias que isso, ninguém escolhe o que come
+    JEITO_GOSTO: 0.3, JEITO_EXEMPLO: 0.5, JEITO_W: 0.25,   // o jeito começa no gosto e no exemplo dos pais; pesa até 25%
+    JEITO_SOBE: 0.05, JEITO_DESCE: 0.04, JEITO_FALHA: 0.02, JEITO_MORDIDA: 0.25,
+    COMBINA_W: 1.3,               // o combinado da conversa: na manhã seguinte, a vontade daquele trabalho sobe 30%
+    GENTE_PAPO: 0.45,             // chance de uma conversa ser das novas (contar, fofoca, combinar, gosto, desabafo, ensinar)
+    // a fofoca fala de quem tem estima de FOFOCA_REL para cima (ou para baixo); quem ouve puxa a sua 30% na direção da de
+    // quem falou (no máximo ±FOFOCA_TETO), até FOFOCA_MAX por conversa. Com QUEDA_REL, a pessoa não sai da cabeça
+    FOFOCA_REL: 8, FOFOCA_PUXA: 0.3, FOFOCA_TETO: 10, FOFOCA_MAX: 3, QUEDA_REL: 10,
+    PENSA_FALA: 0.4,              // na sua hora (um terço do povo por hora), a chance de dizer em voz alta o que pensa
+    TENTA_A: 0.5, TENTA_B: 0.85, TENTA_PRAT: 0.05,   // tentativas aos 50% e 85% da prática; o erro ensina 5%
+    DOM_MESTRE: 0.8, DOM_PERTO: 0.06, DOM_PERTO_R: 8, DOM_SO: 0.01, DOM_ENSINO: 0.3, DOM_VELHO: 0.8,
     // descontentamento (0 a 100), o que soma por dia e o quanto cai num dia sem motivo. O líder ruim e o medo de Deus
     // param de somar em DESC_TETO: sozinhos, não levam ninguém embora
     DESC_CAMA: 3, DESC_FOME: 3, DESC_FRIO: 2, DESC_HUMOR: 2, DESC_POVO: 2, DESC_INJ: 4, DESC_LIDER: 0.4, DESC_MEDO: 0.5, DESC_CAI: 1.5, DESC_TETO: 45,

@@ -10,7 +10,7 @@
 const path = require('path');
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 globalThis.G = globalThis.G || {};
-for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'sociedade', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
+for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'sociedade', 'gente', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
 const { W, Sim, CFG: C, Family: F, God, Save, AI, Tech: T, Inv: I, Life: L, Campo: K, Narr: N, Deus: D, Povos: Pv, Minas: Mi, Obras: O, Bichos: B } = G;
 const Y = 60 * 1440, DAYM = 1440;
 
@@ -292,7 +292,8 @@ if (isMainThread) {
     check('dois dias de forja: o anão faz ferramentas de ferro, que saem do minério e do carvão', S.stats.ferroMade >= 2 && S.stock.minerio < 12 && S.stock.carvao < 6 && Mi.goalTest.m_ferro(S) && S.chron.some((c) => /primeira ferramenta de ferro/.test(c.text)), S.stats.ferroMade + ' feitas · minério ' + S.stock.minerio + ', carvão ' + S.stock.carvao + ' · ' + S.chron.slice(-3).map((c) => c.text.slice(0, 50)).join(' | '));
     const fe = alive(S).filter((p) => p.tool && p.tool.fe);
     check('quem passa pelo estoque troca a de pedra pela de ferro', fe.length >= 1 && fe.length + S.stock.ferro === S.stats.ferroMade, fe.length + ' na mão, ' + S.stock.ferro + ' guardadas');
-    const pf = Object.assign({}, p0, { tool: { dur: 100, fe: 1 } }), ps = Object.assign({}, p0, { tool: { dur: 100 } });
+    // quem domina o machado (Etapa 15: sem o domínio, o ganho do machado vale a metade)
+    const pf = Object.assign({}, p0, { tool: { dur: 100, fe: 1 }, sabe: { machado: 1 } }), ps = Object.assign({}, p0, { tool: { dur: 100 }, sabe: { machado: 1 } });
     check('a de ferro rende mais (1,45; machado 1,9) que a de pedra (1,2; 1,6)', near(T.speed(S, pf, 'pedra'), C.FERRO_BONUS) && near(T.speed(S, ps, 'pedra'), C.TOOL_BONUS) && (S.tech.known.machado = { t: 0, by: '', how: '' }, near(T.speed(S, pf, 'madeira'), C.FERRO_MACHADO) && near(T.speed(S, ps, 'madeira'), C.MACHADO_BONUS)));
     T.useTool(S, pf, 60, C.TOOL_WEAR_H); T.useTool(S, ps, 60, C.TOOL_WEAR_H);
     check('e gasta um terço', near(100 - pf.tool.dur, (100 - ps.tool.dur) * C.FERRO_WEAR, 1e-6), (100 - pf.tool.dur).toFixed(2) + ' contra ' + (100 - ps.tool.dur).toFixed(2));

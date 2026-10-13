@@ -110,6 +110,7 @@
     if (curS && wk) s *= Tech.speed(curS, p, wk);   // ferramenta de pedra
     if (curS && wk && curS.god && curS.god.blessings && curS.god.blessings.length && G.Deus) s *= G.Deus.blessAt(curS, p.x, p.y);   // a Bênção (Etapa 11)
     if (curS && wk && p.sangue && G.Povos) s *= G.Povos.speed(curS, p, wk);   // os dons de cada povo (Etapa 12)
+    if (curS && wk && G.Gente) s *= G.Gente.speedMult(curS, p, wk);   // Etapa 15: o trabalho de que gosta
     if (curS && wk && curS.memoria && G.Memoria && (p.ressaca || curS.memoria.zelo)) s *= G.Memoria.speed(curS, p, wk);   // a manhã depois do rito e o zelo de uma resposta de Deus (Etapa 13)
     if (has(p, 'Trabalhador')) s *= 1.15;
     if (has(p, 'Preguiçoso')) s *= 0.85;
@@ -253,6 +254,9 @@
     if (c.fibra) { S.stock.fibra += c.fibra; S.stats.fibraGot = (S.stats.fibraGot || 0) + c.fibra; }   // embira da casca (Etapa 7) e lã (Etapa 10)
     if (c.k === 'frutas' || c.k === 'peixe') { const got = S.stats.got || (S.stats.got = {}); got[c.k] = (got[c.k] || 0) + c.n; }   // missões do Ato 1
     if (c.k !== 'obra' && c.k !== 'caca' && c.k !== 'cria') Sim.float(S, S.camp.x + 1, S.camp.y + 0.6, '+' + c.n + ' ' + RES_LABEL[c.k] + (c.fibra ? ' +' + c.fibra + ' fibra' : ''));
+    // Etapa 15: o que rendeu (por hora, desde que a pessoa começou o trabalho) ensina o jeito
+    const a = p.act;
+    if (G.Gente && a && a.t0 !== undefined && c.k !== 'obra' && c.k !== 'cria') G.Gente.onYield(S, p, a.type, c.k === 'caca' ? (c.carne || 0) + (c.couro || 0) : c.n, (S.t - a.t0) / 60);
     p.carry = null;
   }
   // devolve ao estoque o que a pessoa carregava para uma tarefa largada no meio
@@ -571,15 +575,22 @@
         // o fresco primeiro (estraga logo); o conservado fica para quando faltar (o inverno)
         const st = S.stock, fresh = st.peixe + st.carne, lit = litNearCamp(S), cm = Tech.cookMult(S);   // vasos (Etapa 8): cozido rende mais
         const roca = rocaDish(st, lit);   // Etapa 10: da roça, o que estraga primeiro (sem fogo, só milho e abóbora)
-        if (st.leite > 0) {
+        const fav = G.Gente ? G.Gente.pratoFav(S, p, lit) : null;   // Etapa 15: a comida de que gosta, se há e dá para comer agora
+        const Ge = G.Gente;
+        if (fav === 'peixe' || fav === 'carne') { st[fav]--; n.fome += (fav === 'carne' ? C.CARNE_COOKED : C.FISH_COOKED) * cm; Sim.addMem(S, p, cm > 1 ? 'comeuCozido' : 'comeuQuente'); a.next = a.t + 25; a.hot = fav; Ge.comeu(S, p, fav); }
+        else if (fav === 'frutas') { st.frutas--; n.fome += C.FRUIT_FOOD; a.next = a.t + 6; a.dish = 'frutas'; Ge.comeu(S, p, fav); }
+        else if (fav && C.ROCA[fav]) eatRoca(S, p, a, fav, lit, cm);
+        else if (st.leite > 0) {
           st.leite--; n.fome += C.LEITE_FOOD; n.sede = Math.min(100, n.sede + C.LEITE_SEDE); a.next = a.t + 5; a.dish = 'leite'; Sim.addMem(S, p, 'tomouLeite');
+          if (Ge) Ge.comeu(S, p, 'leite');
         }
-        else if (st.ovos > 0 && lit) { st.ovos--; n.fome += C.OVOS_FOOD * cm; a.next = a.t + 8; a.dish = 'ovos'; Sim.addMem(S, p, cm > 1 ? 'comeuCozido' : 'comeuQuente'); }
+        else if (st.ovos > 0 && lit) { st.ovos--; n.fome += C.OVOS_FOOD * cm; a.next = a.t + 8; a.dish = 'ovos'; Sim.addMem(S, p, cm > 1 ? 'comeuCozido' : 'comeuQuente'); if (Ge) Ge.comeu(S, p, 'ovos'); }
         else if (fresh > 0 && lit) {
           const k = st.carne > st.peixe ? 'carne' : 'peixe';
           st[k]--; n.fome += (k === 'carne' ? C.CARNE_COOKED : C.FISH_COOKED) * cm; Sim.addMem(S, p, cm > 1 ? 'comeuCozido' : 'comeuQuente'); a.next = a.t + 25; a.hot = k;
+          if (Ge) Ge.comeu(S, p, k);
         }
-        else if (st.frutas > 0) { st.frutas--; n.fome += C.FRUIT_FOOD; a.next = a.t + 6; }
+        else if (st.frutas > 0) { st.frutas--; n.fome += C.FRUIT_FOOD; a.next = a.t + 6; if (Ge) Ge.comeu(S, p, 'frutas'); }
         else if (roca) eatRoca(S, p, a, roca, lit, cm);
         else if (st.defumado > 0) { st.defumado--; n.fome += C.DEFUMADO_FOOD; a.next = a.t + 15; a.kept = 'defumado'; }
         else if (st.seca > 0) { st.seca--; n.fome += C.SECA_FOOD; a.next = a.t + 6; a.kept = 'seca'; }
@@ -623,6 +634,7 @@
     p.needs.fome += lit ? d.food * cm : d.raw;
     a.next = a.t + (lit ? 20 : 8); a.dish = k;
     if (lit) Sim.addMem(S, p, cm > 1 ? 'comeuCozido' : 'comeuQuente');
+    if (G.Gente) G.Gente.comeu(S, p, k);   // Etapa 15
   }
 
   ACT.dormir = {
@@ -1020,6 +1032,9 @@
       if (a.stage === 'go') {
         a.walk = (a.walk || 0) + dt;
         if (a.walk > m.walk) return FAIL;
+        // 0.15: quem vai atrás de alguém que anda para quando o alcança no caminho (antes passava por ele e seguia até
+        // onde ele estava)
+        if (m.alvo && moving(p)) { const t = person(S, m.alvo); if (t && Math.hypot(t.x - p.x, t.y - p.y) < 1.6) p.path = null; }
         if (moving(p)) return RUN;
         if (p.stuck) return FAIL;
         if (m.alvo) {
@@ -1339,10 +1354,10 @@
             const room = Tech.waterCap(S) - S.stock.agua;
             if (room <= 0) return DONE;
             // na seca o rio baixa: cada viagem rende menos; com cestos, cabem mais cabaças
-            p.carry = { k: 'agua', n: Math.max(1, Math.min(Math.round((Fam.stage(S, p) === 'crianca' ? 3 : C.WATER_TRIP) * Tech.carryMult(S) * G.Narr.waterMult(S)), room)) };
+            p.carry = { k: 'agua', n: Math.max(1, Math.min(Math.round((Fam.stage(S, p) === 'crianca' ? 3 : C.WATER_TRIP) * Tech.carryMult(S, p) * G.Narr.waterMult(S)), room)) };
           } else if (kind === 'argila') {
             if (a.t < C.ARGILA_MIN) return RUN;
-            p.carry = { k: 'argila', n: Math.round(C.ARGILA_TRIP * Tech.carryMult(S)) };
+            p.carry = { k: 'argila', n: Math.round(C.ARGILA_TRIP * Tech.carryMult(S, p)) };
           } else {
             if (a.t - a.roll >= C.FISH_ROLL) {
               a.roll += C.FISH_ROLL;
@@ -1598,7 +1613,7 @@
         const bow = !!(G.Inv && Tech.known(S, 'arco'));
         S.events.push({ k: 'throw', x1: p.x, y1: p.y - 0.4, x2: e.x, y2: e.y, bow });
         const bando = Fa.alive(S).filter((o) => o !== e && o.h === e.h && Math.hypot(o.x - e.x, o.y - e.y) < 7);
-        if (S.rng.next() < C.CACA_HIT + C.CACA_HIT_LVL * lvl(p, 'caca') + (G.Inv ? G.Inv.cacaHit(S) : 0) + (p.sangue && G.Povos ? G.Povos.cacaHit(p) : 0)) {
+        if (S.rng.next() < C.CACA_HIT + C.CACA_HIT_LVL * lvl(p, 'caca') + (G.Inv ? G.Inv.cacaHit(S) * (G.Gente ? 0.5 + 0.5 * G.Gente.dom(S, p, 'arco') : 1) : 0) + (p.sangue && G.Povos ? G.Povos.cacaHit(p) : 0)) {   // Etapa 15: o arco rende pelo domínio
           S.events.push({ k: 'hit', x: e.x, y: e.y });
           const r = Fa.hit ? Fa.hit(S, e, p) : (Fa.kill(S, e), 'morto');   // bicho grande pede mais de um acerto
           if (r === 'morto') {
@@ -2264,6 +2279,7 @@
       const vw = Math.pow(C.VONTADE_W[v], G.God.obedience(S, p));
       let s = C.WORK_BASE * vw * campNeed(S, wk, p);
       if (!(s > 0)) continue;
+      if (G.Gente) s *= G.Gente.workMult(S, p, wk);   // Etapa 15: o gosto, o jeito e o combinado
       if (has(p, 'Trabalhador')) s *= 1.15;
       if (has(p, 'Preguiçoso')) s *= 0.85;
       const sk = SKILL_OF[wk];
@@ -2291,7 +2307,7 @@
     if (r === DONE && WORK_SET.has(a.type)) p.lastWork = a.type;   // para o "o que você fez hoje?"
     if (a.obj && a.obj.res === p.id) a.obj.res = 0;
     p.path = null; p.stuck = false;
-    if (r === FAIL) p.fail[a.type] = S.t + 30;
+    if (r === FAIL) { p.fail[a.type] = S.t + 30; if (G.Gente && WORK_SET.has(a.type)) G.Gente.onFail(S, p, a.type); }
   }
   AI.abort = function (S, p) { end(S, p, 0); };
 
@@ -2302,7 +2318,7 @@
       if (c.q) a.q = c.q.id;
       if (c.hint) a.hint = c.hint;
       p.stuck = false;
-      if (ACT[c.type].start(S, p, a)) { p.act = a; p.nextEval = S.t + C.REEVAL_MIN; return a; }
+      if (ACT[c.type].start(S, p, a)) { p.act = a; a.t0 = S.t; p.nextEval = S.t + C.REEVAL_MIN; return a; }
       if (a.obj && a.obj.res === p.id) a.obj.res = 0;
       p.fail[c.type] = S.t + 45;
       p.path = null;
@@ -2315,7 +2331,7 @@
     if (p.fail[type] && p.fail[type] > S.t) return null;
     const a = { type, score: 99, stage: 'go', t: 0 };
     p.stuck = false;
-    if (ACT[type].start(S, p, a)) { p.act = a; p.nextEval = S.t + C.REEVAL_MIN; return a; }
+    if (ACT[type].start(S, p, a)) { p.act = a; a.t0 = S.t; p.nextEval = S.t + C.REEVAL_MIN; return a; }
     if (a.obj && a.obj.res === p.id) a.obj.res = 0;
     p.fail[type] = S.t + 45; p.path = null;
     return null;
@@ -2371,7 +2387,9 @@
     }
     if (S.t >= p.nextEval) {
       p.nextEval = S.t + C.REEVAL_MIN;
-      if (REEVAL.has(a.type)) {
+      // 0.15: quem já tirou do estoque o material da tarefa (a madeira da cerca, a pedra do caminho) não reavalia no meio:
+      // com o material nas costas o estoque parece vazio, a tarefa sumia da lista e a pessoa devolvia tudo no caminho
+      if (REEVAL.has(a.type) && !(p.carry && p.carry.back && p.carry.k === a.type)) {
         const list = scoreList(S, p);
         const best = list[0];
         if (best && best.type !== a.type) {

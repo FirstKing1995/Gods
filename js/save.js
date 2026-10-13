@@ -104,6 +104,7 @@
       povos: S.povos || null,   // Etapa 12: a convivência e as caravanas
       memoria: G.Memoria && S.memoria ? packMem(S.memoria) : null,   // Etapa 13: corpos, contos, a erva e o rito
       soc: G.Soc && S.soc ? G.Soc.pack(S) : null,   // Etapa 14: crimes, líder, pedidos, quem foi embora, a vila de fora
+      gente: S.gente || null,   // Etapa 15: a média de cada trabalho, as tentativas, quem aprendeu com quem
     };
   };
 
@@ -142,6 +143,7 @@
       povos: d.povos || null,
       memoria: d.memoria || null,
       soc: d.soc || null,
+      gente: d.gente || null,
     };
     for (const p of S.people) {
       p.path = null; p.pathI = 0; p.act = null; p.px = p.x; p.py = p.y; p.fail = {}; p.stuck = false;

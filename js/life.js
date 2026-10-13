@@ -321,6 +321,9 @@
       return dlg('crianca', [[0, q], [1, pick(S, rs)]]);
     }
     if (ka < 12 && kb < 12) { const [q, r] = pick(S, KIDS2); return dlg('crianca', [[0, q], [1, r]]); }
+    // Etapa 15: as conversas de verdade (o que viu, a fofoca, o combinado, o gosto, o desabafo, ensinar uma técnica)
+    const nova = G.Gente ? G.Gente.dialog(S, a, b) : null;
+    if (nova) return nova;
     // par: namoro
     if (F.isPartner(a, b) && S.rng.next() < 0.6) {
       const hot = F.spicy && F.spicy(S) && F.age(S, a) >= 18 && F.age(S, b) >= 18 && S.rng.next() < 0.35;
@@ -347,6 +350,7 @@
     if (S.povos && S.povos.mixed && G.Povos) G.Povos.onChat(S, a, b, d.kind);   // Etapa 12: a conversa aproxima os povos (a briga afasta)
     const rec = { t: S.t, kind: d.kind, lines: d.lines.map((ln) => [(ln.by ? b : a).name, ln.text]) };
     a.talk = rec; b.talk = rec;
+    if (G.Gente) G.Gente.afterChat(S, a, b, d);   // Etapa 15
     if (d.kind === 'casal') F.addAfeto(S, a, b, 2);
     else if (d.kind === 'consolo') {
       Sm.addMem(S, b, 'consolado'); Sm.addMem(S, a, 'consolou');
@@ -634,6 +638,7 @@
     L.party(S, 'nascimento', { pid: baby.id });
   };
   L.onDeath = function (S, dead) {
+    if (G.Gente) G.Gente.onDeath(S, dead);   // Etapa 15: quem morre leva o jeito que tinha
     const l = S.life;
     if (l && l.party && !l.party.on) { l.party = null; if (!S.safe) Sim().toast(S, 'A festa ficou para outro dia.', ''); }
     // quem era mais próximo reza por quem se foi
@@ -661,6 +666,7 @@
     if (k === 'fartura' || k === 'piracema') L.party(S, k);
   };
   L.onDiscover = function (S, id, by, how) {
+    if (G.Gente) G.Gente.onDiscover(S, id, by);   // Etapa 15: quem descobriu domina a técnica; as tentativas entram na história
     if (by && by.alive && how !== 'revelacao' && how !== 'povo' && by.fe >= 45 && !S.safe) God().thank(S, by, 'Obrigad' + oa(by) + ' pela ideia, céu!', C.THANKS.descoberta, true);
     L.party(S, 'descoberta', { id });
   };
