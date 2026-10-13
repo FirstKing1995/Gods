@@ -273,8 +273,9 @@
     }
   };
   const users = (S) => S.people.filter((p) => p.alive && !p.carriedBy && Fam().age(S, p) >= 3);
-  O.needMantas = (S) => users(S).filter((p) => !p.manta || p.manta.dur < 15).length - S.stock.mantas;
-  O.needRedes = (S) => users(S).filter((p) => !p.rede || p.rede.dur < 15).length - S.stock.redes;
+  // 0.14: as contagens vêm do censo do passo (tech.js)
+  O.needMantas = (S) => (Tech().censo ? Tech().censo(S).manta : users(S).filter((p) => !p.manta || p.manta.dur < 15).length) - S.stock.mantas;
+  O.needRedes = (S) => (Tech().censo ? Tech().censo(S).rede : users(S).filter((p) => !p.rede || p.rede.dur < 15).length) - S.stock.redes;
   // tábuas: o que as obras marcadas pedem, mais uma folga pequena
   O.needTabuas = function (S) {
     const short = S.ctx && S.ctx.matShort ? S.ctx.matShort.tabuas || 0 : 0;

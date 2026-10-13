@@ -21,7 +21,7 @@
   // minutos de jogo que passam para um tempo real fora (ms)
   Off.minutesFor = function (awayMs, S) {
     if (!(awayMs > C.OFFLINE_MIN_SEC * 1000)) return 0;
-    const perRealSec = C.DAY_MIN / C.REAL_SEC_PER_DAY * Off.rate(S);
+    const perRealSec = C.DAY_MIN / C.OFFLINE_SEC_PER_DAY * Off.rate(S);
     return Math.min(awayMs / 1000 * perRealSec, C.OFFLINE_MAX_DAYS * C.DAY_MIN);
   };
 

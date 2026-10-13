@@ -267,6 +267,7 @@
 
   // ---------- partículas ----------
   function spawn(p) { if (parts.length < 400) parts.push(p); }
+  const olhos = [];   // Etapa 14: onde algo que não se devia acabou de acontecer (o olho de Deus, uns segundos)
   R.event = function (e) {
     if (e.k === 'road') { dirtyTile(e.i); return; }
     if (e.k === 'upgrade') {
@@ -306,6 +307,24 @@
     if (e.k === 'fireLit') {
       // fagulhas subindo quando acendem o fogo
       for (let i = 0; i < 12; i++) spawn({ x: e.x * TS + 8 + (Math.random() - 0.5) * 8, y: e.y * TS + 8, vx: (Math.random() - 0.5) * 14, vy: -18 - Math.random() * 22, g: -4, life: 0.9 + Math.random() * 0.6, col: Math.random() < 0.5 ? '#feae34' : '#fee761' });
+      return;
+    }
+    if (e.k === 'soc') {
+      // Etapa 14: o que só Deus viu (um olho escuro), o que o povo viu (vermelho), o golpe, o fogo, o castigo, o perdão
+      const X = e.x !== undefined ? e.x * TS + 8 : 0, Y = e.y !== undefined ? e.y * TS + 6 : 0;
+      const puff = (n, cols, up, spread, life) => { for (let i = 0; i < n; i++) spawn({ x: X + (Math.random() - 0.5) * (spread || 12), y: Y + (Math.random() - 0.5) * 6, vx: (Math.random() - 0.5) * 10, vy: -(up || 10) - Math.random() * (up || 10), g: 0, life: (life || 1) + Math.random() * 0.6, col: cols[Math.floor(Math.random() * cols.length)] }); };
+      if (e.ev === 'crime') { if (e.known) puff(e.g >= 2 ? 14 : 8, ['#e43b44', '#f6757a', '#181425']); else puff(e.g >= 2 ? 10 : 6, ['#3a4466', '#5a6988', '#181425'], 6); olhos.push({ x: e.x, y: e.y, t0: performance.now(), known: !!e.known, g: e.g }); }
+      else if (e.ev === 'golpe') { for (let i = 0; i < 10; i++) spawn({ x: X, y: Y - 2, vx: (Math.random() - 0.5) * 50, vy: -10 - Math.random() * 30, g: 80, life: 0.5, col: Math.random() < 0.5 ? '#ffffff' : '#e43b44' }); }
+      else if (e.ev === 'fogo') { if (e.on) puff(20, ['#f77622', '#feae34', '#fee761'], 18, 26, 1.2); else if (e.burned) puff(40, ['rgba(40,40,52,0.8)', 'rgba(90,96,112,0.7)', '#181425'], 14, 30, 2.4); else puff(26, ['rgba(220,240,255,0.8)', 'rgba(159,232,255,0.7)'], 12, 26, 1.6); }
+      else if (e.ev === 'julg') { if (e.aberto) puff(16, ['#feae34', '#fee761'], 14, 14); else if (!e.on) puff(18, e.cond === 1 ? ['#e43b44', '#a22633'] : e.cond === 0 ? ['#9be070', '#63c74d'] : ['#8b9bb4'], 12, 20); }
+      else if (e.ev === 'bronca') puff(6, ['#8b9bb4', '#c0cbdc'], 8, 8);
+      else if (e.ev === 'castigo') { puff(e.nv >= 4 ? 4 : 16, e.nv === 1 ? ['#b58be0', '#ead4aa'] : e.nv === 2 ? ['#e43b44', '#a22633'] : e.nv === 3 ? ['#8fb86a', '#4a6b3a'] : ['#c0cbdc'], 12, 10, 1.3); }
+      else if (e.ev === 'perdao' || e.ev === 'sinal') { for (let i = 0; i < 28; i++) { const a = Math.random() * Math.PI * 2, r = (0.3 + Math.random() * 0.9) * TS; spawn({ x: X + Math.cos(a) * r, y: Y + Math.sin(a) * r * 0.5, vx: 0, vy: -10 - Math.random() * 16, g: 0, life: 1.4 + Math.random(), col: Math.random() < 0.6 ? '#fee761' : '#ffffff' }); } }
+      else if (e.ev === 'lider' && lastS) { const p = lastS.people.find((q) => q.id === e.pid); if (p) for (let i = 0; i < 18; i++) spawn({ x: p.x * TS + (Math.random() - 0.5) * 12, y: p.y * TS - 8, vx: 0, vy: -8 - Math.random() * 12, g: 0, life: 1.2 + Math.random() * 0.8, col: Math.random() < 0.6 ? '#feae34' : '#fee761' }); }
+      else if (e.ev === 'obra' || e.ev === 'pedido') puff(10, ['#b86f50', '#e4a672', '#8b9bb4'], 8, 20);
+      else if (e.ev === 'partida' || e.ev === 'aviso' || e.ev === 'exilio' || e.ev === 'saque') puff(12, e.ev === 'saque' ? ['#3a4466', '#181425'] : ['#b86f50', '#c9a068', '#8b9bb4'], 8, 26, 1.4);
+      else if (e.ev === 'vila') puff(26, ['rgba(200,204,216,0.8)', 'rgba(140,148,170,0.7)'], 16, 20, 2.6);
+      else if (e.ev === 'injusto') puff(12, ['#3a4466', '#68386c'], 8, 10, 1.6);
       return;
     }
     if (e.k === 'memoria') {
@@ -384,7 +403,7 @@
       // moquém armado: fumaça fina
       if (b.type === 'moquem' && b.batch && Math.random() < dt * 3) spawn({ x: b.x * TS + 6 + Math.random() * 5, y: b.y * TS + 2, vx: (Math.random() - 0.5) * 3, vy: -7 - Math.random() * 4, g: 0, life: 2.6, col: 'smoke' });
       // casa de pedra com gente dentro no frio: fumaça na chaminé (Etapa 7)
-      if (b.kind === 'pedra' && b.built && S.temp < 14 && Math.random() < dt * 2.5 && S.people.some((p) => p.alive && p.inTent === b.id)) {
+      if (b.kind === 'pedra' && b.built && S.temp < 14 && Math.random() < dt * 2.5 && FX && FX.tent.has(b.id)) {
         spawn({ x: b.x * TS + 23 + Math.random() * 2, y: b.y * TS - 3, vx: 1 + Math.random() * 2, vy: -6 - Math.random() * 3, g: 0, life: 2.4, col: 'smoke' });
       }
       if (b.type !== 'fogueira' || !b.built || b.fuel <= 0) continue;
@@ -414,7 +433,34 @@
   R.darkness = darkness;
 
   // ---------- quadro ----------
+  // 0.14: um passe só pelo povo a cada quadro (quem leva bebê no colo, quem está em cada casa, quem trabalha na forja
+  // e na mina); antes, cada pessoa e cada casa desenhada varria o povo inteiro, e com 300 pessoas o quadro pesava
+  let FX = null;
+  const NADA = [];
+  function frameIdx(S) {
+    const carried = new Map(), tent = new Map(), forja = new Set(), mina = new Map();
+    for (const p of S.people) {
+      if (!p.alive) continue;
+      if (p.carriedBy) { const l = carried.get(p.carriedBy); if (l) l.push(p); else carried.set(p.carriedBy, [p]); }
+      if (p.inTent) {
+        let t = tent.get(p.inTent);
+        if (!t) { t = { labor: null, sleepers: 0, n: 0 }; tent.set(p.inTent, t); }
+        t.n++;
+        if (p.labor && !t.labor) t.labor = p;
+        if (p.sleeping && !p.carriedBy) t.sleepers++;
+      }
+      const a = p.act;
+      if (a && a.stage === 'work') {
+        if (a.type === 'oficio') forja.add(a.shop);
+        else if (a.type === 'mina') mina.set(a.b, (mina.get(a.b) || 0) + 1);
+      }
+    }
+    return { carried, tent, forja, mina };
+  }
+  let lastS = null;
   R.draw = function (S, alpha, now, world) {
+    lastS = S || null;
+    FX = S ? frameIdx(S) : null;
     const dt = lastNow ? Math.min(0.1, (now - lastNow) / 1000) : 0;
     lastNow = now;
     const w = S ? S.world : world;
@@ -481,7 +527,16 @@
       for (const p of S.people) {
         if (!p.alive || p.inTent || p.carriedBy) continue;
         const x = U.lerp(p.px, p.x, alpha), y = U.lerp(p.py, p.y, alpha);
+        // 0.14: só quem está à vista (antes, todo o povo era montado a cada quadro, mesmo fora da tela)
+        if (x < tx0 - 2 || x > tx1 + 2 || y < ty0 - 2 || y > ty1 + 3) continue;
         list.push({ y: y * TS + 4, p, x, y });
+      }
+      // Etapa 14: a vila de fora, as cinzas do que o fogo levou e os pedidos do líder
+      if (S.soc) {
+        const v = S.soc.vila;
+        if (v && !v.longe && v.x + 2 >= tx0 && v.x - 2 <= tx1 && v.y + 1 >= ty0 && v.y - 1 <= ty1 && G.Sim.isSeen(S, v.x, v.y)) list.push({ y: (v.y + 1) * TS, soc: 'vila', v });
+        for (const c of S.soc.cinzas) list.push({ y: c.y * TS + 2, soc: 'cinza', c });
+        for (const q of S.soc.pedidos) list.push({ y: (q.y + (q.tiles ? 0 : C.BUILD[q.type].h)) * TS - 1, soc: 'pedido', q });
       }
       // Etapa 13: quem morreu e espera o enterro (no chão, na esteira do velório, ou no ombro de quem leva)
       if (S.memoria && S.memoria.corpos.length) for (const id of S.memoria.corpos) {
@@ -521,7 +576,29 @@
       else if (it.c) drawBicho(it.c, it.x, it.y, now);
       else if (it.fe !== undefined) drawFence(S, it.fe, snow);
       else if (it.cr) drawCria(S, it.cr, it.x, it.y);
+      else if (it.soc) drawSoc(S, it, now);
       else { drawPerson(S, it.p, it.x, it.y, now); if (levado[it.p.id]) blit(A.spr.corpo, it.x * TS - 7, it.y * TS - 15); }
+    }
+    // Etapa 14: o fogo posto (chamas por cima da obra), o julgamento (a balança sobre o fogo) e o olho de Deus
+    if (S && S.soc) {
+      if (S.soc.arde) for (const b of S.buildings) {
+        if (!b.fogo || b.x + b.w < tx0 || b.x > tx1 || b.y + b.h < ty0 || b.y > ty1) continue;
+        const bw = b.w * TS, bh = b.h * TS;
+        for (let k = 0; k < 7; k++) {
+          const fx = b.x * TS + 2 + ((k * 37 + b.id * 13) % Math.max(1, bw - 6)), ph = Math.floor(now / 110 + k * 1.7) % 4, fh = 5 + ((k * 5 + ph * 3) % 7);
+          const fy = b.y * TS + bh - 6 - ((k * 11) % Math.max(1, bh - 10));
+          rect(fx, fy - fh, 3, fh, '#f77622'); rect(fx + 1, fy - fh + 1, 1, Math.max(1, fh - 2), '#fee761'); rect(fx + 1, fy - fh - 1 - (ph % 2), 1, 1, '#feae34');
+        }
+        if (Math.random() < 0.5) spawn({ x: b.x * TS + Math.random() * bw, y: b.y * TS + 4, vx: (Math.random() - 0.5) * 8, vy: -14 - Math.random() * 10, g: 0, life: 2 + Math.random(), col: Math.random() < 0.4 ? '#f77622' : 'rgba(60,60,72,0.7)' });
+      }
+      const J = S.soc.julg;
+      if (J) { const f = G.Sim.building(S, J.fire); if (f) { const ic = A.icon('julg'), bob = Math.round(Math.sin(now / 300) * 1); blit(ic, (f.x + 0.5) * TS - ic.width / 2, f.y * TS - 16 + bob, J.st === 'on' ? 1 : 0.6); } }
+    }
+    for (let i = olhos.length - 1; i >= 0; i--) {
+      const o = olhos[i], t = (performance.now() - o.t0) / 1000;
+      if (t > 4) { olhos.splice(i, 1); continue; }
+      const ic = A.icon(o.known ? 'crime' : 'olho');
+      blit(ic, o.x * TS + 8 - ic.width / 2, o.y * TS - 12 - t * 3, Math.max(0, Math.min(1, 2 - t / 2)));
     }
     // Etapa 13: a fumaça do rito sobe do fogo, lilás e cinza
     const rito = S && S.memoria && S.memoria.erva.rite;
@@ -933,14 +1010,15 @@
       blit(S2.bigShadow, bx + 5, by + 26, ghost ? 0.4 : undefined);
       blit(img, bx, top, ghost ? 0.45 : undefined);
       // parto dentro da barraca: um sinal acima dela
-      const labor = S.people.find((p) => p.alive && p.inTent === b.id && p.labor);
+      const dentro = FX && FX.tent.get(b.id);
+      const labor = dentro ? dentro.labor : null;
       if (labor && !ghost) {
         const bob = Math.round(Math.sin(now / 250) * 1);
         const icon = A.icon(labor.labor.hard && !labor.labor.helped ? 'reza' : 'bebe');
         blit(icon, bx + 16 - icon.width / 2, top - 13 + bob);
       }
       // zzz de quem dorme dentro
-      const sleepers = S.people.filter((p) => p.alive && p.inTent === b.id && p.sleeping && !p.carriedBy).length;
+      const sleepers = dentro ? dentro.sleepers : 0;
       if (sleepers && !ghost) {
         const t = (now / 1000) % 2;
         for (let i = 0; i < 2; i++) {
@@ -1063,7 +1141,7 @@
       if ((st.redes || 0) > 0) blit(it.redes, bx + 22, by + 28);
     } else if (b.type === 'ferraria') {
       // Etapa 12: com alguém na forja, a brasa pulsa, sobem fagulhas e a fumaça sai pela chaminé
-      const on = S.people.some((p) => p.alive && p.act && p.act.type === 'oficio' && p.act.shop === b.id && p.act.stage === 'work');
+      const on = !!FX && FX.forja.has(b.id);
       if (on) {
         const f = 0.5 + 0.5 * Math.sin(now / 130), x0 = lv >= 2 ? [6, 12] : [8];
         for (const xo of x0) { rect(bx + xo, top + (lv >= 2 ? 21 : 20), lv >= 2 ? 4 : 6, 3, f > 0.5 ? '#fee761' : '#feae34'); rect(bx + xo + 1, top + (lv >= 2 ? 20 : 19), 2, 1, '#f77622'); }
@@ -1074,7 +1152,7 @@
       for (let i = 0; i < nf; i++) blit(it.ferro, bx + 24 + (i % 2) * 2, by + 28 - i * 2);
     } else if (b.type === 'mina') {
       // quem está lá dentro: um lampião aceso na boca; e o que saiu, empilhado ao lado
-      const n = S.people.filter((p) => p.alive && p.act && p.act.type === 'mina' && p.act.b === b.id && p.act.stage === 'work').length;
+      const n = FX ? FX.mina.get(b.id) || 0 : 0;
       if (n) { const f = Math.sin(now / 170) > 0 ? '#fee761' : '#feae34'; rect(bx + 15, top + (lv >= 2 ? 19 : 20), 2, 2, f); rect(bx + 14, top + (lv >= 2 ? 20 : 21), 4, 1, 'rgba(254,174,52,0.35)'); }
       if ((S.stock.minerio || 0) > 0) blit(it.minerio, bx + 1, by + 29);
       if ((S.stock.carvao || 0) > 0) blit(it.carvao, bx + 24, by + 30);
@@ -1200,7 +1278,7 @@
     const wx = x * TS, wy = y * TS;
     blit(A.spr.shadow, wx - 6, wy + 2);
     const a = p.act;
-    const babies = S.people.filter((b) => b.alive && b.carriedBy === p.id);
+    const babies = (FX && FX.carried.get(p.id)) || NADA;
     if (p.sleeping) {
       blit(sheet.sleep, wx - (kid ? 5 : 7), wy - (kid ? 3 : 5));
       // manta tecida por cima (Etapa 7)
@@ -1252,6 +1330,12 @@
       const hy = top - 2 + dy + Math.round(Math.sin(now / 400) * 0.5);
       rect(wx - 2, hy, 4, 1, col); rect(wx - 3, hy + 1, 1, 1, col); rect(wx + 2, hy + 1, 1, 1, col);
     }
+    // Etapa 14: o cocar do líder, a marca de Deus na testa, e o olho sobre quem vai fazer o que não deve (você vê tudo)
+    if (S.soc && !kid) {
+      if (S.soc.lider === p.id) { const hy = top - 2 + dy; rect(wx - 2, hy + 1, 1, 1, '#e43b44'); rect(wx - 1, hy, 1, 2, '#feae34'); rect(wx, hy - 1, 1, 3, '#fee761'); rect(wx + 1, hy, 1, 2, '#feae34'); rect(wx + 2, hy + 1, 1, 1, '#e43b44'); }
+      if (p.marca > S.t && p.dir !== 1) rect(p.dir === 2 ? wx + 1 : p.dir === 3 ? wx - 2 : wx - 1, top + 2 + dy, p.dir === 0 ? 2 : 1, 1, '#e43b44');
+      if (p.plano && a && a.type === 'soc' && a.m && a.m.k === 'crime') { const ic = A.icon('olho'), bob = Math.round(Math.sin(now / 250) * 1); blit(ic, wx - ic.width / 2, top - 12 + bob, 0.85); }
+    }
     // Etapa 13: a vela de quem vela e de quem lembra os mortos, as flores de quem visita, a fumaça na cabeça de quem está na roda
     if (a && a.type === 'memoria' && a.m && !moving && p.dir !== 1) {
       const mk = a.m.k, hx = p.dir === 3 ? wx - 4 : wx + 3;
@@ -1270,6 +1354,38 @@
       const it = A.spr.item[carryKind(p.carry)];
       if (it) blit(it, wx - it.width / 2, top - it.height);
     }
+  }
+  // Etapa 14: a vila de fora (com fumaça, se há gente), as cinzas de uma obra queimada, o pedido do líder (a obra em
+  // fantasma, com um ponto de interrogação)
+  function interroga(wx, wy, now) {
+    const b = Math.round(Math.sin(now / 260) * 1), y = wy + b, K = '#181425', Y = '#fee761';
+    rect(wx - 3, y - 1, 7, 9, K);
+    rect(wx - 2, y, 5, 1, Y); rect(wx + 2, y + 1, 1, 2, Y); rect(wx - 2, y + 1, 1, 1, Y); rect(wx, y + 3, 2, 1, Y); rect(wx, y + 4, 1, 1, Y); rect(wx, y + 6, 1, 1, Y);
+  }
+  function drawSoc(S, it, now) {
+    if (it.soc === 'vila') {
+      const v = it.v, img = A.vilaFora(!!v.fim);
+      blit(img, (v.x + 0.5) * TS - img.width / 2, (v.y + 1) * TS - img.height);
+      if (!v.fim && Math.random() < 0.12) spawn({ x: (v.x + 0.5) * TS + 6, y: (v.y + 1) * TS - 6, vx: (Math.random() - 0.5) * 3, vy: -7, g: 0, life: 3, col: 'rgba(200,204,216,0.6)' });
+      return;
+    }
+    if (it.soc === 'cinza') {
+      const c = it.c, x0 = c.x * TS, y0 = c.y * TS, w = c.w * TS, h = c.h * TS;
+      for (let k = 0; k < 14; k++) { const px = x0 + 2 + ((k * 29 + c.x * 7) % (w - 5)), py = y0 + 6 + ((k * 17 + c.y * 5) % (h - 8)); rect(px, py, 2 + (k % 3), 1 + (k % 2), k % 3 ? 'rgba(24,20,37,0.5)' : 'rgba(90,96,112,0.5)'); }
+      rect(x0 + 4, y0 + h - 12, 1, 8, '#181425'); rect(x0 + w - 6, y0 + h - 10, 1, 6, '#181425'); rect(x0 + w / 2, y0 + h - 14, 1, 9, '#262b44');
+      return;
+    }
+    const q = it.q;
+    if (q.tiles) {
+      const Wd = S.world.W;
+      for (const i of q.tiles) rect((i % Wd) * TS + 6, Math.floor(i / Wd) * TS + 7, 4, 3, 'rgba(254,231,97,0.55)');
+      const b = G.Sim.building(S, q.pid);
+      if (b) interroga((b.x + b.w / 2) * TS, b.y * TS - 12, now);
+      return;
+    }
+    const d = C.BUILD[q.type];
+    drawBuilding(S, { id: -q.id, type: q.type, x: q.x, y: q.y, w: d.w, h: d.h, built: false, lv: 1, kind: null, progress: 0, have: {}, fuel: 0, beds: [] }, now);
+    interroga((q.x + d.w / 2) * TS, q.y * TS - 10, now);
   }
   // o que aparece nas costas: material de obra, pedra do caminho, material do ofício
   function carryKind(c) {
@@ -1555,7 +1671,12 @@
     lctx.fillStyle = 'rgba(14,12,40,' + dark.toFixed(3) + ')';
     lctx.fillRect(0, 0, lw, lh);
     lctx.globalCompositeOperation = 'destination-out';
-    const fires = S.buildings.filter((b) => b.type === 'fogueira' && b.built && b.fuel > 0);
+    // 0.14: só os fogos cuja luz chega à tela
+    const fires = S.buildings.filter((b) => {
+      if (b.type !== 'fogueira' || !b.built || b.fuel <= 0) return false;
+      const cx = (b.x + 0.5) * TS * sc + ox, cy = (b.y + 0.4) * TS * sc + oy, r = TS * sc * (G.Sim.def(b).fire.r + 0.5);
+      return cx + r >= 0 && cx - r <= W && cy + r >= 0 && cy - r <= H;
+    });
     if (S.god) for (const a of S.god.auras) {
       const cx = ((a.x + 0.5) * TS * sc + ox) / 4, cy = ((a.y + 0.5) * TS * sc + oy) / 4, r = a.r * TS * sc / 4;
       for (const [f, al] of [[1.0, 0.3], [0.7, 0.6], [0.4, 0.9]]) { lctx.fillStyle = 'rgba(0,0,0,' + al + ')'; lctx.beginPath(); lctx.arc(cx, cy, r * f, 0, Math.PI * 2); lctx.fill(); }

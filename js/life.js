@@ -367,6 +367,7 @@
       Sm.addMem(S, a, 'brigou'); Sm.addMem(S, b, 'brigou');
       const until = S.t + Math.round((C.FEUD_DAYS[0] + S.rng.next() * (C.FEUD_DAYS[1] - C.FEUD_DAYS[0])) * DAY());
       (a.feud || (a.feud = {}))[b.id] = until; (b.feud || (b.feud = {}))[a.id] = until;
+      if (G.Soc && S.soc) G.Soc.onBriga(S, a, b);   // Etapa 14: quem tem o gênio violento guarda a raiva por mais tempo
       if (F.isPartner(a, b)) F.addAfeto(S, a, b, -8);
       S.stats.fights++;
       if (S.t - S.life.fightToast > 2 * DAY()) { S.life.fightToast = S.t; Sm.toast(S, a.name + ' e ' + b.name + ' brigaram. Vão ficar uns dias sem se falar.', 'warn'); }
@@ -418,6 +419,7 @@
     if (!l || l.story || l.storyDay === S.ck.day || !calmEvening(S)) return false;
     if (p.carriedBy || p.labor || age(S, p) < 14 || !fine(p)) return false;
     if (G.Memoria && S.memoria && G.Memoria.blockStory(S)) return false;   // Etapa 13: noite de velório ou de rito não tem história
+    if (G.Soc && G.Soc.blockStory(S)) return false;   // Etapa 14: nem a tardinha de julgamento
     if (G.Deus && S.god && S.god.pending && G.Deus.sermonFirst(S, p)) return false;   // Etapa 11: a vez é do profeta
     const f = L.campFire(S, true);
     if (!f) return false;

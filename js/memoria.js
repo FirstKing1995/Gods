@@ -536,7 +536,7 @@
 
   // ---------- a História de Deus ----------
   // o tom com que o conto nasce: +1 cuidado, -1 medo, 0 espanto
-  const TOM = { cura: 1, chuva: 1, calor: 1, raioFera: 0, castigo: -1, sonho: 1, nome: 0, escolhido: 0, estatua: 0, especie: 1, saber: 1, chamado: 0, visao: 0, silencio: -1, promessa: 0 };
+  const TOM = { cura: 1, chuva: 1, calor: 1, raioFera: 0, castigo: -1, sonho: 1, nome: 0, escolhido: 0, estatua: 0, especie: 1, saber: 1, chamado: 0, visao: 0, silencio: -1, promessa: 0, justica: 0, pesado: -1, perdao: 1, palavra: 0 };
   const FERA = { onca: ['a onça', 'onças', 'a onça'], lobos: ['a matilha', 'lobos', 'o lobo'] };
   const eE = (c) => (c.sx === 'F' ? 'ela' : 'ele');
   const oE = (c) => (c.sx === 'F' ? 'a' : 'o');
@@ -584,6 +584,19 @@
     silencio: [(c, D) => c.a + ' rezou até o fim, e ' + D + ' não respondeu.',
       (c, D) => c.a + ' chamou por ' + D + ' três noites. O céu ficou calado.',
       (c, D) => D + ' virou o rosto, e ' + c.a + ' se foi sem resposta. Por isso a gente reza baixo.'],
+    // Etapa 14: o castigo na medida, o castigo pesado demais (ou em quem não tinha culpa), o perdão, a palavra dada a quem ia embora
+    justica: [(c, D) => c.a + ' ' + (c.x1 || 'fez o que não devia') + ', e ' + D + ' cobrou na medida.',
+      (c, D) => 'ninguém tinha visto o que ' + c.a + ' fez. ' + D + ' viu, e todo mundo ficou sabendo.',
+      (c, D) => D + ' pesa cada um numa balança. Com ' + c.a + ', a balança não errou.'],
+    pesado: [(c, D) => (c.x1 === 'inocente' ? D + ' castigou ' + c.a + ', que não tinha feito nada.' : D + ' pesou a mão com ' + c.a + '. Foi mais do que ' + eE(c) + ' merecia.'),
+      (c, D) => (c.x1 === 'inocente' ? c.a + ' só estava passando, e ' + D + ' descontou n' + (c.sx === 'F' ? 'ela' : 'ele') + ' a raiva de outro.' : c.a + ' errou pouco, e ' + D + ' cobrou muito.'),
+      (c, D) => 'com ' + D + ' não se erra nem uma vez. ' + c.a + ' que o diga.'],
+    perdao: [(c, D) => c.a + ' errou, e ' + D + ' perdoou diante de todos.',
+      (c, D) => c.a + ' chorou ao pé do fogo, e ' + D + ' enxugou o rosto del' + (c.sx === 'F' ? 'a' : 'e') + '.',
+      (c, D) => D + ' perdoa quem volta. ' + c.a + ' voltou, e virou outra pessoa.'],
+    palavra: [(c, D) => (c.r ? 'tinha gente de saída, ' + D + ' deu a palavra, e cumpriu.' : 'tinha gente de saída, ' + D + ' deu a palavra, e não cumpriu.'),
+      (c, D) => (c.r ? D + ' segurou o povo pela mão e fez o que disse.' : D + ' prometeu para segurar o povo, e esqueceu.'),
+      (c, D) => (c.r ? 'o que ' + D + ' promete, a gente já conta como feito.' : 'metade do povo foi embora por causa de uma promessa de ' + D + '.')],
     promessa: [(c, D) => (c.r ? D + ' prometeu, e cumpriu.' : D + ' prometeu, e não cumpriu.'),
       (c, D) => (c.r ? 'o que ' + D + ' diz na fumaça acontece. Sempre aconteceu.' : D + ' disse uma coisa na fumaça e fez outra.'),
       (c, D) => (c.r ? 'a palavra de ' + D + ' é mais firme que a serra.' : 'houve um tempo em que ' + D + ' mentiu para nós. Os antigos não esquecem.')],
@@ -593,6 +606,7 @@
     castigo: (c) => 'O castigo de ' + c.a, sonho: (c) => 'O sonho de ' + c.a, nome: () => 'O nome', escolhido: (c) => c.a + ', ' + (c.sx === 'F' ? 'a escolhida' : 'o escolhido'),
     estatua: () => 'A estátua', especie: (c) => 'A criação' + (c.a ? ': ' + c.a : ''), saber: () => 'O sonho de todos', chamado: () => 'O chamado',
     visao: () => 'A resposta na fumaça', silencio: (c) => 'O silêncio', promessa: (c) => (c.r ? 'A promessa cumprida' : 'A promessa quebrada'),
+    justica: (c) => 'A medida de ' + c.a, pesado: (c) => (c.x1 === 'inocente' ? 'O castigo sem culpa' : 'A mão pesada'), perdao: (c) => 'O perdão de ' + c.a, palavra: (c) => (c.r ? 'A palavra cumprida' : 'A palavra quebrada'),
   };
   // o que aconteceu de verdade (para pôr ao lado do que o povo conta)
   const FATO = {
@@ -602,6 +616,10 @@
     especie: (c) => 'Você criou uma espécie nova' + (c.a ? ': ' + c.a : '') + '.', saber: (c) => 'Você ensinou ' + (c.x1 || 'um saber') + ' ao povo inteiro, num sonho.', chamado: (c) => 'Você chamou ' + (c.x1 || 'um povo de fora') + ', e a caravana foi acolhida.',
     visao: (c) => 'No rito, ' + c.a + ' fez uma pergunta e você respondeu: “' + c.r + '”', silencio: (c) => c.a + ' rezou, ninguém respondeu, e ' + eE(c) + ' morreu.',
     promessa: (c) => (c.r ? 'Você fez uma promessa no rito, e ela se cumpriu.' : 'Você fez uma promessa no rito, e ela não se cumpriu.'),
+    justica: (c) => 'Você castigou ' + c.a + ' na medida' + (c.x1 ? ': ' + eE(c) + ' ' + c.x1 + '.' : '.'),
+    pesado: (c) => (c.x1 === 'inocente' ? 'Você castigou ' + c.a + ', que não tinha feito nada.' : 'Você castigou ' + c.a + ' além da medida.'),
+    perdao: (c) => 'Você perdoou ' + c.a + ' diante de todos.',
+    palavra: (c) => (c.r ? 'Você prometeu algo a quem ia embora, e cumpriu.' : 'Você prometeu algo a quem ia embora, e não cumpriu.'),
   };
   const FIM = [['É bom não deixar %D zangado.', 'Por isso não se brinca com o céu.', 'Quando troveja, a gente baixa a cabeça.'],
     ['E foi assim.', 'Quem estava lá lembra.', 'Nunca esqueçam disso.'],
@@ -687,6 +705,7 @@
       if (c.tone < 0) { Gd().faith(S, q, C.CONTO_FE * 0.6); Sm.addMem(S, q, 'contoMedo'); } else Gd().faith(S, q, C.CONTO_FE * (c.tone > 0 ? 1 : 0.6));
       if (Dz()) Dz().sinal(S, q, 'conto');
       if (a < C.CRIADO_AGE && c.tone && !q.criado) { const o = q.ouviu || (q.ouviu = [0, 0]); o[c.tone < 0 ? 0 : 1]++; }
+      if (G.Soc) G.Soc.onConto(S, q, c.tone);   // Etapa 14: o conto de cuidado amansa; o de medo ensina a esconder
     }
     if (S.stats.contados === 1) Sm.chron(S, 'Pela primeira vez, ' + p.name + ' contou ao pé do fogo um feito de ' + Dz().call(S) + ': “' + TITULO[c.k](c) + '”.');
   };
@@ -1058,7 +1077,7 @@
     const dx = b.x - S.camp.x, dy = b.y - S.camp.y;
     return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'a leste' : 'a oeste') : dy > 0 ? 'ao sul' : 'ao norte';
   }
-  const CAUSA = { frio: 'de frio', sede: 'de sede', fome: 'de fome', raio: 'de um raio', parto: 'no parto', velhice: 'de velhice', lobos: 'no ataque dos lobos', onca: 'no ataque da onça', jacare: 'no ataque de um jacaré', bicho: 'atacado por um bicho' };
+  const CAUSA = { frio: 'de frio', sede: 'de sede', fome: 'de fome', raio: 'de um raio', parto: 'no parto', velhice: 'de velhice', lobos: 'no ataque dos lobos', onca: 'no ataque da onça', jacare: 'no ataque de um jacaré', bicho: 'atacado por um bicho', crime: 'pelas mãos de outra pessoa' };
   // o que a cova mostra ao toque
   M.graveInfo = function (S, o) {
     const d = (o.pid && person(S, o.pid)) || S.people.find((p) => !p.alive && p.name === o.name && !p.corpo) || null;

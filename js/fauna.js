@@ -223,11 +223,22 @@
   }
   // alguém acordado chegou perto demais? (as ariscas olham em volta de 5 em 5 minutos)
   function nearPerson(S, e, r) {
-    for (const p of S.people) {
-      if (!p.alive || p.carriedBy || p.inTent || p.sleeping || G.Family.age(S, p) < 7) continue;
-      if (p.sangue && G.Povos && G.Povos.has(p, 'faro')) continue;   // Etapa 12: o faro chega sem ser notado
-      if (Math.abs(p.x - e.x) <= r && Math.abs(p.y - e.y) <= r && Math.hypot(p.x - e.x, p.y - e.y) <= r) return p;
+    const ok = (p) => {
+      if (!p.alive || p.carriedBy || p.inTent || p.sleeping || G.Family.age(S, p) < 7) return false;
+      if (p.sangue && G.Povos && G.Povos.has(p, 'faro')) return false;   // Etapa 12: o faro chega sem ser notado
+      return Math.abs(p.x - e.x) <= r && Math.abs(p.y - e.y) <= r && Math.hypot(p.x - e.x, p.y - e.y) <= r;
+    };
+    // 0.14: olha só os cantos do mapa em volta do bicho (o retrato do povo por passo, da IA), não o povo inteiro
+    if (G.AI && G.AI.stepIdx) {
+      const ix = G.AI.stepIdx(S), K = ix.cell, R = r + 1;
+      const x0 = Math.floor((e.x - R) / K), x1 = Math.floor((e.x + R) / K), y0 = Math.floor((e.y - R) / K), y1 = Math.floor((e.y + R) / K);
+      for (let cx = x0; cx <= x1; cx++) for (let cy = y0; cy <= y1; cy++) {
+        const l = ix.grid.get(cx * 4096 + cy);
+        if (l) for (const p of l) if (ok(p)) return p;
+      }
+      return null;
     }
+    for (const p of S.people) if (ok(p)) return p;
     return null;
   }
 

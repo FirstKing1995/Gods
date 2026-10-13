@@ -242,13 +242,35 @@
     (p.sangue && G.Povos ? G.Povos.bite(p) : 1);   // Etapa 12: a lança de ferro e as garras do povo-fera
   T.coldMult = (p, S) => (p.roupa ? (S && T.known(S, 'agulha') ? C.AGULHA_COLD : C.ROUPA_COLD) : 1);   // costurada com agulha, mais quente
   // quantas ferramentas guardar: quem trabalha (12+) e ainda não tem, mais uma folga
-  T.workers = (S) => S.people.filter((p) => p.alive && !p.carriedBy && Fam().age(S, p) >= 12);
+  // 0.14: o censo do passo: quem trabalha e quem está sem ferramenta, quem precisa de roupa, de manta, de rede. O plano
+  // do ofício pergunta isso várias vezes por passo (para cada um que pensa no que fazer); a conta é feita uma vez só
+  const CENSO = new WeakMap();
+  function censo(S) {
+    const c0 = CENSO.get(S);
+    if (G.passoOk(S, c0) && c0.n === S.people.length) return c0;
+    const c = { t: S.t, n: S.people.length, workers: [], semTool: 0, users: 0, roupa: 0, manta: 0, rede: 0 }, F = Fam();
+    for (const p of S.people) {
+      if (!p.alive || p.carriedBy) continue;
+      const a = F.age(S, p);
+      if (a >= 12) { c.workers.push(p); if (!p.tool) c.semTool++; }
+      if (a >= 3) {
+        c.users++;
+        if (!p.roupa || p.roupa.dur < 15) c.roupa++;
+        if (!p.manta || p.manta.dur < 15) c.manta++;
+        if (!p.rede || p.rede.dur < 15) c.rede++;
+      }
+    }
+    CENSO.set(S, G.passoMarca(c));
+    return c;
+  }
+  T.censo = censo;
+  T.workers = (S) => censo(S).workers.slice();
   T.toolTarget = function (S) {
-    const ws = T.workers(S);
-    return Math.max(2, Math.ceil(ws.length * 0.3)) + ws.filter((p) => !p.tool).length - (S.stock.ferro || 0);   // as de ferro guardadas contam (Etapa 12)
+    const c = censo(S);
+    return Math.max(2, Math.ceil(c.workers.length * 0.3)) + c.semTool - (S.stock.ferro || 0);   // as de ferro guardadas contam (Etapa 12)
   };
   // quem ainda precisa de roupa (a partir dos 3 anos; bebê vai enrolado no colo)
-  T.needClothes = (S) => S.people.filter((p) => p.alive && !p.carriedBy && Fam().age(S, p) >= 3 && (!p.roupa || p.roupa.dur < 15)).length;
+  T.needClothes = (S) => censo(S).roupa;
 
   // ---------- ofício: o que fazer agora ----------
   T.oficioPlan = function (S) {

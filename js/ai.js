@@ -121,7 +121,8 @@
   // quem carrega um bebê sente o frio dele também
   function feltCold(S, p) {
     let c = p.needs.calor;
-    for (const b of S.people) if (b.alive && b.carriedBy === p.id && b.needs.calor < c) c = b.needs.calor;
+    const l = stepIdx(S).carried.get(p.id);
+    if (l) for (const b of l) if (b.alive && b.carriedBy === p.id && b.needs.calor < c) c = b.needs.calor;
     return c;
   }
   const person = (S, id) => Fam.person(S, id);   // (0.12: pelo índice da família)
@@ -140,29 +141,91 @@
   function faceIdx(S, p, i) { face(p, i % S.world.W, (i / S.world.W) | 0); }
 
   // allowSlow: aceita parar dentro de outra obra (fogueira ou moquém cercados de barracas continuam alcançáveis)
-  function route(S, p, test, maxCost, allowSlow) {
-    let r = W.findNearest(S.world, tileOf(S, p), test, maxCost || 160);
-    if (!r && allowSlow) r = W.findNearest(S.world, tileOf(S, p), test, maxCost || 160, true);
+  // box (0.14): o retângulo onde fica todo lugar que passa no teste; com ele, a busca vai direto na direção certa
+  function route(S, p, test, maxCost, allowSlow, box) {
+    const near = (slow) => (box ? W.findNearestIn(S.world, tileOf(S, p), test, maxCost || 160, slow, box[0], box[1], box[2], box[3]) : W.findNearest(S.world, tileOf(S, p), test, maxCost || 160, slow));
+    let r = near(false);
+    if (!r && allowSlow) r = near(true);
     if (!r) return null;
     setPath(p, r.path);
     return r;
   }
-  function toCamp(S, p) { return route(S, p, (i) => (Sim.isCamp(S, i) ? 1 : 0), 180); }
+  const campBox = (S) => [S.camp.x, S.camp.y, S.camp.x + 1, S.camp.y + 1];
+  function toCamp(S, p) { return route(S, p, (i) => (Sim.isCamp(S, i) ? 1 : 0), 180, false, campBox(S)); }
+  // o caminho até o acampamento, de um ponto qualquer (sem mexer no caminho de ninguém)
+  function campFrom(S, i) { const b = campBox(S); return W.findNearestIn(S.world, i, (k) => (Sim.isCamp(S, k) ? 1 : 0), 180, false, b[0], b[1], b[2], b[3]); }
   function toBuilding(S, p, b) {
     const w = S.world;
     return route(S, p, (i) => {
       const x = i % w.W, y = (i / w.W) | 0;
       if (x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h) return 0;
       return x >= b.x - 1 && x <= b.x + b.w && y >= b.y - 1 && y <= b.y + b.h ? 1 : 0;
-    }, 180, true);
+    }, 180, true, [b.x - 1, b.y - 1, b.x + b.w, b.y + b.h]);
   }
   function litFires(S) { return S.buildings.filter((b) => b.type === 'fogueira' && b.built && b.fuel > 0); }
   function litNearCamp(S) {
     return litFires(S).some((b) => Math.abs(b.x - S.camp.x) <= 8 && Math.abs(b.y - S.camp.y) <= 8);
   }
-  function othersDoing(S, p, type) { return S.people.some((q) => q !== p && q.alive && q.act && q.act.type === type); }
-  function fishTaken(S, p, i) { return S.people.some((q) => q !== p && q.alive && q.act && q.act.type === 'pesca' && q.act.spot === i); }
-  function claimed(S, p, i) { return S.people.some((q) => q !== p && q.alive && q.act && q.act.spot === i && (q.act.type === 'argila' || q.act.type === 'pesca')); }
+  // 0.14: um retrato do povo por passo, para não varrer todo mundo a cada pergunta (com 300 pessoas, essas varreduras
+  // eram a maior parte do custo): quem faz o quê, quem leva quem no colo, quem está em cada canto do mapa, que
+  // margem está tomada. Feito na primeira pergunta do passo; o que muda no meio do passo entra no seguinte
+  const STEP = new WeakMap();
+  const CELL = 8;
+  function stepIdx(S) {
+    let c = STEP.get(S);
+    if (G.passoOk(S, c) && c.n === S.people.length) return c;
+    const acts = new Map(), carried = new Map(), grid = new Map(), spots = new Map();
+    for (const q of S.people) {
+      if (!q.alive) continue;
+      if (q.carriedBy) { const l = carried.get(q.carriedBy); if (l) l.push(q); else carried.set(q.carriedBy, [q]); continue; }
+      const a = q.act;
+      if (a) {
+        const e = acts.get(a.type);
+        if (e) e.n++; else acts.set(a.type, { n: 1, id: q.id });
+        if (a.spot !== undefined && (a.type === 'argila' || a.type === 'pesca')) { const l = spots.get(a.spot); if (l) l.push(q); else spots.set(a.spot, [q]); }
+      }
+      const k = Math.floor(q.x / CELL) * 4096 + Math.floor(q.y / CELL), l = grid.get(k);
+      if (l) l.push(q); else grid.set(k, [q]);
+    }
+    c = G.passoMarca({ t: S.t, n: S.people.length, acts, carried, grid, spots, cell: CELL });
+    STEP.set(S, c);
+    return c;
+  }
+  AI.stepIdx = stepIdx;
+  // os lugares tomados (onde cada um está e para onde vai), contados por casa do mapa; quem pergunta não conta o seu
+  function takenOf(S, p) {
+    const ix = stepIdx(S);
+    if (!ix.taken) {
+      const m = new Map();
+      for (const q of S.people) {
+        if (!q.alive || q.carriedBy) continue;
+        const a = tileOf(S, q);
+        m.set(a, (m.get(a) || 0) + 1);
+        if (q.path && q.path.length) { const b = q.path[q.path.length - 1]; if (b !== a) m.set(b, (m.get(b) || 0) + 1); }
+      }
+      ix.taken = m;
+    }
+    const m = ix.taken, a = tileOf(S, p), b = p.path && p.path.length ? p.path[p.path.length - 1] : -1;
+    return { has: (i) => { const n = m.get(i) || 0; return n - (i === a ? 1 : 0) - (i === b && b !== a ? 1 : 0) > 0; } };
+  }
+  // 0.14: antes de procurar um lugar numa roda (em volta do fogo, da estátua, da cova), olha a roda: sem chão livre,
+  // nenhuma busca acha; com todo lugar tomado, a primeira não acha (e cada busca que não acha varre o mapa inteiro)
+  function ringRoute(S, p, cx, cy, ring, taken, maxCost, r1) {
+    const w = S.world, R1 = Math.ceil(r1) + 1, x0 = Math.floor(cx), y0 = Math.floor(cy);
+    let livre = 0, solto = 0;
+    for (let dy = -R1; dy <= R1; dy++) for (let dx = -R1; dx <= R1; dx++) {
+      const x = x0 + dx, y = y0 + dy, i = y * w.W + x;
+      if (x < 0 || y < 0 || x >= w.W || y >= w.H || w.block[i] || w.slow[i] || !ring(i)) continue;
+      livre++;
+      if (!taken.has(i)) solto++;
+    }
+    if (!livre) return null;
+    const box = [x0 - R1, y0 - R1, x0 + R1, y0 + R1];   // toda a roda fica aqui dentro: a busca vai direto para ela
+    return (solto ? route(S, p, (i) => (ring(i) && !taken.has(i) ? 1 : 0), maxCost, false, box) : null) || route(S, p, ring, maxCost, false, box);
+  }
+  function othersDoing(S, p, type) { const e = stepIdx(S).acts.get(type); return !!e && (e.n > 1 || e.id !== p.id); }
+  function fishTaken(S, p, i) { const l = stepIdx(S).spots.get(i); return !!l && l.some((q) => q !== p && q.act && q.act.type === 'pesca' && q.act.spot === i); }
+  function claimed(S, p, i) { const l = stepIdx(S).spots.get(i); return !!l && l.some((q) => q !== p && q.act && q.act.spot === i); }
 
   function deposit(S, p) {
     const c = p.carry; if (!c) return;
@@ -357,12 +420,53 @@
     },
   };
 
+  // 0.14: preso atrás da mata (num save antigo, a árvore que voltou no toco pode ter fechado a única saída de um canto):
+  // sem caminho para a água nem para o acampamento, quem tem sede derruba a árvore que fecha o caminho mais curto
+  // para fora (a madeira vai para o estoque). Devolve true se abriu passagem
+  function abrirMata(S, p) {
+    const w = S.world, Wd = w.W, start = tileOf(S, p), MAXC = 140, ARV = 6;
+    const ehArvore = (i) => { const o = W.objAt(w, i); return !!o && o.k === 'tree'; };
+    const g = new Map([[start, 0]]), de = new Map(), fila = new G.Heap();
+    fila.push(0, start);
+    let alvo = -1;
+    while (fila.size()) {
+      const c = fila.pop(), gc = g.get(c);
+      if (c !== start && !w.block[c] && (Sim.isCamp(S, c) || W.waterAdj(w, c) >= 0)) { alvo = c; break; }
+      const cx = c % Wd, cy = (c / Wd) | 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue;
+        const nx = cx + dx, ny = cy + dy;
+        if (nx < 0 || ny < 0 || nx >= Wd || ny >= w.H) continue;
+        const ni = ny * Wd + nx, arv = w.block[ni] && ehArvore(ni);
+        if (w.block[ni] && !arv) continue;
+        if (dx && dy) continue;   // só em cruz: mais simples, e ninguém passa de quina pela mata
+        const ng = gc + (arv ? ARV : 1);
+        if (ng > MAXC || (g.has(ni) && g.get(ni) <= ng)) continue;
+        g.set(ni, ng); de.set(ni, c); fila.push(ng, ni);
+      }
+    }
+    if (alvo < 0) return false;
+    // a primeira árvore do caminho, a partir de quem está preso
+    const passos = [];
+    for (let c = alvo; c !== start && c !== undefined; c = de.get(c)) passos.push(c);
+    passos.reverse();
+    const i = passos.find((c) => w.block[c] && ehArvore(c));
+    if (i === undefined) return false;
+    const o = W.objAt(w, i);
+    o.k = 'stump'; o.regrow = 0; W.refreshBlock(w, i);
+    S.stock.madeira += C.TREE_WOOD;
+    Sim.toast(S, p.name + ' estava preso atrás da mata e abriu caminho.', 'warn');
+    return true;
+  }
+  AI.abrirMata = abrirMata;
+
   ACT.beber = {
     start(S, p, a) {
       const w = S.world, here = tileOf(S, p);
-      const wr = W.findNearest(w, here, (i) => (W.waterAdj(w, i) >= 0 ? 1 : 0), 90);
+      let wr = W.findNearest(w, here, (i) => (W.waterAdj(w, i) >= 0 ? 1 : 0), 90);
+      if (!wr && p.needs.sede < 20 && !campFrom(S, here) && abrirMata(S, p)) wr = W.findNearest(w, here, (i) => (W.waterAdj(w, i) >= 0 ? 1 : 0), 90);
       if (S.stock.agua > 0) {
-        const cr = W.findNearest(w, here, (i) => (Sim.isCamp(S, i) ? 1 : 0), 180);
+        const cr = campFrom(S, here);
         // com lobos ou onça rondando, bebe do estoque, perto do fogo
         if (cr && (!wr || cr.cost <= wr.cost + 3 || G.Narr.beastsOut(S))) { a.src = 'estoque'; setPath(p, cr.path); return true; }
       }
@@ -395,18 +499,47 @@
     },
   };
 
+  // Etapa 14 (correção da IA): o que dá para comer da carga, cru mesmo. Carne da caça, peixe e frutas.
+  // (material separado para uma tarefa, com `back`, não é comida de caminho)
+  function carryFood(p) {
+    const c = p.carry;
+    if (!c || c.back) return null;
+    if (c.k === 'caca') return c.carne > 0 ? 'carne' : null;
+    return (c.k === 'peixe' || c.k === 'frutas') && c.n > 0 ? c.k : null;
+  }
+  AI.carryFood = carryFood;
+
   ACT.comer = {
     start(S, p, a) {
       const w = S.world, here = tileOf(S, p);
-      const r = W.findNearest(w, here, (i) => W.adjObj(w, i, (o) => o.k === 'bush' && o.fruit > 0 && !o.res), 60);
-      const food = S.ctx.food;
+      const food = S.ctx.food, mine = carryFood(p) && p.needs.fome < C.CARGA_FOME;
+      const cr = food > 0 || mine ? campFrom(S, here) : null;
+      // 0.14: o arbusto só serve se fica bem mais perto que o estoque (ou se o estoque está quase vazio): a busca vai só
+      // até onde ele ainda valeria (antes procurava sempre até 60, e quase sempre em vão)
+      const bushMax = !cr || food < 3 ? 60 : Math.min(60, cr.cost - 12.001);
+      // longe de casa, com comida no estoque, o arbusto só serve se fica no caminho de volta (mais perto de casa que a
+      // pessoa): antes, quem estava longe ia de arbusto em arbusto, cada vez mais longe, e morria de fome com o estoque
+      // cheio (um anão, no ano 19 de um dos mundos da bateria de Deus)
+      const cx = S.camp.x + 1, cy = S.camp.y + 1, dAqui = Math.hypot(p.x - cx, p.y - cy);
+      const volta = food >= 3 && dAqui > C.ARBUSTO_LONGE ? dAqui - C.ARBUSTO_VOLTA : Infinity;
+      const busca = (lim) => W.findNearest(w, here, (i) => {
+        const o = W.adjObj(w, i, (x) => x.k === 'bush' && x.fruit > 0 && !x.res);
+        return o && (lim === Infinity || Math.hypot(o.x + 0.5 - cx, o.y + 0.5 - cy) < lim) ? o : null;
+      }, bushMax);
+      let r = bushMax > 0 ? busca(volta) : null;
+      if (!r && !cr && volta !== Infinity && bushMax > 0) r = busca(Infinity);   // sem caminho para casa, qualquer fruta serve
+      // com fome de verdade e longe de casa, quem leva comida nas costas come dela ali mesmo
+      // (antes ia atrás de arbusto em arbusto, cada vez mais longe, com a carne nas costas)
+      if (mine && (!cr || cr.cost > C.CARGA_LONGE)) { a.src = 'carga'; p.path = null; return true; }
       if (food > 0) {
-        const cr = W.findNearest(w, here, (i) => (Sim.isCamp(S, i) ? 1 : 0), 180);
         // longe de casa, com fruta no pé logo ali (ou quase nada no estoque): come no arbusto
         const bushFirst = r && (!cr || r.cost + 12 < cr.cost || food < 3);
         if (cr && !bushFirst) { a.src = 'estoque'; setPath(p, cr.path); return true; }
       }
-      if (!r) return false;
+      if (!r) {
+        if (!mine) return false;
+        a.src = 'carga'; p.path = null; return true;
+      }
       a.src = 'arbusto'; a.obj = r.data; a.obj.res = p.id; setPath(p, r.path);
       return true;
     },
@@ -421,6 +554,19 @@
       a.t += dt;
       if (a.t < a.next) return RUN;
       if (n.fome >= 88) return DONE;
+      if (a.src === 'carga') {
+        // come o bastante para chegar em casa; o resto vai para o estoque
+        const c = p.carry, k = carryFood(p);
+        if (!k || n.fome >= C.CARGA_ATE) return a.ate ? DONE : FAIL;
+        if (k === 'carne') { c.carne--; n.fome += C.CARNE_RAW; Sim.addMem(S, p, 'carneCrua'); a.next = a.t + 12; }
+        else if (k === 'peixe') { n.fome += C.FISH_RAW; Sim.addMem(S, p, 'comeuCru'); a.next = a.t + 12; }
+        else { n.fome += C.FRUIT_FOOD; a.next = a.t + 6; }
+        c.n--; a.ate = true; a.dish = k;
+        if (c.n <= 0) p.carry = null;
+        S.stats.comeuCarga = (S.stats.comeuCarga || 0) + 1;
+        n.fome = Math.min(100, n.fome);
+        return RUN;
+      }
       if (a.src === 'estoque') {
         // o fresco primeiro (estraga logo); o conservado fica para quando faltar (o inverno)
         const st = S.stock, fresh = st.peixe + st.carne, lit = litNearCamp(S), cm = Tech.cookMult(S);   // vasos (Etapa 8): cozido rende mais
@@ -499,16 +645,34 @@
           if (fires.some((f) => Math.hypot(x - f.x - 0.5, y - f.y - 0.5) <= C.FIRE_FULL_R)) return 1;
           return auras.some((g) => Math.hypot(x - g.x - 0.5, y - g.y - 0.5) <= g.r * 0.55) ? 1 : 0;
         };
-        r = W.findNearest(w, tileOf(S, p), near, 140) || W.findNearest(w, tileOf(S, p), near, 140, true);   // fogo cercado de obras: deita onde der
+        // fogo cercado de obras (ou a fogueira grande, que ocupa o próprio chão em volta): deita onde der. 0.14: se em volta
+        // do fogo não há chão livre, a primeira busca nem roda (ela varria o mapa inteiro em vão, para cada um que ia dormir)
+        const livre = auras.length > 0 || fires.some((f) => { for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const x = f.x + dx, y = f.y + dy, i = y * w.W + x; if (x >= 0 && y >= 0 && x < w.W && y < w.H && !w.slow[i] && !w.block[i] && near(i)) return true; } return false; });
+        // 0.14: a busca vai na direção do fogo (o retângulo em volta dos fogos e do Calor)
+        let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+        const cerca = (cx, cy, r) => { const k = Math.ceil(r); x0 = Math.min(x0, cx - k); y0 = Math.min(y0, cy - k); x1 = Math.max(x1, cx + k); y1 = Math.max(y1, cy + k); };
+        for (const f of fires) cerca(f.x, f.y, C.FIRE_FULL_R);
+        for (const g of auras) cerca(g.x, g.y, g.r * 0.55);
+        const busca = (slow) => W.findNearestIn(w, tileOf(S, p), near, 140, slow, x0, y0, x1, y1);
+        r = (livre ? busca(false) : null) || busca(true);
       }
       a.byFire = !!r;
-      if (!r) r = W.findNearest(w, tileOf(S, p), (i) => (Sim.isCamp(S, i) ? 1 : 0), 180);
+      if (!r) r = campFrom(S, tileOf(S, p));
       setPath(p, r ? r.path : null);
       return true;
     },
     run(S, p, a, dt) {
       if (a.stage === 'go') {
-        if (moving(p)) return RUN;
+        if (moving(p)) {
+          // Etapa 14 (correção da IA): sem força nenhuma e ainda longe da cama, deita ali mesmo.
+          // (antes andava horas com a energia em zero; a fome e a sede cortavam a caminhada e ela nunca chegava)
+          // (menos quem vai dormir junto do fogo com frio: deitar no frio, longe dele, é o que mata; esse aguenta até chegar)
+          if (!(p.needs.energia <= 0 && p.path.length - p.pathI > C.DORME_LONGE) || (a.byFire && feltCold(S, p) < 30)) return RUN;
+          p.path = null; a.tent = 0; a.byFire = false; a.faint = true;
+          unguest(S, p);
+          if (!p.faintAt || S.t - p.faintAt > C.DAY_MIN) Sim.toast(S, p.name + ' não aguentou chegar em casa e dormiu no caminho.', 'warn');
+          p.faintAt = S.t;
+        }
         a.stage = 'sleep'; a.t = 0; p.sleeping = true; p.dir = 0;
         if (a.tent && !p.stuck) { const b = Sim.building(S, a.tent); if (b && b.built) enterTent(S, p, b); }
         say(S, p, 'sono', 0.3);
@@ -521,7 +685,7 @@
       // ou, com sono demais, levantava para beber e deitava de novo sem nunca chegar à água.
       // acorda para beber ou comer (comer só se houver comida): alguns minutos bastam para escolher ir
       // (se beber ou comer está bloqueado agora, não adianta acordar: levantava e desmaiava de novo sem parar)
-      if ((n.sede < 10 && !(p.fail.beber > S.t)) || (n.fome < 8 && (S.ctx.food > 0 || S.ctx.bushFruit > 0) && !(p.fail.comer > S.t))) { p.fail.dormir = S.t + 6; return DONE_QUIET; }
+      if ((n.sede < 10 && !(p.fail.beber > S.t)) || (n.fome < 8 && (S.ctx.food > 0 || S.ctx.bushFruit > 0 || carryFood(p)) && !(p.fail.comer > S.t))) { p.fail.dormir = S.t + 6; return DONE_QUIET; }
       // frio demais aqui, sem fogo por perto: levanta para se aquecer ou rezar (meia hora)
       // (quem desmaiou de cansaço só acorda assim depois de recuperar um pouco)
       if (feltCold(S, p) < 12 && !(a.faint && n.energia < 20) && Math.max(Sim.fireHeat(S, p.x, p.y), G.God.heatAt(S, p.x, p.y)) < 5) return FAIL;
@@ -655,17 +819,12 @@
   function toFireRing(S, p, f, r0, r1) {
     const w = S.world, fx = f.x + 0.5, fy = f.y + 0.5;
     // cada um no seu lugar da roda: não para onde já tem gente (ou onde alguém está indo)
-    const taken = new Set();
-    for (const q of S.people) {
-      if (q === p || !q.alive || q.carriedBy) continue;
-      taken.add(tileOf(S, q));
-      if (q.path && q.path.length) taken.add(q.path[q.path.length - 1]);
-    }
+    const taken = takenOf(S, p);
     const ring = (i) => {
       const x = i % w.W + 0.5, y = ((i / w.W) | 0) + 0.5, d = Math.hypot(x - fx, y - fy);
       return d >= r0 && d <= r1 && w.bgrid[i] < 0 ? 1 : 0;
     };
-    return route(S, p, (i) => (ring(i) && !taken.has(i) ? 1 : 0), 90) || route(S, p, ring, 90);
+    return ringRoute(S, p, fx, fy, ring, taken, 90, r1);
   }
   // quem conta: vai para a roda do fogo, conta em três partes e quem está por perto vem ouvir
   ACT.historia = {
@@ -746,17 +905,12 @@
   // ---------- Etapa 11: Deus ----------
   // um lugar livre em volta de um ponto (a estátua), fora das obras
   function toRing(S, p, cx, cy, r0, r1, maxCost) {
-    const w = S.world, taken = new Set();
-    for (const q of S.people) {
-      if (q === p || !q.alive || q.carriedBy) continue;
-      taken.add(tileOf(S, q));
-      if (q.path && q.path.length) taken.add(q.path[q.path.length - 1]);
-    }
+    const w = S.world, taken = takenOf(S, p);
     const ring = (i) => {
       const x = i % w.W + 0.5, y = ((i / w.W) | 0) + 0.5, d = Math.hypot(x - cx, y - cy);
       return d >= r0 && d <= r1 && w.bgrid[i] < 0 ? 1 : 0;
     };
-    return route(S, p, (i) => (ring(i) && !taken.has(i) ? 1 : 0), maxCost || 90) || route(S, p, ring, maxCost || 90);
+    return ringRoute(S, p, cx, cy, ring, taken, maxCost || 90, r1);
   }
   // reza da manhã: vai até a estátua, reza um pouco e segue o dia
   ACT.rezar = {
@@ -842,6 +996,48 @@
     const w = S.world, qi = tileOf(S, c), qx = qi % w.W, qy = (qi / w.W) | 0;
     return route(S, p, (i) => (Math.max(Math.abs(i % w.W - qx), Math.abs(((i / w.W) | 0) - qy)) <= 1 ? 1 : 0), 90, true);
   }
+  // ---------- Etapa 14: Sociedade ----------
+  // uma ação só para tudo o que a Sociedade pede: ir até um lugar ou até alguém, ficar um tempo e avisar (o
+  // julgamento, o crime, o exílio, a partida de quem vai embora). a.hint diz qual; o resto vem de G.Soc.task
+  ACT.soc = {
+    start(S, p, a) {
+      const So = G.Soc, m = So ? So.task(S, p, a.hint) : null;
+      if (!m) return false;
+      a.m = m;
+      let ok;
+      if (m.alvo) {
+        const t = person(S, m.alvo);
+        if (t && closeTo(S, p, healSpot(S, t))) { setPath(p, [tileOf(S, p)]); ok = true; }
+        else ok = !!t && !!healRoute(S, p, t);
+      } else ok = !!toRing(S, p, m.x, m.y, m.r0, m.r1, m.far);
+      if (!ok) { So.drop(S, p, a, true, false); return false; }
+      if (!p.path) setPath(p, [tileOf(S, p)]);
+      return true;
+    },
+    run(S, p, a, dt) {
+      const So = G.Soc, m = a.m;
+      if (!So || !So.valid(S, p, a)) { if (m && m.fimOk && a.stage === 'stay') { a.fim = true; return DONE; } return FAIL; }
+      if (a.stage === 'go') {
+        a.walk = (a.walk || 0) + dt;
+        if (a.walk > m.walk) return FAIL;
+        if (moving(p)) return RUN;
+        if (p.stuck) return FAIL;
+        if (m.alvo) {
+          // a pessoa andou: vai atrás (umas vezes)
+          const t = person(S, m.alvo);
+          if (!t) return FAIL;
+          if (!closeTo(S, p, healSpot(S, t), 2.4)) { a.re = (a.re || 0) + 1; if (a.re > 5 || !healRoute(S, p, t)) return FAIL; return RUN; }
+          face(p, Math.floor(t.x), Math.floor(t.y));
+        } else face(p, Math.floor(m.x), Math.floor(m.y));
+        a.stage = 'stay'; a.t = 0;
+        So.arrive(S, p, a);
+      }
+      a.t += dt;
+      if (a.t >= m.min) { a.fim = true; So.done(S, p, a); return DONE; }
+      return RUN;
+    },
+    end(S, p, a, r) { if (!a.fim && a.m && G.Soc) G.Soc.drop(S, p, a, false, r === FAIL); },
+  };
   ACT.curar = {
     start(S, p, a) {
       const t = person(S, a.q);
@@ -1058,6 +1254,7 @@
     return true;
   }
 
+  const GATHER_FAIL = new WeakMap();   // 0.14: por mundo, até quando a busca de cada coisa já se sabe vazia
   function gather(kind) {
     const sk = SKILL_OF[kind];
     return {
@@ -1078,9 +1275,14 @@
         else test = (i) => (W.waterAdj(w, i) >= 0 && W.waterCount8(w, i) >= 2 && !fishTaken(S, p, i) && !danger(S, i) ? 1 : 0);
         // procura o alvo mais perto do acampamento (trabalho perto de casa), depois caminha até ele
         const campI = S.camp.y * w.W + S.camp.x;
+        // 0.14: a busca que não achou nada vale por uns minutos para todo mundo (com 300 pessoas, cada uma refazia a
+        // busca inteira, em vão: era um quinto do tempo da simulação)
+        let fc = GATHER_FAIL.get(S);
+        if (!fc) { fc = {}; GATHER_FAIL.set(S, fc); }
+        if (fc[kind] > S.t && fc[kind + 'c'] === campI) return false;
         // perto de casa primeiro; acabou pedra (ou árvore) por perto, vai mais longe (pedra não nasce de novo)
         const r = W.findNearest(w, campI, test, C.SEARCH_MAX) || (kind === 'pedra' || kind === 'madeira' ? W.findNearest(w, campI, test, C.SEARCH_FAR) : null);
-        if (!r) return false;
+        if (!r) { fc[kind] = S.t + C.BUSCA_FALHA_MIN; fc[kind + 'c'] = campI; return false; }
         const path = W.findPath(w, tileOf(S, p), r.idx, 300);
         if (!path) return false;
         setPath(p, path);
@@ -1336,11 +1538,18 @@
     return RUN;
   }
   function approach(S, p, e) {
-    const w = S.world, ex = e.x, ey = e.y;
-    const r = W.findNearest(w, tileOf(S, p), (i) => {
-      const x = i % w.W + 0.5, y = ((i / w.W) | 0) + 0.5;
-      return Math.hypot(x - ex, y - ey) <= cacaR(S, p) - 0.4 ? 1 : 0;
-    }, 160);
+    const w = S.world, ex = e.x, ey = e.y, R = cacaR(S, p) - 0.4;
+    const near = (i) => Math.hypot(i % w.W + 0.5 - ex, ((i / w.W) | 0) + 0.5 - ey) <= R;
+    const from = tileOf(S, p);
+    if (near(from) && !w.slow[from]) { setPath(p, null); return true; }
+    // 0.14: o caminho direto até a presa (A*), cortado no primeiro passo que já fica ao alcance. Antes a busca se
+    // espalhava em roda até chegar perto dela, e com muita gente caçando (e refazendo o caminho atrás do bicho), pesava
+    const path = W.findPath(w, from, Math.floor(ey) * w.W + Math.floor(ex), 160);
+    if (path) {
+      const k = path.findIndex((i) => near(i) && !w.slow[i]);
+      if (k >= 0) { setPath(p, path.slice(0, k + 1)); return true; }
+    }
+    const r = W.findNearest(w, from, (i) => (near(i) ? 1 : 0), 160);
     if (!r) return false;
     setPath(p, r.path.length ? r.path : null);
     return true;
@@ -1881,9 +2090,20 @@
     const Li = G.Life;
     const late = S.ctx.night && !(Li && Li.moonUp(S) && S.ck.hour < 23 && S.ck.hour >= 18);
     if (late || p.chatCool > S.t) return null;
-    const comfort = !!Li && p.mood >= 45 && Fam.age(S, p) >= 12 && !Li.grieving(S, p);
+    // 0.14: quem procura consolar só olha longe se há alguém de luto na aldeia (a lista é do passo)
+    const ix = stepIdx(S);
+    if (!ix.grievers) ix.grievers = Li ? S.people.filter((q) => q.alive && !q.carriedBy && Li.grieving(S, q) && !Li.consoled(S, q)) : [];
+    const comfort = !!Li && ix.grievers.length > 0 && p.mood >= 45 && Fam.age(S, p) >= 12 && !Li.grieving(S, p);
+    // satisfeito de conversa e sem ninguém para consolar: nem procura (o resultado seria o mesmo)
+    if (!comfort && p.needs.social > 78) return null;
     let best = null, bd = 8, griever = null, gd = 14;
-    for (const q of S.people) {
+    // só quem está perto (a grade do passo: os quadrados de 8 passos em volta; o enlutado, até 14)
+    const gx = Math.floor(p.x / CELL), gy = Math.floor(p.y / CELL), grid = ix.grid, R = comfort ? 2 : 1;
+    for (let dx = -R; dx <= R; dx++) for (let dy = -R; dy <= R; dy++) {
+    const cellPeople = grid.get((gx + dx) * 4096 + gy + dy);
+    if (!cellPeople) continue;
+    if (!comfort && bd < 1.2) break;      // já achou alguém do lado: mais perto que isso não fica
+    for (const q of cellPeople) {
       if (q === p || !q.alive || q.carriedBy || q.labor || q.sleeping || q.inTent || q.chatCool > S.t) continue;
       if (Li && Li.avoid(S, p, q)) continue;
       const qa = q.act;
@@ -1892,6 +2112,7 @@
       const d = Math.hypot(q.x - p.x, q.y - p.y);
       if (comfort && d < gd && Li.grieving(S, q) && !Li.consoled(S, q)) { gd = d; griever = q; }
       if (d < bd) { bd = d; best = q; }
+    }
     }
     if (griever) return { q: griever, hint: 'consolo' };
     if (p.needs.social > 78 || !best) return null;
@@ -1904,7 +2125,18 @@
     if (d > 40) return 0.5;
     return (1 + 0.5 * U.clamp((4 - d) / 4, 0, 1)) * (d < 1 ? 1.6 : 1);
   }
+  // 0.14: o quanto a aldeia precisa de cada trabalho é o mesmo para todos no mesmo passo (só o ofício depende de quem
+  // forja): a conta fica guardada pelo passo, em vez de refeita por pessoa (com 300 pessoas, eram 300 vezes)
+  const NEED = new WeakMap();
   function campNeed(S, wk, p) {
+    let c = NEED.get(S);
+    if (!G.passoOk(S, c)) { c = G.passoMarca({ t: S.t, v: {} }); NEED.set(S, c); }
+    const key = wk === 'oficio' ? wk + (p && G.Povos && G.Povos.canForge(S, p) ? 'F' : '') : wk;
+    const hit = c.v[key];
+    if (hit !== undefined) return hit;
+    return (c.v[key] = campNeed0(S, wk, p));
+  }
+  function campNeed0(S, wk, p) {
     const st = S.stock, ctx = S.ctx;
     switch (wk) {
       case 'frutas': return ctx.bushFruit > 0 ? foodFactor(S) * Math.min(1, ctx.bushFruit / 12) : 0;
@@ -1982,7 +2214,7 @@
     if (p.carry) add('depositar', 44);
     // quase cheio não come nem bebe (senão o sorteio de ±2 fazia começar e largar na hora)
     if (n.sede < 85) add('beber', urg(n.sede) * 110 + crit(n.sede) + (dinner && n.sede < 70 ? C.EVENING_BONUS : 0));
-    if ((ctx.food > 0 || ctx.bushFruit > 0) && n.fome < 85) add('comer', urg(n.fome) * 100 + crit(n.fome) + (dinner && n.fome < 70 ? C.EVENING_BONUS : 0));
+    if ((ctx.food > 0 || ctx.bushFruit > 0 || (n.fome < C.CARGA_FOME && carryFood(p))) && n.fome < 85) add('comer', urg(n.fome) * 100 + crit(n.fome) + (dinner && n.fome < 70 ? C.EVENING_BONUS : 0));
     const st = Fam.stage(S, p);
     let sd = urg(n.energia) * 100 + (ctx.night ? 38 : 0) + (ctx.evening ? (st === 'crianca' ? 30 : 10) : 0) + (n.energia < 8 ? C.CRITICAL_BONUS : 0);
     if (!ctx.night && n.energia > 35) sd -= 25;
@@ -1995,7 +2227,7 @@
     // Etapa 6: festa, história ao pé do fogo
     const life = S.life;
     if (life && st !== 'bebe' && fineNow(p)) {
-      if (life.party && life.party.on) add('festa', 70 + urg(n.social) * 20 + (st === 'crianca' || st === 'jovem' ? 6 : 0));
+      if (life.party && life.party.on && !(G.Soc && G.Soc.semLazer(S, p))) add('festa', 70 + urg(n.social) * 20 + (st === 'crianca' || st === 'jovem' ? 6 : 0));
       if (life.story && life.story.teller !== p.id) {
         // par e filhos de quem conta vêm com mais vontade
         const t = person(S, life.story.teller), close = t && (Fam.isPartner(p, t) || p.mother === t.id || p.father === t.id);
@@ -2020,6 +2252,10 @@
     }
     // Etapa 13: velar, enterrar, visitar a cova, o dia dos mortos, colher a erva, o rito
     if (G.Memoria && S.memoria && st !== 'bebe') { const mm = G.Memoria.want(S, p); if (mm) add('memoria', mm.score, { hint: mm.k }); }
+    // Etapa 14: o julgamento, o que não se deve, o exílio, a partida de quem vai embora
+    const soc = G.Soc && S.soc ? G.Soc : null;
+    if (soc && st !== 'bebe') { const sw = soc.want(S, p); if (sw) add('soc', sw.score, { hint: sw.k }); }
+    const wm = soc ? soc.workMult(S, p) : 1;   // quem cumpre pena trabalha mais; quem adoeceu de castigo, menos
     for (const wk of WORK) {
       const v = S.vontades[VONT[wk] || wk] | 0;
       if (!v || !Fam.canWork(S, p, wk) || !Tech.workOpen(S, wk)) continue;
@@ -2037,7 +2273,7 @@
       if (ctx.night && wk !== 'fogo') s *= noite ? C.DOM_NOITE : 0.45;
       else if (ctx.hour >= 17.5 && wk !== 'fogo' && !noite) s *= 0.75;   // de tardinha o trabalho afrouxa (é hora de história e de festa)
       s *= G.Narr.workMult(S, wk);   // nevasca, tempestade e lobos seguram o povo em casa
-      add(wk, Math.min(C.WORK_CAP, s));
+      add(wk, Math.min(C.WORK_CAP * (wm > 1 ? 1.1 : 1), s * wm));
     }
     if (st === 'crianca') add('brincar', ctx.night ? 0 : 22 + urg(n.social) * 25);
     else add('vagar', has(p, 'Preguiçoso') ? 14 : 7);
@@ -2098,7 +2334,7 @@
       return null;
     }
     if (n.sede < 12 && a.type !== 'beber') return 'beber';
-    if (n.fome < 10 && a.type !== 'comer' && (ctx.food > 0 || ctx.bushFruit > 0)) return 'comer';
+    if (n.fome < 10 && a.type !== 'comer' && (ctx.food > 0 || ctx.bushFruit > 0 || carryFood(p))) return 'comer';
     const cal = feltCold(S, p);
     // indo dormir junto do fogo já é se aquecer; alimentar o fogo também
     if (cal < 15 && p.tempHere < C.COMFORT && a.type !== 'aquecer' && a.type !== 'fogo' && !(a.type === 'dormir' && a.byFire)) {
@@ -2143,7 +2379,7 @@
           const cs = cur ? cur.score : 0;
           // festa e história chamam: basta valer um pouco mais que o que está fazendo
           // o profeta larga o trabalho para pregar, e quem cura, para curar (Etapa 11)
-          const call = (best.type === 'festa' || best.type === 'ouvir' || best.type === 'curar' || best.type === 'memoria' || (best.type === 'historia' && best.hint === 'sermao')) && best.score > cs + 5;
+          const call = (best.type === 'festa' || best.type === 'ouvir' || best.type === 'curar' || best.type === 'memoria' || best.type === 'soc' || (best.type === 'historia' && best.hint === 'sermao')) && best.score > cs + 5;
           if (call || best.score > cs * 1.3 + 10) { end(S, p, 0); AI.decide(S, p); }
         }
       }
@@ -2177,8 +2413,9 @@
     argila: ['Indo buscar argila', 'Cavando barro na beira d\'água', 'Levando argila'],
   };
   AI.describe = function (S, p) {
+    if (p.fora) return G.Soc ? G.Soc.foraTxt(S, p) : 'Foi embora';   // Etapa 14
     if (!p.alive) { const o = p.sex === 'F' ? 'a' : 'o'; return 'Morreu ' + ({ frio: 'de frio', sede: 'de sede', fome: 'de fome', raio: 'atingid' + o + ' por um raio', parto: 'no parto', velhice: 'de velhice', lobos: 'no ataque dos lobos',
-      onca: 'no ataque da onça', jacare: 'no ataque de um jacaré', bicho: 'atacad' + o + ' por um bicho' }[p.cause] || ''); }
+      onca: 'no ataque da onça', jacare: 'no ataque de um jacaré', bicho: 'atacad' + o + ' por um bicho', crime: 'pelas mãos de outra pessoa' }[p.cause] || ''); }
     if (p.carriedBy) { const c = person(S, p.carriedBy); return c ? (c.sleeping ? 'Dormindo no colo de ' : 'No colo de ') + c.name : 'Sozinho'; }
     const a = p.act;
     if (!a) return 'Pensando no que fazer';
@@ -2186,9 +2423,10 @@
     switch (a.type) {
       case 'chegar': return 'Chegando ao novo lar';
       case 'memoria': return G.Memoria ? G.Memoria.describe(S, p, a) : 'Pensando no que fazer';
+      case 'soc': return G.Soc ? G.Soc.describe(S, p, a) : 'Pensando no que fazer';
       case 'depositar': return 'Guardando no estoque';
       case 'beber': return st === 'go' ? 'Indo beber água' : 'Bebendo água';
-      case 'comer': return st === 'go' ? 'Indo comer' : a.src === 'arbusto' ? 'Comendo frutas no pé' : a.hot === 'carne' ? 'Comendo carne assada' : a.hot ? 'Comendo peixe assado' :
+      case 'comer': return st === 'go' ? 'Indo comer' : a.src === 'carga' ? 'Comendo do que leva nas costas' : a.src === 'arbusto' ? 'Comendo frutas no pé' : a.hot === 'carne' ? 'Comendo carne assada' : a.hot ? 'Comendo peixe assado' :
         a.kept === 'defumado' ? 'Comendo defumado' : a.kept === 'seca' ? 'Comendo fruta seca' : a.dish ? DISH[a.dish] || 'Comendo' : 'Comendo';
       case 'caca': { const e = G.Fauna.get(S, a.prey), nm = e ? C.BICHOS[e.sp || 'capivara'].name.toLowerCase() : 'bicho', um = e ? C.BICHOS[e.sp || 'capivara'].art : 'um bicho';
         return st === 'aim' ? 'Mirando ' + um : st === 'cut' ? 'Carneando ' + um : st === 'haul' ? 'Levando carne' + (p.carry && p.carry.couro ? ' e couro' : '') : 'Caçando (' + nm + ')'; }

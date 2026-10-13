@@ -10,7 +10,7 @@ const path = require('path');
 const fs = require('fs');
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 globalThis.G = {};
-for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
+for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'sociedade', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
 const { W, Sim, CFG: C, Family: F, God, Save, AI, Tech: T, Life: L } = G;
 const Y = 60 * 1440, D = 1440;
 
@@ -213,8 +213,9 @@ if (isMainThread) {
     const S = world(5);
     const [w, m] = S.people;
     F.link(S, w, m, 3);
+    S.events.length = 0;
     for (let d = 0; d < 10; d++) F.daily(S);
-    check('afeto em zero: o par se separa, sem mágoa, e vai para a Crônica', !F.isPartner(w, m) && S.chron.some((c) => /se separaram, sem mágoa/.test(c.text)));
+    check('afeto em zero: o par se separa, sem mágoa, e o jogo avisa (sem encher a Crônica)', !F.isPartner(w, m) && S.events.some((e) => e.k === 'toast' && /se separaram, sem mágoa/.test(e.text)) && !S.chron.some((c) => /se separaram/.test(c.text)) && S.stats.seps === 1);
   }
   // 7. visitas: quem tem par em outra barraca dorme lá em parte das noites (e a barraca não estoura)
   {
@@ -648,7 +649,7 @@ function longRun(seed, mode, years) {
   Object.assign(out, {
     alive: S.people.filter((p) => p.alive).length, births: st.births, deaths: S.people.filter((p) => !p.alive).map((p) => p.cause),
     mothers: moms.size, multiDad: [...moms.values()].filter((s) => s.size > 1).length,
-    bonds: S.chron.filter((c) => /estão juntos/.test(c.text)).length + 1, seps: S.chron.filter((c) => /separaram/.test(c.text)).length, maxBonds,
+    bonds: (st.bonds || 0) + 1, seps: st.seps || 0, maxBonds,
     stories: st.stories, parties: st.parties, talks: st.talks, fights: st.fights, peace: st.peace, consoled: st.consoled, taught: st.taught, small: st.small || 0,
     workPct: pct(AI.WORK), chatPct: pct(['conversar']), storyPct: pct(['historia', 'ouvir']), partyPct: pct(['festa']), sleepPct: pct(['dormir']),
     hungry: (hungry / Math.max(1, hours) * 100).toFixed(1), cold: (cold / Math.max(1, hours) * 100).toFixed(1),

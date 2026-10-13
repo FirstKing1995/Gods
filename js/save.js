@@ -103,6 +103,7 @@
       hist: S.hist ? { day: S.hist.day, s: S.hist.s, n: S.hist.n } : null,   // a memória da aldeia (0.12), para o jogo fechado
       povos: S.povos || null,   // Etapa 12: a convivência e as caravanas
       memoria: G.Memoria && S.memoria ? packMem(S.memoria) : null,   // Etapa 13: corpos, contos, a erva e o rito
+      soc: G.Soc && S.soc ? G.Soc.pack(S) : null,   // Etapa 14: crimes, líder, pedidos, quem foi embora, a vila de fora
     };
   };
 
@@ -140,6 +141,7 @@
       hist: d.hist ? { day: -2, s: d.hist.s || [null, null, null, null], n: d.hist.n || [0, 0, 0, 0] } : null,
       povos: d.povos || null,
       memoria: d.memoria || null,
+      soc: d.soc || null,
     };
     for (const p of S.people) {
       p.path = null; p.pathI = 0; p.act = null; p.px = p.x; p.py = p.y; p.fail = {}; p.stuck = false;

@@ -129,6 +129,7 @@ body[data-placing] #view { cursor: crosshair; }
 }
 .spd:hover { border-color: var(--edge-2); }
 .spd.on { background: var(--gold); color: var(--night); border-color: var(--gold-hi); }
+.spd.lag { background: #d77643; border-color: #f6a0a4; }   /* 0.14: a aldeia é grande para esta velocidade: o mundo anda o que dá */
 .menu { position: absolute; top: calc(var(--top) + 60px); right: var(--gut); display: grid; gap: 8px; width: 240px; z-index: 8; max-height: calc(100% - var(--top) - 80px); overflow: auto; }
 .menu { grid-template-columns: minmax(0, 1fr); }
 .menu > * { min-width: 0; }
@@ -675,3 +676,22 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 .dom-opt.mem-opt .nm { font-family: var(--story); font-size: 18px; font-weight: 400; line-height: 1.25; }
 @media (max-width: 520px) { .deus-tabs { flex-wrap: wrap; } .deus-tabs button { flex: 1 1 30%; } }
 #dom-ok { white-space: nowrap; }
+
+/* Etapa 14: sociedade */
+.chip.lider { background: #5a4420; color: #fee761; border-color: #feae34; }
+.soc-line { display: flex; align-items: center; gap: 6px; margin: 4px 0; }
+.soc-line .ico { flex: none; }
+.crimelist li.crime.g2 { border-left: 3px solid #d77643; padding-left: 6px; }
+.crimelist li.crime.g3 { border-left: 3px solid #e43b44; padding-left: 6px; }
+.crimelist li.crime.g1 { border-left: 3px solid #5a6988; padding-left: 6px; }
+.crimelist li.crime.done { opacity: 0.72; }
+.grav.g2 { color: #f0a070; }
+.grav.g3 { color: #f6757a; font-weight: 600; }
+.chip.chip-btn { cursor: pointer; font: inherit; font-size: 11px; }
+.chip.chip-btn:hover, .chip.chip-btn:focus-visible { border-color: #feae34; outline: none; }
+.fora-list { margin-top: 6px; }
+.side { color: #c0cbdc; }
+.side.bom { color: #9be070; }
+.side.temido { color: #f6a0a4; }
+.crimelist li.crime { align-items: start; }
+.crimelist li.crime > .ico { margin-top: 2px; }

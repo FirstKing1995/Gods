@@ -7,7 +7,7 @@
 const path = require('path');
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 globalThis.G = {};
-for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
+for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'sociedade', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
 const { W, Sim, CFG: C, Family: F, God, Narr: N, Save, AI } = G;
 const Y = 60 * 1440, D = 1440;
 
@@ -37,7 +37,9 @@ function longRun(seed, kind, years) {
         if (e.k === 'narr' && e.on && N.EVENTS[e.ev]) starts.push({ t: S.t, k: e.ev });
         if (e.k === 'bite') {
           bitesAt.push(S.t);
-          if (N.safeXY(S, e.x, e.y) && (!e.sp || e.sp === 'onca')) unsafeBites++;   // a luz do fogo guarda de lobo e de onça (jacaré e porco-do-mato não ligam para o fogo)
+          // 0.14: o bote da onça acuada na toca não conta: é a luta que o povo foi buscar, de dia, e a toca pode ter
+          // ficado perto de um fogo novo (o povo agora ergue fogueira junto das casas mais longe)
+          if (N.safeXY(S, e.x, e.y) && (!e.sp || e.sp === 'onca') && !e.acuada) unsafeBites++;   // a luz do fogo guarda de lobo e de onça (jacaré e porco-do-mato não ligam para o fogo)
           // quem foi mordido: o evento diz (duas pessoas podem estar no mesmo ponto, e o bebê no colo fica no ponto de quem o carrega)
           const p = e.pid ? S.people.find((q) => q.id === e.pid) : S.people.find((q) => q.alive && !q.carriedBy && Math.abs(q.x - e.x) < 1e-6 && Math.abs(q.y - e.y) < 1e-6);
           if (p && F.age(S, p) < 12) kidBites++;

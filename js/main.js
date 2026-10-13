@@ -12,6 +12,7 @@
   let siteWorld = null, siteSeed = 0, siteSel = null;
   let placing = null, casting = null, roading = null;   // placing: a obra que está sendo posicionada (veja startPlacing)
   let camTarget = null, holdSim = false, holdDrawn = false;
+  let simLag = 0, lagShown = false;                      // 0.14: perto de 1, o mundo não está acompanhando a velocidade pedida
   let follow = null;                                     // quem a câmera segue (veja setFollow)
   const rng = new G.RNG((Date.now() ^ 0x5bd1e995) >>> 0);
 
@@ -86,11 +87,13 @@
     $('#btn-continue').hidden = !has;
     $('#continue-info').hidden = !has;
     if (has) {
+      // a data e quantos são (os nomes ficam no jogo: com uma aldeia grande, a linha não cabia)
+      const gente = (n) => (n === 1 ? '1 pessoa' : n + ' pessoas');
       if (d && !d.over) {
-        const alive = d.people.filter((p) => p.alive).map((p) => ({ name: p.name }));
-        $('#continue-info').textContent = Sim.dateText(d.t) + ' · ' + (alive.length ? Sim.listNames(alive) : 'ninguém vivo');
+        const n = d.people.filter((p) => p.alive).length;
+        $('#continue-info').textContent = Sim.dateText(d.t) + ' · ' + (n ? gente(n) : 'ninguém vivo');
       } else {
-        $('#continue-info').textContent = 'Ano ' + cloud.ano + ', ' + String(cloud.estacao).toLowerCase() + ', dia ' + cloud.dia + ' · ' + (cloud.nomes || '') + ' (na nuvem)';
+        $('#continue-info').textContent = 'Ano ' + cloud.ano + ', ' + String(cloud.estacao).toLowerCase() + ', dia ' + cloud.dia + (cloud.vivos ? ' · ' + gente(cloud.vivos) : '') + ' (na nuvem)';
       }
     }
     setMode('title');
@@ -142,6 +145,7 @@
     if (S.stats.eraEnd && !S.stats.eraSeen) showEra();   // a era fechou com o jogo fechado
     if (G.Deus && G.Deus.pending(S)) setTimeout(showGodPending, 900);   // Deus subiu de nível com o jogo fechado
     if (G.Memoria && G.Memoria.pending(S)) setTimeout(showMemPending, 1300);   // Etapa 13: a pergunta do rito ficou esperando
+    if (G.Soc && S.soc && G.Soc.pendInfo(S)) setTimeout(showSocPending, 1700);   // Etapa 14: o aviso de quem vai embora ficou esperando
   }
   // uma janela por vez: espera a outra fechar
   const modalOpen = () => ['#modal-birth', '#modal-choice', '#modal-away', '#modal-era', '#modal-dom'].some((id) => !$(id).hidden);
@@ -163,6 +167,36 @@
     const before = speed;
     setSpeed(0);
     UI.memPending(() => { setSpeed(before || 1); save(); if (G.Deus && G.Deus.pending(S)) setTimeout(showGodPending, 500); });
+  }
+  // Etapa 14: o grupo que avisou que vai embora, o inocente que o povo vai mandar embora: pausa e pergunta
+  function showSocPending() {
+    if (!S || S.safe || mode !== 'game' || !G.Soc || !S.soc || !G.Soc.pendInfo(S)) return;
+    if (modalOpen()) { setTimeout(showSocPending, 700); return; }
+    $('#modal-deus').hidden = true;
+    const before = speed;
+    setSpeed(0);
+    UI.socPending(() => { setSpeed(before || 1); save(); if (G.Deus && G.Deus.pending(S)) setTimeout(showGodPending, 500); else if (G.Memoria && G.Memoria.pending(S)) setTimeout(showMemPending, 500); });
+  }
+  // o fogo posto: pausa e pergunta (mandar a Chuva ou deixar com o povo); a câmera vai até a obra
+  function showSocFire(bid) {
+    if (!S || S.safe || mode !== 'game' || !G.Soc || !S.soc) return;
+    const b = Sim.building(S, bid);
+    if (!b || !b.fogo) return;
+    if (modalOpen()) { setTimeout(() => showSocFire(bid), 700); return; }
+    $('#modal-deus').hidden = true;
+    const before = speed;
+    setSpeed(0);
+    if (!follow) camTarget = { x: (b.x + b.w / 2) * TS, y: (b.y + b.h / 2) * TS };
+    // na volta o tempo segue em 1x, para dar para ver o que acontece com a obra
+    if (!UI.fogo(bid, () => { setSpeed(1); save(); })) setSpeed(before || 1);
+  }
+  // castigar alguém: pausa, mostra o que você viu e as seis medidas; volta: a aba de Deus de onde veio ('' = a ficha)
+  function showCastigo(pid, volta) {
+    if (!S || S.safe || mode !== 'game' || !G.Soc || !S.soc) return;
+    if (modalOpen()) return;
+    const before = speed;
+    setSpeed(0);
+    if (!UI.castigo(pid, () => { setSpeed(before || 1); save(); if (volta) UI.deus(volta); })) setSpeed(before || 1);
   }
   // fim da Era da Família: pausa e mostra o que o povo construiu
   function showEra() {
@@ -862,6 +896,17 @@
         return;
       }
     }
+    // Etapa 14: o pedido do líder (o lugar com o ponto de interrogação) e a vila de fora
+    if (G.Soc && S.soc) {
+      const q = S.soc.pedidos.find((x) => (x.tiles ? x.tiles.indexOf(ty * S.world.W + tx) >= 0 : tx >= x.x && ty >= x.y && tx < x.x + C.BUILD[x.type].w && ty < x.y + C.BUILD[x.type].h));
+      if (q) { UI.deus('sociedade'); return; }
+      const v = S.soc.vila;
+      if (v && !v.longe && Math.abs(tx - v.x) <= 2 && Math.abs(ty - v.y) <= 2 && Sim.isSeen(S, v.x, v.y)) {
+        const vi = G.Soc.vilaInfo(S);
+        UI.toast(vi.fim ? vi.nome + ': a vila de quem foi embora. Ficou vazia.' : vi.nome + ', a vila de quem foi embora: ' + (vi.pop === 1 ? '1 pessoa' : vi.pop + ' pessoas') + ', ' + vi.lacoTxt + ' com a aldeia. Veja em Deus → Sociedade.', '');
+        return;
+      }
+    }
     const bid = S.world.bgrid[ty * S.world.W + tx];
     if (bid >= 0) {
       const inside = S.people.find((p) => p.alive && p.inTent === bid);
@@ -909,7 +954,7 @@
       return;
     }
     if (k === ' ') { e.preventDefault(); setSpeed(speed === 0 ? (lastSpeed || 1) : 0); }
-    else if (k >= '1' && k <= '5' && k.length === 1) setSpeed(+k);
+    else if (k >= '1' && k <= '6' && k.length === 1) setSpeed(+k);
     else if (k === 'f') startPlacing('fogueira');
     else if (k === 'b') startPlacing('barraca');
     else if (k === 'q') startCasting('calor');
@@ -965,9 +1010,20 @@
     } else if (S) {
       if (mode === 'game' && speed > 0 && !holdSim) {
         acc += dt * (C.DAY_MIN / C.REAL_SEC_PER_DAY) * C.SPEEDS[speed];
+        // 0.14: a simulação tem um tanto de tempo por quadro (como nos jogos de cidade): se a aldeia é grande demais para a
+        // velocidade pedida, o mundo anda o que dá e a tela segue fluida, em vez de travar tentando alcançar
+        const t0 = performance.now();
         let n = 0;
-        while (acc >= C.STEP_MIN && n < 80) { Sim.step(S, C.STEP_MIN); acc -= C.STEP_MIN; n++; if (S.over) break; }
-        if (n >= 80) acc = 0;
+        while (acc >= C.STEP_MIN) { Sim.step(S, C.STEP_MIN); acc -= C.STEP_MIN; n++; if (S.over || performance.now() - t0 > C.SIM_BUDGET_MS) break; }
+        if (acc > C.SIM_BACKLOG * C.STEP_MIN) { simLag = Math.min(1, simLag + 0.05); acc = C.SIM_BACKLOG * C.STEP_MIN; } else simLag = Math.max(0, simLag - 0.02);
+        // o botão da velocidade avisa quando o mundo não acompanha
+        const lag = simLag > 0.5;
+        if (lag !== lagShown) {
+          lagShown = lag;
+          const b = document.querySelector('.spd.on');
+          document.querySelectorAll('.spd.lag').forEach((x) => { x.classList.remove('lag'); x.removeAttribute('data-lag'); if (x.dataset.t0) x.title = x.dataset.t0; });
+          if (lag && b) { b.classList.add('lag'); b.setAttribute('data-lag', '1'); b.dataset.t0 = b.dataset.t0 || b.title; b.title = b.dataset.t0 + ' · a aldeia é grande para esta velocidade: o mundo anda o que dá'; }
+        }
       }
       const alpha = Math.min(1, acc / C.STEP_MIN);
       if (follow || camTarget) {
@@ -1026,11 +1082,16 @@
       era: showEra,
       godPending: showGodPending,
       memPending: showMemPending,
+      socPending: showSocPending,
+      socFire: showSocFire,
+      castigo: showCastigo,
       panels: () => { positionHint(); offAt = 0; },   // abriu ou fechou painel: o mapa à vista mudou
       birth: (pid) => {
         if (!S || S.safe || mode !== 'game') return;
         const baby = S.people.find((q) => q.id === pid);
         if (!baby) return;
+        // 0.14: numa aldeia grande o nascimento não pausa (o nome sugerido fica; dá para trocar na ficha enquanto é pequeno)
+        if (S.people.filter((q) => q.alive).length > C.CHRON_GRANDE && S.stats.births > 1) return;
         if (modalOpen()) { setTimeout(() => UI.hooks.birth(pid), 600); return; }
         const before = speed;
         setSpeed(0);
@@ -1079,7 +1140,7 @@
     if (session()) Net.call('hora', {}).then(() => {});
 
     G.debug = {
-      get S() { return S; }, get mode() { return mode; },
+      get S() { return S; }, get mode() { return mode; }, get speed() { return speed; },
       advance(days) { if (S) { Sim.advance(S, days * C.DAY_MIN); UI.update(0, true); } },
       setSpeed, startPlacing, startCasting, startRoad, startFence, stopRoad, placeAt: (tx, ty) => placeAt((tx + 0.5) * TS, (ty + 0.5) * TS),
       castAt: (kind, tx, ty) => { startCasting(kind); if (casting) castAt((tx + 0.5) * TS, (ty + 0.5) * TS); },
