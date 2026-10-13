@@ -11,7 +11,7 @@
 const path = require('path');
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 globalThis.G = {};
-for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
+for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'sociedade', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
 const { W, Sim, CFG: C, Family: F, God, Save, AI, Tech: T, Inv: I, Life: L, Obras: O, Fauna: FA, Campo: K, Narr: N } = G;
 const Y = 60 * 1440, D = 1440;
 
@@ -523,6 +523,8 @@ if (isMainThread) {
     K.receive(S, { sp: 'galinha', m: 1, f: 4 }, pen.x + 1, pen.y + 1);
     K.receive(S, { sp: 'gado', m: 1, f: 1 }, pen.x + 1, pen.y + 1);
     S.vontades.criacao = 3;
+    // 0.14: só o que você marca (o teste é da criação; com "o povo decide", a aldeia também ergue as obras dela)
+    if (S.soc) S.soc.modo = 'eu';
     const eggs0 = S.stats.ovosGot, milk0 = S.stats.leiteGot;
     let ate = 0, drank = 0;
     days(S, 6, (s) => { for (const p of s.people) if (p.act && p.act.type === 'comer' && p.act.dish === 'ovos') ate++; else if (p.act && p.act.type === 'comer' && p.act.dish === 'leite') drank++; });

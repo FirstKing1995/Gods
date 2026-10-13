@@ -32,9 +32,11 @@
     const list = S.people;
     let m = byId.get(list);
     if (!m || m.n !== list.length) { m = new Map(); for (const q of list) m.set(q.id, q); m.n = list.length; byId.set(list, m); }
-    return m.get(id) || null;
+    // Etapa 14: quem foi embora não está em S.people, mas o parentesco continua valendo (alive = false, fora = quando saiu)
+    return m.get(id) || (S.soc && S.soc.fora && S.soc.fora.length && G.Soc ? G.Soc.away(S, id) : null);
   }
   F.person = person;
+  F.reindex = (S) => { byId.delete(S.people); KIDX.delete(S); };   // quando alguém sai da lista (Etapa 14)
 
   // quem trabalha em quê: criança só colhe frutas e busca água, a partir dos 7
   F.canWork = function (S, p, wk) {
@@ -45,11 +47,23 @@
     return true;
   };
   F.carrying = (S, p) => S.people.some((b) => b.alive && b.carriedBy === p.id);
+  // 0.14: quem leva alguém no colo, contado uma vez por passo (o fator de trabalho é pedido por quem trabalha, a cada
+  // passo; varrer o povo inteiro para cada um pesava numa aldeia grande)
+  const CARR = new WeakMap();
+  function carriers(S) {
+    let c = CARR.get(S);
+    if (!G.passoOk(S, c) || c.n !== S.people.length) {
+      c = G.passoMarca({ t: S.t, n: S.people.length, s: new Set() });
+      for (const b of S.people) if (b.alive && b.carriedBy) c.s.add(b.carriedBy);
+      CARR.set(S, c);
+    }
+    return c.s;
+  }
   F.latePregnant = (S, p) => !!(p.preg && p.preg.due - S.t < C.LATE_PREG_DAYS * C.DAY_MIN);
   F.workFactor = function (S, p) {
     const st = F.stage(S, p);
     let f = st === 'crianca' ? 0.5 : st === 'jovem' ? 0.75 : st === 'idoso' ? 0.8 : 1;
-    if (F.carrying(S, p)) f *= 0.85;
+    if (carriers(S).has(p.id)) f *= 0.85;
     if (F.latePregnant(S, p)) f *= 0.7;
     return f;
   };
@@ -66,12 +80,32 @@
   F.xpFactor = function (S, p) {
     const st = F.stage(S, p);
     let f = st === 'jovem' ? 1.5 : st === 'crianca' ? 1.2 : 1;
-    if ((st === 'jovem' || st === 'crianca') && S.people.some((q) => q.alive && q !== p && F.stage(S, q) === 'idoso' && Math.hypot(q.x - p.x, q.y - p.y) < 6)) f *= 1.25;
+    if ((st === 'jovem' || st === 'crianca') && elders(S).some((q) => q !== p && Math.hypot(q.x - p.x, q.y - p.y) < 6)) f *= 1.25;
     if (G.Deus && G.Deus.saber(S, 'escrita')) f *= C.ESCRITA_XP;   // a escrita (Etapa 11): todos aprendem mais rápido
     if (S.povos && S.povos.mixed && G.Povos) f *= G.Povos.xp(S, p);   // Etapa 12: o versátil aprende com os outros povos
     return f;
   };
-  F.nursing = (S, p) => p.sex === 'F' && S.people.some((b) => b.alive && b.mother === p.id && F.stage(S, b) === 'bebe' && b.carriedBy === p.id);
+  // 0.14: quem amamenta, calculado uma vez por passo (antes, cada pergunta varria o povo inteiro: com 300, era 90 mil
+  // voltas por passo só para isso)
+  const NURSE = new WeakMap();
+  // os idosos (para quem aprende perto deles), uma vez por passo
+  const ELD = new WeakMap();
+  function elders(S) {
+    let c = ELD.get(S);
+    if (!G.passoOk(S, c) || c.n !== S.people.length) { c = G.passoMarca({ t: S.t, n: S.people.length, list: S.people.filter((q) => q.alive && F.stage(S, q) === 'idoso') }); ELD.set(S, c); }
+    return c.list;
+  }
+  F.nursing = function (S, p) {
+    if (p.sex !== 'F') return false;
+    let c = NURSE.get(S);
+    if (!G.passoOk(S, c) || c.n !== S.people.length) {
+      const set = new Set();
+      for (const b of S.people) if (b.alive && b.carriedBy && b.carriedBy === b.mother && F.stage(S, b) === 'bebe') set.add(b.mother);
+      c = G.passoMarca({ t: S.t, n: S.people.length, set });
+      NURSE.set(S, c);
+    }
+    return c.set.has(p.id);
+  };
   // multiplicadores de necessidade por fase e estado
   F.needMult = function (S, p) {
     const st = F.stage(S, p);
@@ -137,6 +171,21 @@
     for (const x of A) if (B.has(x)) return true;
     return false;
   };
+  // 0.14: os filhos de cada um e a posição de cada um na lista, uma vez por passo (antes, "filhos de" varria o povo
+  // inteiro, e "a família de" fazia isso para cada pessoa: com 300, eram milhões de voltas a cada reza)
+  const KIDX = new WeakMap();
+  function kinIdx(S) {
+    let c = KIDX.get(S);
+    if (G.passoOk(S, c) && c.n === S.people.length) return c;
+    const kids = new Map(), pos = new Map();
+    S.people.forEach((q, i) => {
+      pos.set(q.id, i);
+      for (const par of [q.mother, q.father]) { if (!par) continue; const l = kids.get(par); if (l) { if (l.indexOf(q) < 0) l.push(q); } else kids.set(par, [q]); }
+    });
+    c = G.passoMarca({ t: S.t, n: S.people.length, kids, pos });
+    KIDX.set(S, c);
+    return c;
+  }
   F.childrenOf = (S, p) => S.people.filter((q) => q.mother === p.id || q.father === p.id);
   F.siblingsOf = (S, p) => S.people.filter((q) => q !== p && ((p.mother && q.mother === p.mother) || (p.father && q.father === p.father)));
   // ---------- laços ----------
@@ -164,8 +213,27 @@
     return '';
   };
   F.family = function (S, p) {
+    // os candidatos vêm dos laços (par, pais, filhos, irmãos, avós, netos), não do povo inteiro; a ordem é a da lista
+    const ix = kinIdx(S), cand = new Set(), kidsOf = (id) => ix.kids.get(id) || [];
+    const add = (id) => { if (id && id !== p.id) cand.add(id); };
+    if (p.bonds) for (const id in p.bonds) add(+id);
+    for (const pid of [p.mother, p.father]) {
+      if (!pid) continue;
+      add(pid);
+      for (const s of kidsOf(pid)) add(s.id);
+      const par = person(S, pid);
+      if (par) { add(par.mother); add(par.father); }
+    }
+    for (const c of kidsOf(p.id)) { add(c.id); for (const g of kidsOf(c.id)) add(g.id); }
     const out = [];
-    for (const q of S.people) { if (q === p) continue; const r = F.relation(S, p, q); if (r) out.push({ q, r }); }
+    for (const id of cand) {
+      const i = ix.pos.get(id);
+      if (i === undefined) continue;
+      const q = S.people[i], r = F.relation(S, p, q);
+      if (r) out.push({ q, r, i });
+    }
+    out.sort((a, b) => a.i - b.i);
+    for (const o of out) delete o.i;
     return out;
   };
 
@@ -259,7 +327,9 @@
       cnt.set(a.id * 2 + (same ? 1 : 0), na + 1); cnt.set(b.id * 2 + (same ? 1 : 0), nb + 1);
       if (S.povos && S.povos.mixed && G.Povos) G.Povos.onBond(S, a, b);
       S.stats.bonds = (S.stats.bonds || 0) + 1;
-      Sim().chron(S, a.name + ' e ' + b.name + ' estão juntos.');
+      // 0.14: a Crônica guarda o primeiro par; os outros passam num aviso (numa aldeia grande, eram metade da Crônica)
+      if (S.stats.bonds === 1) Sim().chron(S, a.name + ' e ' + b.name + ' estão juntos: é o primeiro par que se forma na aldeia.');
+      else Sim().toast(S, a.name + ' e ' + b.name + ' estão juntos.', 'good');
       if (G.Life) G.Life.onBond(S, a, b);
     }
   }
@@ -273,7 +343,8 @@
         F.addAfeto(S, p, q, -d);
         if (F.afeto(p, q) > 0) continue;
         F.unlink(S, p, q);
-        Sim().chron(S, p.name + ' e ' + q.name + ' se separaram, sem mágoa.');
+        S.stats.seps = (S.stats.seps || 0) + 1;
+        Sim().toast(S, p.name + ' e ' + q.name + ' se separaram, sem mágoa.', '');
       }
     }
   }
@@ -539,8 +610,12 @@
     const first = S.stats.births === 1;
     const txt = 'Nasceu ' + baby.name + ', ' + (sex === 'F' ? 'filha' : 'filho') + ' de ' + w.name + (dad ? ' e ' + dad.name : '') + '.' +
       (first ? ' É a primeira criança do povo.' : '');
-    S.chron.push({ t: S.t, text: txt, pid: baby.id, born: true });
-    S.events.push({ k: 'chron', text: txt, birth: !S.safe });
+    // 0.14: numa aldeia grande, cada nascimento passa num aviso, e a Crônica guarda o resumo do ano
+    if (!first && S.people.filter((q) => q.alive).length > C.CHRON_GRANDE) Sm.toast(S, txt, 'good');
+    else {
+      S.chron.push({ t: S.t, text: txt, pid: baby.id, born: true });
+      S.events.push({ k: 'chron', text: txt, birth: !S.safe });
+    }
     S.events.push({ k: 'birth', pid: baby.id });
     Sm.addMem(S, w, 'nasceuFilho'); if (dad && dad.alive) Sm.addMem(S, dad, 'nasceuFilho');
     for (const q of S.people) if (q.alive && q !== w && q !== dad && q !== baby && F.closeKin(S, q, baby)) Sm.addMem(S, q, 'nasceuIrmao');
@@ -619,7 +694,8 @@
     else if (age === 18) {
       const first = !S.stats.firstAdult && (p.mother || p.father);
       if (first) S.stats.firstAdult = true;
-      Sm.chron(S, (first ? 'A primeira criança do povo cresceu: ' : '') + p.name + ' fez 18 anos.');
+      if (first) Sm.chron(S, 'A primeira criança do povo cresceu: ' + p.name + ' fez 18 anos.');
+      else Sm.toast(S, p.name + ' fez 18 anos.', 'good');
       // o primogênito virou adulto: o Narrador manda um segundo casal pedindo abrigo
       if ((p.mother || p.father) && G.Narr) G.Narr.onAdult(S, p);
     } else if (age === (p.velho || C.OLD_AGE)) Sm.toast(S, p.name + ' fez ' + age + ' anos: ensina os jovens, mas já não tem a mesma força.');

@@ -109,6 +109,11 @@
     m_rito: 'No nível 2 de Deus, o povo acha a erva-do-sonho na mata. No rito, ao escurecer, alguém pergunta: responda.',
     m_finados: 'No último dia do outono, à tarde, a aldeia vai ao cemitério com uma luz para cada cova.',
     m_reconto: 'Quem só ouviu um conto passa adiante e muda um detalhe. Veja em Deus → Memória.',
+    s_lider: 'Com 5 adultos, o povo escolhe quem fala por todos, numa tardinha. Veja em Deus → Sociedade.',
+    s_julg: 'Quando alguém vê um roubo ou uma surra, o líder chama o julgamento ao pé do fogo, à tardinha.',
+    s_medida: 'Em Deus → Sociedade, castigue um crime com a medida do tamanho dele (o leve, com o aviso em sonho).',
+    s_perdao: 'Em Deus → Sociedade, perdoe alguém. O povo vê, e passa a te ver mais bondoso.',
+    s_obra: 'Em Deus → Sociedade, escolha "O povo pede" ou "O povo decide". O líder marca o que falta.',
   };
   // estoque: os cinco de sempre e os da Etapa 5, que aparecem quando existem
   const RES = [['madeira', 'madeira'], ['pedra', 'pedra'], ['argila', 'argila'], ['tabuas', 'tabuas'], ['fibra', 'fibra'], ['agua', 'agua'], ['frutas', 'frutas'], ['peixe', 'peixe'], ['carne', 'carne'],
@@ -201,6 +206,8 @@
     $('#btn-deus').addEventListener('click', () => {
       if (S && G.Deus && G.Deus.pending(S) && UI.hooks.godPending) UI.hooks.godPending();
       else if (S && G.Memoria && G.Memoria.pending(S) && UI.hooks.memPending) UI.hooks.memPending();   // Etapa 13
+      else if (S && G.Soc && S.soc && G.Soc.pendInfo(S) && UI.hooks.socPending) UI.hooks.socPending();   // Etapa 14
+      else if (S && G.Soc && S.soc && S.soc.pedidos.length) UI.deus('sociedade');   // o líder espera um sim
       else UI.deus();
     });
     $('#deus-close').addEventListener('click', () => { $('#modal-deus').hidden = true; });
@@ -258,6 +265,9 @@
         if (kid) UI.birth(kid, null, true);
       }
       if (b.dataset.act === 'ungir') UI.deus('escolhidos');   // Etapa 11
+      // Etapa 14: castigar e perdoar, da ficha
+      if (b.dataset.act === 'castigar' && UI.hooks.castigo) UI.hooks.castigo(UI.sel.person, '');
+      if (b.dataset.act === 'perdoar' && G.Soc) { const r = G.Soc.perdoar(S, +b.dataset.cid); if (!r.ok) UI.toast('Agora não: ' + r.msg.charAt(0).toLowerCase() + r.msg.slice(1), 'warn'); contoKey = ''; UI.update(0, true); }
       if (b.dataset.act === 'vercova') {   // Etapa 13: a câmera vai até a cova (ou até onde o corpo espera)
         const d = S.people.find((q) => q.id === UI.sel.person);
         if (d && d.cova) UI.hooks.center((d.cova[0] + 0.5) * C.TILE, (d.cova[1] + 0.5) * C.TILE);
@@ -729,7 +739,7 @@
       setText($('#deus-title'), g.name || 'Deus');
       setText($('#deus-sub'), (g.name ? g.epithet + ' · ' : '') + def.name + ', nível ' + lv);
       setText($('#deus-next'), nx ? 'Nível ' + (lv + 1) + ': glória ' + fmtN(g.glory) + '/' + fmtN(nx.glory) + ' · fiéis ' + Dz.fieis(S) + '/' + nx.fieis : 'Níveis, dons e grandes atos');
-      const bd2 = $('#badge-dom'), pend = !!Dz.pending(S) || !!(G.Memoria && G.Memoria.pending(S));
+      const bd2 = $('#badge-dom'), pend = !!Dz.pending(S) || !!(G.Memoria && G.Memoria.pending(S)) || !!(G.Soc && S.soc && (S.soc.pedidos.length || G.Soc.pendInfo(S)));
       if (bd2.hidden === pend) bd2.hidden = !pend;
       $('#btn-deus').classList.toggle('pend', pend);
     }
@@ -774,12 +784,12 @@
     while (root.children.length > i) root.removeChild(root.lastChild);
   }
   const sec = (title, html) => `<span class="small muted sec">${title}</span>${html}`;
-  let inspPid = 0;
+  let inspPid = 0, famCache = null;
   function paintInspector() {
     paintObra();
     const el = $('#inspector');
     if (UI.sel.person) {
-      const p = S.people.find((q) => q.id === UI.sel.person);
+      const p = S.people.find((q) => q.id === UI.sel.person) || (G.Soc && S.soc ? G.Soc.away(S, UI.sel.person) : null);   // Etapa 14: quem foi embora ainda tem ficha
       if (!p) { UI.select(0, 0); return; }   // não existe mais (mundo trocado)
       if (!UI.isOpen('pessoa')) return;      // no celular a ficha divide a gaveta com os outros painéis
       const n = p.needs;
@@ -790,14 +800,19 @@
       const skills = Object.keys(p.skills).filter((k) => AI.SKILL_LABEL[k] && (['coleta', 'pesca', 'construcao'].indexOf(k) >= 0 || p.skills[k] > 0))
         .map((k) => `<span>${AI.SKILL_LABEL[k]}</span><span>nível ${AI.lvl(p, k)}</span>`).join('');
       const F = G.Family;
-      // família: par, pais, filhos, irmãos, avós, netos
+      // família: par, pais, filhos, irmãos, avós, netos. 0.14: a conta varre o povo inteiro, então fica guardada por
+      // pessoa e só se refaz quando muda quem está na ficha, o tamanho do povo, ou passa um segundo e meio
       const groups = {};
-      for (const k of F.family(S, p)) {
+      const nowMs = performance.now();
+      if (!famCache || famCache.pid !== p.id || famCache.n !== S.people.length || nowMs - famCache.at > 1500 || famCache.S !== S) famCache = { pid: p.id, n: S.people.length, at: nowMs, S, list: F.family(S, p) };
+      for (const k of famCache.list) {
         const r = k.r, lbl = { companheira: 'Companheira', companheiro: 'Companheiro', 'mãe': 'Mãe', pai: 'Pai', filha: 'Filhos', filho: 'Filhos', 'irmã': 'Irmãos', 'irmão': 'Irmãos', 'avó': 'Avós', 'avô': 'Avós', neta: 'Netos', neto: 'Netos' }[r];
         if (!lbl) continue;
         const who = esc(k.q.name) + (k.q.alive ? (lbl === 'Filhos' || lbl === 'Irmãos' || lbl === 'Netos' ? ' (' + F.age(S, k.q) + ')' : '') : ' †');
         (groups[lbl] = groups[lbl] || []).push(who + (lbl.startsWith('Compan') && k.q.alive ? ' · afeto ' + Math.round(F.afeto(p, k.q)) : ''));
       }
+      const fk = foraKin(p);   // Etapa 14: os parentes que foram embora
+      for (const k in fk) groups[k] = (groups[k] || []).concat(fk[k]);
       const fam = ['Companheira', 'Companheiro', 'Mãe', 'Pai', 'Filhos', 'Irmãos', 'Avós', 'Netos'].filter((k) => groups[k])
         .map((k) => `<span>${k}${k.startsWith('Compan') && groups[k].length > 1 ? 's' : ''}</span><span>${groups[k].join(', ')}</span>`).join('');
       let state = '';
@@ -817,8 +832,8 @@
       const feud = p.alive && p.feud ? Object.keys(p.feud).filter((id) => p.feud[id] > S.t).map((id) => { const q = F.person(S, +id); return q && q.alive ? q.name : ''; }).filter(Boolean) : [];
       if (feud.length) state = (state ? state + ' ' : '') + 'Brigad' + (p.sex === 'F' ? 'a' : 'o') + ' com ' + feud.join(' e ') + ': sem se falar por uns dias.';
       // o cabeçalho da caixa: o nome (e o título de escolhido), quem é e a idade
-      setHTML($('#pessoa-title'), esc(p.name) + (p.alive ? '' : ' †') + (p.alive && p.escolhido && Dz ? ` <span class="ttl">${esc(Dz.title(p))}</span>` : ''));
-      setText($('#pessoa-sub'), who + ', ' + (p.alive ? UI.ageText(S, p) : anos(yearsOf(p))));
+      setHTML($('#pessoa-title'), esc(p.name) + (p.alive ? '' : p.fora && !p.morto ? ' <span class="ttl">foi embora</span>' : ' †') + (p.alive && p.escolhido && Dz ? ` <span class="ttl">${esc(Dz.title(p))}</span>` : ''));
+      setText($('#pessoa-sub'), who + ', ' + (p.alive ? UI.ageText(S, p) : p.fora ? anos(F.age(p.morto ? { t: p.morto } : S, p)) : anos(yearsOf(p))));
       paintSheetTools(p);
       // no alto o essencial (o que faz, o estado, a oração, os traços, o que carrega); depois as barras; depois a
       // família, as habilidades, as lembranças e a última conversa
@@ -829,7 +844,8 @@
         deus: godLine,
         rito: ritoLine(p),
         reza: p.prayer ? `<p class="story">Reza: “${esc(p.prayer.text)}”</p>` : '',
-        tracos: `<div class="chips">${p.traits.map((t) => `<span class="chip" title="${esc(Sim.TRAIT_DESC[t])}">${esc(t)}</span>`).join('')}${criadoChip(p)}</div>`,
+        tracos: `<div class="chips">${indoleChips(p)}${p.traits.map((t) => `<span class="chip" title="${esc(Sim.TRAIT_DESC[t])}">${esc(t)}</span>`).join('')}${criadoChip(p)}</div>`,
+        soc: socLine(p),   // Etapa 14: a pena, o descontentamento, o que só Deus viu
         povo: povoChips(p),   // Etapa 12: o povo da pessoa e os dons dela
         posses: p.alive ? gear(p) : '',
         barras: p.alive ? `<div class="needs">${needs}</div>` : '',
@@ -1118,7 +1134,7 @@
     document.querySelectorAll('#modal-deus [data-gtab]').forEach((b) => { b.classList.toggle('on', b.dataset.gtab === deusTab); b.setAttribute('aria-selected', b.dataset.gtab === deusTab ? 'true' : 'false'); });
     $('#deus-mtitle').textContent = g.name ? g.name + ', ' + g.epithet : 'Deus';
     $('#deus-poder').textContent = fmtN(g.poder) + ' de Poder · glória ' + fmtN(g.glory);
-    $('#deus-body').innerHTML = deusTab === 'escolhidos' ? escolhidosHTML(Dz, g) : deusTab === 'atos' ? atosHTML(Dz, g) : deusTab === 'povos' && G.Povos ? povosHTML(Dz, g) : deusTab === 'memoria' && G.Memoria && S.memoria ? memoriaHTML(Dz) : nivelHTML(Dz, g);
+    $('#deus-body').innerHTML = deusTab === 'escolhidos' ? escolhidosHTML(Dz, g) : deusTab === 'atos' ? atosHTML(Dz, g) : deusTab === 'povos' && G.Povos ? povosHTML(Dz, g) : deusTab === 'memoria' && G.Memoria && S.memoria ? memoriaHTML(Dz) : deusTab === 'sociedade' && G.Soc && S.soc ? sociedadeHTML(Dz) : nivelHTML(Dz, g);
     $('#modal-deus').hidden = false;
   };
   // Etapa 12: os povos (quem são, os dons, a convivência entre eles) e o chamado de Deus
@@ -1376,6 +1392,269 @@
     m.hidden = false;
     return true;
   };
+  // ---------- Etapa 14: Sociedade ----------
+  const So = () => G.Soc;
+  const OBRA_NOME = { barraca: 'uma barraca', fogueira: 'uma fogueira', armazem: 'um armazém', cerca: 'uma cerca em volta da roça', mina: 'uma mina' };
+  const MODO_ORD = ['eu', 'pede', 'decide'];
+  // o motivo do descontentamento de uma pessoa só
+  const DESC1 = { cama: 'não tem casa', fome: 'passou fome', frio: 'passou frio', humor: 'a vida anda ruim', povo: 'os povos não se entendem', injustica: 'viu injustiça', lider: 'não confia em quem manda', medo: 'tem medo de Deus' };
+  // os rótulos da índole na ficha: só os eixos que se destacam (o título diz o que mais pesou); o líder e a marca
+  function indoleChips(p) {
+    const Sc = So();
+    if (!Sc || !S.soc || (!p.alive && !p.fora) || p.carriedBy) return '';
+    const info = Sc.pessoaInfo(S, p), out = [];
+    if (info.lider) out.push('<span class="chip lider" title="Fala por todos: chama o julgamento ao pé do fogo e, se você deixar, marca as obras que faltam.">Líder</span>');
+    info.rot.forEach((r) => {
+      const pq = info.pq[Sc.AX.indexOf(r.k)];
+      out.push(`<span class="chip ${r.bom ? 'dom' : 'fraq'}" title="${esc(Sc.EIXO[r.k].nome + ': ' + Sc.EIXO[r.k].desc.charAt(0).toLowerCase() + Sc.EIXO[r.k].desc.slice(1) + (pq ? ' O que mais pesou até aqui: ' + pq.txt + '.' : ''))}">${esc(cap1((r.forte ? 'muito ' : '') + r.txt))}</span>`);
+    });
+    if (info.marca) out.push(`<span class="chip fraq" title="A marca de Deus na testa: todos veem.">Marcad${p.sex === 'F' ? 'a' : 'o'}</span>`);
+    return out.join('');
+  }
+  // a ficha de quem vive: a pena, o descontentamento, e o que só Deus viu (com o que dá para fazer)
+  function socLine(p) {
+    const Sc = So();
+    if (!Sc || !S.soc || !p.alive || p.carriedBy) return '';
+    const F = G.Family, info = Sc.pessoaInfo(S, p), bits = [];
+    if (info.pena) bits.push('Cumpre pena: ' + (info.pena.dias === 1 ? 'falta 1 dia' : 'faltam ' + info.pena.dias + ' dias') + ' de trabalho para todos.');
+    if (info.exilio) bits.push(p.exilio.t > S.t ? 'Vai embora da aldeia ao amanhecer.' : 'Está indo embora da aldeia.');
+    if (info.doente) bits.push('Adoeceu por castigo: uns dias de fraqueza.');
+    if (info.desc >= 30) bits.push((info.desc >= C.DISS_DESC ? 'Pensa em ir embora' : 'Não anda contente') + (DESC1[info.descPq] ? ': ' + DESC1[info.descPq].replace('Deus', G.Deus ? G.Deus.call(S) : 'Deus') : '') + '.');
+    // o que a vida fez com a índole (no celular não há a dica do rótulo): "A mão piorou com a fome."
+    const EIXO_ART = { g: 'A mão', m: 'O gênio', f: 'A palavra' };
+    const porq = [];
+    info.pq.forEach((pq, i) => { if (pq) porq.push(EIXO_ART[Sc.AX[i]] + (pq.d > 0 ? ' melhorou com ' : ' piorou com ') + pq.txt.replace('Deus', G.Deus ? G.Deus.call(S) : 'Deus') + '.'); });
+    const c = info.crime, age = F.age(S, p);
+    let god = '';
+    if (c) {
+      const full = S.soc.crimes.find((x) => x.id === c.id);
+      god = `<p class="small soc-line"><img class="ico" src="${ic('olho')}" alt=""><span>Você viu: ${esc(c.txt)} <span class="muted">(${c.grav})</span>. ${full && full.known ? 'O povo sabe.' : 'O povo não sabe quem foi.'}</span></p>`;
+    }
+    const btns = age >= 12 ? `<div class="chips"><button class="btn btn-small" data-act="castigar"><img class="ico" src="${ic('raio')}" alt="">Castigar</button>${c && !Sc.perdaoWhy(S, S.soc.crimes.find((x) => x.id === c.id)) ? `<button class="btn btn-small" data-act="perdoar" data-cid="${c.id}"><img class="ico" src="${ic('perdao')}" alt="">Perdoar (${C.PERDAO_CUSTO})</button>` : ''}</div>` : '';
+    return (bits.length ? `<p class="small preg">${esc(bits.join(' '))}</p>` : '') + (porq.length ? `<p class="small muted soc-pq">${esc(porq.join(' '))}</p>` : '') + god + btns;   // castigar dá para qualquer um de 12 anos ou mais (em quem você não viu fazer nada, a janela avisa)
+  }
+  // parentes que foram embora (não estão na lista de gente, mas continuam parentes)
+  function foraKin(p) {
+    const F = G.Family, out = {};
+    if (!S.soc || !S.soc.fora.length) return out;
+    for (const q of S.soc.fora) {
+      const r = F.relation(S, p, q);
+      const lbl = { companheira: 'Companheira', companheiro: 'Companheiro', 'mãe': 'Mãe', pai: 'Pai', filha: 'Filhos', filho: 'Filhos', 'irmã': 'Irmãos', 'irmão': 'Irmãos', 'avó': 'Avós', 'avô': 'Avós', neta: 'Netos', neto: 'Netos' }[r];
+      if (lbl) (out[lbl] = out[lbl] || []).push(esc(q.name) + (q.morto ? ' †' : ' (foi embora)'));
+    }
+    return out;
+  }
+  // Deus → Povo: o líder, as obras por conta própria, quem não está contente, a vila de fora e o que você viu
+  function sociedadeHTML(Dz) {
+    const Sc = So(), s = S.soc, D = Dz.call(S), F = G.Family;
+    const pend = Sc.pendInfo(S);
+    // o líder
+    const li = Sc.liderInfo(S), adultos = S.people.filter((p) => p.alive && !p.carriedBy && F.age(S, p) >= 18).length;
+    let lider;
+    if (li) {
+      const rot = li.rot.map((r) => `<span class="chip ${r.bom ? 'dom' : 'fraq'}">${esc(cap1(r.txt))}</span>`).join('');
+      lider = `<ul class="donlist"><li><img class="ico" src="${ic('lider')}" alt=""><div><b>${esc(li.p.name)}</b> <span class="small ttl">desde ${esc(Sim.dateText(li.desde))}</span><span class="small">${esc(li.porque)}</span>${rot ? `<div class="chips">${rot}</div>` : ''}
+        ${li.ruim ? '<span class="small side temido">Líder de índole ruim desgasta a aldeia, um pouco por dia.</span>' : ''}</div><button type="button" class="btn btn-small" data-gact="goto" data-pid="${li.p.id}">Ver</button></li></ul>`;
+    } else lider = `<p class="small muted">${adultos < C.LIDER_MIN ? 'Ainda não há líder: o povo escolhe um quando a aldeia tem ' + C.LIDER_MIN + ' adultos (hoje, ' + adultos + ').' : 'A aldeia está sem líder. O povo escolhe outro na próxima tardinha.'}</p>`;
+    const mixed = S.povos && S.povos.mixed;
+    const resp = `<p class="small muted">O líder é quem o povo mais respeita${mixed ? ', e cada povo respeita uma coisa: os humanos, ' + Sc.RESPEITA.humano + '; os elfos, ' + Sc.RESPEITA.elfo + '; os anões, ' + Sc.RESPEITA.anao + '; o povo-fera, ' + Sc.RESPEITA.fera : ' (entre humanos, quem é mais querido)'}. À tardinha, ao pé do fogo, é ele quem chama o julgamento.</p>`;
+    // as obras por conta própria
+    const modos = MODO_ORD.map((k) => `<button type="button" class="btn btn-small${s.modo === k ? ' on' : ''}" data-gact="modo" data-k="${k}" aria-pressed="${s.modo === k ? 'true' : 'false'}">${esc(Sc.MODOS[k][0])}</button>`).join('');
+    const peds = Sc.pedidosInfo(S).map((q) => `<li><img class="ico" src="${ic('construir')}" alt=""><div><b>${esc(cap1(q.nome))}</b><span class="small">${esc(q.why)} Custa ${esc(costText(q.custo))}.</span><span class="small muted">O pedido espera mais ${q.dias === 1 ? '1 dia' : q.dias + ' dias'}.</span>
+      <div class="chips"><button type="button" class="btn btn-small btn-gold" data-gact="aprovar" data-id="${q.id}">Pode fazer</button><button type="button" class="btn btn-small" data-gact="recusar" data-id="${q.id}">Agora não</button><button type="button" class="btn btn-small" data-gact="verpedido" data-id="${q.id}">Ver o lugar</button></div></div></li>`).join('');
+    const espera = s.espera && s.modo === 'decide' ? `<p class="small muted">${li ? esc(li.p.name) : 'O líder'} quer marcar ${OBRA_NOME[s.espera.type] || 'uma obra'} (${esc(Sc.FALTA[s.espera.why].toLowerCase().replace(/\.$/, ''))}), mas o material não cabe na parte do povo. Junte mais, ou marque você.</p>` : '';
+    const feitas = S.stats.obrasPovo ? ` Obras que o povo já marcou: ${S.stats.obrasPovo}.` : '';
+    // quem não está contente
+    const tal = {}; let n30 = 0, n60 = 0;
+    for (const p of S.people) {
+      if (!p.alive || p.carriedBy || (p.desc || 0) < 30) continue;
+      n30++; if (p.desc >= C.DISS_DESC) n60++;
+      for (const k in p.descWhy || {}) tal[k] = (tal[k] || 0) + p.descWhy[k];
+    }
+    const top = Object.keys(tal).sort((a, b) => tal[b] - tal[a])[0];
+    const di = Sc.dissInfo(S);
+    let diss = '';
+    if (di && di.st === 'promessa') diss = `<p class="small"><b>Promessa de pé: ${esc(di.prom.txt.toLowerCase())}</b> · ${di.prom.dias === 1 ? 'falta 1 dia' : 'faltam ' + di.prom.dias + ' dias'}. ${esc(di.prom.como)} Cumprida, o grupo de ${esc(di.cab ? di.cab.name : '')} fica e a fé sobe; passado o prazo, vão embora na hora.</p>`;
+    else if (di && di.st === 'indo') diss = `<p class="small">${esc(di.cab ? di.cab.name : 'Um grupo')} e mais ${di.n - 1} estão de saída${di.kids ? ', com ' + di.kids + (di.kids === 1 ? ' criança' : ' crianças') : ''}.</p>`;
+    const contentes = n30 ? `<p class="small">${n30 === 1 ? 'Uma pessoa não anda contente' : n30 + ' pessoas não andam contentes'}${n60 ? ' (' + (n60 === 1 ? 'uma já pensa' : n60 + ' já pensam') + ' em ir embora)' : ''}. O que mais pesa: ${esc((Sc.DESC[top] || '').replace('Deus', D)) || 'a vida aqui'}.</p>` : '<p class="small muted">Ninguém anda descontente.</p>';
+    // a vila de fora
+    const v = Sc.vilaInfo(S);
+    let vila = '';
+    if (v) {
+      const lw = Math.round((v.laco + 100) / 2), pw = Sc.presenteWhy(S), tw = Sc.trovejarWhy(S);
+      const gente = v.gente.slice(0, 14).map((q) => `<button type="button" class="chip chip-btn" data-gact="goto" data-pid="${q.id}">${esc(q.name)} <span class="muted">${q.age}</span></button>`).join('');
+      vila = `<h3>${esc(v.nome)}, a vila de fora</h3>` + (v.fim ? `<p class="small muted">Ficou vazia em ${esc(Sim.dateText(v.fim))}.</p>` :
+        `<p class="small">Fundada em ${esc(Sim.dateText(v.desde))} por ${esc(v.cab)} (${esc(v.motivo.replace('Deus', D))}). Moram lá ${v.pop === 1 ? '1 pessoa' : v.pop + ' pessoas'}${v.nascidos ? ', ' + (v.nascidos === 1 ? '1 nascida' : v.nascidos + ' nascidas') + ' lá' : ''}.${v.deus ? ' Rezam para ' + esc(v.deus) + ': um milagre seu diante de quem vier de lá os traz de volta.' : ''}${v.medo ? ' Estão com medo do seu trovão.' : ''}</p>
+        <ul class="convlist"><li><span class="small">Com a aldeia: <b>${esc(v.lacoTxt)}</b></span><div class="bar ${v.laco <= -25 ? 'low' : v.laco < 10 ? 'mid' : ''}"><i style="width:${lw}%"></i></div></li>
+        <li><span class="small">Como vivem por lá: <b>${v.bem >= 60 ? 'bem' : v.bem >= 30 ? 'no aperto' : 'mal'}</b></span><div class="bar ${v.bem < 30 ? 'low' : v.bem < 60 ? 'mid' : ''}"><i style="width:${v.bem}%"></i></div></li></ul>
+        <div class="chips"><button type="button" class="btn btn-small" data-gact="presente"${pw ? ' disabled title="' + esc(pw) + '"' : ''}>Mandar um presente (${C.VILA_PRESENTE} porções)</button><button type="button" class="btn btn-small" data-gact="trovejar"${tw ? ' disabled title="' + esc(tw) + '"' : ''}>Trovejar (${C.VILA_TROVAO} de Poder)</button>${v.longe ? '' : '<button type="button" class="btn btn-small" data-gact="vervila">Ver no mapa</button>'}</div>
+        <p class="small muted">De bem, vêm trocar e casar; de mal, vêm buscar comida de madrugada. O presente aproxima; o trovão assusta por um ano (e o povo daqui te teme mais). No aperto, ou com saudade, pedem para voltar.</p>
+        ${gente ? `<div class="chips fora-list">${gente}${v.gente.length > 14 ? `<span class="small muted">e mais ${v.gente.length - 14}</span>` : ''}</div>` : ''}`) +
+        (v.hist.length ? `<ul class="promlist">${v.hist.slice(0, 5).map((h) => `<li class="small"><span class="muted">${esc(Sim.dateText(h.t))}</span> · ${esc(h.text)}</li>`).join('')}</ul>` : '');
+    }
+    // o que você viu
+    const cs = Sc.crimesInfo(S);
+    const row = (c) => {
+      const acts = [];
+      if (c.podeRevelar) acts.push(`<button type="button" class="btn btn-small" data-gact="revelar" data-id="${c.id}" title="Um sonho mostra a alguém do povo quem foi">Mostrar em sonho (${C.REVELAR_CUSTO})</button>`);
+      if (c.podeCastigar) acts.push(`<button type="button" class="btn btn-small" data-gact="castigar" data-pid="${c.by}">Castigar</button>`);
+      if (c.podePerdoar) acts.push(`<button type="button" class="btn btn-small" data-gact="perdoar" data-id="${c.id}">Perdoar (${C.PERDAO_CUSTO})</button>`);
+      if (c.aqui) acts.push(`<button type="button" class="btn btn-small" data-gact="goto" data-pid="${c.by}">Ver</button>`);
+      const deus = c.deus === 'perdao' ? '' : c.deusM === 'justo' ? ' · você castigou na medida' : c.deusM === 'leve' ? ' · seu castigo foi leve' : c.deusM === 'pesado' ? ' · seu castigo pesou' : '';
+      return `<li class="crime g${c.g}${c.aberto ? '' : ' done'}"><img class="ico" src="${ic(c.soVoce ? 'olho' : 'crime')}" alt=""><div><b>${esc(c.txt)}</b>
+        <span class="small muted">${esc(c.quando)} · <span class="grav g${c.g}">${c.grav}</span>${deus}</span>
+        <span class="small${c.injusto ? ' side temido' : c.soVoce && c.aberto ? ' side' : ''}">${esc(c.povo)}</span>
+        ${acts.length ? `<div class="chips">${acts.join('')}</div>` : ''}</div></li>`;
+    };
+    const abertos = cs.filter((c) => c.aberto || c.injusto), outros = cs.filter((c) => !c.aberto && !c.injusto);
+    const pendBtn = pend ? `<button type="button" class="btn btn-gold" data-gact="pendsoc">${pend.k === 'diss' ? 'Um grupo avisou que vai embora' : 'O povo vai mandar embora quem não fez nada'}</button>` : '';
+    return `${pendBtn}
+      <p class="small muted">Cada pessoa tem índole: a mão (generosa ou egoísta), o gênio (manso ou violento) e a palavra (franca ou mentirosa). A fome, a humilhação, o exemplo dos pais, a fé e os contos empurram para um lado ou para o outro. Você vê tudo; o povo só sabe o que alguém viu.</p>
+      <h3>Quem fala por todos</h3>${lider}${resp}
+      <h3>Obras por conta própria</h3><div class="chips lei-row" role="group" aria-label="Quem marca as obras">${modos}</div><p class="small muted">${esc(Sc.MODOS[s.modo][1])}${feitas} O líder olha de manhã: casa para quem dorme ao relento, fogueira longe do fogo, armazém quando a comida estraga, cerca onde o bicho entrou, mina quando falta pedra.</p>
+      ${peds ? `<ul class="donlist">${peds}</ul>` : ''}${espera}
+      <h3>Quem não está contente</h3>${contentes}${diss}<p class="small muted">Falta de casa, fome, frio, injustiça, um líder ruim, povos que se estranham, medo de ${esc(D)}: quando ${C.DISS_MIN} adultos ou mais chegam ao limite, avisam que vão embora. Aí você deixa ir, convence com um milagre ou promete algo.</p>
+      ${vila}
+      <h3>O que você viu${abertos.length ? ' · ' + abertos.length + (abertos.length === 1 ? ' em aberto' : ' em aberto') : ''}</h3>
+      <ul class="donlist crimelist">${abertos.length ? abertos.map(row).join('') : '<li class="none small muted">Nada em aberto.</li>'}</ul>
+      <p class="small muted">Castigar na medida ensina e sobe a fé: para o leve, o aviso em sonho ou a marca; para o médio, a marca, a doença leve ou o raio por perto; para o grave, o raio por perto, o exílio ou a morte. Pesado demais vira medo e gente indo embora. Em quem não fez nada, custa a fé de quem sabia. O perdão diante de todos te deixa mais bondoso aos olhos do povo.</p>
+      ${outros.length ? `<h3>Já resolvido · ${outros.length}</h3><ul class="donlist crimelist">${outros.slice(0, 12).map(row).join('')}</ul>` : ''}`;
+  }
+  // a janela de castigar: o que você viu a pessoa fazer, e as seis medidas
+  UI.castigo = function (pid, onDone) {
+    const Sc = So(), p = S && Sc ? G.Family.person(S, pid) : null;
+    const m = $('#modal-dom'), ok = $('#dom-ok'), body = $('#dom-body');
+    if (!p || !p.alive) { if (onDone) onDone(); return false; }
+    const info = Sc.pessoaInfo(S, p), c = info.crime, full = c ? S.soc.crimes.find((x) => x.id === c.id) : null;
+    const povoAcha = S.soc.crimes.find((x) => x.cond === p.id && x.injusto) || S.soc.crimes.find((x) => x.sus === p.id && x.st === 'aberto');
+    $('#dom-ico').src = ic('raio');
+    $('#dom-title').textContent = 'Castigar ' + p.name;
+    $('#dom-lead').textContent = c ? 'Você viu: ' + p.name + ' ' + c.txt + '. É algo ' + c.grav + '.' + (full && full.st === 'julgado' && full.cond === p.id ? ' O povo já cobrou: agora, mais que um aviso é pesar a mão.' : full && full.known ? ' O povo sabe.' : ' O povo não sabe quem foi.')
+      : 'Você não viu ' + p.name + ' fazer nada.' + (povoAcha ? ' O povo acha que foi ' + (p.sex === 'F' ? 'ela' : 'ele') + ', mas não foi.' : '') + ' Castigar quem não tem culpa custa a fé de quem sabe disso.';
+    const opt = (nv) => {
+      const d = Sc.CASTIGO[nv], why = Sc.castigoWhy(S, p, nv);
+      return `<button type="button" class="dom-opt mem-opt" role="radio" aria-checked="false" data-i="${nv}"${why ? ' disabled' : ''}><span class="nm">${esc(d.nome)} <span class="small muted">· ${C.CASTIGO_CUSTO[nv - 1]} de Poder</span></span><span class="ds small">${esc(why ? 'Agora não: ' + why.charAt(0).toLowerCase() + why.slice(1) + (/\.$/.test(why) ? '' : '.') : d.desc)}</span></button>`;
+    };
+    body.innerHTML = '<div class="dom-opts" role="radiogroup" aria-label="Castigos">' + [1, 2, 3, 4, 5, 6].map(opt).join('') +
+      '<button type="button" class="dom-opt mem-opt" role="radio" aria-checked="false" data-i="0"><span class="nm">Deixar como está</span><span class="ds small">Não castigar agora.</span></button></div>' +
+      '<p class="small muted">Na medida, ensina e sobe a fé. Pesado demais, vira medo. Leve demais, quem sofreu espera mais.</p>';
+    let pick = null;
+    ok.textContent = 'Está decidido';
+    ok.disabled = true;
+    body.querySelectorAll('.dom-opt').forEach((b) => b.addEventListener('click', () => {
+      if (b.disabled) return;
+      pick = +b.dataset.i;
+      body.querySelectorAll('.dom-opt').forEach((x) => x.setAttribute('aria-checked', x === b ? 'true' : 'false'));
+      ok.disabled = false;
+      ok.textContent = pick ? 'Castigar' : 'Fechar';
+    }));
+    $('#form-dom').onsubmit = (e) => {
+      e.preventDefault();
+      if (pick === null) return;
+      m.hidden = true;
+      if (pick) {
+        const r = Sc.castigar(S, p.id, pick);
+        UI.toast(r.msg, !r.ok ? 'warn' : r.m === 'justo' ? 'good' : r.m === 'leve' ? '' : 'bad');
+        contoKey = '';
+      }
+      UI.update(0, true);
+      if (onDone) onDone();
+    };
+    m.hidden = false;
+    return true;
+  };
+  // o que espera resposta: o grupo que avisou que vai embora; o inocente que o povo vai mandar embora
+  UI.socPending = function (onDone) {
+    const Sc = So(), info = S && Sc && Sc.pendInfo(S);
+    const m = $('#modal-dom'), ok = $('#dom-ok'), body = $('#dom-body');
+    if (!info) { m.hidden = true; if (onDone) onDone(); return false; }
+    const D = G.Deus.call(S);
+    const opt = (k, nm, ds, side, off) => `<button type="button" class="dom-opt mem-opt" role="radio" aria-checked="false" data-k="${k}"${off ? ' disabled' : ''}><span class="nm">${esc(nm)}</span><span class="ds small">${esc(ds)}</span>${side === 'bom' ? '<span class="side bom small">o povo te vê mais bondoso</span>' : ''}</button>`;
+    if (info.k === 'diss') {
+      $('#dom-ico').src = ic('partida');
+      $('#dom-title').textContent = 'Vão embora';
+      const quem = listPT(info.nomes.slice(0, 4)) + (info.n > 4 ? ' e mais ' + (info.n - 4) : '');
+      $('#dom-lead').textContent = quem + ' avisaram que vão embora' + (info.kids ? ', com ' + (info.kids === 1 ? 'uma criança' : info.kids + ' crianças') : '') + ': ' + info.motivoTxt.replace('Deus', D) + '. Esperam a sua resposta por ' + (info.prazoH === 1 ? '1 hora' : info.prazoH + ' horas') + '.';
+      const semPoder = S.god.poder < info.custo;
+      body.innerHTML = '<div class="dom-opts" role="radiogroup" aria-label="Respostas">' +
+        opt('ir', 'Deixar ir', 'Saem ao amanhecer e fundam outra vila, a ' + C.VILA_DIST + ' passos ou mais. Ela segue por conta própria: troca, casa e briga com a de cá, e pode voltar.', '') +
+        opt('milagre', 'Convencer com um milagre', semPoder ? 'Falta Poder: custa ' + info.custo + '.' : 'Custa ' + info.custo + ' de Poder. Eles ficam, mas o motivo continua.', '', semPoder) +
+        opt('promessa', 'Prometer: ' + info.promTxt.toLowerCase(), info.promComo + ' O prazo é de ' + info.promDias + ' dias. Cumprida, ficam e a fé sobe; passado o prazo, vão na hora, e vira conto.', 'bom') +
+        '</div><p class="small muted">Sem resposta até o prazo, eles vão.</p>';
+      ok.textContent = 'Responder';
+    } else {
+      $('#dom-ico').src = ic('julg');
+      $('#dom-title').textContent = 'O povo errou';
+      $('#dom-lead').textContent = 'O povo julgou ' + info.nome + ' e decidiu pelo exílio: dizem que ' + info.crime + '. Não foi ' + (info.sx === 'F' ? 'ela' : 'ele') + '. Só você sabe que foi ' + info.autor + '. ' + info.nome + ' parte ao amanhecer.';
+      body.innerHTML = '<div class="dom-opts" role="radiogroup" aria-label="Respostas">' +
+        opt('revelar', 'Mostrar a verdade em sonho', info.pode ? 'Custa ' + info.custo + ' de Poder. Alguém do povo sonha com o que aconteceu, ' + info.nome + ' fica, e quem fez vai a julgamento.' : 'Falta Poder: custa ' + info.custo + '.', 'bom', !info.pode) +
+        opt('deixar', 'Deixar', info.nome + ' vai embora sem culpa. Quem sabe a verdade guarda a mágoa.', '') + '</div>';
+      ok.textContent = 'Está decidido';
+    }
+    let pick = null;
+    ok.disabled = true;
+    body.querySelectorAll('.dom-opt').forEach((b) => b.addEventListener('click', () => {
+      if (b.disabled) return;
+      pick = b.dataset.k;
+      body.querySelectorAll('.dom-opt').forEach((x) => x.setAttribute('aria-checked', x === b ? 'true' : 'false'));
+      ok.disabled = false;
+    }));
+    $('#form-dom').onsubmit = (e) => {
+      e.preventDefault();
+      if (pick === null) return;
+      const r = Sc.pendResp(S, pick);
+      if (r && !r.ok && r.msg) { UI.toast(r.msg, 'warn'); return; }
+      m.hidden = true; contoKey = '';
+      if (r && r.msg && info.k === 'diss') UI.toast(r.msg, pick === 'ir' ? '' : 'good');
+      UI.update(0, true);
+      if (Sc.pending(S) && Sc.pendInfo(S)) UI.socPending(onDone); else if (onDone) onDone();
+    };
+    m.hidden = false;
+    return true;
+  };
+  // o fogo posto: pausa e pergunta. A Chuva apaga na hora; senão, é com o povo (gente acordada por perto e água)
+  UI.fogo = function (bid, onDone) {
+    const Sc = So(), b = S && Sc && S.soc ? Sim.building(S, bid) : null;
+    const m = $('#modal-dom'), ok = $('#dom-ok'), body = $('#dom-body');
+    if (!b || !b.fogo) { if (onDone) onDone(); return false; }
+    const d = Sim.def(b), God = G.God, why = God.canCast(S, 'chuva'), custo = God.cost(S, 'chuva');
+    const c = S.soc.crimes.slice().reverse().find((x) => x.k === 'fogo' && x.bid === b.id);
+    const mor = (b.beds || []).map((id) => G.Family.person(S, id)).filter((q) => q && q.alive);
+    const perto = S.people.filter((q) => q.alive && !q.carriedBy && !q.sleeping && G.Family.age(S, q) >= 12 && Math.hypot(q.x - b.x, q.y - b.y) <= 14).length;
+    const agua = S.stock.agua >= C.FOGO_AGUA;
+    const ch = Math.round(Math.min(0.9, 0.15 + 0.15 * perto) * (agua ? 1 : 0.35) * 10);
+    const onde = (d.a === 'o' ? 'no ' : 'na ') + d.name.toLowerCase();
+    $('#dom-ico').src = ic('fogoposto');
+    $('#dom-title').textContent = 'Fogo ' + onde;
+    $('#dom-lead').textContent = (c ? c.byN + ' pôs fogo ' + onde + '. ' + (c.known ? 'O povo viu.' : 'Ninguém viu, só você.') : 'Há fogo ' + onde + '.') +
+      (mor.length ? ' ' + listPT(mor.slice(0, 4).map((q) => q.name)) + (mor.length > 1 ? ' moram' : ' mora') + ' ali.' : '') + ' A obra arde por uma hora e meia.';
+    body.innerHTML = '<div class="dom-opts" role="radiogroup" aria-label="Respostas">' +
+      `<button type="button" class="dom-opt mem-opt" role="radio" aria-checked="false" data-k="chuva"${why ? ' disabled' : ''}><span class="nm">Mandar a Chuva <span class="small muted">· ${custo} de Poder</span></span><span class="ds small">${esc(why ? 'Agora não: ' + why.charAt(0).toLowerCase() + why.slice(1) : 'Apaga na hora, sem gastar a água do povo.')}</span></button>` +
+      `<button type="button" class="dom-opt mem-opt" role="radio" aria-checked="false" data-k="povo"><span class="nm">Deixar com o povo</span><span class="ds small">${esc((perto ? (perto === 1 ? 'Há 1 pessoa acordada' : 'Há ' + perto + ' pessoas acordadas') + ' por perto' : 'Não há ninguém acordado por perto') + (agua ? '' : ', e falta água no estoque') + ': ' + ch + ' em 10 de apagarem a tempo. Se não, a obra se vai' + (b.type === 'armazem' ? ', com ' + Math.round(C.FOGO_COMIDA * 100) + '% da comida' : mor.length ? ', e quem mora ali fica sem teto' : '') + '.')}</span></button>` +
+      '</div><p class="small muted">Pôr fogo é coisa grave: depois, o povo julga quem viu fazer, e você pode castigar, mostrar em sonho quem foi ou perdoar.</p>';
+    let pick = null;
+    ok.textContent = 'Está decidido';
+    ok.disabled = true;
+    body.querySelectorAll('.dom-opt').forEach((x) => x.addEventListener('click', () => {
+      if (x.disabled) return;
+      pick = x.dataset.k;
+      body.querySelectorAll('.dom-opt').forEach((y) => y.setAttribute('aria-checked', y === x ? 'true' : 'false'));
+      ok.disabled = false;
+    }));
+    $('#form-dom').onsubmit = (e) => {
+      e.preventDefault();
+      if (pick === null) return;
+      m.hidden = true;
+      if (pick === 'chuva' && b.fogo) {
+        const r = God.cast(S, 'chuva', b.x, b.y);
+        if (r && r.ok === false && r.msg) UI.toast(r.msg, 'warn');
+      }
+      UI.update(0, true);
+      if (onDone) onDone();
+    };
+    m.hidden = false;
+    return true;
+  };
   const Fam = () => G.Family;
   function godAct(b) {
     const Dz = G.Deus, a = b.dataset.gact;
@@ -1395,6 +1674,28 @@
       return;
     }
     if (a === 'goto') { $('#modal-deus').hidden = true; UI.select(+b.dataset.pid, 0, true); return; }
+    // Etapa 14: Sociedade
+    const Sc = G.Soc;
+    if (Sc && S.soc) {
+      const again = () => { UI.deus('sociedade'); UI.update(0, true); };
+      if (a === 'pendsoc') { $('#modal-deus').hidden = true; if (UI.hooks.socPending) UI.hooks.socPending(); return; }
+      if (a === 'modo') { Sc.setModo(S, b.dataset.k); again(); return; }
+      if (a === 'aprovar') { if (!Sc.aprovar(S, +b.dataset.id)) UI.toast('O lugar não serve mais. O líder vai procurar outro.', 'warn'); again(); return; }
+      if (a === 'recusar') { Sc.recusar(S, +b.dataset.id); again(); return; }
+      if (a === 'verpedido') { const q = S.soc.pedidos.find((x) => x.id === +b.dataset.id); $('#modal-deus').hidden = true; if (q) UI.hooks.center((q.x + 1) * C.TILE, (q.y + 1) * C.TILE); return; }
+      if (a === 'castigar') { $('#modal-deus').hidden = true; if (UI.hooks.castigo) UI.hooks.castigo(+b.dataset.pid, 'sociedade'); return; }
+      if (a === 'perdoar' || a === 'revelar') {
+        const r = a === 'perdoar' ? Sc.perdoar(S, +b.dataset.id) : Sc.revelar(S, +b.dataset.id);
+        if (!r.ok) UI.toast('Agora não: ' + r.msg.charAt(0).toLowerCase() + r.msg.slice(1), 'warn');
+        contoKey = ''; again(); return;
+      }
+      if (a === 'presente' || a === 'trovejar') {
+        const r = a === 'presente' ? Sc.presente(S) : Sc.trovejar(S);
+        if (!r.ok) UI.toast('Agora não: ' + r.msg.charAt(0).toLowerCase() + r.msg.slice(1) + '.', 'warn');
+        again(); return;
+      }
+      if (a === 'vervila') { const v = S.soc.vila; $('#modal-deus').hidden = true; if (v) UI.hooks.center((v.x + 0.5) * C.TILE, (v.y + 0.5) * C.TILE); return; }
+    }
     if (a === 'chamar' && G.Povos) {   // Etapa 12
       const why = G.Povos.callWhy(S, b.dataset.k);
       if (why) { UI.toast('Agora não: ' + why + '.', 'warn'); return; }
@@ -1498,6 +1799,14 @@
         if (!$('#modal-deus').hidden && deusTab === 'memoria') UI.deus();
         G.R.event(e);
       }
+      else if (e.k === 'soc') {
+        // Etapa 14: o aviso e o inocente abrem a janela; o fogo posto volta o tempo para 1x; o resto é do desenho e do som
+        if (e.ev === 'pend') { if (UI.hooks.socPending && !quiet) setTimeout(UI.hooks.socPending, 900); }
+        else if (e.ev === 'fogo' && e.on) { if (UI.hooks.socFire && !quiet) setTimeout(() => UI.hooks.socFire(e.bid), 500); else if (UI.hooks.alarm) UI.hooks.alarm(); }
+        else if (e.ev === 'vila' && e.nova && !quiet) setTimeout(() => UI.toast('A vila de fora aparece no mapa e em Deus → Sociedade.', ''), 2600);
+        if (!$('#modal-deus').hidden && deusTab === 'sociedade') UI.deus();
+        G.R.event(e);
+      }
       else if (e.k === 'festa' || e.k === 'story' || e.k === 'fight' || e.k === 'goal' || e.k === 'moon' || e.k === 'song') { /* só som */ }
       else if (e.k === 'fireLit') G.R.event(e);
       else if (e.k === 'star' || e.k === 'rainbow' || e.k === 'birds') G.R.event(e);
@@ -1558,10 +1867,12 @@
   }
   UI.frame = function (now) {
     if (!S) return;
-    const scale = G.R.scale();
+    const scale = G.R.scale(), vw = G.R.sizeCSS();
     const shown = [];
     for (const p of S.people) {
       let b = bubbles.get(p.id);
+      // 0.14: quem morreu não fala mais (o balão sai da página), e fora da tela o balão nem é posto no lugar
+      if (!p.alive) { if (b) { b.el.remove(); bubbles.delete(p.id); } continue; }
       if (!b) { b = { el: document.createElement('div'), id: p.sayId, t0: 0, w: 0, h: 0, cur: null, q: [] }; b.el.className = 'bubble'; b.el.hidden = true; $('#fx').appendChild(b.el); bubbles.set(p.id, b); }
       if (p.sayId !== b.id) {
         b.id = p.sayId;
@@ -1574,6 +1885,7 @@
       if (c && now - b.t0 >= readMs(c.text, c.kind) && !b.q.length) b.cur = null;
       if (!show) { if (!b.el.hidden) b.el.hidden = true; continue; }
       const s = G.R.toScreen(p.x * C.TILE, (p.inTent ? p.y - 1.6 : p.y) * C.TILE - 12);
+      if (s.x < -160 || s.x > vw.w + 160 || s.y < -20 || s.y > vw.h + 120) { if (!b.el.hidden) b.el.hidden = true; continue; }
       shown.push({ b, x: Math.round(s.x), y: Math.round(s.y) });
     }
     // conversa: a fala mais nova fica no lugar; a mais velha sobe se encostar (lê-se de cima para baixo)
@@ -1775,6 +2087,26 @@
     $('#choice-yes').disabled = false;
     $('#choice-no').textContent = 'Mandar seguir';
     $('#choice-ico').src = ic('pessoa');
+    const gv = info.kind === 'vila' ? S.narr.groups[gid] : null, vl = gv && S.soc ? S.soc.vila : null;
+    if (gv && vl) {
+      // Etapa 14: quem foi embora pede para voltar
+      const nf = (gv.filhos || []).length;
+      $('#choice-ico').src = ic('vila');
+      $('#choice-title').textContent = 'Gente de ' + vl.nome + ' pede para voltar';
+      $('#choice-lead').textContent = 'Foram embora em ' + Sim.dateText(vl.t0) + '. ' + (gv.porque === 'aperto' ? 'Passam aperto por lá' : 'Sentem falta daqui') + ' e pedem para voltar' + (nf ? ', com ' + (nf === 1 ? 'uma criança que nasceu' : nf + ' crianças que nasceram') + ' lá.' : '.');
+      $('#choice-people').innerHTML = ps.map((p, i) => `<li><canvas data-i="${i}" width="8" height="14"></canvas><div class="nm">${esc(p.name)}<span class="small">${p.age} anos</span></div><div class="chips">${p.traits.map((t) => `<span class="chip" title="${esc(Sim.TRAIT_DESC[t])}">${esc(t)}</span>`).join('')}</div></li>`).join('');
+      ps.forEach((p, i) => {
+        const cv = $('#choice-people').querySelector(`canvas[data-i="${i}"]`), kid = p.age < 12, q = { id: 'c' + gid + ':' + i, sex: p.sex, look: p.look };
+        const x2 = cv.getContext('2d');
+        if (kid) x2.drawImage(A.kidSheet(q).sheet, 0, 0, 6, 11, 1, 3, 6, 11); else x2.drawImage(A.personSheet(q).sheet, 0, 0, 8, 14, 0, 0, 8, 14);
+      });
+      const beds = G.Family.bedsTotal(S), need = G.Family.bedsNeeded(S) + ps.length * 2;
+      $('#choice-note').textContent = 'Hoje: comida para ' + Math.floor(S.ctx.foodDays) + (Math.floor(S.ctx.foodDays) === 1 ? ' dia' : ' dias') + ' · barracas com ' + beds + ' lugares, ' + (need > beds ? 'faltariam ' + (need - beds) : 'sobrariam ' + (beds - need)) + ' com eles. Mandar seguir deixa a vila de mal com a aldeia.';
+      $('#choice-yes').textContent = 'Receber de volta';
+      $('#modal-choice').hidden = false;
+      setTimeout(() => $('#choice-yes').focus(), 50);
+      return true;
+    }
     const Pv = G.Povos, PD = info.kind === 'povo' && Pv ? Pv.DEF[info.povo] : null;
     if (PD) {
       // Etapa 12: a caravana de um povo

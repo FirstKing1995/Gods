@@ -1759,6 +1759,38 @@
   ICONS.erva = [['....v.....', '.g..g..v..', '.gG.g.g...', '..gGgGg.v.', '.v.gGGg.g.', '..ggGGgg..', '...gGGg...', '....GG....', '....GG....', '...kkkk...'], { g: '#4fa88a', G: '#2f7a6a', v: '#b58be0', k: P.bark }];
   ICONS.rito = [['...v......', '..v.v..v..', '...v..v.v.', '..v....v..', '...v.v....', '....YY....', '...YooY...', '..kYooYk..', '.kbbbbbbk.', '..kkkkkk..'], { v: '#b58be0', Y: P.yellow, o: P.ember, b: P.bark, k: P.ink2 }];
   ICONS.visao = [['....Y.....', '.Y..Y..Y..', '..........', '..kkkkkk..', '.kWWvvWWk.', 'kWWvKKvWWk', '.kWWvvWWk.', '..kkkkkk..', '..........', '.Y..Y..Y..'], { k: P.ink2, W: P.white, v: '#b58be0', K: P.ink, Y: P.gold }];
+  // Etapa 14: a vila de fora, vista de longe: três cabanas pequenas e um fogo (vazia: sem o fogo)
+  function cabaninha(b, x0, y0, s) {
+    for (let y = 0; y <= s; y++) for (let dx = -y; dx <= y; dx++) {
+      let c = dx < 0 ? P.tan : P.wood;
+      if (dx === -y) c = P.bark;
+      if (dx === y) c = P.maroon;
+      if (y % 4 === 0 && Math.abs(dx) < y - 1 && (dx + y) % 2 === 0) c = dx < 0 ? P.wood : P.bark;
+      b.set(x0 + dx, y0 + y, c);
+    }
+    for (let y = Math.ceil(s * 0.55); y <= s; y++) { b.set(x0 + 1, y0 + y, P.ink); if (y > s * 0.75) b.set(x0 + 2, y0 + y, P.ink); }
+    b.set(x0 - 1, y0 - 1, P.bark); b.set(x0 + 1, y0 - 1, P.maroon);
+  }
+  A.vilaFora = function (vazia) {
+    const key = vazia ? '#vilaV' : '#vila';
+    if (iconCache[key]) return iconCache[key];
+    const b = new Buf(46, 26);
+    for (let x = 3; x <= 43; x++) for (let y = 20; y <= 24; y++) if ((x * 3 + y) % 4 !== 0) b.set(x, y, 'rgba(24,20,37,0.18)');
+    cabaninha(b, 10, 6, 10); cabaninha(b, 35, 4, 11); cabaninha(b, 23, 11, 9);
+    if (!vazia) { b.set(29, 22, P.ember); b.set(30, 22, P.gold); b.set(29, 21, P.yellow); b.set(28, 23, P.bark); b.set(31, 23, P.bark); b.set(30, 23, P.maroon); }
+    return (iconCache[key] = b.canvas());
+  };
+  // Etapa 14: Sociedade. O bastão do líder, a balança do julgamento, o olho (só Deus viu), a marca, a mão do perdão,
+  // as casas da vila de fora, a pegada de quem vai embora, a chama do fogo posto
+  ICONS.lider = [['....YY....', '...YooY...', '....YY....', '....ww....', '..r.ww.r..', '...rwwr...', '....ww....', '....ww....', '....ww....', '....kk....'], { Y: P.gold, o: P.ember, w: P.wood, r: P.red, k: P.ink2 }];
+  ICONS.julg = [['....YY....', '....tt....', '.tttttttt.', '.b..tt..b.', 'bbb.tt.bbb', 'bwb.tt.bwb', '.b..tt..b.', '....tt....', '...dddd...', '..dddddd..'], { Y: P.gold, t: P.tan, b: P.wood, w: P.parch, d: P.bark }];
+  ICONS.crime = [['..........', '..kkkkkk..', '.kKKKKKKk.', 'kKWWKKWWKk', 'kKWrKKrWKk', 'kKKKKKKKKk', '.kKKkkKKk.', '..kKKKKk..', '...kkkk...', '..........'], { k: P.ink, K: P.slate, W: P.white, r: P.red }];
+  ICONS.marca = [['...ssss...', '..sSSSSs..', '.sSSrrSSs.', '.sSrSSrSs.', '.sSSrrSSs.', '.sKSSSSKs.', '.sSSSSSSs.', '..sSwwSs..', '...ssss...', '..........'], { s: P.skinD, S: P.skinL, r: P.red, K: P.ink, w: P.wine }];
+  ICONS.perdao = [['...Y..Y...', '.Y......Y.', '....ss....', '..s.ss.s..', '..sSssSs..', '..sSSSSs..', '..sSSSSs..', '...sSSs...', '...sSSs...', '....ss....'], { Y: P.yellow, s: P.skinD, S: P.skinL }];
+  ICONS.vila = [['..........', '..r.......', '.rRr...r..', 'rRRRr.rRr.', 'kwwwkrRRRr', 'kwkwkkwwwk', 'kwkwkkwkwk', 'gggggkwkwk', '..gggggggg', '..........'], { r: P.rust, R: P.orange, w: P.parch, k: P.ink2, g: P.green }];
+  ICONS.partida = [['..........', '.kk.......', '.kk..kk...', '.....kk...', '..kk......', '..kk..kk..', '......kk..', '...kk.....', '...kk.....', '..........'], { k: P.wood }];
+  ICONS.fogoposto = [['....o.....', '...oYo....', '..oYYo.o..', '..oYYYoYo.', '.oYYWYYYo.', '.oYWWWYYo.', '.oYWWWYo..', '..kkkkkk..', '.kwwkwwwk.', '.kkkkkkkk.'], { o: P.ember, Y: P.yellow, W: P.white, k: P.ink2, w: P.wood }];
+  ICONS.sonho = [['..........', '....YYY...', '..YYY.....', '.YYY...Y..', '.YYY......', '.YYY....Y.', '.YYYY.....', '..YYYYYY..', '....YYY...', '..........'], { Y: P.parch }];
   A.icon = function (name) {
     if (iconCache[name]) return iconCache[name];
     if (name.indexOf('cria:') === 0) return (iconCache[name] = criaIcon(name.slice(5)));   // bicho de criação (Etapa 10)

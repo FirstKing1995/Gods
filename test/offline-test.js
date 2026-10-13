@@ -8,7 +8,7 @@
 //    mundos, 120 dias: o novo tem de ser muitas vezes mais rápido e chegar a um mundo parecido
 const path = require('path');
 globalThis.G = globalThis.G || {};
-for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
+for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'sociedade', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
 const { W, Sim, CFG: C, Family: F, God, Save, Tech: T, Life: L, Campo: K, Deus: D, Offline: Off } = G;
 const DAYM = 1440;
 
@@ -83,10 +83,10 @@ const ms = () => Date.now();
 {
   // --- quanto tempo passa ---
   const S = village(42, 6, 2);
-  const perSec = C.DAY_MIN / C.REAL_SEC_PER_DAY;
+  const perSec = C.DAY_MIN / C.OFFLINE_SEC_PER_DAY;
   check('fora por menos de 2 min: nada passa', Off.minutesFor(60e3, S) === 0);
   S.opts = S.opts || {}; S.opts.offline = 3;
-  check('1x: uma hora fora é uma hora de jogo aberto', Math.abs(Off.minutesFor(3600e3, S) - 3600 * perSec) < 1e-6);
+  check('o mais rápido: uma hora fora é um ano', Math.abs(Off.minutesFor(3600e3, S) - 3600 * perSec) < 1e-6 && Math.abs(Off.minutesFor(3600e3, S) - C.YEAR_DAYS * C.DAY_MIN) < 1e-6);
   S.opts.offline = 2;
   check('metade (o padrão): uma hora fora é meia', Math.abs(Off.minutesFor(3600e3, S) - 1800 * perSec) < 1e-6);
   check('o teto: 300 dias, por mais que demore', Off.minutesFor(40 * 86400e3, S) === C.OFFLINE_MAX_DAYS * C.DAY_MIN);

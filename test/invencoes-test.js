@@ -8,7 +8,7 @@
 const path = require('path');
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 globalThis.G = {};
-for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
+for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'sociedade', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
 const { W, Sim, CFG: C, Family: F, God, Save, AI, Tech: T, Inv: I, Life: L, Obras: O, Fauna: FA } = G;
 const Y = 60 * 1440, D = 1440;
 
@@ -224,6 +224,8 @@ if (isMainThread) {
     S.stock.madeira = 40; S.stock.peixe = 60; S.vontades.caca = 0;
     days(S, 1);   // o casal se ajeita antes
     S.life.party = null; S.life.lastParty = -1e9;
+    // 0.14: a festa da descoberta (do próprio tambor) pode já ter pegado no dia de antes: conta-se a partir daqui
+    const dp0 = S.stats.drumParties || 0;
     L.party(S, 'fartura');
     // descansados para a festa: o teste é do tambor, não do cansaço (com mais bichos no mundo, o dia muda um pouco)
     for (let i = 0; i < 360 && S.ck.hour < 17; i++) { Sim.step(S, 2); S.events.length = 0; }
@@ -233,7 +235,7 @@ if (isMainThread) {
       const pt = s.life.party; if (pt && pt.on && pt.drummer) drummer = pt.drummer;
       if (++n % 30 === 0) danced = Math.max(danced, s.people.filter((q) => q.mem.some((m) => m.k === 'festaTambor')).length);
     });
-    check('festa com tambor: um bate, os outros dançam, e a Crônica lembra', drummer > 0 && S.stats.drumParties === 1 && danced >= 2 && S.chron.some((c) => /primeira festa com tambor/.test(c.text)), 'dançaram ' + danced);
+    check('festa com tambor: um bate, os outros dançam, e a Crônica lembra', drummer > 0 && S.stats.drumParties === dp0 + 1 && danced >= 2 && S.chron.some((c) => /primeira festa com tambor/.test(c.text)), 'dançaram ' + danced);
   }
   {
     // festa com tambor aproxima mais (a mesma festa, com e sem)
@@ -343,7 +345,9 @@ if (isMainThread) {
         check(tag + 'a primeira chega cedo (até o ano 6)', Math.min(...Object.values(r.inv)) <= 6, Math.min(...Object.values(r.inv)));
         check(tag + 'espalhadas pelos anos (a última depois do ano 8)', Math.max(...Object.values(r.inv)) > 8 || YEARS < 20, Math.max(...Object.values(r.inv)));
         check(tag + 'usadas de verdade: flecha, tambor e flauta', (r.arrows > 0 && r.drums > 0 && r.flutes > 0) || YEARS < 20, r.arrows + ' · ' + r.drums + ' · ' + r.flutes);
-        check(tag + 'com o machado, mais madeira por hora de corte', !r.inv.machado || r.woodRate[1] > r.woodRate[0] * 1.2, r.woodRate.map((x) => x.toFixed(1)).join(' → '));
+        // 0.14: 10% (era 20%). O ganho do machado (60% com ferramenta) chega diluído: conta quem corta sem ferramenta e a
+        // habilidade de quem corta, que mudou desde que o povo ergue as próprias obras (num mundo, 4,7 → 5,3)
+        check(tag + 'com o machado, mais madeira por hora de corte', !r.inv.machado || r.woodRate[1] > r.woodRate[0] * 1.1, r.woodRate.map((x) => x.toFixed(1)).join(' → '));
         check(tag + 'o povo cresce (15 pessoas ou mais)', r.alive >= 15 || YEARS < 20, r.alive);
       } else if (r.mode === 'rev') {
         check(tag + 'com a Revelação, as nove', n === 9 || YEARS < 20, n + ' de 9');

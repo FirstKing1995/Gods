@@ -475,6 +475,7 @@
       }
       Sm.refresh(S);
     }
+    if (G.Soc && S.soc && !free) G.Soc.onMilagre(S, kind, x, y);   // Etapa 14: o milagre diante de quem veio da vila de fora
     return { ok: true, msg };
   };
 })(globalThis.G = globalThis.G || {});

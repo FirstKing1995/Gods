@@ -181,6 +181,42 @@
     return null;
   }
 
+  // 0.14: como findNearest, para quando todo tile que passa no teste fica dentro de um retângulo conhecido (x0..x1,
+  // y0..y1): o acampamento, a volta de uma obra, a roda de um fogo. A busca vai na direção dele (A*, estimando pela
+  // distância até o retângulo, que nunca passa do custo de verdade) e acha o mesmo custo que a busca em roda, varrendo
+  // muito menos chão. É o que os jogos de cidade fazem com quem volta para casa
+  function findNearestIn(w, start, test, maxCost, allowSlow, x0, y0, x1, y1) {
+    maxCost = maxCost || C.SEARCH_MAX;
+    ensure(w.W * w.H);
+    const W = w.W, hk = w.roadCount ? MIN_ROAD : 1;
+    const h = (x, y) => {
+      const dx = x < x0 ? x0 - x : x > x1 ? x - x1 : 0, dy = y < y0 ? y0 - y : y > y1 ? y - y1 : 0;
+      return (dx + dy + (Math.SQRT2 - 2) * Math.min(dx, dy)) * hk;
+    };
+    gBuf[start] = 0; seenBuf[start] = stamp;
+    heap.push(h(start % W, (start / W) | 0), start);
+    let cur, gc;
+    const edge = (ni, c, nx, ny) => {
+      const ng = gc + c;
+      if (ng > maxCost) return;
+      if (seenBuf[ni] !== stamp || ng < gBuf[ni]) {
+        seenBuf[ni] = stamp; gBuf[ni] = ng; fromBuf[ni] = cur;
+        heap.push(ng + h(nx, ny), ni);
+      }
+    };
+    while (heap.size()) {
+      cur = heap.pop();
+      if (closedBuf[cur] === stamp) continue;
+      closedBuf[cur] = stamp;
+      gc = gBuf[cur];
+      const r = w.slow[cur] && !allowSlow ? 0 : test(cur);
+      if (r) return { idx: cur, path: rebuild(start, cur), data: r, cost: gc };
+      expand(w, cur, edge, 0);
+    }
+    return null;
+  }
+  const MIN_ROAD = Math.min.apply(null, C.ROAD_MULT);
+
   // Dijkstra até o primeiro tile que passa no teste (allowSlow: também dentro de obras, quando não há outro jeito)
   function findNearest(w, start, test, maxCost, allowSlow, beast) {
     maxCost = maxCost || C.SEARCH_MAX;
@@ -313,7 +349,7 @@
   G.T = T; G.IS_WATER = IS_WATER; G.TNAME = TNAME;
   G.W = {
     classify, generate, addObj, objAt, refreshBlock, removeObj, wall,
-    findPath, findNearest, adjObj, waterAdj, waterCount8, campFree, evalSite, bestSite, siteLabel,
+    findPath, findNearest, findNearestIn, adjObj, waterAdj, waterCount8, campFree, evalSite, bestSite, siteLabel,
     idx: (w, x, y) => y * w.W + x,
   };
 })(globalThis.G = globalThis.G || {});

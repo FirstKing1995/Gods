@@ -47,6 +47,35 @@
     dormiuBem: { t: 'Dormiu bem abrigado', v: 6, d: 1440 },
     dormiuRelento: { t: 'Dormiu ao relento', v: -6, d: 1440 },
     passouFrio: { t: 'Passou frio', v: -8, d: 1440 },
+    // Etapa 14: Sociedade
+    apanhou: { t: 'Apanhou de alguém', v: -12, d: 4 * 1440 },
+    feridoProp: { t: 'Foi ferido de propósito', tf: 'Foi ferida de propósito', v: -18, d: 8 * 1440 },
+    viuCrime: { t: 'Viu alguém fazer mal a outro', v: -4, d: 2 * 1440 },
+    viuMorte: { t: 'Viu alguém matar', v: -15, d: 10 * 1440 },
+    humilhado: { t: 'Levou uma bronca na frente de todos', v: -6, d: 3 * 1440 },
+    ressentido: { t: 'Guarda mágoa de ter sido julgado', tf: 'Guarda mágoa de ter sido julgada', v: -3, d: 8 * 1440 },
+    justica: { t: 'Viu a justiça ser feita', v: 5, d: 3 * 1440 },
+    semJustica: { t: 'Quem fez mal ficou sem resposta', v: -6, d: 6 * 1440 },
+    injusticado: { t: 'Foi condenado sem culpa', tf: 'Foi condenada sem culpa', v: -15, d: 15 * 1440 },
+    injustica: { t: 'Viu condenarem quem não tinha culpa', v: -8, d: 8 * 1440 },
+    inocentado: { t: 'A verdade apareceu', v: 8, d: 5 * 1440 },
+    cumpriuPena: { t: 'Cumpriu a pena', v: 3, d: 3 * 1440 },
+    avisoSonho: { t: 'Recebeu um aviso em sonho', v: -2, d: 2 * 1440 },
+    marcado: { t: 'Carrega a marca de Deus na testa', v: -8, d: 20 * 1440 },
+    doenteDeus: { t: 'Adoeceu por castigo', v: -8, d: 4 * 1440 },
+    castigoPesado: { t: 'Viu Deus pesar a mão', v: -5, d: 5 * 1440 },
+    castigoInjusto: { t: 'Viu Deus castigar quem não tinha culpa', v: -10, d: 10 * 1440 },
+    justicaDivina: { t: 'Viu Deus castigar na medida', v: 3, d: 3 * 1440 },
+    perdoado: { t: 'Foi perdoado diante de todos', tf: 'Foi perdoada diante de todos', v: 8, d: 6 * 1440 },
+    viuPerdao: { t: 'Viu Deus perdoar', v: 3, d: 3 * 1440 },
+    incendio: { t: 'Viu o fogo levar uma obra', v: -8, d: 4 * 1440 },
+    difamado: { t: 'Inventaram coisas a seu respeito', v: -5, d: 3 * 1440 },
+    parenteFoi: { t: 'Alguém da família foi embora', v: -10, d: 15 * 1440 },
+    amigoFoi: { t: 'Gente querida foi embora', v: -4, d: 6 * 1440 },
+    parExilado: { t: 'Quem amava foi mandado embora', v: -15, d: 20 * 1440 },
+    visitaVila: { t: 'Reviu quem tinha ido embora', v: 6, d: 3 * 1440 },
+    voltouGente: { t: 'Quem tinha ido embora voltou', v: 6, d: 5 * 1440 },
+    saqueado: { t: 'Levaram comida do estoque de madrugada', v: -5, d: 3 * 1440 },
     // Etapa 13: Memória
     velou: { t: 'Velou quem partiu', v: 2, d: 3 * 1440 },
     semDespedida: { t: 'Não pôde se despedir', v: -8, d: 20 * 1440 },
@@ -206,9 +235,20 @@
     const t = S.world.tile[i];
     return S.temp + (t === T.MOUNTAIN ? C.MOUNTAIN_COLD : t === T.HILL ? C.HILL_COLD : 0);
   }
+  // 0.14: as fogueiras acesas, uma vez por passo (antes, cada pessoa varria todas as obras: numa aldeia grande, a
+  // lista das casas inteira, para cada um, a cada passo)
+  const FIRES = new WeakMap();
+  function litList(S) {
+    let c = FIRES.get(S);
+    if (G.passoOk(S, c) && c.n === S.buildings.length) return c.list;
+    const list = [];
+    for (const b of S.buildings) if (b.type === 'fogueira' && b.built && b.fuel > 0) list.push(b);
+    FIRES.set(S, G.passoMarca({ t: S.t, n: S.buildings.length, list }));
+    return list;
+  }
   function fireHeat(S, x, y) {
     let best = 0;
-    for (const b of S.buildings) {
+    for (const b of litList(S)) {
       if (b.type !== 'fogueira' || !b.built || b.fuel <= 0) continue;
       const d = Math.hypot(b.x + 0.5 - x, b.y + 0.5 - y), R = Sim.def(b).fire.r;
       let h = 0;
@@ -379,17 +419,75 @@
   };
   Sim.toast = function (S, text, tone) { S.events.push({ k: 'toast', text, tone: tone || '' }); };
   Sim.chron = function (S, text) { S.chron.push({ t: S.t, text }); S.events.push({ k: 'chron', text }); };
+  // 0.14: o resumo do ano que passou, no primeiro dia da primavera. Numa aldeia grande, nascimentos e pares não vão
+  // um a um para a Crônica; aqui fica a conta (pelo dia em que cada um nasceu ou morreu: vale para o save antigo)
+  function anoResumo(S, alive) {
+    if (S.t < C.DAY_MIN * C.YEAR_DAYS) return;
+    const y0 = S.t - C.DAY_MIN * C.YEAR_DAYS;
+    let nasc = 0, mort = 0;
+    for (const p of S.people) { if (p.born >= y0 && (p.mother || p.father)) nasc++; if (!p.alive && p.diedAt >= y0) mort++; }
+    if (alive.length <= C.CHRON_GRANDE && nasc < 4) return;      // aldeia pequena: a Crônica já contou um a um
+    const bits = [];
+    if (nasc) bits.push(nasc === 1 ? 'nasceu 1 criança' : 'nasceram ' + nasc + ' crianças');
+    if (mort) bits.push(mort === 1 ? 'morreu 1 pessoa' : 'morreram ' + mort + ' pessoas');
+    Sim.chron(S, 'No ano que passou, ' + (bits.length ? bits.join(' e ') : 'ninguém nasceu nem morreu') + '. Agora são ' + alive.length + '.');
+  }
+  // 0.14: a árvore que volta no toco não pode fechar passagem. Os vizinhos livres do toco precisam continuar ligados
+  // entre si por perto (numa janela de 7 × 7), sem passar por ele; se não, a árvore não volta ali. Sem isso, uma casa
+  // cercada de mata virava prisão: quem estava dentro não chegava mais à água nem ao acampamento (num teste da 0.14,
+  // dois elfos morreram de sede assim, com água no estoque)
+  function fechaPassagem(w, i) {
+    const Wd = w.W, x0 = i % Wd, y0 = (i / Wd) | 0, R = 3;
+    const livre = (x, y) => x >= 0 && y >= 0 && x < Wd && y < w.H && !(x === x0 && y === y0) && !w.block[y * Wd + x];
+    const viz = [];
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && livre(x0 + dx, y0 + dy)) viz.push((y0 + dy) * Wd + x0 + dx);
+    if (viz.length <= 1) return false;
+    const visto = new Set([viz[0]]), fila = [viz[0]];
+    while (fila.length) {
+      const c = fila.pop(), x = c % Wd, y = (c / Wd) | 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue;
+        const nx = x + dx, ny = y + dy;
+        if (Math.abs(nx - x0) > R || Math.abs(ny - y0) > R || !livre(nx, ny)) continue;
+        if (dx && dy && (!livre(x + dx, y) || !livre(x, y + dy))) continue;   // a quina fechada não deixa passar (como no caminho)
+        const k = ny * Wd + nx;
+        if (visto.has(k)) continue;
+        visto.add(k); fila.push(k);
+      }
+    }
+    return viz.some((k) => !visto.has(k));
+  }
+  Sim.fechaPassagem = fechaPassagem;
   Sim.float = function (S, x, y, text) { S.events.push({ k: 'float', x, y, text }); };
 
   // ---------- construções ----------
-  Sim.building = function (S, id) { for (const b of S.buildings) if (b.id === id) return b; return null; };
+  // 0.14: o índice das obras por id (antes, cada consulta varria a lista; com uma aldeia grande, eram dezenas de milhares
+  // de voltas por passo). A posição guardada é conferida; se a lista mudou, o índice se refaz
+  const BIDX = new WeakMap();
+  Sim.building = function (S, id) {
+    const list = S.buildings;
+    let m = BIDX.get(list);
+    if (m) {
+      const i = m.get(id);
+      if (i !== undefined && list[i] && list[i].id === id) return list[i];
+      if (i === undefined && m.size === list.length && (!list.length || list[list.length - 1].id === m.last)) return null;
+    }
+    m = new Map();
+    for (let i = 0; i < list.length; i++) m.set(list[i].id, i);
+    m.last = list.length ? list[list.length - 1].id : 0;
+    BIDX.set(list, m);
+    const j = m.get(id);
+    return j === undefined ? null : list[j];
+  };
   // Etapa 7: a definição da obra no nível dela. O nível 1 é o BUILD; cada melhoria troca o que muda;
   // no nível 3 da barraca entra a casa escolhida (HOUSES)
+  // 0.14: o cache por tipo → nível → casa (sem montar texto a cada consulta: é a função mais chamada do jogo)
   const defCache = {};
   Sim.defOf = function (type, lv, kind) {
     lv = lv || 1;
-    const key = type + ':' + lv + ':' + (kind || '');
-    if (defCache[key]) return defCache[key];
+    const byT = defCache[type] || (defCache[type] = []), byL = byT[lv] || (byT[lv] = {}), kk = kind || '';
+    const hit = byL[kk];
+    if (hit) return hit;
     const base = C.BUILD[type];
     if (!base) return null;
     const d = Object.assign({}, base);
@@ -402,7 +500,7 @@
     }
     d.type = type; d.lv = lv; d.kind = kind || null;
     d.max = !(base.up && base.up[lv - 1]);   // último nível
-    defCache[key] = d;
+    byL[kk] = d;
     return d;
   };
   Sim.def = (b) => Sim.defOf(b.type, b.lv, b.kind);
@@ -863,7 +961,7 @@
         const i = o.y * w.W + o.x;
         // no caminho, na trilha e no caminho marcado a árvore não volta (Etapa 7)
         if (o.regrow >= C.TREE_REGROW_DAYS && w.bgrid[i] < 0 && !Sim.isCamp(S, i) && !(w.road && (w.road[i] || w.roadJob[i])) && !(w.fence && (w.fence[i] || w.fenceJob[i])) &&
-          !S.people.some((p) => p.alive && Math.floor(p.x) === o.x && Math.floor(p.y) === o.y)) {
+          !S.people.some((p) => p.alive && Math.floor(p.x) === o.x && Math.floor(p.y) === o.y) && !fechaPassagem(w, i)) {
           o.k = 'tree'; o.regrow = 0; G.W.refreshBlock(w, i);
         }
       }
@@ -890,6 +988,7 @@
         const alive = S.people.filter((p) => p.alive);
         if (S.stats.winters === 1 && alive.length) Sim.chron(S, 'O primeiro inverno terminou. ' + listNames(alive) + (alive.length > 1 ? ' sobreviveram.' : ' sobreviveu.'));
         else Sim.toast(S, 'Começou a ' + season.toLowerCase() + '.');
+        anoResumo(S, alive);
         if (G.Life && alive.length) G.Life.onSpring(S);   // agradecem pelo inverno vencido e fazem festa
       } else Sim.toast(S, 'Começou o ' + season.toLowerCase() + '.');
     }
@@ -904,6 +1003,7 @@
     if (G.Minas) G.Minas.daily(S);   // Etapa 12: as descobertas da mina
     if (G.Povos) G.Povos.daily(S);   // a convivência e as caravanas
     if (G.Memoria) G.Memoria.daily(S);   // Etapa 13: visitas à cova, promessas, o costume do rito
+    if (G.Soc) G.Soc.daily(S);   // Etapa 14: a índole, o descontentamento, as penas, a vila de fora
     if (G.Life) G.Life.daily(S);
   }
   function rot(S, k, rate) {
@@ -949,6 +1049,7 @@
     if (G.Minas) G.Minas.hourly(S);   // Etapa 12: a ferramenta de ferro e a joia de quem passa pelo acampamento
     if (G.Povos) G.Povos.hourly(S);   // e a caravana que está para chegar
     if (G.Memoria) G.Memoria.hourly(S);   // Etapa 13: o corpo, o velório, o rito, o dia dos mortos
+    if (G.Soc) G.Soc.hourly(S);   // Etapa 14: os crimes, o julgamento, o líder, as obras do povo
     if (G.Life) G.Life.hourly(S);
     checkGoals(S);
   }
@@ -976,7 +1077,7 @@
   function checkGoals(S) {
     for (const g of S.goals) {
       if (g.done) continue;
-      const fn = GOAL_TEST[g.id] || G.Family.goalTest[g.id] || G.Tech.goalTest[g.id] || (G.Obras && G.Obras.goalTest[g.id]) || (G.Inv && G.Inv.goalTest[g.id]) || (G.Bichos && G.Bichos.goalTest[g.id]) || (G.Campo && G.Campo.goalTest[g.id]) || (G.Deus && G.Deus.goalTest[g.id]) || (G.Povos && G.Povos.goalTest[g.id]) || (G.Minas && G.Minas.goalTest[g.id]) || (G.Memoria && G.Memoria.goalTest[g.id]);
+      const fn = GOAL_TEST[g.id] || G.Family.goalTest[g.id] || G.Tech.goalTest[g.id] || (G.Obras && G.Obras.goalTest[g.id]) || (G.Inv && G.Inv.goalTest[g.id]) || (G.Bichos && G.Bichos.goalTest[g.id]) || (G.Campo && G.Campo.goalTest[g.id]) || (G.Deus && G.Deus.goalTest[g.id]) || (G.Povos && G.Povos.goalTest[g.id]) || (G.Minas && G.Minas.goalTest[g.id]) || (G.Memoria && G.Memoria.goalTest[g.id]) || (G.Soc && G.Soc.goalTest[g.id]);
       if (!fn || !fn(S)) continue;
       g.done = true;
       if (g.reward && S.god && !g.paid) { g.paid = true; G.God.gain(S, g.reward); }
@@ -1021,7 +1122,7 @@
   }
   // missões pequenas das obras que entram em cada fase (Etapa 7)
   const missions = (S, phase) => (G.Obras ? G.Obras.missions(phase) : []).concat(G.Inv ? G.Inv.missions(phase) : [], G.Bichos ? G.Bichos.missions(phase) : [],
-    G.Campo ? G.Campo.missions(phase) : [], G.Deus ? G.Deus.missions(phase) : [], G.Povos ? G.Povos.missions(phase) : [], G.Minas ? G.Minas.missions(phase) : [], G.Memoria ? G.Memoria.missions(phase) : [])
+    G.Campo ? G.Campo.missions(phase) : [], G.Deus ? G.Deus.missions(phase) : [], G.Povos ? G.Povos.missions(phase) : [], G.Minas ? G.Minas.missions(phase) : [], G.Memoria ? G.Memoria.missions(phase) : [], G.Soc ? G.Soc.missions(phase) : [])
     .filter((m) => !S.goals.some((g) => g.id === m.id));
   Sim.checkGoals = checkGoals;
   Sim.daily = (S) => daily(S);   // para os testes
@@ -1050,6 +1151,7 @@
     const beasts = [['lobos', d.lobo || 0], ['onca', d.onca || 0], ['jacare', d.jacare || 0], ['bicho', d.bicho || 0]].sort((a, b) => b[1] - a[1]);
     if (beasts[0][1] > 0 && beasts[0][1] >= Math.max(d.frio, d.fome, d.sede, d.raio || 0, d.parto || 0)) p.cause = beasts[0][0];
     if (d.velhice) p.cause = 'velhice';
+    if (d.crime) p.cause = 'crime';   // Etapa 14: morto por outra pessoa
     S.stats.lastDeathAt = S.t;   // o Narrador dá um respiro depois de uma perda
     if (G.Narr) G.Narr.onDeath(S);
     G.AI.abort(S, p);
@@ -1064,13 +1166,14 @@
       if (r) G.W.addObj(w, 'grave', r.idx % w.W, (r.idx / w.W) | 0, { name: p.name, pid: p.id, t: S.t });
     }
     const causeTxt = { frio: 'de frio', sede: 'de sede', fome: 'de fome', raio: 'atingid' + (p.sex === 'F' ? 'a' : 'o') + ' por um raio', parto: 'no parto', velhice: 'de velhice', lobos: 'no ataque dos lobos',
-      onca: 'no ataque da onça', jacare: 'no ataque de um jacaré', bicho: 'atacad' + (p.sex === 'F' ? 'a' : 'o') + ' por um bicho' }[p.cause];
+      onca: 'no ataque da onça', jacare: 'no ataque de um jacaré', bicho: 'atacad' + (p.sex === 'F' ? 'a' : 'o') + ' por um bicho', crime: 'pelas mãos de outra pessoa' }[p.cause];
     const age = Sim.ageOf(S, p);
     Sim.chron(S, p.name + ' morreu ' + causeTxt + (age < 1 ? ', com poucos meses.' : ', ' + (age < 12 ? 'com ' : 'aos ') + age + (age === 1 ? ' ano.' : ' anos.')));
     G.Family.onDeath(S, p);
     for (const q of S.people) if (q.alive && !q.mem.some((m) => m.k === 'perdeuCompanheiro' || m.k === 'perdeuFamilia')) Sim.addMem(S, q, 'perdeuAlguem');
     G.God.onDeath(S, p);
     if (G.Life) G.Life.onDeath(S, p);
+    if (G.Soc) G.Soc.onDeath(S, p);
     if (!S.people.some((q) => q.alive)) {
       S.over = true;
       Sim.chron(S, 'O povo se foi. Restam os túmulos e esta crônica.');
@@ -1122,6 +1225,12 @@
   // ---------- passo ----------
   Sim.step = function (S, dt) {
     if (S.over) return;
+    // 0.14: o retrato do passo (core.js) vale daqui até o fim do passo
+    const fora = G.passo;
+    G.passo = S; G.passoK++;
+    try { passo(S, dt); } finally { G.passo = fora; G.passoK++; }
+  };
+  function passo(S, dt) {
     const prevHour = Math.floor(S.t / 60), prevDay = Math.floor(S.t / C.DAY_MIN);
     S.t += dt;
     S.ck = clock(S.t);
@@ -1152,9 +1261,10 @@
     if (G.Fauna) G.Fauna.step(S, dt);   // capivaras
     if (G.Campo) G.Campo.step(S, dt);   // bichos de criação (Etapa 10)
     if (G.Deus && S.god && S.god.pending) G.Deus.tick(S, dt);   // o raio da estátua do trovão (Etapa 11)
+    if (G.Soc && G.Soc.busy(S)) G.Soc.tick(S);   // Etapa 14: o julgamento, o fogo posto, quem vai embora
     G.Tech.step(S, dt);   // moquém e jirau
     for (const p of S.people) if (p.alive && p.needs.saude <= 0) die(S, p);
-  };
+  }
   Sim.advance = function (S, minutes) {
     const steps = Math.round(minutes / C.STEP_MIN);
     for (let i = 0; i < steps && !S.over; i++) Sim.step(S, C.STEP_MIN);
@@ -1173,6 +1283,7 @@
     if (G.Povos) G.Povos.init(S);   // Etapa 12: povos
     if (G.Life) G.Life.init(S);
     if (G.Memoria) G.Memoria.init(S);   // Etapa 13: corpos, contos, a erva e o rito
+    if (G.Soc) G.Soc.init(S);   // Etapa 14: índole, crimes, líder, quem foi embora
     fixGoals(S);
     if (!S.seen) {
       S.seen = new Uint8Array(S.world.W * S.world.H);

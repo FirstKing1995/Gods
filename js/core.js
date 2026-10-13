@@ -108,5 +108,14 @@
     pad2: (n) => (n < 10 ? '0' : '') + n,
   };
 
+  // ---------- o retrato do passo (0.14) ----------
+  // Dentro de Sim.step, uma contagem do povo (quem leva quem, quem precisa de roupa, quem faz o quê...) vale para o
+  // passo inteiro: é feita na primeira pergunta e guardada até o passo acabar. Fora dele (a tela, os testes), cada
+  // pergunta conta de novo, então quem mexe no mundo à mão nunca lê um retrato velho.
+  // Uso: const c = map.get(S); if (G.passoOk(S, c)) return c...; ... map.set(S, G.passoMarca({...}))
+  G.passo = null; G.passoK = 0;
+  G.passoOk = (S, c) => !!c && G.passo === S && c.k === G.passoK;
+  G.passoMarca = (c) => { c.k = G.passoK; return c; };
+
   G.RNG = RNG; G.hashStr = hashStr; G.hash2 = hash2; G.Simplex = Simplex; G.Heap = Heap; G.U = U;
 })(globalThis.G = globalThis.G || {});

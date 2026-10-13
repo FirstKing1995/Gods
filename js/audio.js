@@ -247,6 +247,30 @@
     respMeio(t, o, v) { pad([hz(57), hz(62), hz(69)], t, 2.2, 0.07 * v, o, 1800); bell(hz(74), t + 0.3, 0.1 * v, o, 2); bell(hz(69), t + 0.7, 0.08 * v, o, 2); return 2.8; },
     respMedo(t, o, v) { bell(hz(45), t, 0.2 * v, o, 3.2); bell(hz(51), t + 0.5, 0.13 * v, o, 3); noise(t, 1.6, 'lowpass', 400, 1, 0.3, 0.16 * v, o, 120); return 3.6; },
     conto(t, o, v) { [62, 67, 69, 74].forEach((m, i) => pluck(hz(m), t + i * 0.17, 0.7, 0.12 * v, o)); return 1.5; },
+    // Etapa 14: Sociedade
+    crimeLeve(t, o, v) { tone('triangle', hz(45), t, 0.01, 0.35, 0.1 * v, o, hz(42)); return 0.6; },                                    // só você viu: uma nota baixa, curta
+    crimeVisto(t, o, v) { tone('triangle', hz(57), t, 0.005, 0.2, 0.12 * v, o); tone('triangle', hz(51), t + 0.16, 0.005, 0.4, 0.12 * v, o); return 0.8; },
+    crimeGrave(t, o, v) { drum('taiko', t, 0.9 * v, o); tone('sawtooth', hz(39), t, 0.02, 1.2, 0.07 * v, o, hz(33)); bell(hz(46), t + 0.3, 0.12 * v, o, 2.4); return 2.4; },
+    golpe(t, o, v) { drum('tapa', t, 1.1 * v, o); drum('bumbo', t + 0.02, 0.7 * v, o); return 0.4; },
+    fogoPosto(t, o, v) { noise(t, 1.8, 'bandpass', 900, 0.8, 0.2, 0.22 * v, o, 2400); for (let i = 0; i < 6; i++) noise(t + 0.2 + i * 0.22, 0.04, 'highpass', 3000, 1, 0.001, 0.2 * v, o); bell(hz(69), t, 0.14 * v, o, 0.5); bell(hz(69), t + 0.3, 0.14 * v, o, 0.5); return 2.2; },
+    fogoApagou(t, o, v) { noise(t, 1.2, 'highpass', 2500, 0.7, 0.05, 0.18 * v, o, 600); return 1.4; },
+    julgChama(t, o, v) { for (let i = 0; i < 3; i++) drum('taiko', t + i * 0.55, (0.7 + i * 0.1) * v, o); return 2; },
+    julgCond(t, o, v) { drum('taiko', t, v, o); bell(hz(45), t + 0.1, 0.14 * v, o, 2.4); return 2.4; },
+    julgLivre(t, o, v) { pluck(hz(60), t, 0.6, 0.12 * v, o); pluck(hz(67), t + 0.2, 0.9, 0.12 * v, o); return 1.2; },
+    bronca(t, o, v) { tone('square', hz(52), t, 0.005, 0.12, 0.05 * v, o); tone('square', hz(50), t + 0.14, 0.005, 0.2, 0.05 * v, o); return 0.5; },
+    castSonho(t, o, v) { bell(hz(81), t, 0.08 * v, o, 1.6); bell(hz(76), t + 0.25, 0.07 * v, o, 1.8); return 1.8; },
+    castMarca(t, o, v) { noise(t, 0.5, 'bandpass', 3200, 2, 0.01, 0.2 * v, o, 900); tone('sine', hz(50), t, 0.01, 0.6, 0.12 * v, o, hz(45)); return 0.9; },
+    castDoenca(t, o, v) { tone('sine', hz(48), t, 0.05, 0.9, 0.1 * v, o, hz(44)); tone('sine', hz(49), t + 0.05, 0.05, 0.9, 0.08 * v, o, hz(43)); return 1.2; },
+    perdao(t, o, v) { pad([hz(60), hz(64), hz(67)], t, 1.8, 0.06 * v, o, 1800); [72, 76, 79].forEach((m, i) => bell(hz(m), t + 0.2 + i * 0.22, 0.09 * v, o, 2)); return 3; },
+    verdade(t, o, v) { [69, 76, 81].forEach((m, i) => bell(hz(m), t + i * 0.3, 0.1 * v, o, 2.2)); return 2.6; },
+    lider(t, o, v) { [55, 62, 67].forEach((m, i) => flute(hz(m), t + i * 0.28, i === 2 ? 0.9 : 0.24, 0.12 * v, o)); drum('bumbo', t, 0.6 * v, o); return 1.8; },
+    obraPovo(t, o, v) { for (let i = 0; i < 3; i++) noise(t + i * 0.16, 0.05, 'bandpass', 1100, 3, 0.001, 0.28 * v, o); return 0.7; },
+    pedido(t, o, v) { pluck(hz(67), t, 0.3, 0.1 * v, o); pluck(hz(74), t + 0.16, 0.5, 0.1 * v, o); return 0.8; },
+    aviso(t, o, v) { drum('bumbo', t, 0.8 * v, o); tone('triangle', hz(50), t + 0.1, 0.02, 0.9, 0.1 * v, o, hz(45)); tone('triangle', hz(57), t + 0.1, 0.02, 0.9, 0.07 * v, o, hz(52)); return 1.4; },
+    partida(t, o, v) { for (let i = 0; i < 6; i++) noise(t + i * 0.3, 0.08, 'lowpass', 500, 1, 0.005, 0.16 * v, o); flute(hz(62), t + 0.3, 0.8, 0.07 * v, o); flute(hz(57), t + 1.2, 1.1, 0.07 * v, o); return 2.6; },
+    vilaNova(t, o, v) { pad([hz(55), hz(62)], t, 2, 0.05 * v, o, 1400); pluck(hz(67), t + 0.4, 0.8, 0.1 * v, o); pluck(hz(62), t + 0.8, 1, 0.1 * v, o); return 3; },
+    saque(t, o, v) { for (let i = 0; i < 4; i++) noise(t + i * 0.12, 0.05, 'lowpass', 700, 1, 0.002, 0.2 * v, o); tone('triangle', hz(44), t + 0.5, 0.01, 0.6, 0.1 * v, o, hz(40)); return 1.3; },
+    injusto(t, o, v) { tone('triangle', hz(50), t, 0.02, 1.4, 0.09 * v, o); tone('triangle', hz(51), t + 0.02, 0.02, 1.4, 0.09 * v, o); return 1.6; },
   };
   function bandOut(o, f, q) { const b = ctx.createBiquadFilter(); b.type = 'bandpass'; b.frequency.value = f; b.Q.value = q; b.connect(o); return b; }
   function crackle(t, o, v) { noise(t, 0.012 + Math.random() * 0.02, 'highpass', 2000 + Math.random() * 3000, 1, 0.001, (0.1 + Math.random() * 0.25) * v, o); }
@@ -329,7 +353,8 @@
     const p = place(x, y);
     if (p.g < 0.04) return;
     lastPlay[name] = now;
-    const wet = { nivel: 0.6, dom: 0.5, ungir: 0.5, converte: 0.5, consagrar: 0.6, criar: 0.6, saber: 0.6, bencao: 0.4, nascimento: 0.5, morte: 0.6, descoberta: 0.4, era: 0.5, cura: 0.5, revelacao: 0.6, oracao: 0.5, atendida: 0.4, obrigado: 0.4, uivo: 0.5, lua: 0.5, canto: 0.4, arcoiris: 0.5, estrela: 0.4, esturro: 0.45, velorio: 0.6, enterro: 0.4, flores: 0.4, finados: 0.6, rito: 0.5, visao: 0.6, respBoa: 0.5, respMeio: 0.5, respMedo: 0.6, conto: 0.4 }[name] || 0.1;
+    const wet = { nivel: 0.6, dom: 0.5, ungir: 0.5, converte: 0.5, consagrar: 0.6, criar: 0.6, saber: 0.6, bencao: 0.4, nascimento: 0.5, morte: 0.6, descoberta: 0.4, era: 0.5, cura: 0.5, revelacao: 0.6, oracao: 0.5, atendida: 0.4, obrigado: 0.4, uivo: 0.5, lua: 0.5, canto: 0.4, arcoiris: 0.5, estrela: 0.4, esturro: 0.45, velorio: 0.6, enterro: 0.4, flores: 0.4, finados: 0.6, rito: 0.5, visao: 0.6, respBoa: 0.5, respMeio: 0.5, respMedo: 0.6, conto: 0.4,
+      crimeGrave: 0.5, julgChama: 0.4, julgCond: 0.5, castSonho: 0.6, perdao: 0.6, verdade: 0.6, lider: 0.4, partida: 0.5, vilaNova: 0.5, aviso: 0.4, injusto: 0.5 }[name] || 0.1;
     SFX[name](now + 0.02 + (delay || 0), out(bus.sfx, p.pan, wet), p.g * (vol === undefined ? 1 : vol));
   };
   A.ui = function (name) { if (name === 'click') A.sfx('clique'); };
@@ -406,6 +431,24 @@
         else if (e.ev === 'pend') A.sfx('visao');
         else if (e.ev === 'conto') A.sfx('conto');
         else if (e.ev === 'resposta') A.sfx(e.tone > 0 ? 'respBoa' : e.tone < 0 ? 'respMedo' : 'respMeio');
+        break;
+      case 'soc':   // Etapa 14
+        if (e.ev === 'crime') A.sfx(e.g >= 3 ? 'crimeGrave' : e.known ? 'crimeVisto' : 'crimeLeve', e.x + 0.5, e.y + 0.5);
+        else if (e.ev === 'golpe') A.sfx('golpe', e.x, e.y);
+        else if (e.ev === 'fogo') A.sfx(e.on ? 'fogoPosto' : e.burned ? 'crimeGrave' : 'fogoApagou', e.x, e.y);
+        else if (e.ev === 'julg') { if (e.on && !e.aberto) A.sfx('julgChama'); else if (!e.on && e.cond === 1) A.sfx('julgCond'); else if (!e.on && e.cond === 0) A.sfx('julgLivre'); }
+        else if (e.ev === 'bronca') A.sfx('bronca', e.x, e.y);
+        else if (e.ev === 'castigo') { if (e.nv === 1) A.sfx('castSonho'); else if (e.nv === 2) A.sfx('castMarca'); else if (e.nv === 3) A.sfx('castDoenca'); else if (e.nv === 5) A.sfx('partida'); }
+        else if (e.ev === 'perdao' || e.ev === 'sinal') A.sfx('perdao');
+        else if (e.ev === 'revelado') A.sfx('verdade');
+        else if (e.ev === 'lider') A.sfx('lider');
+        else if (e.ev === 'obra') A.sfx('obraPovo', e.x + 0.5, e.y + 0.5);
+        else if (e.ev === 'pedido') A.sfx('pedido');
+        else if (e.ev === 'aviso') A.sfx('aviso');
+        else if (e.ev === 'partida' || e.ev === 'exilio') A.sfx('partida');
+        else if (e.ev === 'vila') A.sfx('vilaNova');
+        else if (e.ev === 'saque') A.sfx('saque');
+        else if (e.ev === 'injusto') A.sfx('injusto');
         break;
       case 'narr': if (e.on && e.ev === 'lobos') A.sfx('uivo'); else if (e.on && e.ev === 'mascate') A.sfx('sino'); else if (e.on && e.ev === 'povo') A.sfx('caravana'); else if (e.warn && (e.ev === 'nevasca' || e.ev === 'tempestade')) A.sfx('aviso'); break;
       // Etapa 10

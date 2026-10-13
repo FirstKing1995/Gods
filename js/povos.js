@@ -154,6 +154,9 @@
 
   // ---------- herança: o filho de dois povos ----------
   Pv.inherit = function (S, baby, mom, dad) {
+    // 0.14: o filho nascido na vila de fora pode voltar só com o pai (a mãe ficou lá): conta o sangue de quem veio
+    if (!mom) { mom = dad; dad = null; }
+    if (!mom) return;
     if (!(mom && mom.sangue) && !(dad && dad.sangue)) return;   // humano com humano: nada muda
     const a = Pv.blood(mom), b = dad ? Pv.blood(dad) : a, bl = {};
     for (const k in a) bl[k] = (bl[k] || 0) + a[k] / 2;

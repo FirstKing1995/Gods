@@ -843,7 +843,7 @@
     e.dir = p.x > e.x ? 2 : 3;
     Sm.addMem(S, p, 'atacadoBicho');
     if (a) { a.pounced = a.pounced || []; if (a.pounced.indexOf(p.id) < 0) { a.pounced.push(p.id); Sm.toast(S, 'A onça pulou em cima de ' + p.name + '!', 'bad'); } }
-    S.events.push({ k: 'bite', x: p.x, y: p.y, sp: 'onca', pid: p.id });
+    S.events.push({ k: 'bite', x: p.x, y: p.y, sp: 'onca', pid: p.id, acuada: true });   // acuada: a luta que o povo foi buscar (pode ser de dia, perto de um fogo)
     S.events.push({ k: 'roar' });
     Sm.say(S, p, S.rng.pick(['Ai!', 'Segura ela!', 'Me acertou!']), true);
     G.God.cry(S, p, 'onca');
@@ -993,6 +993,8 @@
   }
   function arrived(S, g) {
     const n = S.narr;
+    // Etapa 14: quem vem da vila de fora não pede abrigo: troca, casa ou pede para voltar (sociedade.js decide)
+    if (g.kind === 'vila') { g.state = 'visita'; if (G.Soc) G.Soc.onChegou(S, g); else N.sendAway(S, g.id); return; }
     g.state = 'esperando';
     const pds = describeGroup(S, g), Sm = Sim();
     if (g.kind === 'mascate') {
@@ -1026,6 +1028,7 @@
   N.decide = function (S, gid, accept) {
     const n = S.narr, g = n && n.groups[gid];
     if (!g || g.state !== 'esperando') return false;
+    if (g.kind === 'vila') return G.Soc ? G.Soc.decide(S, g, accept) : false;   // Etapa 14: os de fora que pedem para voltar
     const ents = g.ents.map((id) => n.ents.find((x) => x.id === id)).filter(Boolean);
     const Sm = Sim(), F = Fam();
     if (g.kind === 'mascate') {
@@ -1077,6 +1080,44 @@
     }
     S.events.push({ k: 'narr', ev: g.kind === 'casal' ? 'casal' : g.kind === 'povo' ? 'povo' : 'andarilho', on: false });
     return true;
+  };
+
+  // Etapa 14: gente da vila de fora vem pela trilha, do lado onde a vila fica (quem são e o que querem: sociedade.js)
+  N.spawnVila = function (S, members, v, o) {
+    const w = S.world, c = camp(S), campI = S.camp.y * w.W + S.camp.x;
+    let spot = null;
+    const a0 = v && !v.longe ? Math.atan2(v.y - c.y, v.x - c.x) : S.rng.next() * Math.PI * 2;
+    for (let k = 0; k < 24 && !spot; k++) {
+      const a = a0 + (k % 2 ? 1 : -1) * Math.floor((k + 1) / 2) * 0.12, d = 16 + (k % 4) * 2;
+      const x = Math.round(c.x + Math.cos(a) * d), y = Math.round(c.y + Math.sin(a) * d);
+      if (x < 2 || y < 2 || x >= w.W - 2 || y >= w.H - 2) continue;
+      const i = y * w.W + x;
+      if (w.block[i] || w.slow[i] || G.IS_WATER[w.tile[i]]) continue;
+      const path = W.findPath(w, i, campI, 500);
+      if (path && path.length) spot = { x, y, i };
+    }
+    if (!spot) spot = edgeSpot(S, 14, 20);
+    if (!spot) return null;
+    const n = S.narr, g = Object.assign({ id: n.nextEnt++, kind: 'vila', state: 'vindo', ents: [], home: spot.i, t0: S.t }, o || {});
+    members.forEach((pd, k) => { g.ents.push(newEnt(S, 'visita', spot.x, spot.y, { gid: g.id, pd, off: k }).id); });
+    n.groups[g.id] = g;
+    S.events.push({ k: 'narr', ev: 'andarilho', on: true });
+    return g;
+  };
+  N.entsOf = function (S, gid) { const n = S.narr, g = n && n.groups[gid]; return g ? g.ents.map((id) => n.ents.find((x) => x.id === id)).filter(Boolean) : []; };
+  // a visita se despede e volta pela trilha
+  N.sendAway = function (S, gid) {
+    const n = S.narr, g = n && n.groups[gid];
+    if (!g) return;
+    for (const e of N.entsOf(S, gid)) { e.state = 'indo'; e.path = null; e.leftAt = e.t; }
+    g.state = 'indo';
+  };
+  // a visita ficou: os viajantes viram gente da aldeia (quem os cria é quem chamou)
+  N.endGroup = function (S, gid) {
+    const n = S.narr, g = n && n.groups[gid];
+    if (!g) return;
+    for (const e of N.entsOf(S, gid)) e.gone = true;
+    g.state = 'acolhido';
   };
 
   // Etapa 12: a caravana de um povo vem pela trilha como os viajantes (quem são: povos.js)

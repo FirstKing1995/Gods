@@ -3,7 +3,9 @@
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.13.0',
+    VERSION: '0.14.0',
+    // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
+    CHRON_GRANDE: 40,
     SAVE_KEY: 'genesis.save.v1',
     // endereço do Web App do Google Apps Script (termina em /exec). Vazio = jogo só local.
     API_URL: 'https://script.google.com/macros/s/AKfycbzDy7z7jS8Xd9ejZINSNtR6_S7_3zmfqDaPa77NKVEoEFBY8N_F6-EHTvlsbX0-wGsQ/exec',
@@ -14,12 +16,16 @@
     TILE: 16,            // px por tile
     CHUNK: 16,           // tiles por bloco de render
 
-    // ---- tempo: 1 hora real = 1 ano em 1x ----
+    // ---- tempo: em 1x, um dia leva 4 minutos (uma hora de jogo, 10 segundos; um ano, 4 horas) ----
     DAY_MIN: 1440,
     SEASON_DAYS: 15,
     YEAR_DAYS: 60,
-    REAL_SEC_PER_DAY: 60,          // 1x: 1 dia = 1 min real
-    SPEEDS: [0, 1, 2, 5, 10, 20],
+    REAL_SEC_PER_DAY: 240,         // 1x: 1 dia = 4 min reais (até a 0.13 era 1 min: rápido demais para ver o povo)
+    SPEEDS: [0, 1, 2, 5, 10, 20, 50],
+    // com o jogo fechado, a conta é a de antes (1 dia por minuto a 100%): os nomes das opções dizem quanto passa
+    OFFLINE_SEC_PER_DAY: 60,
+    // a cada quadro, a simulação roda no máximo SIM_BUDGET_MS; o que não couber fica para depois (até SIM_BACKLOG passos)
+    SIM_BUDGET_MS: 12, SIM_BACKLOG: 40,
     STEP_MIN: 2,                   // passo fixo da simulação
     START_HOUR: 7,
 
@@ -52,6 +58,13 @@
 
     // ---- comida e água ----
     FRUIT_FOOD: 25, FISH_COOKED: 45, FISH_RAW: 22, WATER_DRINK: 40,
+    // Etapa 14 (correção da IA): com a fome abaixo de CARGA_FOME e a casa a mais de CARGA_LONGE passos, quem leva
+    // carne, peixe ou frutas nas costas come da carga, cru, até CARGA_ATE. Com a energia em zero e a cama a mais de
+    // DORME_LONGE passos, deita no caminho
+    CARGA_FOME: 25, CARGA_LONGE: 12, CARGA_ATE: 60, DORME_LONGE: 10,
+    // e, a mais de ARBUSTO_LONGE passos de casa com comida no estoque, o arbusto só serve se fica ARBUSTO_VOLTA passos mais
+    // perto de casa que a pessoa (o caminho da fruta é o de volta)
+    ARBUSTO_LONGE: 20, ARBUSTO_VOLTA: 3,
     START_STOCK: { madeira: 0, pedra: 0, agua: 0, frutas: 8, peixe: 0, carne: 0, defumado: 0, seca: 0, couro: 0, argila: 0, ferramentas: 0, roupas: 0,
       tabuas: 0, fibra: 0, mantas: 0, redes: 0, feijao: 0, milho: 0, abobora: 0, mandioca: 0, ovos: 0, leite: 0 },
     ROT_FRUIT: 0.04, ROT_FISH: 0.08,            // parte do estoque que estraga por dia
@@ -73,6 +86,7 @@
     FISH_WINTER: 0.5, FISH_MAX: 4,
     SEARCH_MAX: 55,                // custo máx. de busca de alvos
     SEARCH_FAR: 130,               // pedra e madeira: quando acaba perto, vão mais longe
+    BUSCA_FALHA_MIN: 20,           // 0.14: a busca do que coletar que não achou nada vale esses minutos para todos
     BUILD_PASS_COST: 6,            // passar por dentro de uma obra custa 6x (só quando não há outro jeito)
 
     // ---- fogo ----
@@ -218,7 +232,7 @@
 
     // ---- tempo com o jogo fechado ----
     // tempo com o jogo fechado: fração do 1x (o jogador escolhe no menu; padrão metade)
-    OFFLINE_RATES: [0.1, 0.25, 0.5, 1], OFFLINE_RATE_NAMES: ['1/10 (1 h fora = 6 dias)', '1/4 (1 h fora = 15 dias)', 'metade (1 h fora = 30 dias)', 'igual ao 1x (1 h fora = 1 ano)'],
+    OFFLINE_RATES: [0.1, 0.25, 0.5, 1], OFFLINE_RATE_NAMES: ['devagar (1 h fora = 6 dias)', 'como o 1x (1 h fora = 15 dias)', 'o dobro do 1x (1 h fora = 30 dias)', 'rápido (1 h fora = 1 ano)'],
     OFFLINE_RATE_DEFAULT: 2, OFFLINE_MAX_DAYS: 300, OFFLINE_MIN_SEC: 120, OFFLINE_HEALTH_FLOOR: 25,
     // 0.12: a volta tem orçamento de relógio. Até BUDGET, entram dias inteiros pelo meio; passou de HARD, o que falta
     // vira dia resumido; passou do dobro de HARD (aparelho muito lento), o resto do tempo deixa de passar
@@ -556,5 +570,49 @@
       temorObed: 0.3,                             // Temor Sagrado (e ninguém entra em greve)
       chamaFloor: 50, chamaPoder: 1.2,            // Fé que Aquece
     },
+
+    // ---- Etapa 14: Sociedade ----
+    // índole: três eixos de −100 a 100 (g mão: generoso/egoísta · m gênio: manso/violento · f palavra: franco/mentiroso).
+    // Nasce de um sorteio fixo do mundo (INDOLE_MEAN no meio, INDOLE_SPREAD de ponta a ponta), puxado para o lado bom;
+    // o rótulo aparece a partir de INDOLE_ROTULO
+    INDOLE_MEAN: 32, INDOLE_SPREAD: 200, INDOLE_ROTULO: 30, INDOLE_HERDA: 0.25,
+    // o que empurra a índole. Por dia: a fome, a humilhação, o exemplo dos pais (a fração do caminho, até IND_PAIS_AGE
+    // anos), a fé (só conserta o que está abaixo de zero; com um Deus temido, o medo), o exemplo do líder para os
+    // jovens. Por conto ouvido. O que puxa para o bem sem ser mérito da pessoa para em IND_TETO; o que puxa para o
+    // mal, em −IND_CHAO. De uma vez: a pena cumprida, o castigo na medida, o perdão, ter ficado sem resposta
+    IND_FOME: 0.6, IND_HUMILHA: 0.5, IND_PAIS: 0.0005, IND_PAIS_AGE: 14, IND_FE: 0.03, IND_MEDO: 0.03, IND_CONTO: 0.05, IND_LIDER: 0.02, IND_TETO: 30, IND_CHAO: 60,
+    IND_PENA: 8, IND_CASTIGO: 10, IND_PERDAO: 6, IND_IMPUNE: 1.5,
+    // crimes: SOC_GRACA_D dias de paz no começo, e só com SOC_MIN_GENTE de 12 anos ou mais. A chance por dia é CR_x
+    // vezes o quanto a índole é ruim (0 a 1). SOC_VER: até quantos passos alguém acordado vê (de noite, SOC_VER_NOITE)
+    SOC_GRACA_D: 40, SOC_MIN_GENTE: 6, SOC_VER: 6, SOC_VER_NOITE: 3,
+    CR_COMIDA: 0.03, CR_FOLGA: 0.035, CR_MENTIRA: 0.03, CR_FURTO: 0.02, CR_SURRA: 0.5, CR_FERIR: 0.25, CR_FOGO: 0.15, CR_MATAR: 0.04, CR_M_FERIR: -40, CR_M_FOGO: -30, CR_M_MATAR: -60, VIOL_PAUSA_D: 3, RANCOR: 2.5,
+    SURRA_DANO: [10, 16], SURRA_MIN: 20, FERIR_DANO: [32, 45], FERIR_MIN: 8,
+    // o fogo posto arde FOGO_MIN minutos; apagar gasta FOGO_AGUA de água; o armazém que queima leva FOGO_COMIDA da comida
+    FOGO_MIN: 90, FOGO_AGUA: 4, FOGO_COMIDA: 0.3,
+    // dias até um crime sem julgamento esfriar (leve, médio, grave) · quantos a lista guarda
+    CRIME_FRIO: [12, 30, 90], CRIME_MAX: 60,
+    // quando ninguém viu: a pista que quem fez deixa, e o mínimo para o povo desconfiar de alguém
+    SUSP_PISTA: 1.5, SUSP_MIN: 3,
+    // julgamento: chamado às JULG_H; espera JULG_ESPERA min pelo povo; dura JULG_MIN; pede JULG_QUORUM adultos além do acusado
+    JULG_H: 17, JULG_ESPERA: 50, JULG_MIN: 35, JULG_QUORUM: 3, PENA_DIAS: { furto: 3, surra: 4, ferir: 10, fogo: 12 }, PENA_WORK: 1.35,
+    // castigo de Deus: o custo em Poder de cada medida (sonho, marca, doença, raio perto, exílio, morte) e a faixa justa por gravidade
+    CASTIGO_CUSTO: [5, 10, 12, 15, 25, 40], CASTIGO_FAIXA: { 1: [1, 2], 2: [2, 4], 3: [4, 6] }, MARCA_D: 20, DOENCA_D: 4, DOENCA_DANO: 25,
+    REVELAR_CUSTO: 8, PERDAO_CUSTO: 6,
+    // líder: escolhido com LIDER_MIN adultos; outro passa na frente com LIDER_TROCA vezes o respeito
+    LIDER_MIN: 5, LIDER_TROCA: 1.25,
+    // obras por conta própria: o povo compromete até SOC_TETO de cada material; um pedido vale PEDIDO_D dias; recusado,
+    // só volta depois de RECUSA_D. Casa a mais de SOC_FOGO_LONGE passos de um fogo pede fogueira; SOC_ROT porções
+    // estragando por dia pedem armazém; menos de SOC_PEDRA de pedra por dois dias pede mina
+    SOC_TETO: 0.4, PEDIDO_D: 5, RECUSA_D: 10, SOC_FOGO_LONGE: 9, SOC_ROT: 3, SOC_PEDRA: 6,
+    // 0.14: o padrão é "o povo decide"; obras do povo ao mesmo tempo: 1 + adultos / SOC_OBRAS_POR, até SOC_OBRAS_MAX
+    SOC_OBRAS_POR: 12, SOC_OBRAS_MAX: 8,
+    // descontentamento (0 a 100), o que soma por dia e o quanto cai num dia sem motivo. O líder ruim e o medo de Deus
+    // param de somar em DESC_TETO: sozinhos, não levam ninguém embora
+    DESC_CAMA: 3, DESC_FOME: 3, DESC_FRIO: 2, DESC_HUMOR: 2, DESC_POVO: 2, DESC_INJ: 4, DESC_LIDER: 0.4, DESC_MEDO: 0.5, DESC_CAI: 1.5, DESC_TETO: 45,
+    // dissidentes: de DISS_MIN a DISS_MAX adultos com DISS_DESC ou mais, numa aldeia de DISS_ALDEIA adultos (nunca mais
+    // que DISS_FRAC dela). O aviso espera DISS_PRAZO_H horas; depois de uma saída, DISS_COOL_D dias de sossego
+    DISS_DESC: 60, DISS_MIN: 4, DISS_MAX: 8, DISS_ALDEIA: 10, DISS_FRAC: 0.45, DISS_PRAZO_H: 24, DISS_COOL_D: 30, DISS_MILAGRE: 25, DISS_ANDA_H: 26,
+    // a vila de fora: a pelo menos VILA_DIST passos; um acontecimento a cada VILA_EVENTO_D dias; VILA_NASC filhos por casal por ano
+    VILA_DIST: 40, VILA_DIST_MAX: 72, VILA_EVENTO_D: [12, 24], VILA_NASC: 0.35, VILA_PRESENTE: 20, VILA_TROVAO: 15,
   };
 })(globalThis.G = globalThis.G || {});
