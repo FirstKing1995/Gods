@@ -956,6 +956,31 @@
     };
     return ringRoute(S, p, cx, cy, ring, taken, maxCost || 90, r1);
   }
+  // Etapa 16: servir no posto (a escola, o hospital, a guarda...): vai até lá, fica um turno e conta o tempo servido
+  ACT.servir = {
+    start(S, p, a) {
+      const b = G.Cidade && G.Cidade.alvo(S, p);
+      if (!b || !b.built || !toRing(S, p, b.x + b.w / 2, b.y + b.h / 2, 0.8, b.w / 2 + 1.6, 160)) return false;
+      if (!p.path) setPath(p, [tileOf(S, p)]);
+      a.b = b.id;
+      return true;
+    },
+    run(S, p, a, dt) {
+      const b = Sim.building(S, a.b);
+      if (!b || !b.built || p.cargo !== b.id) return FAIL;
+      if (a.stage === 'go') {
+        a.walk = (a.walk || 0) + dt;
+        if (a.walk > 120) return FAIL;
+        if (moving(p)) return RUN;
+        if (p.stuck) return FAIL;
+        a.stage = 'work'; a.t = 0;
+        face(p, b.x + b.w / 2, b.y + b.h / 2);
+      }
+      a.t += dt;
+      if (a.t >= C.SERVIR_MIN || S.ck.hour >= 17) { G.Cidade.serviu(S, p, b, a.t); return DONE; }
+      return RUN;
+    },
+  };
   // reza da manhã: vai até a estátua, reza um pouco e segue o dia
   ACT.rezar = {
     start(S, p, a) {
@@ -1443,10 +1468,12 @@
         let cap = Fam.carryCap(S, p);
         const take = {};
         for (const k of MATS) { const t = Math.max(0, Math.min(miss[k] || 0, S.stock[k] || 0, cap)); take[k] = t; cap -= t; }
-        if (sumMat(take) === 0) return false;
-        if (!toCamp(S, p)) return false;
-        a.take = take; a.stage = 'fetch';
-        return true;
+        if (sumMat(take) > 0) {
+          if (!toCamp(S, p)) return false;
+          a.take = take; a.stage = 'fetch';
+          return true;
+        }
+        if (!(G.Cidade && G.Cidade.podeErguer(job))) return false;   // Etapa 16: a grande obra sobe com o que já chegou
       }
       if (!toBuilding(S, p, b)) return false;
       return true;
@@ -1478,7 +1505,7 @@
       if (a.stage === 'go') {
         if (moving(p)) return RUN;
         if (p.stuck) return FAIL;
-        if (sumMat(Sim.missing(job)) > 0) return DONE;
+        if (sumMat(Sim.missing(job)) > 0 && !(G.Cidade && G.Cidade.podeErguer(job))) return DONE;
         a.stage = 'build'; a.t = 0;
         face(p, b.x, b.y);
         say(S, p, 'construir', 0.3);
@@ -1489,6 +1516,7 @@
       p.skills.construcao += dt / 60 * Fam.xpFactor(S, p);
       a.t += dt;
       if (job.progress >= 1) { Sim.complete(S, b); return DONE; }
+      if (sumMat(Sim.missing(job)) > 0 && G.Cidade && !G.Cidade.podeErguer(job)) return DONE;   // a fase subiu até onde o material deixa
       return RUN;
     },
     end(S, p) {
@@ -2297,6 +2325,8 @@
       const pr = G.Deus.wantPray(S, p);
       if (pr > 0) add('rezar', pr);
     }
+    // Etapa 16: quem tem posto (professor, curandeiro, guarda...) serve nele no horário de trabalho
+    if (G.Cidade && p.cargo) { const sv = G.Cidade.want(S, p); if (sv > 0) add('servir', sv); }
     // Etapa 13: velar, enterrar, visitar a cova, o dia dos mortos, colher a erva, o rito
     if (G.Memoria && S.memoria && st !== 'bebe') { const mm = G.Memoria.want(S, p); if (mm) add('memoria', mm.score, { hint: mm.k }); }
     // Etapa 14: o julgamento, o que não se deve, o exílio, a partida de quem vai embora
@@ -2526,6 +2556,7 @@
         return sm ? (st === 'tell' ? 'Pregando a palavra de ' + G.Deus.call(S) + ' ao pé do fogo' : 'Indo pregar ao pé do fogo') : st === 'tell' ? 'Contando uma história ao pé do fogo' : 'Indo contar uma história'; }
       case 'ouvir': { const t = person(S, a.teller), sm = S.life && S.life.story && S.life.story.id === a.st && S.life.story.sermon;
         return sm ? (st === 'listen' ? 'Ouvindo a pregação de ' + (t ? t.name : '…') : 'Indo ouvir a pregação') : st === 'listen' ? 'Ouvindo a história de ' + (t ? t.name : '…') : 'Indo ouvir uma história'; }
+      case 'servir': { const ob = a.b ? Sim.building(S, a.b) : null; return st === 'work' && ob ? G.Cidade.fazendo(ob) : 'Indo para o posto'; }
       case 'rezar': return st === 'pray' ? 'Rezando ao pé da estátua de ' + G.Deus.call(S) : 'Indo rezar na estátua';
       case 'curar': { const t = person(S, a.q); return st === 'heal' ? 'Curando ' + (t ? t.name : '…') + ' com as mãos' : 'Indo curar ' + (t ? t.name : '…'); }
       case 'festa': return st === 'dance' ? 'Dançando na festa' : 'Indo para a festa';

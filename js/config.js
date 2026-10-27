@@ -3,7 +3,7 @@
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.16.0',
+    VERSION: '0.17.0',
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
     SAVE_KEY: 'genesis.save.v1',
@@ -177,6 +177,54 @@
         desc: 'O lugar dos que partiram. O povo vela ao pé do fogo, enterra aqui, traz flores e volta todo ano, no último dia do outono.',
         up: [{ name: 'Cemitério cercado', cost: { madeira: 20 }, work: 300, mem: { r: 8, vale: 1.5 },
           desc: 'Uma cerca baixa e um portal de madeira: cabe mais gente, e a visita e o dia dos mortos consolam metade a mais.' }] },
+      // Etapa 16 (0.17): as grandes obras. Pedem centenas de peças e meses de muitas mãos; sobem em fases (grande: o
+      // povo constrói até onde o material entregue deixa, sem esperar tudo chegar) e valem para a aldeia inteira
+      templo: { name: 'Templo', a: 'o', key: '', w: 4, h: 4, cost: { pedra: 160, madeira: 60, tabuas: 50 }, work: 36000, grande: true, god: { reach: 0, reza: 2 },
+        desc: 'A casa de Deus, de pedra e de muitas mãos. Quem tem fé reza ali de manhã e ganha o dobro de fé; a festa e o rito ficam maiores perto dele.' },
+      muralha: { name: 'Muralha', a: 'a', key: '', w: 3, h: 2, cost: { pedra: 200, madeira: 40 }, work: 30000, grande: true, wall: { r: 16 },
+        desc: 'Um anel de pedra em volta do centro, com portão. Lobo e onça não entram, e ninguém leva a comida guardada lá dentro.' },
+      torre: { name: 'Torre de vigia', a: 'a', key: '', w: 2, h: 2, cost: { pedra: 80, tabuas: 40, madeira: 30 }, work: 18000, grande: true, watch: { r: 24 },
+        desc: 'Do alto se vê longe: a névoa se abre em volta dela, o bicho que vem chegando é avisado antes e o malfeito da noite tem testemunha.' },
+      aqueduto: { name: 'Aqueduto', a: 'o', key: '', w: 4, h: 2, cost: { pedra: 180, argila: 60, tabuas: 20 }, work: 33000, grande: true, need: 'ceramica', water: { h: 3 },
+        desc: 'Arcos de pedra que trazem a água para dentro da aldeia: o estoque de água se enche sozinho, e ninguém precisa mais ir buscar.' },
+      // Etapa 16: as instituições. Aparecem quando a sociedade pede, sobem de nível e pedem gente fixa (staff por
+      // nível), que sai do trabalho comum para servir ali. Só com fartura: com fome, todos voltam à roça
+      escola: { name: 'Roda de ensino', a: 'a', key: '', w: 3, h: 3, cost: { madeira: 20, fibra: 6 }, work: 600, inst: { k: 'escola', staff: 1 },
+        desc: 'Um professor junta as crianças à sombra: elas aprendem de dia o que os grandes sabem, e as técnicas passam sem precisar ver.',
+        up: [
+          { name: 'Escola', cost: { tabuas: 24, pedra: 12 }, work: 900, inst: { k: 'escola', staff: 2 }, desc: 'Uma casa com bancos e lousa: as crianças aprendem o dobro, e o adulto que estuda se especializa (aprende 15% mais depressa).' },
+          { name: 'Faculdade', cost: { pedra: 36, tabuas: 24 }, work: 1200, inst: { k: 'escola', staff: 3 }, desc: 'Faculdade e curso técnico: o adulto aprende 35% mais depressa, e o mestre de um ofício forma outros sem sair da bancada.' },
+        ] },
+      biblioteca: { name: 'Estante', a: 'a', key: '', w: 3, h: 3, cost: { madeira: 16, tabuas: 6 }, work: 540, inst: { k: 'biblioteca', staff: 1 },
+        desc: 'O que foi escrito não se perde: o jeito de uma técnica fica guardado, mesmo quando morre o último que sabia.',
+        up: [
+          { name: 'Biblioteca', cost: { tabuas: 22, pedra: 12 }, work: 900, inst: { k: 'biblioteca', staff: 1 }, desc: 'Quem trabalha numa técnica escrita aprende pelo livro, como se tivesse um mestre por perto.' },
+          { name: 'Arquivo', cost: { pedra: 30, tabuas: 18 }, work: 1080, inst: { k: 'biblioteca', staff: 2 }, desc: 'Tudo guardado e copiado: todo o povo aprende 15% mais depressa.' },
+        ] },
+      hospital: { name: 'Curandeiro', a: 'o', key: '', w: 3, h: 3, cost: { madeira: 16, fibra: 10 }, work: 600, inst: { k: 'hospital', staff: 1 },
+        desc: 'A casa das ervas: quem adoece se cura mais depressa e morre menos, e o ferido sara melhor. Sem milagre.',
+        up: [
+          { name: 'Enfermaria', cost: { tabuas: 20, fibra: 10 }, work: 900, inst: { k: 'hospital', staff: 2 }, desc: 'Camas e mãos treinadas: a doença pega menos, e o parto difícil tem quem ajude.' },
+          { name: 'Hospital', cost: { pedra: 32, tabuas: 20 }, work: 1200, inst: { k: 'hospital', staff: 3 }, desc: 'Quase ninguém morre de doença, e a peste mal se espalha.' },
+        ] },
+      guarda: { name: 'Vigia', a: 'o', key: '', w: 3, h: 3, cost: { madeira: 14, pedra: 6 }, work: 480, inst: { k: 'guarda', staff: 1 },
+        desc: 'Alguém de olho na aldeia: o malfeito diminui, e o que acontece perto da guarda tem testemunha.',
+        up: [
+          { name: 'Guarda', cost: { tabuas: 16, pedra: 12 }, work: 840, inst: { k: 'guarda', staff: 2 }, desc: 'Dois de vigia e uma cela: o malfeito cai pela metade.' },
+          { name: 'Delegacia', cost: { pedra: 28, tabuas: 16 }, work: 1080, inst: { k: 'guarda', staff: 3 }, desc: 'Ronda de dia e de noite: o malfeito cai a menos da metade, e quase nada passa sem ser visto.' },
+        ] },
+      brigada: { name: 'Fila de baldes', a: 'a', key: '', w: 3, h: 3, cost: { madeira: 12, argila: 6 }, work: 420, inst: { k: 'brigada', staff: 1 },
+        desc: 'Baldes prontos e alguém que puxa a fila: o fogo é apagado mais vezes e mais cedo.',
+        up: [
+          { name: 'Brigada do fogo', cost: { tabuas: 14, pedra: 8 }, work: 780, inst: { k: 'brigada', staff: 2 }, desc: 'Gente treinada: o fogo quase sempre é apagado antes de levar a obra.' },
+          { name: 'Quartel', cost: { pedra: 26, tabuas: 16 }, work: 1020, inst: { k: 'brigada', staff: 3 }, desc: 'Sino e caixa d’água: o fogo é apagado na hora, mesmo com pouca água no estoque.' },
+        ] },
+      mercado: { name: 'Banca', a: 'a', key: '', w: 3, h: 3, cost: { madeira: 12, tabuas: 4 }, work: 420, inst: { k: 'mercado', staff: 1 },
+        desc: 'Uma banca de troca com a vila de fora: uma vez por semana, o que sobra aqui vira o que falta, sem esperar o mascate.',
+        up: [
+          { name: 'Feira', cost: { tabuas: 18, fibra: 6 }, work: 720, inst: { k: 'mercado', staff: 1 }, desc: 'Feira a cada três dias, com mais coisa na troca.' },
+          { name: 'Mercado', cost: { pedra: 24, tabuas: 18 }, work: 960, inst: { k: 'mercado', staff: 2 }, desc: 'Troca todo dia, e a vila de fora fica mais amiga.' },
+        ] },
     },
     // nível 3 da barraca: a casa que o lugar pede (env: o que precisa ter em volta)
     HOUSES: {
@@ -219,6 +267,16 @@
 
     // ---- IA ----
     VONTADE_W: [0, 0.5, 1, 1.6],
+    // Etapa 16: profissões (só com PROF_FARTURA dias de comida; abaixo de PROF_SOLTA, voltam ao trabalho comum), a peste
+    // (por ano, numa aldeia de PESTE_GENTE ou mais; dura PESTE_D dias; tira PESTE_H de saúde por hora, sem a saúde voltar
+    // enquanto dura; pega com PESTE_PEGA)
+    // e o fogo por acaso (no verão seco, por dia, numa aldeia com FOGO_ACASO_CASAS casas de palha ou mais)
+    PROF_FARTURA: 3, PROF_SOLTA: 1.5, GRANDE_FARTURA: 5,   // a grande obra só anda com GRANDE_FARTURA dias de comida guardada
+    PROF_MIN: 60, SERVIR_MIN: 120,
+    PESTE_ANO: 0.35, PESTE_GENTE: 15, PESTE_D: [5, 9], PESTE_H: 0.4, PESTE_PEGA: 0.16, PESTE_RUA: 0.04,
+    FOGO_ACASO: 0.025, FOGO_ACASO_CASAS: 6,
+    ESCOLA_XP: [0, 1, 1.15, 1.35], ARQUIVO_XP: 1.15, GUARDA_CRIME: [1, 0.75, 0.5, 0.4], BRIGADA_APAGA: [0, 0.3, 0.55, 0.8], HOSP_CURA: [1, 0.45, 0.25, 0.1],
+    MERCADO_D: [0, 7, 3, 1], MERCADO_N: [0, 10, 16, 24],
     WORK_BASE: 32, WORK_CAP: 75, CRITICAL: 15, CRITICAL_BONUS: 70, EVENING_BONUS: 18,
     DEFAULT_VONTADES: { frutas: 2, agua: 2, madeira: 2, pedra: 1, pesca: 2, caca: 2, argila: 1, construir: 2, oficio: 2, conservar: 2, fogo: 3, roca: 2, criacao: 2, mina: 2 },
     REEVAL_MIN: 20,

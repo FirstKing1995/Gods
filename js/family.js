@@ -88,6 +88,7 @@
     if ((st === 'jovem' || st === 'crianca') && elders(S).some((q) => q !== p && Math.hypot(q.x - p.x, q.y - p.y) < 6)) f *= 1.25;
     if (G.Deus && G.Deus.saber(S, 'escrita')) f *= C.ESCRITA_XP;   // a escrita (Etapa 11): todos aprendem mais rápido
     if (S.povos && S.povos.mixed && G.Povos) f *= G.Povos.xp(S, p);   // Etapa 12: o versátil aprende com os outros povos
+    if (G.Cidade && S.cidade) f *= G.Cidade.xp(S, p);   // Etapa 16: a escola e o arquivo
     return f;
   };
   // 0.14: quem amamenta, calculado uma vez por passo (antes, cada pergunta varria o povo inteiro: com 300, era 90 mil

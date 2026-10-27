@@ -314,6 +314,7 @@
   // (não gasta o da simulação): numa aldeia de gente boa, nada muda
   function tentar(S) {
     if (!podeCrime(S)) return;
+    if (G.Cidade && S.cidade) { const cm = G.Cidade.crimeMult(S); if (cm < 1 && S.rng.next() > cm) return; }   // Etapa 16: a guarda segura o malfeito (sem guarda, não gasta o sorteio)
     const s = S.soc, h = hourOf(S), hi = Math.floor(S.t / 60);
     if (h < 6) return;
     const work = h >= 8 && h < 17, st = S.stock;
@@ -375,6 +376,7 @@
       if (Math.hypot(q.x - x, q.y - y) <= R) out.push(q.id);
     }
     if (vic && vic.alive && !vic.sleeping && out.indexOf(vic.id) < 0) out.push(vic.id);
+    if (G.Cidade && S.cidade) G.Cidade.guardas(S, x, y, out, p);   // Etapa 16: quem está de vigia vê
     return out;
   }
   // a testemunha conta o que viu? Par e parente próximo de quem fez calam (a não ser que a vítima também seja deles);
@@ -564,10 +566,11 @@
     for (const b of S.buildings.slice()) {
       if (!b.fogo) continue;
       if (S.precip === 'chuva' || (S.god && S.god.rainUntil > S.t)) { apagou(S, b, 'A chuva apagou o fogo'); continue; }
-      if (S.t - b.fogo < C.FOGO_MIN) continue;
+      if (S.t - b.fogo < C.FOGO_MIN * (G.Cidade && S.cidade ? G.Cidade.fogoMin(S) : 1)) continue;
       let n = 0;
       for (const q of S.people) if (here(q) && !q.sleeping && age(S, q) >= 12 && Math.hypot(q.x - b.x, q.y - b.y) <= 14) n++;
-      const ch = Math.min(0.9, 0.15 + 0.15 * n) * (S.stock.agua >= C.FOGO_AGUA ? 1 : 0.35);
+      const bri = G.Cidade && S.cidade ? G.Cidade.apaga(S) : 0;   // Etapa 16: a brigada do fogo
+      const ch = Math.min(0.97, 0.15 + 0.15 * n + bri) * (S.stock.agua >= C.FOGO_AGUA || (bri && G.Cidade.semAgua(S)) ? 1 : 0.35);
       if (S.rng.next() < ch) { S.stock.agua = Math.max(0, S.stock.agua - C.FOGO_AGUA); apagou(S, b, 'O povo apagou o fogo a tempo'); }
       else queimou(S, b);
     }
@@ -1186,6 +1189,7 @@
       if (b) out.push({ type: 'cerca', why: 'cerca', perto: b });
     }
     if (s.semPedra >= 2 && !tem('mina') && C.BUILD.mina && G.Tech.buildOpen(S, 'mina')) out.push({ type: 'mina', why: 'mina' });
+    if (G.Cidade && S.cidade) for (const f of G.Cidade.faltas(S)) out.push(f);   // Etapa 16: a instituição que a sociedade pede
     return out;
   }
   So.faltas = faltas;
@@ -1269,6 +1273,7 @@
     // 0.16: o armazém não fica mais preso ao centro: o das casas longe vai para o meio delas
     if (f.type === 'armazem') return f.perto ? lugar(S, 'armazem', f.perto.x + 1, f.perto.y + 1, 2, 9) : lugar(S, 'armazem', cx, cy, 2, 9);
     if (f.type === 'mina') return lugar(S, 'mina', cx, cy, 3, 40);
+    if (G.Cidade && G.Cidade.isCidade(f.type)) return lugar(S, f.type, cx, cy, 3, 16) || lugar(S, f.type, cx, cy, 4, 26);   // Etapa 16
     // a casa nova perto das outras
     const casas = S.buildings.filter((b) => Sm.def(b).cap);
     const mx = casas.length ? casas.reduce((a, b) => a + b.x, 0) / casas.length : cx, my = casas.length ? casas.reduce((a, b) => a + b.y, 0) / casas.length : cy;
@@ -1283,6 +1288,7 @@
     return true;
   }
   const NOME_OBRA = { barraca: 'uma barraca', fogueira: 'uma fogueira', armazem: 'um armazém', cerca: 'uma cerca em volta da roça', mina: 'uma mina' };
+  So.NOME_OBRA = NOME_OBRA;
   function marcar(S, q, L) {
     const Sm = Sim(), K = G.Campo;
     let ok = false;
@@ -2074,7 +2080,7 @@
     return 'Pensando no que fazer';
   };
   // quem cumpre pena trabalha mais (e não vai à festa); quem adoeceu de castigo, menos
-  So.workMult = (S, p) => (p.pena ? C.PENA_WORK : 1) * (p.doente > S.t ? 0.6 : 1);
+  So.workMult = (S, p) => (p.pena ? C.PENA_WORK : 1) * (p.doente > S.t ? 0.6 : 1) * (p.sick ? 0.5 : 1);   // Etapa 16: com febre, rende metade
   So.semLazer = (S, p) => !!p.pena;
 
   // ---------- o que espera a resposta do jogador ----------

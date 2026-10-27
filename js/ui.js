@@ -163,7 +163,10 @@
     });
     // construir (as das descobertas aparecem com elas; o armazém, depois do primeiro inverno) e a ferramenta de caminho
     const builds = [['fogueira', 'fogo'], ['barraca', 'barraca'], ['armazem', 'armazem'], ['moquem', 'moquem'], ['jirau', 'jirau'], ['forno', 'forno'],
-      ['marcenaria', 'marcenaria'], ['tecelagem', 'tecelagem'], ['roca', 'roca'], ['curral', 'curral'], ['mina', 'mina'], ['ferraria', 'ferraria'], ['estatua', 'estatua'], ['cemiterio', 'cemiterio']];
+      ['marcenaria', 'marcenaria'], ['tecelagem', 'tecelagem'], ['roca', 'roca'], ['curral', 'curral'], ['mina', 'mina'], ['ferraria', 'ferraria'], ['estatua', 'estatua'], ['cemiterio', 'cemiterio'],
+      // Etapa 16: as instituições e as grandes obras (aparecem quando a sociedade pede)
+      ['guarda', 'guarda'], ['brigada', 'brigada'], ['hospital', 'hospital'], ['escola', 'escola'], ['biblioteca', 'biblioteca'], ['mercado', 'mercado'],
+      ['torre', 'torre'], ['templo', 'templo'], ['muralha', 'muralha'], ['aqueduto', 'aqueduto']];
     const SHORT = { barraca: 'Barraca', forno: 'Forno' };   // nome curto no botão (o painel fica em duas fileiras)
     $('#builds').innerHTML = builds.map(([t, icn]) => {
       const d = C.BUILD[t];
@@ -1005,6 +1008,19 @@
         'Ferramenta de ferro: ' + C.FERRO_COST.minerio + ' de minério e ' + C.FERRO_COST.carvao + ' de carvão, em ' + Math.round(C.FERRO_MIN / d.shop.speed) + ' min. No estoque: minério ' + S.stock.minerio + ', carvão ' + S.stock.carvao + ', ferramentas de ferro ' + S.stock.ferro + '.' +
         (d.shop.joias ? ' Joia: 1 de prata ou de ouro, em ' + Math.round(C.JOIA_MIN / d.shop.speed) + ' min.' : '');
     }
+    if (G.Cidade && G.Cidade.isCidade(b.type)) {   // Etapa 16: quem serve ali, e o que a grande obra faz
+      const Ci = G.Cidade, inf = Ci.info(S, b);
+      if (!b.built && C.BUILD[b.type].grande) { const j = Sim.jobOf(b); return j ? 'Material entregue: ' + Math.round(Ci.frac(j) * 100) + '% · a obra vai em ' + Math.round((b.progress || 0) * 100) + '%. ' + (Ci.parada(S, b) ? 'Parada: com menos de ' + C.GRANDE_FARTURA + ' dias de comida guardada, o povo cuida de comer primeiro.' : 'O povo ergue até onde o material deixa; as outras obras passam na frente.') : ''; }
+      if (inf) {
+        const nome = inf.cargo[0], nomes = nome === 'guarda' || nome === 'feirante' ? nome + 's' : nome + 'es';
+        return (inf.staff.length ? 'No posto: ' + listPT(inf.staff) + ' (' + inf.staff.length + ' de ' + inf.quer + ')' + (inf.ativa ? ' · em serviço.' : ' · ainda não serviu hoje.')
+          : 'Sem ' + nomes + ': só com fartura (' + C.PROF_FARTURA + ' dias de comida ou mais) alguém sai do trabalho comum para servir aqui.') + ' ' + d.desc;
+      }
+      if (b.type === 'templo') return 'Quem tem fé reza aqui de manhã e ganha o dobro de fé.';
+      if (b.type === 'muralha') return 'Dentro do anel de ' + C.BUILD.muralha.wall.r + ' passos em volta do centro, lobo e onça não pegam ninguém, e a comida guardada fica.';
+      if (b.type === 'torre') return 'A névoa fica aberta num raio de ' + C.BUILD.torre.watch.r + ' passos. Com a guarda, quem vigia vê também de noite e mais longe.';
+      if (b.type === 'aqueduto') return 'Água no estoque: ' + S.stock.agua + ' de ' + T.waterCap(S) + '. Ninguém precisa mais ir buscar.';
+    }
     if (d.shop) {
       const who = S.people.filter((p) => p.alive && p.act && p.act.type === 'oficio' && p.act.shop === b.id).map((p) => p.name);
       const make = d.shop.k === 'tabuas' ? 'Tábuas: 2 de madeira dão 1, em ' + Math.round(C.TABUA_MIN / d.shop.speed) + ' min. No estoque: ' + S.stock.tabuas + '.' :
@@ -1462,6 +1478,9 @@
     if (info.pena) bits.push('Cumpre pena: ' + (info.pena.dias === 1 ? 'falta 1 dia' : 'faltam ' + info.pena.dias + ' dias') + ' de trabalho para todos.');
     if (info.exilio) bits.push(p.exilio.t > S.t ? 'Vai embora da aldeia ao amanhecer.' : 'Está indo embora da aldeia.');
     if (info.doente) bits.push('Adoeceu por castigo: uns dias de fraqueza.');
+    // Etapa 16: o posto e a febre
+    if (G.Cidade && p.cargo) { const cg = G.Cidade.cargoNome(S, p); if (cg) bits.push('É ' + cg + ': sai do trabalho comum para servir no posto, das 8 às 17.'); }
+    if (p.sick) bits.push('Está com febre: rende metade e a saúde não volta até passar.' + (G.Cidade && G.Cidade.nivel(S, 'hospital') ? ' A casa de cura segura o pior.' : ''));
     if (info.desc >= 30) bits.push((info.desc >= C.DISS_DESC ? 'Pensa em ir embora' : 'Não anda contente') + (DESC1[info.descPq] ? ': ' + DESC1[info.descPq].replace('Deus', G.Deus ? G.Deus.call(S) : 'Deus') : '') + '.');
     // o que a vida fez com a índole (no celular não há a dica do rótulo): "A mão piorou com a fome."
     const EIXO_ART = { g: 'A mão', m: 'O gênio', f: 'A palavra' };

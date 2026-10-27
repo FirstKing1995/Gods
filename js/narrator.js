@@ -553,7 +553,7 @@
     return false;
   };
   // a salvo: na barraca, no colo, perto do fogo aceso ou dentro do Calor de Deus
-  N.safeSpot = function (S, p) { return !!(p.inTent || p.carriedBy || repelAt(S, p.x, p.y)); };
+  N.safeSpot = function (S, p) { return !!(p.inTent || p.carriedBy || repelAt(S, p.x, p.y) || (G.Cidade && G.Cidade.dentro(S, p.x, p.y))); };   // Etapa 16: a muralha
   N.wolvesOut = (S) => !!(S.narr && S.narr.ents.some((e) => e.k === 'lobo' && e.state !== 'embora'));
   N.wolvesNear = (S, x, y, r) => !!(S.narr && S.narr.ents.some((e) => e.k === 'lobo' && e.state !== 'embora' && Math.hypot(e.x - x, e.y - y) < r));
   // Etapa 9: feras por perto (lobos, ou a onça fora da toca)
@@ -593,6 +593,7 @@
   function stockOpen(S) {
     if (!(S.ctx && S.ctx.food > 0)) return false;
     const c = camp(S);
+    if (G.Cidade && G.Cidade.dentro(S, c.x, c.y)) return false;   // Etapa 16: atrás da muralha, a comida fica
     return !repelAt(S, c.x, c.y);
   }
   function spawnWolves(S, pack) {

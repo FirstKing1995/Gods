@@ -139,6 +139,7 @@
   const TEC_NOME = { machado: 'o machado', rede: 'a rede de pesca', anzol: 'o anzol', arco: 'o arco', cestos: 'os cestos' };
   const DE_TEC = { machado: 'do machado', rede: 'da rede de pesca', anzol: 'do anzol', arco: 'do arco', cestos: 'dos cestos' };
   Ge.TEC_NOME = TEC_NOME;
+  Ge.DE_TEC = DE_TEC;
   Ge.dom = (S, p, id) => (p && p.sabe && p.sabe[id]) || 0;
   // o ganho de uma técnica vale pela metade sem domínio e inteiro com ele: base + (cheio - base) × (½ + ½ domínio)
   Ge.ganho = (S, p, id, base, cheio) => base + (cheio - base) * (0.5 + 0.5 * Ge.dom(S, p, id));
@@ -172,6 +173,8 @@
     for (const id of Ge.TECNICAS) {
       if ((dead.sabe[id] || 0) < C.DOM_MESTRE) continue;
       if (S.people.some((q) => q.alive && q !== dead && (q.sabe && q.sabe[id] || 0) >= C.DOM_MESTRE)) continue;
+      // Etapa 16: o que está escrito na biblioteca não se perde
+      if (G.Cidade && G.Cidade.escrito(S, id)) { Sim().chron(S, 'Com ' + dead.name + ' foi-se quem mais sabia o jeito ' + DE_TEC[id] + ', mas ele está escrito. Quem ler, aprende.'); continue; }
       S.stats.perdeuTec++;
       Sim().chron(S, 'Com ' + dead.name + ' foi-se o jeito ' + DE_TEC[id] + ': ninguém mais sabe tão bem. Vão ter de reaprender.');
     }
