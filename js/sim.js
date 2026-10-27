@@ -539,7 +539,7 @@
   };
   Sim.canPlace = function (S, type, x, y) {
     const def = C.BUILD[type], w = S.world;
-    if (def.near && Math.hypot(x + def.w / 2 - S.camp.x - 1, y + def.h / 2 - S.camp.y - 1) > def.near + 1) return 'Longe do estoque: tem que ficar a até ' + def.near + ' passos';
+    // 0.16: nenhuma obra fica mais presa à distância do centro (o armazém virou uma boca do estoque onde estiver)
     if (def.env && G.Obras && !G.Obras.envOk(S, { x, y, w: def.w, h: def.h }, def.env)) return 'Pede ' + C.ENV[def.env].name;   // Etapa 12: a mina
     for (let dy = 0; dy < def.h; dy++) for (let dx = 0; dx < def.w; dx++) {
       const tx = x + dx, ty = y + dy;
@@ -554,6 +554,37 @@
       if (o && o.k !== 'stump' && o.k !== 'bush') return o.k === 'tree' ? 'Tem uma árvore no caminho' : o.k === 'rock' ? 'Tem uma pedra no caminho' : 'Lugar ocupado';
     }
     return '';
+  };
+  // 0.16: o centro (o lugar do estoque, 2 × 2) pode mudar de lugar. Pede chão conhecido, seco e livre: sem obra,
+  // sem cerca, sem árvore nem pedra (toco e arbusto saem); o caminho pode passar por baixo
+  Sim.campWhy = function (S, x, y) {
+    const w = S.world;
+    if (x === S.camp.x && y === S.camp.y) return 'O centro já é aqui';
+    for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) {
+      const tx = x + dx, ty = y + dy;
+      if (tx < 1 || ty < 1 || tx >= w.W - 1 || ty >= w.H - 1) return 'Fora do mapa';
+      const i = ty * w.W + tx;
+      if (S.seen && !S.seen[i]) return 'A névoa cobre esse lugar';
+      if (G.IS_WATER[w.tile[i]]) return 'O estoque não fica na água';
+      if (w.bgrid[i] >= 0) return 'Já tem uma obra aqui';
+      if (w.fence && (w.fence[i] || (w.fenceJob && w.fenceJob[i]))) return 'Tem cerca aqui';
+      const o = G.W.objAt(w, i);
+      if (o && o.k !== 'stump' && o.k !== 'bush') return o.k === 'tree' ? 'Tem uma árvore no caminho' : o.k === 'rock' ? 'Tem uma pedra no caminho' : 'Lugar ocupado';
+    }
+    return '';
+  };
+  // o povo leva o estoque para o centro novo (by: quem decidiu, para a Crônica)
+  Sim.moveCamp = function (S, x, y, by) {
+    if (Sim.campWhy(S, x, y)) return false;
+    const old = S.camp, dist = Math.round(Math.hypot(x - old.x, y - old.y));
+    S.camp = { x, y };
+    foundCamp(S);
+    S.stats.centros = (S.stats.centros || 0) + 1;
+    S.stats.centroT = S.t;
+    const nome = G.Obras && G.Obras.povoacao ? G.Obras.povoacao(S).nome : 'a aldeia';
+    Sim.chron(S, (by ? by + ' decidiu' : 'Você decidiu') + ' mudar o centro de ' + nome + ' para ' + dist + ' passos dali. O povo levou o estoque nas costas, viagem por viagem.');
+    S.events.push({ k: 'camp' });
+    return true;
   };
   Sim.placeBlueprint = function (S, type, x, y) {
     if (Sim.canPlace(S, type, x, y)) return null;
@@ -791,7 +822,9 @@
     // com frio, ou com lobos rondando (o fogo espanta), a fogueira não pode apagar
     ctx.fireNeedsFuel = !!(fire && fire.fuel <= C.FIRE_REFUEL_AT && st.madeira > 0 && (cold || (G.Narr && G.Narr.wantFire(S))));
     // obra da vez: a primeira que dá para tocar (material entregue ou no estoque); senão, a primeira da fila
-    let job = null, needs = null, doable = false;
+    // 0.16: com gente dormindo ao relento, a casa que dá para tocar passa na frente das outras obras
+    let job = null, needs = null, doable = false, jobCasa = false;
+    const semCasa = !!(S.soc && S.soc.semCama > 0);
     const short = {};
     for (const k of C.MATERIALS) short[k] = 0;
     for (const b of S.buildings) {
@@ -800,8 +833,8 @@
       const m = Sim.missing(j);
       let sum = 0, can = false;
       for (const k of C.MATERIALS) { sum += m[k]; short[k] += m[k]; if (m[k] > 0 && st[k] > 0) can = true; }
-      const ok = sum === 0 || can;
-      if (!job || (ok && !doable)) { job = j; needs = m; doable = ok; }
+      const ok = sum === 0 || can, casa = semCasa && b.type === 'barraca';
+      if (!job || (ok && !doable) || (ok && casa && !jobCasa)) { job = j; needs = m; doable = ok; jobCasa = casa && ok; }
     }
     if (G.Campo) short.madeira += G.Campo.fenceShort(S);   // as cercas marcadas pedem vara (Etapa 10)
     for (const k of C.MATERIALS) short[k] = Math.max(0, short[k] - (st[k] || 0));
@@ -1190,6 +1223,8 @@
       S.events.push({ k: 'over' });
     }
   }
+
+  Sim.die = die;   // 0.16: a velhice com o jogo fechado
 
   // ---------- névoa: Deus vê e age só onde o povo já esteve ----------
   function reveal(S, x, y, r) {

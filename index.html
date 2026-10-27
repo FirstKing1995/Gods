@@ -22,11 +22,13 @@
   <div class="title-card">
     <h1 class="wordmark">Gods</h1>
     <p class="pitch">Um casal. Um lugar. Todas as eras.</p>
+    <p class="title-lede">Você escolhe onde eles chegam. O resto, eles aprendem: o fogo, a casa, o luto, a fé em você.</p>
     <div class="title-actions">
       <p id="acct-line" class="small acct-line" hidden></p>
       <button id="btn-continue" class="btn btn-gold" hidden>Continuar</button>
       <p id="continue-info" class="small muted" hidden></p>
       <button id="btn-new" class="btn">Novo mundo</button>
+      <button id="btn-mundos" class="btn btn-small" hidden>Seus mundos</button>
       <div id="acct-actions" class="acct-actions" hidden>
         <button id="btn-login" class="btn btn-small">Entrar</button>
         <button id="btn-signup" class="btn btn-small">Criar conta</button>
@@ -40,6 +42,19 @@
   </div>
 </section>
 
+<!-- 0.16: os mundos guardados neste aparelho -->
+<div id="modal-mundos" class="modal" hidden>
+  <div class="panel modal-card mundos-card">
+    <h2>Seus mundos</h2>
+    <p class="small muted">Cada mundo segue guardado neste aparelho. Começar outro não apaga nenhum.</p>
+    <ul id="mundos-list" class="mundos-list"></ul>
+    <div class="modal-actions">
+      <button type="button" id="btn-mundos-close" class="btn">Fechar</button>
+      <button type="button" id="btn-mundos-new" class="btn btn-gold">Novo mundo</button>
+    </div>
+  </div>
+</div>
+
 <!-- escolha do local -->
 <section id="scr-site" class="screen" hidden>
   <header class="site-bar panel">
@@ -48,6 +63,7 @@
       <p class="small muted">Toque no mapa. Água perto, árvores, pedras e pitangueiras ajudam no primeiro inverno.</p>
     </div>
     <div class="site-bar-actions">
+      <div id="size-opts" class="seg-group" role="group" aria-label="Tamanho do mundo"></div>
       <span id="seed-label" class="small muted"></span>
       <button id="btn-reroll" class="btn btn-small">Outro mundo</button>
     </div>
@@ -317,6 +333,11 @@
     </aside>
     <aside id="p-povo" class="panel sheet" data-sheet="povo">
       <div class="povo-head"><h2 id="povo-title">Seu povo</h2><div class="povo-tools"><button id="btn-tree" class="btn btn-small" title="Árvore da família (T)"><img class="ico" alt=""> Árvore</button><button id="btn-disc" class="btn btn-small" title="Descobertas (I)"><img class="ico" alt=""> Descobertas</button></div></div>
+      <div class="povo-place" id="povo-place">
+        <p class="small"><b id="vila-label"></b> <span id="vila-next" class="muted"></span></p>
+        <form id="vila-form" class="vila-form" hidden><input id="vila-nome" maxlength="22" autocomplete="off" spellcheck="false" aria-label="Nome do lugar"><button class="btn btn-small btn-gold" type="submit">Salvar</button><button class="btn btn-small" type="button" id="vila-cancel">Cancelar</button></form>
+        <div class="povo-tools"><button id="btn-vila-nome" class="btn btn-small" type="button">Dar nome</button><button id="btn-centro" class="btn btn-small" type="button" title="Escolha onde fica o estoque do centro">Mudar o centro</button></div>
+      </div>
       <div class="povo-filter">
         <input id="povo-search" type="search" maxlength="14" autocomplete="off" spellcheck="false" placeholder="Buscar pelo nome" aria-label="Buscar pelo nome">
         <select id="povo-sort" class="select" aria-label="Ordem da lista" title="Ordem da lista">

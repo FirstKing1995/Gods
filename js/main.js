@@ -4,7 +4,9 @@
   const C = G.CFG, R = G.R, UI = G.UI, Sim = G.Sim, Save = G.Save, A = G.Art, W = G.W, Net = G.Net, God = G.God;
   const $ = (s) => document.querySelector(s);
   const TS = C.TILE;
-  const ZOOMS = [1, 2, 3, 4, 5, 6];
+  const ZOOMS = [0.5, 1, 2, 3, 4, 5, 6];   // 0.16: 0,5 para ver de longe o mapa maior
+  // 0.16: o tamanho e o nome do que se posiciona (as obras, e o centro, que não é obra: é o lugar do estoque)
+  const bdef = (t) => C.BUILD[t] || (t === 'centro' ? { name: 'Novo centro', w: 2, h: 2 } : null);
 
   let mode = 'title';
   let S = null, speed = 1, acc = 0, lastT = 0, lastSave = 0, lastCloud = 0, cloudBusy = false;
@@ -30,11 +32,14 @@
 
   // ---------- conta ----------
   const session = () => (Net.enabled() ? Net.session() : null);
+  // 0.16: o mundo mais recente desta conta (ou sem conta) que ainda está de pé: { id, d }
   function localSaveFor(email) {
-    const d = Save.read();
-    if (!d || d.game !== 'genesis') return null;
-    if ((d.conta || '') !== (email || '')) return null;
-    return d;
+    for (const m of Save.list()) {
+      if (m.over || (m.conta || '') !== (email || '')) continue;
+      const d = Save.read(m.id);
+      if (d && d.game === 'genesis' && !d.over) return { id: m.id, d };
+    }
+    return null;
   }
   async function login(tab, f) {
     let res;
@@ -81,17 +86,22 @@
     $('#btn-ranking').hidden = !net;
     $('#acct-line').hidden = !s;
     if (s) $('#acct-line').textContent = 'Conectado como ' + s.nome;
-    const d = localSaveFor(s ? s.email : '');
+    const loc = localSaveFor(s ? s.email : ''), d = loc && loc.d;
     const cloud = s && s.mundo && !s.mundo.fim ? s.mundo : null;
     const has = (d && !d.over) || !!cloud;
     $('#btn-continue').hidden = !has;
     $('#continue-info').hidden = !has;
+    // 0.16: todos os mundos guardados neste aparelho
+    const nm = Save.list().length;
+    $('#btn-mundos').hidden = nm < 1 || (nm === 1 && has && !cloud);
+    $('#btn-mundos').textContent = 'Seus mundos (' + nm + ')';
     if (has) {
       // a data e quantos são (os nomes ficam no jogo: com uma aldeia grande, a linha não cabia)
       const gente = (n) => (n === 1 ? '1 pessoa' : n + ' pessoas');
       if (d && !d.over) {
         const n = d.people.filter((p) => p.alive).length;
-        $('#continue-info').textContent = Sim.dateText(d.t) + ' · ' + (n ? gente(n) : 'ninguém vivo');
+        const m = Save.list().find((x) => x.id === loc.id);
+        $('#continue-info').textContent = (m && m.casal ? m.casal + ' · ' : '') + Sim.dateText(d.t) + ' · ' + (n ? gente(n) : 'ninguém vivo');
       } else {
         $('#continue-info').textContent = 'Ano ' + cloud.ano + ', ' + String(cloud.estacao).toLowerCase() + ', dia ' + cloud.dia + (cloud.vivos ? ' · ' + gente(cloud.vivos) : '') + ' (na nuvem)';
       }
@@ -99,11 +109,53 @@
     setMode('title');
   }
 
-  async function continueGame() {
+  // 0.16: a lista dos mundos guardados neste aparelho (jogar ou apagar cada um; apagar pede confirmação)
+  function openMundos() {
+    const box = $('#mundos-list'), s = session(), email = s ? s.email : '';
+    const gente = (n) => (n === 1 ? '1 pessoa' : n + ' pessoas');
+    const tam = (n) => { const z = C.MAP_SIZES.find((q) => q.n === n); return z ? z.name.toLowerCase() : n + '×' + n; };
+    box.innerHTML = '';
+    const l = Save.list();
+    if (!l.length) box.innerHTML = '<li class="small muted">Nenhum mundo guardado neste aparelho.</li>';
+    for (const m of l) {
+      const li = document.createElement('li');
+      li.className = 'mundo-row' + (m.over ? ' fim' : '');
+      const quando = m.savedAt ? new Date(m.savedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : '';
+      const info = document.createElement('div');
+      info.className = 'mundo-info';
+      const h = document.createElement('strong'); h.textContent = m.casal || 'Um casal';
+      const p1 = document.createElement('span'); p1.className = 'small';
+      p1.textContent = (m.local ? m.local.charAt(0).toUpperCase() + m.local.slice(1) + ' · ' : '') + 'mundo ' + tam(m.size) + (m.aldeia ? ' · já é aldeia' : '');
+      const p2 = document.createElement('span'); p2.className = 'small muted';
+      p2.textContent = (m.over ? 'O povo acabou' : Sim.dateText(m.t) + ' · ' + gente(m.vivos)) + (quando ? ' · jogado em ' + quando : '') + (m.conta && m.conta !== email ? ' · de outra conta' : '');
+      info.append(h, p1, p2);
+      const acts = document.createElement('div');
+      acts.className = 'mundo-acts';
+      const go = document.createElement('button');
+      go.className = 'btn btn-small btn-gold'; go.type = 'button'; go.textContent = m.over ? 'Ver' : 'Jogar';
+      go.addEventListener('click', () => continueGame(m.id));
+      const del = document.createElement('button');
+      del.className = 'btn btn-small'; del.type = 'button'; del.textContent = 'Apagar';
+      del.addEventListener('click', () => {
+        if (del.dataset.sure !== '1') { del.dataset.sure = '1'; del.textContent = 'Apagar mesmo?'; del.classList.add('danger'); setTimeout(() => { del.dataset.sure = ''; del.textContent = 'Apagar'; del.classList.remove('danger'); }, 3500); return; }
+        Save.remove(m.id);
+        openMundos();
+        showTitle();
+      });
+      acts.append(go, del);
+      li.append(info, acts);
+      box.appendChild(li);
+    }
+    $('#modal-mundos').hidden = false;
+  }
+  // id (0.16): abrir um mundo escolhido na lista; sem id, o mais recente (e o da nuvem, se for mais novo)
+  async function continueGame(id) {
     const s = session();
-    let d = localSaveFor(s ? s.email : '');
+    const loc = typeof id === 'string' && id ? { id, d: Save.read(id) } : localSaveFor(s ? s.email : '');
+    let d = loc ? loc.d : null, slot = loc ? loc.id : '';
     let nowTrusted = Date.now();
-    if (s) {
+    // a nuvem guarda um mundo por conta: só entra quando é o mesmo mundo, ou quando não se escolheu outro
+    if (s && (!id || (d && (d.conta || '') === s.email))) {
       $('#btn-continue').disabled = true; $('#btn-continue').textContent = 'Buscando seu mundo…';
       const res = await Net.call('carregar', { token: s.token });
       $('#btn-continue').disabled = false; $('#btn-continue').textContent = 'Continuar';
@@ -112,7 +164,11 @@
         if (res.dados) {
           let cloudD = null;
           try { cloudD = JSON.parse(res.dados); } catch (e) { cloudD = null; }
-          if (cloudD && (!d || (res.savedAt || 0) > (d.savedAt || 0) + 1000)) { cloudD.savedAt = res.savedAt; d = cloudD; }
+          const mesmo = cloudD && d && cloudD.seed === d.seed;
+          if (cloudD && (!d || ((!id || mesmo) && (res.savedAt || 0) > (d.savedAt || 0) + 1000))) {
+            if (!mesmo) { const m = Save.list().find((x) => x.seed === cloudD.seed && (x.conta || '') === s.email); slot = m ? m.id : ''; }
+            cloudD.savedAt = res.savedAt; d = cloudD;
+          }
         }
       } else if (res.sessao === false) { UI.toast('Sua sessão expirou. Entre de novo.', 'warn'); showTitle(); return; }
       else if (!d) { UI.toast(res.erro || 'Não deu para buscar o mundo.', 'warn'); return; }
@@ -120,6 +176,8 @@
     }
     const st = d && Save.deserialize(d);
     if (!st) { UI.toast('Não achei um mundo salvo.', 'warn'); showTitle(); return; }
+    if (slot) Save.slot = slot; else Save.newSlot();
+    $('#modal-mundos').hidden = true;
     S = st;
     enterGame();
     // o mundo seguiu com o jogo fechado
@@ -223,13 +281,35 @@
   }
 
   // ---------- escolha do local ----------
-  function newSiteWorld() {
-    siteSeed = rng.int(1, 2147483646);
-    siteWorld = W.generate(siteSeed);
+  // 0.16: o tamanho do mundo novo (fica lembrado neste aparelho)
+  let mapSize = C.MAP_NEW;
+  try { const v = +localStorage.getItem('gods.tamanho'); if (C.MAP_SIZES.some((z) => z.n === v)) mapSize = v; } catch (e) { /* sem guardar */ }
+  function sizeButtons() {
+    const box = $('#size-opts');
+    if (!box) return;
+    box.innerHTML = '';
+    for (const z of C.MAP_SIZES) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'seg' + (z.n === mapSize ? ' on' : '');
+      b.textContent = z.name; b.title = z.n + ' × ' + z.n + ' passos';
+      b.setAttribute('aria-pressed', z.n === mapSize ? 'true' : 'false');
+      b.addEventListener('click', () => {
+        if (z.n === mapSize) return;
+        mapSize = z.n;
+        try { localStorage.setItem('gods.tamanho', String(z.n)); } catch (e) { /* sem guardar */ }
+        newSiteWorld(siteSeed);
+      });
+      box.appendChild(b);
+    }
+  }
+  function newSiteWorld(keepSeed) {
+    siteSeed = typeof keepSeed === 'number' && keepSeed ? keepSeed : rng.int(1, 2147483646);
+    siteWorld = W.generate(siteSeed, mapSize);
     siteSel = null;
     R.invalidate();
     R.cam.x = siteWorld.W * TS / 2; R.cam.y = siteWorld.H * TS / 2;
-    R.cam.zoom = Math.max(0.2, R.fitZoom(siteWorld));
+    R.cam.zoom = Math.max(0.08, R.fitZoom(siteWorld));
+    sizeButtons();
     $('#seed-label').textContent = 'Mundo ' + siteSeed;
     UI.siteInfo(siteWorld, null);
     const best = W.bestSite(siteWorld);
@@ -245,6 +325,7 @@
     S = Sim.newGame(siteSeed, { x: siteSel.x, y: siteSel.y }, names, siteWorld);
     if (kind) G.Narr.setKind(S, kind);
     siteWorld = null;
+    Save.newSlot();   // 0.16: o mundo novo vai para uma gaveta nova; os outros continuam guardados
     enterGame();
     R.overlay.beam = { x: S.camp.x + 1, y: S.camp.y + 1, t0: performance.now() };
     save(true);
@@ -268,7 +349,9 @@
     lastSave = performance.now();
     const el = $('#save-status');
     const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    if (el) el.textContent = txt ? 'Salvo neste aparelho às ' + hora + '.' : 'Este navegador não deixou salvar.';
+    if (el) el.textContent = txt ? 'Salvo neste aparelho às ' + hora + '.' : Save.erro === 'cheio' ? 'Acabou o espaço deste navegador. Apague um mundo antigo em Seus mundos, na tela de início.' : 'Este navegador não deixou salvar.';
+    // avisa uma vez quando o espaço acaba (senão o jogo segue sem guardar e ninguém percebe)
+    if (!txt && Save.erro === 'cheio' && !save.avisou) { save.avisou = true; UI.toast('Sem espaço para salvar. Apague um mundo antigo em Seus mundos.', 'warn'); }
     if (s && txt && (forceCloud || performance.now() - lastCloud > C.CLOUD_SAVE_SEC * 1000)) cloudSave(txt);
     return !!txt;
   }
@@ -305,7 +388,7 @@
   //   lv, kind                        o nível e o tipo de casa com que o fantasma é desenhado
   //   x, y                            o tile onde o fantasma começa (já preso)
   function startPlacing(type, opts) {
-    if (mode !== 'game' || !S || !C.BUILD[type]) return;
+    if (mode !== 'game' || !S || !bdef(type)) return;
     if (!opts && placing && !placing.custom && placing.type === type) { cancelPlacing(); return; }   // o mesmo botão de novo: desiste
     cancelCasting(); stopRoad(true); cancelPlacing();
     const o = opts || {};
@@ -340,7 +423,7 @@
     const hint = hintBox('placing'), P = placing;
     hint.innerHTML = `<div class="ph-text"><b class="ph-name"></b><span class="small muted ph-tip">Toque para posicionar, arraste para ajustar.</span><span class="small ph-why" role="status"></span></div>
       <div class="ph-actions"><button class="btn" id="place-cancel" type="button" title="Cancelar (Esc)">Cancelar</button><button class="btn btn-gold" id="place-ok" type="button" title="Confirmar (Enter)" disabled></button></div>`;
-    hint.querySelector('.ph-name').textContent = P.o.label || C.BUILD[P.type].name;
+    hint.querySelector('.ph-name').textContent = P.o.label || bdef(P.type).name;
     $('#place-ok').textContent = P.o.confirm || 'Confirmar';
     $('#place-cancel').onclick = () => cancelPlacing();
     $('#place-ok').onclick = () => confirmPlacing();
@@ -374,14 +457,14 @@
   }
   // o tile do canto de cima da obra, com ela centrada no ponto tocado
   function footprint(type, wx, wy) {
-    const d = C.BUILD[type];
+    const d = bdef(type);
     return { x: Math.floor(wx / TS - (d.w - 1) / 2), y: Math.floor(wy / TS - (d.h - 1) / 2) };
   }
   // põe o fantasma num tile (sem sair do mapa) e confere se o lugar serve
   function setGhost(x, y) {
     const P = placing;
     if (!P || !S) return;
-    const d = C.BUILD[P.type], w = S.world;
+    const d = bdef(P.type), w = S.world;
     P.x = Math.max(0, Math.min(w.W - d.w, x | 0)); P.y = Math.max(0, Math.min(w.H - d.h, y | 0));
     P.why = (P.o.canPlace ? P.o.canPlace(P.x, P.y) : Sim.canPlace(S, P.type, P.x, P.y)) || '';
     P.ok = !P.why;
@@ -392,12 +475,12 @@
   function pinGhost(wx, wy) { if (!placing) return; placing.pinned = true; aimGhost(wx, wy); }
   // o ponto da tela está em cima do fantasma? (com folga: o dedo é maior que o mouse, e o desenho passa do chão da obra)
   function overGhost(sx, sy, touch) {
-    const P = placing, d = C.BUILD[P.type], w = R.toWorld(sx, sy), m = (touch ? 14 : 4) / R.scale();
+    const P = placing, d = bdef(P.type), w = R.toWorld(sx, sy), m = (touch ? 14 : 4) / R.scale();
     return w.x >= P.x * TS - m && w.x <= (P.x + d.w) * TS + m && w.y >= P.y * TS - m - TS * 0.75 && w.y <= (P.y + d.h) * TS + m;
   }
   // o ponto da tela cai num tile da obra?
   function onGhost(sx, sy) {
-    const P = placing, d = C.BUILD[P.type], w = R.toWorld(sx, sy), tx = Math.floor(w.x / TS), ty = Math.floor(w.y / TS);
+    const P = placing, d = bdef(P.type), w = R.toWorld(sx, sy), tx = Math.floor(w.x / TS), ty = Math.floor(w.y / TS);
     return tx >= P.x && tx < P.x + d.w && ty >= P.y && ty < P.y + d.h;
   }
   // setas do teclado: um tile por vez; se o fantasma for sair da vista, a câmera vai atrás
@@ -406,7 +489,7 @@
     P.pinned = true;
     setGhost(P.x + dx, P.y + dy);
     if (follow) return;
-    const d = C.BUILD[P.type], cx = (P.x + d.w / 2) * TS, cy = (P.y + d.h / 2) * TS, s = R.toScreen(cx, cy), r = freeRect();
+    const d = bdef(P.type), cx = (P.x + d.w / 2) * TS, cy = (P.y + d.h / 2) * TS, s = R.toScreen(cx, cy), r = freeRect();
     if (s.x < r.l + 40 || s.x > r.r - 40 || s.y < r.t + 40 || s.y > r.b - 40) camTarget = { x: cx, y: cy };
   }
   // Confirmar: marca a obra (ou faz o que o fluxo pediu) e sai do modo
@@ -742,8 +825,8 @@
       const [a, b] = [...ptrs.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
       const z = pinch.zoom * d / pinch.d;
-      if (mode === 'site') R.cam.zoom = Math.max(0.15, Math.min(4, z));
-      else R.cam.zoom = Math.max(1, Math.min(6, z));
+      if (mode === 'site') R.cam.zoom = Math.max(0.08, Math.min(4, z));
+      else R.cam.zoom = Math.max(0.5, Math.min(6, z));
       if (follow) return;   // seguindo alguém, a pinça só aproxima e afasta
       // os dois dedos também arrastam o mapa
       const s = R.scale();
@@ -794,7 +877,7 @@
   function onWheel(e) {
     e.preventDefault();
     const before = R.toWorld(e.clientX, e.clientY);
-    if (mode === 'site') R.cam.zoom = Math.max(0.15, Math.min(4, R.cam.zoom * (e.deltaY < 0 ? 1.25 : 0.8)));
+    if (mode === 'site') R.cam.zoom = Math.max(0.08, Math.min(4, R.cam.zoom * (e.deltaY < 0 ? 1.25 : 0.8)));
     else {
       const i = ZOOMS.indexOf(snapZoom(R.cam.zoom));
       R.cam.zoom = ZOOMS[Math.max(0, Math.min(ZOOMS.length - 1, i + (e.deltaY < 0 ? 1 : -1)))];
@@ -1086,6 +1169,15 @@
       socFire: showSocFire,
       castigo: showCastigo,
       panels: () => { positionHint(); offAt = 0; },   // abriu ou fechou painel: o mapa à vista mudou
+      // 0.16: escolher o lugar do centro novo (o mesmo jeito de posicionar uma obra)
+      centro: () => {
+        if (!S || mode !== 'game') return;
+        startPlacing('centro', {
+          label: 'Novo centro', confirm: 'Mudar para cá',
+          canPlace: (x, y) => Sim.campWhy(S, x, y),
+          onConfirm: (x, y) => { if (!Sim.moveCamp(S, x, y)) return false; R.invalidate(); save(); return true; },
+        });
+      },
       birth: (pid) => {
         if (!S || S.safe || mode !== 'game') return;
         const baby = S.people.find((q) => q.id === pid);
@@ -1098,7 +1190,7 @@
         UI.birth(baby, () => { setSpeed(before || 1); save(); });
       },
     });
-    window.addEventListener('resize', () => { R.resize(); positionHint(); if (mode === 'site' && siteWorld) R.cam.zoom = Math.max(0.2, R.fitZoom(siteWorld)); });
+    window.addEventListener('resize', () => { R.resize(); positionHint(); if (mode === 'site' && siteWorld) R.cam.zoom = Math.max(0.08, R.fitZoom(siteWorld)); });
     const c = $('#view');
     c.addEventListener('pointerdown', onDown);
     c.addEventListener('pointermove', onMove);
@@ -1125,14 +1217,19 @@
     $('#btn-over-new').addEventListener('click', () => {
       const s = session();
       if (s) Net.call('apagar', { token: s.token }).then(() => { s.mundo = null; Net.setSession(s); });
-      Save.clear(); S = null; setMode('site'); newSiteWorld();
+      // 0.16: o mundo que acabou fica guardado (a lista mostra o fim; dá para apagar lá)
+      S = null; Save.slot = ''; setMode('site'); newSiteWorld();
     });
+    $('#btn-mundos').addEventListener('click', openMundos);
+    $('#btn-mundos-close').addEventListener('click', () => { $('#modal-mundos').hidden = true; });
+    $('#btn-mundos-new').addEventListener('click', () => { $('#modal-mundos').hidden = true; setMode('site'); newSiteWorld(); });
 
     const hot = window.claude && window.claude.hot;
     if (hot && typeof hot.snapshot === 'function') {
-      try { hot.snapshot(() => (S && mode === 'game' ? { save: Save.serialize(S) } : {})); } catch (e) { /* opcional */ }
+      try { hot.snapshot(() => (S && mode === 'game' ? { save: Save.serialize(S), slot: Save.slot } : {})); } catch (e) { /* opcional */ }
     }
     if (data && data.save) {
+      if (data.slot) Save.slot = data.slot;
       const st = Save.deserialize(data.save);
       if (st) { S = st; enterGame(); setTimeout(checkPending, 400); } else showTitle();
     } else showTitle();

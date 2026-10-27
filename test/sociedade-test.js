@@ -1387,11 +1387,12 @@ if (isMainThread) {
     check('"O povo decide": o líder marca sozinho', !!q && S.buildings.filter((b) => !b.built && b.povo).length === 1 && S.soc.pedidos.length === 0 && S.stats.obrasPovo === 1);
     S = mk('decide');
     semCasa(S);
-    S.stock.madeira = 30;
+    S.stock.madeira = 6;
     q = So.planejarObra(S);
-    check('mas só até ' + C.SOC_TETO * 100 + '% de cada material: com 30 de madeira, a barraca (14) não cabe e ele espera', q === null && !S.buildings.some((b) => !b.built) && S.soc.espera.type === 'barraca');
-    S.stock.madeira = 35;
-    check('com 35 de madeira, cabe', !!So.planejarObra(S) && !S.soc.espera);
+    // 0.16: a casa não espera o teto de 40% (antes, ninguém juntava madeira para uma obra que não existia)
+    check('0.16: casa não espera o estoque: com 6 de madeira, a barraca é marcada e o povo vai buscar o resto', !!q && q.type === 'barraca' && S.buildings.some((b) => !b.built && b.povo) && !S.soc.espera);
+    Sim.refresh(S);
+    check('0.16: e a obra marcada pede a madeira que falta', S.ctx.matShort.madeira >= 14 - 6);
     // sem líder, quem olha é o adulto mais velho
     S = mk('decide');
     semCasa(S); S.soc.lider = 0;
@@ -1403,7 +1404,10 @@ if (isMainThread) {
     S = mk('decide');
     semCasa(S);
     for (let k = 0; k < So.obrasMax(S) + 2; k++) { const at = spot(S, 'fogueira', 6 + 2 * k); Sim.placeBlueprint(S, 'fogueira', at.x, at.y); }
-    check('com obras do jogador demais esperando (' + (So.obrasMax(S) + 2) + '), o povo não põe mais uma na fila', So.planejarObra(S) === null);
+    // 0.16: com gente na rua, uma casa fura a fila cheia (antes esperava para sempre); a segunda não
+    const qf = So.planejarObra(S);
+    check('0.16: com obras do jogador demais esperando (' + (So.obrasMax(S) + 2) + '), o povo ainda marca uma casa, e só ela', !!qf && qf.type === 'barraca' && S.buildings.filter((b) => b.povo && !b.built).length === 1);
+    check('0.16: com essa casa já marcada, não põe mais nada na fila', So.planejarObra(S) === null);
     // aldeia grande: várias obras ao mesmo tempo, e a barraca avançada vira a casa grande do lugar
     {
       let SG = village(42, 40);
@@ -1461,7 +1465,7 @@ if (isMainThread) {
     check('comida estragando (e o armazém já liberado) pede armazém', So.faltas(S).some((x) => x.type === 'armazem'));
     q = So.planejarObra(S);
     const arm = S.buildings.find((b) => b.type === 'armazem');
-    check('o armazém fica a até ' + C.BUILD.armazem.near + ' passos do estoque', !!arm && arm.povo === 1 && !Sim.canPlace(S, 'fogueira', arm.x + 5, arm.y) !== undefined && Math.hypot(arm.x + 1 - S.camp.x - 1, arm.y + 1 - S.camp.y - 1) <= C.BUILD.armazem.near + 1);
+    check('0.16: o armazém do povo fica perto do centro (a até 10 passos)', !!arm && arm.povo === 1 && Math.hypot(arm.x + 1 - S.camp.x - 1, arm.y + 1 - S.camp.y - 1) <= 11);
     Sim.complete(S, arm);
     check('um armazém basta', !So.faltas(S).some((x) => x.type === 'armazem'));
     S.stats.winters = 0;

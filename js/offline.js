@@ -66,6 +66,7 @@
       // a prática das descobertas que o povo já vinha treinando (a ideia em si sai nos ganchos do dia, como sempre)
       if (b.prat > 0 && S.tech) { const pr = S.tech.prat; for (const id in pr) if (!S.tech.known[id]) pr[id] += b.prat; }
     }
+    if (G.Soc && S.soc) G.Soc.casaFechado(S);   // 0.16: a casa que falta é marcada também com o jogo fechado
     buildDay(job, b);
     lifeDay(S);
     G.Sim.refresh(S);
