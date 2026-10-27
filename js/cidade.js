@@ -10,7 +10,7 @@
   const Sim = () => G.Sim, Fam = () => G.Family;
   const DAY = () => C.DAY_MIN;
 
-  const GRANDES = ['templo', 'muralha', 'torre', 'aqueduto'];
+  const GRANDES = ['templo', 'muralha', 'torre', 'aqueduto', 'ponte'];   // a ponte de pedra veio com a Etapa 17
   const INST = ['guarda', 'brigada', 'hospital', 'escola', 'biblioteca', 'mercado'];   // a ordem em que o líder olha
   Ci.GRANDES = GRANDES; Ci.INST = INST;
   Ci.isCidade = (t) => GRANDES.indexOf(t) >= 0 || INST.indexOf(t) >= 0;
@@ -42,6 +42,7 @@
     templo: (S) => (vivos(S) >= 20 ? '' : 'pede uma aldeia de 20 pessoas'),
     muralha: (S) => (vivos(S) >= 30 ? '' : 'pede uma vila de 30 pessoas'),
     aqueduto: (S) => (vivos(S) >= 30 ? '' : 'pede uma vila de 30 pessoas'),
+    ponte: (S) => (vivos(S) >= 15 ? '' : 'pede uma aldeia de 15 pessoas'),
     escola: (S) => (!escrita(S) ? 'pede a escrita' : criancas(S) < 12 ? 'pede 12 crianças na aldeia' : ''),
     biblioteca: (S) => (escrita(S) ? '' : 'pede a escrita'),
     hospital: (S) => (vivos(S) >= 40 ? '' : 'pede 40 pessoas'),
@@ -52,7 +53,7 @@
   // '' pode; texto: por que não; null: não é obra desta etapa
   Ci.openWhy = function (S, type) {
     if (!ABRE[type]) return null;
-    if (S.buildings.some((b) => b.type === type)) return 'a aldeia já tem ' + (C.BUILD[type].a === 'o' ? 'o seu ' : 'a sua ') + C.BUILD[type].name.toLowerCase();
+    if (type !== 'ponte' && S.buildings.some((b) => b.type === type)) return 'a aldeia já tem ' + (C.BUILD[type].a === 'o' ? 'o seu ' : 'a sua ') + C.BUILD[type].name.toLowerCase();
     const w = ABRE[type](S);
     // a obra que pede tábua só abre com a marcenaria de pé (senão a grande obra parava no meio, sem explicação)
     if (!w && C.BUILD[type].cost.tabuas && !S.buildings.some((b) => b.type === 'marcenaria' && b.built)) return 'pede tábuas: construa uma marcenaria';
@@ -329,7 +330,7 @@
   }
 
   // ---------- a troca da feira ----------
-  const TROCA = ['madeira', 'pedra', 'argila', 'tabuas', 'fibra', 'frutas', 'peixe', 'carne', 'feijao', 'milho', 'mandioca', 'couro'];
+  const TROCA = ['madeira', 'pedra', 'argila', 'tabuas', 'fibra', 'frutas', 'peixe', 'carne', 'feijao', 'milho', 'mandioca', 'couro', 'sal', 'nobre'];
   function feira(S) {
     const lv = Ci.nivel(S, 'mercado'), v = S.soc && S.soc.vila;
     if (!lv || !v || v.fim || S.ck.day % C.MERCADO_D[lv]) return;
@@ -391,6 +392,7 @@
   // ---------- obra pronta ----------
   Ci.onBuilt = function (S, b) {
     if (!Ci.isCidade(b.type)) return false;
+    if (b.type === 'ponte') { if (G.Regioes) G.Regioes.ponte(S, b); return true; }   // Etapa 17
     const d = C.BUILD[b.type];
     if (d.grande) {
       const dias = b.t0 ? Math.max(1, Math.round((S.t - b.t0) / DAY())) : 0;

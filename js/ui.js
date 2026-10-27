@@ -141,7 +141,8 @@
     UI.hooks = hooks;
     // ícones estáticos
     document.querySelectorAll('#mobnav button').forEach((b) => {
-      const n = { vontades: 'verao', construir: 'construir', deus: 'deus', povo: 'pessoa', cronica: 'cronica' }[b.dataset.open];
+      const n = { vontades: 'verao', construir: 'construir', deus: 'deus', povo: 'pessoa', cronica: 'cronica' }[b.dataset.open] || (b.id === 'btn-mapa' ? 'mapa' : '');
+      if (!n || !b.querySelector('img')) return;
       b.querySelector('img').src = ic(n);
     });
     $('#btn-cronica img').src = ic('cronica');
@@ -166,7 +167,7 @@
       ['marcenaria', 'marcenaria'], ['tecelagem', 'tecelagem'], ['roca', 'roca'], ['curral', 'curral'], ['mina', 'mina'], ['ferraria', 'ferraria'], ['estatua', 'estatua'], ['cemiterio', 'cemiterio'],
       // Etapa 16: as instituições e as grandes obras (aparecem quando a sociedade pede)
       ['guarda', 'guarda'], ['brigada', 'brigada'], ['hospital', 'hospital'], ['escola', 'escola'], ['biblioteca', 'biblioteca'], ['mercado', 'mercado'],
-      ['torre', 'torre'], ['templo', 'templo'], ['muralha', 'muralha'], ['aqueduto', 'aqueduto']];
+      ['torre', 'torre'], ['templo', 'templo'], ['muralha', 'muralha'], ['aqueduto', 'aqueduto'], ['ponte', 'ponte']];
     const SHORT = { barraca: 'Barraca', forno: 'Forno' };   // nome curto no botão (o painel fica em duas fileiras)
     $('#builds').innerHTML = builds.map(([t, icn]) => {
       const d = C.BUILD[t];
@@ -1973,7 +1974,8 @@
   // ---------- escolha do local ----------
   UI.siteInfo = function (w, s) {
     if (!s) { $('#site-title').textContent = 'Nenhum lugar escolhido'; $('#site-stats').innerHTML = ''; $('#site-reason').hidden = true; $('#btn-start').disabled = true; return; }
-    $('#site-title').textContent = s.valid ? G.TNAME[s.tile] + ', ' + G.W.siteLabel(w, s) : 'Aqui não dá';
+    const rg = w.reg ? w.reg[s.y * w.W + s.x] : 0;   // Etapa 17: a região do lugar
+    $('#site-title').textContent = s.valid ? (rg ? G.RNAME[rg] : G.TNAME[s.tile]) + ', ' + G.W.siteLabel(w, s) : 'Aqui não dá';
     const clima = s.cold > 0.35 ? 'Frio (montanha)' : s.cold > 0.15 ? 'Fresco' : 'Ameno';
     $('#site-stats').innerHTML = [
       ['madeira', 'Árvores', s.trees], ['pedra', 'Pedras', s.rocks], ['frutas', 'Pitangueiras', s.bushes],

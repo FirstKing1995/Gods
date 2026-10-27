@@ -95,7 +95,7 @@
       return q;
     });
     return {
-      v: 1, game: 'genesis', seed: S.seed, size: w.W, t: S.t, rng: S.rng.s, camp: S.camp, siteLabel: S.siteLabel,
+      v: 1, game: 'genesis', seed: S.seed, size: w.W, gen: w.gen || 1, t: S.t, rng: S.rng.s, camp: S.camp, siteLabel: S.siteLabel,
       stock: S.stock, vontades: S.vontades, nextPid: S.nextPid, nextBid: S.nextBid,
       chron: S.chron, goals: S.goals, stats: S.stats, over: S.over, arrived: S.arrived,
       people, buildings: S.buildings, objD, graves: extra, holy, god: S.god, seen: packSeen(S.seen), narr: packNarr(S.narr),
@@ -108,13 +108,14 @@
       soc: G.Soc && S.soc ? G.Soc.pack(S) : null,   // Etapa 14: crimes, líder, pedidos, quem foi embora, a vila de fora
       gente: S.gente || null,   // Etapa 15: a média de cada trabalho, as tentativas, quem aprendeu com quem
       cidade: S.cidade || null,   // Etapa 16: o que está escrito, a febre, as primeiras vezes
+      regioes: S.regioes || null,   // Etapa 17: as regiões que o povo já conhece
       povo: S.povo || null,   // 0.16: o nome e o título do lugar
     };
   };
 
   Save.deserialize = function (d) {
     if (!d || d.v !== 1 || d.game !== 'genesis') return null;
-    const w = G.W.generate(d.seed, d.size || C.MAP);
+    const w = G.W.generate(d.seed, d.size || C.MAP, d.gen || 1);   // 0.18: o save de antes refaz o mundo sem regiões, como era
     const K = ['gone', 'tree', 'stump', 'rock', 'bush'];
     // 0.16: só o que mudou desde a geração (no mapa enorme, a lista inteira pesava demais)
     if (d.objD) for (let j = 0; j + 3 < d.objD.length; j += 4) {
@@ -161,6 +162,7 @@
       soc: d.soc || null,
       gente: d.gente || null,
       cidade: d.cidade || null,
+      regioes: d.regioes || null,
       povo: d.povo || null,
     };
     for (const p of S.people) {

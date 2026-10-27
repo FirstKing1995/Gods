@@ -43,6 +43,15 @@
 </section>
 
 <!-- 0.16: os mundos guardados neste aparelho -->
+<div id="modal-mapa" class="modal" hidden>
+  <div class="panel modal-card mapa-card">
+    <h2>O mundo</h2>
+    <p id="mapa-info" class="small muted"></p>
+    <div class="mapa-wrap"><canvas id="mapa-cv"></canvas></div>
+    <ul id="mapa-legenda" class="mapa-legenda"></ul>
+    <div class="modal-actions"><button type="button" id="btn-mapa-close" class="btn">Fechar</button></div>
+  </div>
+</div>
 <div id="modal-mundos" class="modal" hidden>
   <div class="panel modal-card mundos-card">
     <h2>Seus mundos</h2>
@@ -370,6 +379,7 @@
     <button data-open="deus"><img class="ico" alt="">Deus<span class="badge" id="badge-deus" hidden></span></button>
     <button data-open="povo"><img class="ico" alt="">Povo</button>
     <button data-open="cronica"><img class="ico" alt="">Crônica</button>
+    <button id="btn-mapa" title="O mapa do mundo (tecla M)"><img class="ico" alt="">Mapa</button>
   </nav>
 
   <div id="place-hint" class="panel place-hint" hidden></div>
@@ -408,6 +418,7 @@
 <script src="js/sociedade.js"></script>
 <script src="js/gente.js"></script>
 <script src="js/cidade.js"></script>
+<script src="js/regioes.js"></script>
 <script src="js/save.js"></script>
 <script src="js/offline.js"></script>
 <script src="js/net.js"></script>

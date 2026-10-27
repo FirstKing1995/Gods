@@ -1017,6 +1017,17 @@
   // ---------- teclado ----------
   let lastSpeed = 1;
   function setSpeed(i) { i = Math.max(0, Math.min(C.SPEEDS.length - 1, i | 0)); if (i > 0) lastSpeed = i; speed = i; UI.update(0, true); }
+  // Etapa 17: o mapa do mundo, com a legenda das regiões (as que o povo ainda não conhece, apagadas)
+  function abrirMapa() {
+    if (!S) return;
+    const info = G.R.mapaMundo(S, $('#mapa-cv'));
+    const tam = (C.MAP_SIZES.find((m) => m.n === info.W) || { name: '' }).name;
+    $('#mapa-info').textContent = 'Mapa ' + (tam ? tam.toLowerCase() + ' ' : '') + '(' + info.W + ' × ' + info.W + ' passos) · ' + info.visto + '% já visto pelo povo.' + (info.gen < 2 ? ' Este mundo é de antes das regiões.' : '');
+    const leg = $('#mapa-legenda');
+    leg.innerHTML = info.gen < 2 ? '' : G.RNAME.slice(1).map((n, k) => '<li class="' + (info.conhecidas.indexOf(n) >= 0 ? '' : 'nao') + '"><i style="background:' + G.R.REGCOR[k + 1] + '"></i>' + n + '</li>').join('') +
+      '<li><i style="background:#f2da72"></i>o povo</li><li><i style="background:#e2cfa4"></i>obras</li>' + (S.soc && S.soc.vila && !S.soc.vila.fim ? '<li><i style="background:#c8423a"></i>' + S.soc.vila.nome + '</li>' : '');
+    $('#modal-mapa').hidden = false;
+  }
   function onKey(e) {
     // quem digita num campo (ou escolhe numa lista) não aperta atalho; nem quem usa um atalho do navegador (Ctrl+R...)
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
@@ -1036,6 +1047,7 @@
       }
       return;
     }
+    if (k === 'm' && !placing) { const md = $('#modal-mapa'); if (md.hidden) abrirMapa(); else md.hidden = true; return; }   // Etapa 17: o mapa do mundo
     if (k === ' ') { e.preventDefault(); setSpeed(speed === 0 ? (lastSpeed || 1) : 0); }
     else if (k >= '1' && k <= '6' && k.length === 1) setSpeed(+k);
     else if (k === 'f') startPlacing('fogueira');
@@ -1222,6 +1234,8 @@
     });
     $('#btn-mundos').addEventListener('click', openMundos);
     $('#btn-mundos-close').addEventListener('click', () => { $('#modal-mundos').hidden = true; });
+    $('#btn-mapa').addEventListener('click', () => abrirMapa());   // Etapa 17
+    $('#btn-mapa-close').addEventListener('click', () => { $('#modal-mapa').hidden = true; });
     $('#btn-mundos-new').addEventListener('click', () => { $('#modal-mundos').hidden = true; setMode('site'); newSiteWorld(); });
 
     const hot = window.claude && window.claude.hot;

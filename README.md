@@ -1,3 +1,36 @@
+# Gods · Etapa 17 (Mundo grande) · versão 0.18
+
+## O que mudou na 0.18
+
+**Mapa Gigante.** Na escolha do lugar, um quarto tamanho: **Gigante** (384 × 384, nove vezes o mapa de antes da 0.16). O padrão continua Grande. Um dia de jogo no mapa Gigante custa o mesmo que nos outros, e o save guarda só o que mudou (cerca de 60 mil caracteres no começo).
+
+**Seis regiões.** Todo mundo novo nasce com elas, a partir de um clima em manchas largas (seco ou úmido), da altitude e da distância do mar. A borda entre uma e outra é natural, sem linha reta.
+
+| Região | O chão | Recurso | Bicho | Perigo |
+|---|---|---|---|---|
+| Litoral | areia clara de praia | sal (a salina na areia) | | |
+| Mangue | lama e água escura | | caranguejo | mosquito (febre) |
+| Serra alta | pedra fria, neve no alto | ouro (o veio na pedra) | | frio: 5 °C a menos |
+| Sertão | chão seco e amarelado | mandacaru (fruta) | cabra | calor (3 °C a mais) e roça que rende 25% menos |
+| Mata fechada | árvore em toda parte | madeira nobre (o jequitibá) | | |
+| Pântano | poças, junco | | | mosquito (febre) |
+
+- **Sal**: quem quebra a salina traz sal. Com sal no estoque, a carne e o peixe estragam metade (vai 1 de sal por dia).
+- **Madeira nobre**: o jequitibá dá madeira comum e mais 2 de madeira nobre. Vale muito na feira.
+- **Ouro do veio**: a pedra grande da serra dá pedra e, em 3 de cada 10 golpes, ouro.
+- **O mosquito** do mangue e do pântano passa a febre da etapa 16, mais de noite.
+- A primeira vez que alguém do povo pisa em cada região entra na Crônica.
+
+**Mapa do mundo** (botão Mapa ou tecla M): o mundo inteiro, só o que o povo já viu, com a cor de cada região, as obras, o povo, o centro e a vila de fora. A legenda mostra as regiões que o povo já conhece.
+
+**Ponte de pedra** (grande obra, da etapa 16): vai em cima do rio ou da água rasa, com terra dos dois lados. Pronta, a água do caminho vira chão de pedra: atravessa-se ligeiro, e o bicho de criação também passa.
+
+**Grande estátua**: o terceiro nível da estátua, num pedestal de pedra. O milagre vai duas vezes e meia mais longe, e quem reza ali ganha o triplo de fé.
+
+**O save antigo abre como era.** O gerador do mundo ganhou um número de versão: o mundo salvo antes da 0.18 é refeito sem regiões, tile por tile igual. O GDD pedia que o mundo antigo virasse o centro do mapa grande; isso mexeria em casas e caminhos já feitos, então ficou de fora.
+
+---
+
 # Gods · Etapa 16 (Grandes obras e instituições) · versão 0.17
 
 ## O que mudou na 0.17
@@ -602,9 +635,8 @@ Fontes: Pixelify Sans e Crimson Pro (Google Fonts) e os dígitos do Jersey 10 (T
 
 ## Próximas etapas
 
-A 0.17 fechou a etapa 16 (Grandes obras e instituições), menos a ponte de pedra e a grande estátua, que ficaram para a etapa 17 (mundo grande, onde os rios largos pedem ponte). A 0.15 fechou a etapa 15 (Gente viva), o último dos pedidos urgentes de 12 de outubro: gostos, pensamentos, conversas de verdade, descobertas por tentativa e o saber que passa de mão em mão. A 0.14 tinha fechado a etapa 14 (Sociedade), com a correção da IA que a abria, os três pedidos de 5 de outubro (gente ruim e castigo pela gravidade, obras por conta própria, quem vai embora e funda outra vila) e os outros pedidos urgentes de 12 de outubro (o povo constrói o que precisa sem você marcar, o 1x mais calmo, a aldeia de 300 pessoas sem travar, a Crônica sem excesso de romance e a tela de início sem os nomes). O resto segue nesta ordem (o detalhe de cada etapa está no documento de design):
+A 0.18 fechou a etapa 17 (Mundo grande), com a ponte de pedra e a grande estátua que tinham ficado da 16. A 0.17 fechou a etapa 16 (Grandes obras e instituições). A 0.15 fechou a etapa 15 (Gente viva), o último dos pedidos urgentes de 12 de outubro: gostos, pensamentos, conversas de verdade, descobertas por tentativa e o saber que passa de mão em mão. A 0.14 tinha fechado a etapa 14 (Sociedade), com a correção da IA que a abria, os três pedidos de 5 de outubro (gente ruim e castigo pela gravidade, obras por conta própria, quem vai embora e funda outra vila) e os outros pedidos urgentes de 12 de outubro (o povo constrói o que precisa sem você marcar, o 1x mais calmo, a aldeia de 300 pessoas sem travar, a Crônica sem excesso de romance e a tela de início sem os nomes). O resto segue nesta ordem (o detalhe de cada etapa está no documento de design):
 
-- **17 · Mundo grande**: mapa várias vezes maior, com regiões diferentes de verdade (litoral, mangue, serra alta, sertão, mata fechada, pântano), cada uma com o seu bicho, o seu recurso e o seu perigo. É onde as vilas de fora ganham lugar para se espalhar.
 - **18 · Barcos e outras terras**: canoa, barco, navio; a expedição que acha uma terra nova e funda colônia.
 - **19 e 20 · Eras**: das cavernas e da pedra ao bronze, ao ferro e à monarquia; o povo dominante dá o rumo (matriarcado, guildas, clãs, magia no lugar da máquina) e cada era traz o seu desafio (praga, guerra, pobreza, natalidade).
 - **21 · Avatar**: possuir um cidadão e ver pelos olhos dele; o filho abençoado, que fala direto com você.

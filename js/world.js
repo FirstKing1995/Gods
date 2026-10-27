@@ -6,6 +6,9 @@
   const T = { DEEP: 0, SHALLOW: 1, RIVER: 2, SAND: 3, GRASS: 4, FOREST: 5, HILL: 6, MOUNTAIN: 7, DRY: 8 };
   const IS_WATER = [1, 1, 1, 0, 0, 0, 0, 0, 0];
   const TNAME = ['Água funda', 'Água rasa', 'Rio', 'Areia', 'Campo', 'Floresta', 'Colina', 'Montanha', 'Campo seco'];
+  // Etapa 17 (0.18): as regiões. O mundo de geração 2 tem seis, cada uma com o seu chão, bicho, recurso e perigo
+  const R = { CAMPO: 0, LITORAL: 1, MANGUE: 2, SERRA: 3, SERTAO: 4, MATA: 5, PANTANO: 6 };
+  const RNAME = ['Campo', 'Litoral', 'Mangue', 'Serra alta', 'Sertão', 'Mata fechada', 'Pântano'];
 
   // mesma regra para tiles (jogo) e pixels (arte)
   function classify(e, m, r) {
@@ -21,7 +24,9 @@
   }
 
   // size: lado do mapa em tiles (0.16: médio, grande ou enorme; sem ele, o tamanho de antes)
-  function generate(seed, size) {
+  // gen (0.18): a versão do gerador. 1 é o mundo de antes, sem regiões (o save antigo abre igualzinho); 2 tem as regiões
+  function generate(seed, size, gen) {
+    gen = gen || C.WORLD_GEN;
     const N = size || C.MAP, W = N, H = N, n = W * H;
     const nE = new G.Simplex(seed >>> 0);
     const nM = new G.Simplex((seed ^ 0x51ed27) >>> 0);
@@ -47,10 +52,60 @@
         w.tile[i] = classify(e, m, r);
       }
     }
+    w.gen = gen;
+    if (gen >= 2) regioes(w, seed);
     placeObjects(w);
     w.genCount = w.objs.length;
     for (let i = 0; i < n; i++) refreshBlock(w, i);
     return w;
+  }
+
+  // as regiões vêm de um clima em manchas largas (seco ou úmido), da altitude e da distância do mar. A região mexe no
+  // chão de leve (o sertão seca, a mata fecha, o pântano e o mangue alagam em poças), com pesos contínuos, para a
+  // borda entre uma e outra ficar natural
+  const sm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  function regioes(w, seed) {
+    const W = w.W, H = w.H, n = W * H, reg = new Uint8Array(n);
+    const nC = new G.Simplex((seed ^ 0x7f4a7c15) >>> 0), nP = new G.Simplex((seed ^ 0x1b873593) >>> 0);
+    // distância até o mar (água funda), em passos, até 8
+    const mar = new Uint8Array(n).fill(255), q = new Int32Array(n);
+    let qh = 0, qt = 0;
+    for (let i = 0; i < n; i++) if (w.tile[i] === T.DEEP) { mar[i] = 0; q[qt++] = i; }
+    while (qh < qt) {
+      const i = q[qh++], x = i % W, y = (i / W) | 0, d = mar[i] + 1;
+      if (d > 8) continue;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+        const j = ny * W + nx;
+        if (mar[j] > d) { mar[j] = d; q[qt++] = j; }
+      }
+    }
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x;
+      let e = w.elev[i], m = w.moist[i];
+      const clima = 0.5 + 0.7 * nC.fbm(x / 140, y / 140, 3, 2, 0.5);
+      const seco = sm(0.56, 0.7, clima) * (1 - sm(0.68, 0.74, e)), umido = sm(0.44, 0.32, clima);
+      const costa = mar[i] <= 6 ? 1 - mar[i] / 7 : 0;
+      const poca = nP.fbm(x / 7, y / 7, 2, 2, 0.5);
+      m -= 0.32 * seco;
+      m += 0.2 * umido;
+      // o pântano: baixada úmida longe do mar; o mangue: costa baixa e úmida. Os dois alagam em poças
+      const baixo = sm(0.54, 0.42, e) * (e > 0.345 ? 1 : 0);
+      const pant = umido * baixo * (1 - costa), mang = costa * sm(0.5, 0.64, m) * sm(0.47, 0.38, e) * (1 - seco);
+      if (poca > 0.18 && (pant > 0.4 || mang > 0.35) && w.tile[i] !== T.RIVER) e = Math.min(e, 0.335);
+      let r = R.CAMPO;
+      if (e > 0.7) r = R.SERRA;
+      else if (mang > 0.35) r = R.MANGUE;
+      else if (costa > 0.25 && e < 0.42) r = R.LITORAL;
+      else if (pant > 0.4) r = R.PANTANO;
+      else if (seco > 0.5) r = R.SERTAO;
+      else if (umido > 0.5) r = R.MATA;
+      w.elev[i] = e; w.moist[i] = m;
+      w.tile[i] = classify(e, m, w.riv[i]);
+      reg[i] = w.tile[i] === T.DEEP ? R.CAMPO : r;   // o mar aberto não é região de ninguém
+    }
+    w.reg = reg;
   }
 
   function addObj(w, k, x, y, props) {
@@ -70,6 +125,9 @@
         const h = G.hash2(x, y, s + 101), hv = G.hash2(x, y, s + 202), e = w.elev[i];
         const v = Math.floor(hv * 3);
         const tree = (arau) => addObj(w, 'tree', x, y, { sp: arau ? 'arau' : 'broad', v });
+        // Etapa 17: o que só nasce em cada região
+        const rg = w.reg ? w.reg[i] : 0;
+        if (rg && regionObj(w, x, y, i, t, rg, h, hv, v)) continue;
         const bush = () => addObj(w, 'bush', x, y, { v, fruit: hv < 0.5 ? 2 : 1, grow: 0 });
         const rock = (big) => addObj(w, 'rock', x, y, { v, big: big ? 1 : 0, ch: big ? 4 : 2 });
         switch (t) {
@@ -82,6 +140,42 @@
         }
       }
     }
+  }
+
+  // devolve true quando a região decidiu o que nasce ali (ou que nada nasce)
+  function regionObj(w, x, y, i, t, rg, h, hv, v) {
+    const near = () => { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (IS_WATER[w.tile[i + dy * w.W + dx]] === 1) return true; return false; };
+    switch (rg) {
+      case R.SERTAO:   // cacto (o mandacaru dá fruta), pouca árvore, mais pedra
+        if (t === T.DRY || t === T.GRASS || t === T.SAND) {
+          if (h < 0.05) addObj(w, 'bush', x, y, { v, sp: 'cacto', fruit: hv < 0.4 ? 1 : 0, grow: 0 });
+          else if (h < 0.065) addObj(w, 'rock', x, y, { v, big: 0, ch: 2 });
+          else if (h < 0.075) addObj(w, 'tree', x, y, { sp: 'broad', v });
+          return true;
+        }
+        return false;
+      case R.MATA:   // mata fechada: árvore em toda parte e, de vez em quando, um jequitibá (madeira nobre)
+        if (t === T.FOREST || t === T.GRASS) {
+          if (h < (t === T.FOREST ? 0.58 : 0.2)) { addObj(w, 'tree', x, y, { sp: hv < 0.09 ? 'nobre' : 'broad', v }); return true; }
+          if (h < 0.62 && t === T.FOREST) { addObj(w, 'bush', x, y, { v, fruit: 1, grow: 0 }); return true; }
+        }
+        return false;
+      case R.PANTANO:   // junco na beira das poças, árvore rala
+        if (!IS_WATER[t] && near() && h < 0.35) { addObj(w, 'junco', x, y, { v }); return true; }
+        if (t === T.FOREST || t === T.GRASS) { if (h < 0.08) addObj(w, 'tree', x, y, { sp: 'broad', v }); return true; }
+        return false;
+      case R.MANGUE:   // a árvore de raiz em pé na lama, junto da água
+        if (!IS_WATER[t] && near() && h < 0.3) { addObj(w, 'tree', x, y, { sp: 'mangue', v }); return true; }
+        if (t === T.SAND) return true;
+        return false;
+      case R.LITORAL:   // a salina: o sal que o mar deixa na areia
+        if (t === T.SAND && near() && h < 0.025) { addObj(w, 'rock', x, y, { v, big: 0, ch: 6, sal: 1 }); return true; }
+        return false;
+      case R.SERRA:   // o veio rico: a pedra que tem ouro dentro
+        if ((t === T.MOUNTAIN || t === T.HILL) && h < 0.025) { addObj(w, 'rock', x, y, { v, big: 1, ch: 6, ouro: 1 }); return true; }
+        return false;
+    }
+    return false;
   }
 
   function objAt(w, i) { const o = w.objGrid[i]; return o >= 0 ? w.objs[o] : null; }
@@ -133,7 +227,7 @@
   // beast: 0 = gente (pula a cerca, mais devagar; em cima de caminho a cerca é porteira), 1 = bicho do mato (a cerca e
   // as obras seguram), 2 = bicho de criação (e a água também). Bicho não passa na quina entre duas cercas.
   // bwall: obra que é parede para bicho (casa, fogueira, oficina...); roça e curral não são
-  const wall = (w, i, beast) => (w.fence && w.fence[i] === 1) || (w.bwall && w.bwall[i] === 1) || (beast === 2 && IS_WATER[w.tile[i]] === 1);
+  const wall = (w, i, beast) => (w.fence && w.fence[i] === 1) || (w.bwall && w.bwall[i] === 1) || (beast === 2 && IS_WATER[w.tile[i]] === 1 && !(w.road && w.road[i] >= 3));   // 0.18: a ponte de pedra
   function expand(w, cur, onEdge, beast) {
     const W = w.W, cx = cur % W, cy = (cur / W) | 0, fence = w.fence;
     for (let k = 0; k < 8; k++) {
@@ -347,10 +441,11 @@
     return 'ao campo aberto';
   }
 
-  G.T = T; G.IS_WATER = IS_WATER; G.TNAME = TNAME;
+  G.T = T; G.IS_WATER = IS_WATER; G.TNAME = TNAME; G.REG = R; G.RNAME = RNAME;
   G.W = {
     classify, generate, addObj, objAt, refreshBlock, removeObj, wall,
     findPath, findNearest, findNearestIn, adjObj, waterAdj, waterCount8, campFree, evalSite, bestSite, siteLabel,
     idx: (w, x, y) => y * w.W + x,
+    regiao: (w, i) => (w.reg ? w.reg[i] : 0),
   };
 })(globalThis.G = globalThis.G || {});

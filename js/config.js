@@ -3,7 +3,7 @@
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.17.0',
+    VERSION: '0.18.0',
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
     SAVE_KEY: 'genesis.save.v1',
@@ -12,9 +12,10 @@
     CLOUD_SAVE_SEC: 180,
 
     // ---- mapa ----
-    MAP: 128,            // 128 x 128 tiles: o tamanho dos mundos de antes da 0.16 (save sem tamanho abre com este)
+    MAP: 128,
+    WORLD_GEN: 2,   // 0.18: a versão do gerador do mundo (2: com as regiões; o save antigo guarda a sua)            // 128 x 128 tiles: o tamanho dos mundos de antes da 0.16 (save sem tamanho abre com este)
     // 0.16: o jogador escolhe o tamanho do mundo novo (o padrão é o grande, mais de duas vezes a área de antes)
-    MAP_SIZES: [{ n: 128, name: 'Médio' }, { n: 192, name: 'Grande' }, { n: 256, name: 'Enorme' }], MAP_NEW: 192,
+    MAP_SIZES: [{ n: 128, name: 'Médio' }, { n: 192, name: 'Grande' }, { n: 256, name: 'Enorme' }, { n: 384, name: 'Gigante' }], MAP_NEW: 192,
     TILE: 16,            // px por tile
     CHUNK: 16,           // tiles por bloco de render
 
@@ -38,6 +39,11 @@
     DAY_SWING: 5,                  // ±°C ao longo do dia
     DAY_RANDOM: 3,                 // sorteio ±°C por dia
     MOUNTAIN_COLD: -4, HILL_COLD: -2,
+    // Etapa 17: as regiões. A serra alta é mais fria e o sertão mais quente; o jequitibá dá NOBRE_WOOD de madeira
+    // nobre além da comum; a salina dá SAL_N de sal; o veio de ouro dá ouro em VEIO_OURO das vezes; com sal no estoque,
+    // a carne e o peixe estragam SAL_ROT do normal (e vai 1 de sal por dia); no mangue e no pântano, o mosquito passa
+    // a febre (MOSQUITO_H por hora de quem está ali; de noite, o dobro). SERTAO_ROCA: o quanto a roça rende no sertão
+    SERRA_COLD: -5, SERTAO_HEAT: 3, NOBRE_WOOD: 2, SAL_N: 3, VEIO_OURO: 0.3, SAL_ROT: 0.5, MOSQUITO_H: 0.0025, SERTAO_ROCA: 0.75,
     RAIN_CHANCE: [0.30, 0.15, 0.35, 0.30],
     RAIN_COLD: -2, SNOW_COLD: -3,
     COMFORT: 16,                   // abaixo disso, perde calor
@@ -68,7 +74,7 @@
     // perto de casa que a pessoa (o caminho da fruta é o de volta)
     ARBUSTO_LONGE: 20, ARBUSTO_VOLTA: 3,
     START_STOCK: { madeira: 0, pedra: 0, agua: 0, frutas: 8, peixe: 0, carne: 0, defumado: 0, seca: 0, couro: 0, argila: 0, ferramentas: 0, roupas: 0,
-      tabuas: 0, fibra: 0, mantas: 0, redes: 0, feijao: 0, milho: 0, abobora: 0, mandioca: 0, ovos: 0, leite: 0 },
+      tabuas: 0, fibra: 0, mantas: 0, redes: 0, feijao: 0, milho: 0, abobora: 0, mandioca: 0, ovos: 0, leite: 0, sal: 0, nobre: 0 },
     ROT_FRUIT: 0.04, ROT_FISH: 0.08,            // parte do estoque que estraga por dia
     ROT_SEASON: [1, 1.5, 1, 0.3],               // verão apressa, inverno conserva
 
@@ -170,7 +176,10 @@
       estatua: { name: 'Estátua', a: 'a', key: '', w: 2, h: 2, cost: { pedra: 30, madeira: 10 }, work: 480, god: { reach: 1, reza: 1 },
         desc: 'A imagem de Deus em pedra. Consagrada, faz o milagre dela sozinho; quem tem fé reza ali de manhã.',
         up: [{ name: 'Estátua com altar', cost: { pedra: 20, tabuas: 6 }, work: 360, god: { reach: 1.5, reza: 2 },
-          desc: 'Um altar de pedra aos pés dela: o milagre da estátua vai metade mais longe, e quem reza ali ganha o dobro de fé.' }] },
+          desc: 'Um altar de pedra aos pés dela: o milagre da estátua vai metade mais longe, e quem reza ali ganha o dobro de fé.' },
+        // Etapa 17: a grande estátua, que ficou da Etapa 16
+        { name: 'Grande estátua', cost: { pedra: 90, tabuas: 20 }, work: 4800, god: { reach: 2.5, reza: 3 },
+          desc: 'Alta, sobre um pedestal de pedra, vista de longe: o milagre vai duas vezes e meia mais longe, e quem reza ali ganha o triplo de fé.' }] },
       // Etapa 13: o marco do cemitério. As covas se abrem em volta dele, em fileiras (mem.r: até onde vão; vale: quanto
       // valem a visita e o dia dos mortos). Se ninguém marcar, o povo escolhe o lugar na primeira morte
       cemiterio: { name: 'Cemitério', a: 'o', key: '', w: 2, h: 2, cost: { madeira: 4 }, work: 60, mem: { r: 6, vale: 1 },
@@ -187,6 +196,9 @@
         desc: 'Do alto se vê longe: a névoa se abre em volta dela, o bicho que vem chegando é avisado antes e o malfeito da noite tem testemunha.' },
       aqueduto: { name: 'Aqueduto', a: 'o', key: '', w: 4, h: 2, cost: { pedra: 180, argila: 60, tabuas: 20 }, work: 33000, grande: true, need: 'ceramica', water: { h: 3 },
         desc: 'Arcos de pedra que trazem a água para dentro da aldeia: o estoque de água se enche sozinho, e ninguém precisa mais ir buscar.' },
+      // Etapa 17: a ponte de pedra, em cima do rio ou da água rasa; pronta, a água do caminho vira chão de pedra
+      ponte: { name: 'Ponte de pedra', a: 'a', key: '', w: 2, h: 2, cost: { pedra: 90, tabuas: 24 }, work: 12000, grande: true, ponte: true,
+        desc: 'Arcos de pedra por cima do rio: atravessa-se a pé enxuto e ligeiro, e o bicho de criação também passa. Vai em cima da água, com terra dos dois lados.' },
       // Etapa 16: as instituições. Aparecem quando a sociedade pede, sobem de nível e pedem gente fixa (staff por
       // nível), que sai do trabalho comum para servir ali. Só com fartura: com fome, todos voltam à roça
       escola: { name: 'Roda de ensino', a: 'a', key: '', w: 3, h: 3, cost: { madeira: 20, fibra: 6 }, work: 600, inst: { k: 'escola', staff: 1 },
@@ -462,6 +474,11 @@
         desc: 'O maior bicho da mata. Pede três acertos e às vezes se vira contra quem ataca.' },
       jacu: { name: 'Jacu', art: 'um jacu', hab: 'mata', n: 3, herd: [2, 4], max: 6, speed: 0.5, flee: 2.8, see: 4, hp: 1, carne: 3, couro: 0, birth: 14, bird: true,
         desc: 'Ave da mata. Voa longe quando alguém chega perto.' },
+      // Etapa 17: o caranguejo do mangue (fácil, pouca carne) e a cabra do sertão (arisca, couro bom)
+      caranguejo: { name: 'Caranguejo', art: 'um caranguejo', hab: 'mangue', n: 3, herd: [3, 5], max: 8, speed: 0.4, flee: 1.2, see: 2, hp: 1, carne: 2, couro: 0, birth: 8,
+        desc: 'Anda de lado na lama do mangue. Fácil de pegar, rende pouco.' },
+      cabra: { name: 'Cabra', art: 'uma cabra', hab: 'sertao', n: 3, herd: [3, 5], max: 7, speed: 0.8, flee: 2, see: 4, hp: 1, carne: 8, couro: 2, birth: 16,
+        desc: 'Vive solta no sertão, onde quase nada cresce. Arisca, dá carne e couro bom.' },
       tapiti: { name: 'Tapiti', art: 'um tapiti', hab: 'campo', n: 3, herd: [2, 4], max: 7, speed: 0.9, flee: 2.4, see: 3.5, hp: 1, carne: 2, couro: 1, birth: 10,
         desc: 'Coelho do campo. Rápido, e dá cria depressa.' },
       jacare: { name: 'Jacaré', art: 'um jacaré', hab: 'lago', n: 3, herd: [1, 1], max: 1, speed: 0.5, flee: 1.2, see: 0, hp: 2, carne: 12, couro: 3, birth: 0, bite: 20, predator: true,

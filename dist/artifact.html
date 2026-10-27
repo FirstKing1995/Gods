@@ -132,6 +132,15 @@ body[data-placing] #view { cursor: crosshair; }
 .mundo-info { display: grid; gap: 2px; min-width: 0; }
 .mundo-info strong { font-size: 15px; color: var(--gold-hi); overflow-wrap: anywhere; }
 .mundo-acts { display: flex; gap: 6px; flex: none; }
+/* Etapa 17: o mapa do mundo */
+.mapa-card { max-width: min(560px, 94vw); }
+.mapa-wrap { overflow: auto; max-height: 62vh; border: 1px solid var(--line, #3a4466); border-radius: 6px; background: #141218; }
+#mapa-cv { display: block; width: 100%; image-rendering: pixelated; }
+.mapa-legenda { display: flex; flex-wrap: wrap; gap: 6px 14px; list-style: none; padding: 0; margin: 10px 0 0; font-size: 13px; }
+.mapa-legenda li { display: flex; align-items: center; gap: 6px; }
+.mapa-legenda i { width: 12px; height: 12px; border-radius: 2px; display: inline-block; border: 1px solid rgba(0,0,0,.4); }
+.mapa-legenda .nao { opacity: .45; }
+
 .btn.danger { background: var(--blood); color: #fff; box-shadow: inset 0 0 0 2px #f6757a, inset 0 -4px 0 #a22633; }
 @media (max-width: 520px) { .mundo-row { flex-direction: column; align-items: stretch; } .mundo-acts .btn { flex: 1; } }
 .modal { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: var(--gut); background: rgba(24, 20, 37, 0.7); }
@@ -778,6 +787,15 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 </section>
 
 <!-- 0.16: os mundos guardados neste aparelho -->
+<div id="modal-mapa" class="modal" hidden>
+  <div class="panel modal-card mapa-card">
+    <h2>O mundo</h2>
+    <p id="mapa-info" class="small muted"></p>
+    <div class="mapa-wrap"><canvas id="mapa-cv"></canvas></div>
+    <ul id="mapa-legenda" class="mapa-legenda"></ul>
+    <div class="modal-actions"><button type="button" id="btn-mapa-close" class="btn">Fechar</button></div>
+  </div>
+</div>
 <div id="modal-mundos" class="modal" hidden>
   <div class="panel modal-card mundos-card">
     <h2>Seus mundos</h2>
@@ -1105,6 +1123,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     <button data-open="deus"><img class="ico" alt="">Deus<span class="badge" id="badge-deus" hidden></span></button>
     <button data-open="povo"><img class="ico" alt="">Povo</button>
     <button data-open="cronica"><img class="ico" alt="">Crônica</button>
+    <button id="btn-mapa" title="O mapa do mundo (tecla M)"><img class="ico" alt="">Mapa</button>
   </nav>
 
   <div id="place-hint" class="panel place-hint" hidden></div>
@@ -1250,7 +1269,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.17.0',
+    VERSION: '0.18.0',
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
     SAVE_KEY: 'genesis.save.v1',
@@ -1259,9 +1278,10 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     CLOUD_SAVE_SEC: 180,
 
     // ---- mapa ----
-    MAP: 128,            // 128 x 128 tiles: o tamanho dos mundos de antes da 0.16 (save sem tamanho abre com este)
+    MAP: 128,
+    WORLD_GEN: 2,   // 0.18: a versão do gerador do mundo (2: com as regiões; o save antigo guarda a sua)            // 128 x 128 tiles: o tamanho dos mundos de antes da 0.16 (save sem tamanho abre com este)
     // 0.16: o jogador escolhe o tamanho do mundo novo (o padrão é o grande, mais de duas vezes a área de antes)
-    MAP_SIZES: [{ n: 128, name: 'Médio' }, { n: 192, name: 'Grande' }, { n: 256, name: 'Enorme' }], MAP_NEW: 192,
+    MAP_SIZES: [{ n: 128, name: 'Médio' }, { n: 192, name: 'Grande' }, { n: 256, name: 'Enorme' }, { n: 384, name: 'Gigante' }], MAP_NEW: 192,
     TILE: 16,            // px por tile
     CHUNK: 16,           // tiles por bloco de render
 
@@ -1285,6 +1305,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     DAY_SWING: 5,                  // ±°C ao longo do dia
     DAY_RANDOM: 3,                 // sorteio ±°C por dia
     MOUNTAIN_COLD: -4, HILL_COLD: -2,
+    // Etapa 17: as regiões. A serra alta é mais fria e o sertão mais quente; o jequitibá dá NOBRE_WOOD de madeira
+    // nobre além da comum; a salina dá SAL_N de sal; o veio de ouro dá ouro em VEIO_OURO das vezes; com sal no estoque,
+    // a carne e o peixe estragam SAL_ROT do normal (e vai 1 de sal por dia); no mangue e no pântano, o mosquito passa
+    // a febre (MOSQUITO_H por hora de quem está ali; de noite, o dobro). SERTAO_ROCA: o quanto a roça rende no sertão
+    SERRA_COLD: -5, SERTAO_HEAT: 3, NOBRE_WOOD: 2, SAL_N: 3, VEIO_OURO: 0.3, SAL_ROT: 0.5, MOSQUITO_H: 0.0025, SERTAO_ROCA: 0.75,
     RAIN_CHANCE: [0.30, 0.15, 0.35, 0.30],
     RAIN_COLD: -2, SNOW_COLD: -3,
     COMFORT: 16,                   // abaixo disso, perde calor
@@ -1315,7 +1340,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     // perto de casa que a pessoa (o caminho da fruta é o de volta)
     ARBUSTO_LONGE: 20, ARBUSTO_VOLTA: 3,
     START_STOCK: { madeira: 0, pedra: 0, agua: 0, frutas: 8, peixe: 0, carne: 0, defumado: 0, seca: 0, couro: 0, argila: 0, ferramentas: 0, roupas: 0,
-      tabuas: 0, fibra: 0, mantas: 0, redes: 0, feijao: 0, milho: 0, abobora: 0, mandioca: 0, ovos: 0, leite: 0 },
+      tabuas: 0, fibra: 0, mantas: 0, redes: 0, feijao: 0, milho: 0, abobora: 0, mandioca: 0, ovos: 0, leite: 0, sal: 0, nobre: 0 },
     ROT_FRUIT: 0.04, ROT_FISH: 0.08,            // parte do estoque que estraga por dia
     ROT_SEASON: [1, 1.5, 1, 0.3],               // verão apressa, inverno conserva
 
@@ -1417,7 +1442,10 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       estatua: { name: 'Estátua', a: 'a', key: '', w: 2, h: 2, cost: { pedra: 30, madeira: 10 }, work: 480, god: { reach: 1, reza: 1 },
         desc: 'A imagem de Deus em pedra. Consagrada, faz o milagre dela sozinho; quem tem fé reza ali de manhã.',
         up: [{ name: 'Estátua com altar', cost: { pedra: 20, tabuas: 6 }, work: 360, god: { reach: 1.5, reza: 2 },
-          desc: 'Um altar de pedra aos pés dela: o milagre da estátua vai metade mais longe, e quem reza ali ganha o dobro de fé.' }] },
+          desc: 'Um altar de pedra aos pés dela: o milagre da estátua vai metade mais longe, e quem reza ali ganha o dobro de fé.' },
+        // Etapa 17: a grande estátua, que ficou da Etapa 16
+        { name: 'Grande estátua', cost: { pedra: 90, tabuas: 20 }, work: 4800, god: { reach: 2.5, reza: 3 },
+          desc: 'Alta, sobre um pedestal de pedra, vista de longe: o milagre vai duas vezes e meia mais longe, e quem reza ali ganha o triplo de fé.' }] },
       // Etapa 13: o marco do cemitério. As covas se abrem em volta dele, em fileiras (mem.r: até onde vão; vale: quanto
       // valem a visita e o dia dos mortos). Se ninguém marcar, o povo escolhe o lugar na primeira morte
       cemiterio: { name: 'Cemitério', a: 'o', key: '', w: 2, h: 2, cost: { madeira: 4 }, work: 60, mem: { r: 6, vale: 1 },
@@ -1434,6 +1462,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         desc: 'Do alto se vê longe: a névoa se abre em volta dela, o bicho que vem chegando é avisado antes e o malfeito da noite tem testemunha.' },
       aqueduto: { name: 'Aqueduto', a: 'o', key: '', w: 4, h: 2, cost: { pedra: 180, argila: 60, tabuas: 20 }, work: 33000, grande: true, need: 'ceramica', water: { h: 3 },
         desc: 'Arcos de pedra que trazem a água para dentro da aldeia: o estoque de água se enche sozinho, e ninguém precisa mais ir buscar.' },
+      // Etapa 17: a ponte de pedra, em cima do rio ou da água rasa; pronta, a água do caminho vira chão de pedra
+      ponte: { name: 'Ponte de pedra', a: 'a', key: '', w: 2, h: 2, cost: { pedra: 90, tabuas: 24 }, work: 12000, grande: true, ponte: true,
+        desc: 'Arcos de pedra por cima do rio: atravessa-se a pé enxuto e ligeiro, e o bicho de criação também passa. Vai em cima da água, com terra dos dois lados.' },
       // Etapa 16: as instituições. Aparecem quando a sociedade pede, sobem de nível e pedem gente fixa (staff por
       // nível), que sai do trabalho comum para servir ali. Só com fartura: com fome, todos voltam à roça
       escola: { name: 'Roda de ensino', a: 'a', key: '', w: 3, h: 3, cost: { madeira: 20, fibra: 6 }, work: 600, inst: { k: 'escola', staff: 1 },
@@ -1709,6 +1740,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         desc: 'O maior bicho da mata. Pede três acertos e às vezes se vira contra quem ataca.' },
       jacu: { name: 'Jacu', art: 'um jacu', hab: 'mata', n: 3, herd: [2, 4], max: 6, speed: 0.5, flee: 2.8, see: 4, hp: 1, carne: 3, couro: 0, birth: 14, bird: true,
         desc: 'Ave da mata. Voa longe quando alguém chega perto.' },
+      // Etapa 17: o caranguejo do mangue (fácil, pouca carne) e a cabra do sertão (arisca, couro bom)
+      caranguejo: { name: 'Caranguejo', art: 'um caranguejo', hab: 'mangue', n: 3, herd: [3, 5], max: 8, speed: 0.4, flee: 1.2, see: 2, hp: 1, carne: 2, couro: 0, birth: 8,
+        desc: 'Anda de lado na lama do mangue. Fácil de pegar, rende pouco.' },
+      cabra: { name: 'Cabra', art: 'uma cabra', hab: 'sertao', n: 3, herd: [3, 5], max: 7, speed: 0.8, flee: 2, see: 4, hp: 1, carne: 8, couro: 2, birth: 16,
+        desc: 'Vive solta no sertão, onde quase nada cresce. Arisca, dá carne e couro bom.' },
       tapiti: { name: 'Tapiti', art: 'um tapiti', hab: 'campo', n: 3, herd: [2, 4], max: 7, speed: 0.9, flee: 2.4, see: 3.5, hp: 1, carne: 2, couro: 1, birth: 10,
         desc: 'Coelho do campo. Rápido, e dá cria depressa.' },
       jacare: { name: 'Jacaré', art: 'um jacaré', hab: 'lago', n: 3, herd: [1, 1], max: 1, speed: 0.5, flee: 1.2, see: 0, hp: 2, carne: 12, couro: 3, birth: 0, bite: 20, predator: true,
@@ -1954,6 +1990,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   const T = { DEEP: 0, SHALLOW: 1, RIVER: 2, SAND: 3, GRASS: 4, FOREST: 5, HILL: 6, MOUNTAIN: 7, DRY: 8 };
   const IS_WATER = [1, 1, 1, 0, 0, 0, 0, 0, 0];
   const TNAME = ['Água funda', 'Água rasa', 'Rio', 'Areia', 'Campo', 'Floresta', 'Colina', 'Montanha', 'Campo seco'];
+  // Etapa 17 (0.18): as regiões. O mundo de geração 2 tem seis, cada uma com o seu chão, bicho, recurso e perigo
+  const R = { CAMPO: 0, LITORAL: 1, MANGUE: 2, SERRA: 3, SERTAO: 4, MATA: 5, PANTANO: 6 };
+  const RNAME = ['Campo', 'Litoral', 'Mangue', 'Serra alta', 'Sertão', 'Mata fechada', 'Pântano'];
 
   // mesma regra para tiles (jogo) e pixels (arte)
   function classify(e, m, r) {
@@ -1969,7 +2008,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   }
 
   // size: lado do mapa em tiles (0.16: médio, grande ou enorme; sem ele, o tamanho de antes)
-  function generate(seed, size) {
+  // gen (0.18): a versão do gerador. 1 é o mundo de antes, sem regiões (o save antigo abre igualzinho); 2 tem as regiões
+  function generate(seed, size, gen) {
+    gen = gen || C.WORLD_GEN;
     const N = size || C.MAP, W = N, H = N, n = W * H;
     const nE = new G.Simplex(seed >>> 0);
     const nM = new G.Simplex((seed ^ 0x51ed27) >>> 0);
@@ -1995,10 +2036,60 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         w.tile[i] = classify(e, m, r);
       }
     }
+    w.gen = gen;
+    if (gen >= 2) regioes(w, seed);
     placeObjects(w);
     w.genCount = w.objs.length;
     for (let i = 0; i < n; i++) refreshBlock(w, i);
     return w;
+  }
+
+  // as regiões vêm de um clima em manchas largas (seco ou úmido), da altitude e da distância do mar. A região mexe no
+  // chão de leve (o sertão seca, a mata fecha, o pântano e o mangue alagam em poças), com pesos contínuos, para a
+  // borda entre uma e outra ficar natural
+  const sm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  function regioes(w, seed) {
+    const W = w.W, H = w.H, n = W * H, reg = new Uint8Array(n);
+    const nC = new G.Simplex((seed ^ 0x7f4a7c15) >>> 0), nP = new G.Simplex((seed ^ 0x1b873593) >>> 0);
+    // distância até o mar (água funda), em passos, até 8
+    const mar = new Uint8Array(n).fill(255), q = new Int32Array(n);
+    let qh = 0, qt = 0;
+    for (let i = 0; i < n; i++) if (w.tile[i] === T.DEEP) { mar[i] = 0; q[qt++] = i; }
+    while (qh < qt) {
+      const i = q[qh++], x = i % W, y = (i / W) | 0, d = mar[i] + 1;
+      if (d > 8) continue;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+        const j = ny * W + nx;
+        if (mar[j] > d) { mar[j] = d; q[qt++] = j; }
+      }
+    }
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x;
+      let e = w.elev[i], m = w.moist[i];
+      const clima = 0.5 + 0.7 * nC.fbm(x / 140, y / 140, 3, 2, 0.5);
+      const seco = sm(0.56, 0.7, clima) * (1 - sm(0.68, 0.74, e)), umido = sm(0.44, 0.32, clima);
+      const costa = mar[i] <= 6 ? 1 - mar[i] / 7 : 0;
+      const poca = nP.fbm(x / 7, y / 7, 2, 2, 0.5);
+      m -= 0.32 * seco;
+      m += 0.2 * umido;
+      // o pântano: baixada úmida longe do mar; o mangue: costa baixa e úmida. Os dois alagam em poças
+      const baixo = sm(0.54, 0.42, e) * (e > 0.345 ? 1 : 0);
+      const pant = umido * baixo * (1 - costa), mang = costa * sm(0.5, 0.64, m) * sm(0.47, 0.38, e) * (1 - seco);
+      if (poca > 0.18 && (pant > 0.4 || mang > 0.35) && w.tile[i] !== T.RIVER) e = Math.min(e, 0.335);
+      let r = R.CAMPO;
+      if (e > 0.7) r = R.SERRA;
+      else if (mang > 0.35) r = R.MANGUE;
+      else if (costa > 0.25 && e < 0.42) r = R.LITORAL;
+      else if (pant > 0.4) r = R.PANTANO;
+      else if (seco > 0.5) r = R.SERTAO;
+      else if (umido > 0.5) r = R.MATA;
+      w.elev[i] = e; w.moist[i] = m;
+      w.tile[i] = classify(e, m, w.riv[i]);
+      reg[i] = w.tile[i] === T.DEEP ? R.CAMPO : r;   // o mar aberto não é região de ninguém
+    }
+    w.reg = reg;
   }
 
   function addObj(w, k, x, y, props) {
@@ -2018,6 +2109,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         const h = G.hash2(x, y, s + 101), hv = G.hash2(x, y, s + 202), e = w.elev[i];
         const v = Math.floor(hv * 3);
         const tree = (arau) => addObj(w, 'tree', x, y, { sp: arau ? 'arau' : 'broad', v });
+        // Etapa 17: o que só nasce em cada região
+        const rg = w.reg ? w.reg[i] : 0;
+        if (rg && regionObj(w, x, y, i, t, rg, h, hv, v)) continue;
         const bush = () => addObj(w, 'bush', x, y, { v, fruit: hv < 0.5 ? 2 : 1, grow: 0 });
         const rock = (big) => addObj(w, 'rock', x, y, { v, big: big ? 1 : 0, ch: big ? 4 : 2 });
         switch (t) {
@@ -2030,6 +2124,42 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         }
       }
     }
+  }
+
+  // devolve true quando a região decidiu o que nasce ali (ou que nada nasce)
+  function regionObj(w, x, y, i, t, rg, h, hv, v) {
+    const near = () => { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (IS_WATER[w.tile[i + dy * w.W + dx]] === 1) return true; return false; };
+    switch (rg) {
+      case R.SERTAO:   // cacto (o mandacaru dá fruta), pouca árvore, mais pedra
+        if (t === T.DRY || t === T.GRASS || t === T.SAND) {
+          if (h < 0.05) addObj(w, 'bush', x, y, { v, sp: 'cacto', fruit: hv < 0.4 ? 1 : 0, grow: 0 });
+          else if (h < 0.065) addObj(w, 'rock', x, y, { v, big: 0, ch: 2 });
+          else if (h < 0.075) addObj(w, 'tree', x, y, { sp: 'broad', v });
+          return true;
+        }
+        return false;
+      case R.MATA:   // mata fechada: árvore em toda parte e, de vez em quando, um jequitibá (madeira nobre)
+        if (t === T.FOREST || t === T.GRASS) {
+          if (h < (t === T.FOREST ? 0.58 : 0.2)) { addObj(w, 'tree', x, y, { sp: hv < 0.09 ? 'nobre' : 'broad', v }); return true; }
+          if (h < 0.62 && t === T.FOREST) { addObj(w, 'bush', x, y, { v, fruit: 1, grow: 0 }); return true; }
+        }
+        return false;
+      case R.PANTANO:   // junco na beira das poças, árvore rala
+        if (!IS_WATER[t] && near() && h < 0.35) { addObj(w, 'junco', x, y, { v }); return true; }
+        if (t === T.FOREST || t === T.GRASS) { if (h < 0.08) addObj(w, 'tree', x, y, { sp: 'broad', v }); return true; }
+        return false;
+      case R.MANGUE:   // a árvore de raiz em pé na lama, junto da água
+        if (!IS_WATER[t] && near() && h < 0.3) { addObj(w, 'tree', x, y, { sp: 'mangue', v }); return true; }
+        if (t === T.SAND) return true;
+        return false;
+      case R.LITORAL:   // a salina: o sal que o mar deixa na areia
+        if (t === T.SAND && near() && h < 0.025) { addObj(w, 'rock', x, y, { v, big: 0, ch: 6, sal: 1 }); return true; }
+        return false;
+      case R.SERRA:   // o veio rico: a pedra que tem ouro dentro
+        if ((t === T.MOUNTAIN || t === T.HILL) && h < 0.025) { addObj(w, 'rock', x, y, { v, big: 1, ch: 6, ouro: 1 }); return true; }
+        return false;
+    }
+    return false;
   }
 
   function objAt(w, i) { const o = w.objGrid[i]; return o >= 0 ? w.objs[o] : null; }
@@ -2081,7 +2211,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // beast: 0 = gente (pula a cerca, mais devagar; em cima de caminho a cerca é porteira), 1 = bicho do mato (a cerca e
   // as obras seguram), 2 = bicho de criação (e a água também). Bicho não passa na quina entre duas cercas.
   // bwall: obra que é parede para bicho (casa, fogueira, oficina...); roça e curral não são
-  const wall = (w, i, beast) => (w.fence && w.fence[i] === 1) || (w.bwall && w.bwall[i] === 1) || (beast === 2 && IS_WATER[w.tile[i]] === 1);
+  const wall = (w, i, beast) => (w.fence && w.fence[i] === 1) || (w.bwall && w.bwall[i] === 1) || (beast === 2 && IS_WATER[w.tile[i]] === 1 && !(w.road && w.road[i] >= 3));   // 0.18: a ponte de pedra
   function expand(w, cur, onEdge, beast) {
     const W = w.W, cx = cur % W, cy = (cur / W) | 0, fence = w.fence;
     for (let k = 0; k < 8; k++) {
@@ -2295,11 +2425,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     return 'ao campo aberto';
   }
 
-  G.T = T; G.IS_WATER = IS_WATER; G.TNAME = TNAME;
+  G.T = T; G.IS_WATER = IS_WATER; G.TNAME = TNAME; G.REG = R; G.RNAME = RNAME;
   G.W = {
     classify, generate, addObj, objAt, refreshBlock, removeObj, wall,
     findPath, findNearest, findNearestIn, adjObj, waterAdj, waterCount8, campFree, evalSite, bestSite, siteLabel,
     idx: (w, x, y) => y * w.W + x,
+    regiao: (w, i) => (w.reg ? w.reg[i] : 0),
   };
 })(globalThis.G = globalThis.G || {});
 
@@ -2546,7 +2677,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 
   function tileTemp(S, i) {
     const t = S.world.tile[i];
-    return S.temp + (t === T.MOUNTAIN ? C.MOUNTAIN_COLD : t === T.HILL ? C.HILL_COLD : 0);
+    const rg = S.world.reg ? S.world.reg[i] : 0;   // Etapa 17: a serra alta é fria; o sertão, quente
+    return S.temp + (t === T.MOUNTAIN ? C.MOUNTAIN_COLD : t === T.HILL ? C.HILL_COLD : 0) + (rg === 3 ? C.SERRA_COLD : rg === 4 ? C.SERTAO_HEAT : 0);
   }
   // 0.14: as fogueiras acesas, uma vez por passo (antes, cada pessoa varria todas as obras: numa aldeia grande, a
   // lista das casas inteira, para cada um, a cada passo)
@@ -2847,6 +2979,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const def = C.BUILD[type], w = S.world;
     // 0.16: nenhuma obra fica mais presa à distância do centro (o armazém virou uma boca do estoque onde estiver)
     if (def.env && G.Obras && !G.Obras.envOk(S, { x, y, w: def.w, h: def.h }, def.env)) return 'Pede ' + C.ENV[def.env].name;   // Etapa 12: a mina
+    if (def.ponte) return G.Regioes ? G.Regioes.ponteWhy(S, x, y) : 'Lugar ruim';   // Etapa 17: a ponte vai em cima da água
     for (let dy = 0; dy < def.h; dy++) for (let dx = 0; dx < def.w; dx++) {
       const tx = x + dx, ty = y + dy;
       if (tx < 1 || ty < 1 || tx >= w.W - 1 || ty >= w.H - 1) return 'Fora do mapa';
@@ -3324,8 +3457,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const rm = C.ROT_SEASON[ck.season] * (G.Obras ? G.Obras.storeMult(S) : 1), Te = G.Tech;   // o armazém guarda melhor (Etapa 7)
     let lost = 0;
     lost += rot(S, 'frutas', C.ROT_FRUIT * rm * Te.rotMult(S, 'frutas'));
-    lost += rot(S, 'peixe', C.ROT_FISH * rm * Te.rotMult(S, 'peixe'));
-    lost += rot(S, 'carne', C.ROT_MEAT * rm * Te.rotMult(S, 'carne'));
+    // Etapa 17: com sal no estoque, a carne e o peixe salgados duram mais (vai 1 de sal por dia)
+    const sal = (S.stock.sal || 0) > 0 && ((S.stock.peixe || 0) + (S.stock.carne || 0)) > 0 ? C.SAL_ROT : 1;
+    if (sal < 1 && !S.resumido) S.stock.sal--;
+    lost += rot(S, 'peixe', C.ROT_FISH * rm * sal * Te.rotMult(S, 'peixe'));
+    lost += rot(S, 'carne', C.ROT_MEAT * rm * sal * Te.rotMult(S, 'carne'));
     lost += rot(S, 'defumado', C.ROT_DEFUMADO * rm);
     lost += rot(S, 'seca', C.ROT_SECA * rm);
     // Etapa 10: o que vem da roça dura (feijão e milho secos quase não estragam); ovo e leite, pouco
@@ -3360,6 +3496,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (G.Soc) G.Soc.daily(S);   // Etapa 14: a índole, o descontentamento, as penas, a vila de fora
     if (G.Gente) { if (S.resumido) G.Gente.resumo(S); else G.Gente.daily(S); }   // Etapa 15: tentativas, a estação de que gosta
     if (G.Cidade) G.Cidade.daily(S);   // Etapa 16: quem serve, a aula, a estante, a febre, a faísca, a feira
+    if (G.Regioes) G.Regioes.daily(S);   // Etapa 17: o sal que chegou
     if (G.Life) G.Life.daily(S);
   }
   function rot(S, k, rate) {
@@ -3408,6 +3545,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (G.Soc) G.Soc.hourly(S);   // Etapa 14: os crimes, o julgamento, o líder, as obras do povo
     if (G.Gente) G.Gente.hourly(S);   // Etapa 15: aprender vendo, o combinado, o que se pensa em voz alta
     if (G.Cidade) G.Cidade.hourly(S);   // Etapa 16: a febre, o fogo por acaso, o aqueduto
+    if (G.Regioes) G.Regioes.hourly(S);   // Etapa 17: a primeira vez em cada região, o mosquito
     if (G.Life) G.Life.hourly(S);
     checkGoals(S);
   }
@@ -3648,6 +3786,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (G.Soc) G.Soc.init(S);   // Etapa 14: índole, crimes, líder, quem foi embora
     if (G.Gente) G.Gente.init(S);   // Etapa 15: gostos, jeito, o saber nas pessoas
     if (G.Cidade) G.Cidade.init(S);   // Etapa 16: grandes obras e instituições
+    if (G.Regioes) G.Regioes.init(S);   // Etapa 17: as regiões
     fixGoals(S);
     if (!S.seen) {
       S.seen = new Uint8Array(S.world.W * S.world.H);
@@ -6357,6 +6496,10 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   const C = G.CFG, W = G.W;
   const F = G.Fauna = {};
   F.SPECIES = Object.keys(C.BICHOS);
+  // 0.18: o caranguejo e a cabra moram em regiões (mangue e sertão); no mundo de antes das regiões, não existem (e nem
+  // tentam nascer: a tentativa gastava o sorteio e mudava o resto do mundo)
+  const REGIAO_HAB = { mangue: 1, sertao: 1 };
+  const especies = (S) => (S.world && S.world.reg ? F.SPECIES : F.SPECIES.filter((sp) => !REGIAO_HAB[C.BICHOS[sp].hab]));
   F.spec = (e) => C.BICHOS[(e && e.sp) || 'capivara'];
 
   function rint(S, a, b) { return S.rng.int(a, b); }
@@ -6393,6 +6536,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       case 'mataAgua': return trees(w, x, y, 3) >= 2 && waterNear(w, x, y, 3);
       case 'campo': return (t === T.GRASS || t === T.DRY || t === T.SAND) && trees(w, x, y, 2) === 0 && !waterNear(w, x, y, 1);
       case 'lago': return W.waterAdj(w, i) >= 0 && W.waterCount8(w, i) >= 3;
+      case 'mangue': return !!w.reg && w.reg[i] === 2 && waterNear(w, x, y, 2);   // Etapa 17
+      case 'sertao': return !!w.reg && w.reg[i] === 4 && trees(w, x, y, 2) <= 1;
       case 'deus': return w.bgrid[i] < 0 && !G.Sim.isCamp(S, i) && trees(w, x, y, 1) <= 3;   // o bicho criado por Deus (Etapa 11): perto da aldeia
     }
     return false;
@@ -6420,10 +6565,10 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     }
     if (!f.made) {
       f.made = true; f.v9 = true;
-      for (const sp of F.SPECIES) for (let k = 0; k < C.BICHOS[sp].n; k++) newHerd(S, sp);
+      for (const sp of especies(S)) for (let k = 0; k < C.BICHOS[sp].n; k++) newHerd(S, sp);
       // 0.16: no mapa grande, mais bandos espalhados longe do acampamento (quem explora acha bicho, não um mundo vazio)
       const mais = (S.world.W * S.world.H) / (128 * 128) - 1;
-      if (mais > 0) for (const sp of F.SPECIES) {
+      if (mais > 0) for (const sp of especies(S)) {
         if (C.BICHOS[sp].hab === 'deus') continue;
         const extra = Math.floor(C.BICHOS[sp].n * mais * 0.35 + S.rng.next());
         for (let k = 0; k < extra; k++) newHerd(S, sp, 0, [C.FAUNA_DIST[1], C.FAUNA_DIST[1] + S.world.W * 0.35]);
@@ -6431,7 +6576,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     } else if (!f.v9) {
       // save de antes da Etapa 9: só havia capivaras; chegam os outros bichos
       f.v9 = true;
-      for (const sp of F.SPECIES) if (sp !== 'capivara') for (let k = 0; k < C.BICHOS[sp].n; k++) newHerd(S, sp);
+      for (const sp of especies(S)) if (sp !== 'capivara') for (let k = 0; k < C.BICHOS[sp].n; k++) newHerd(S, sp);
     }
   };
   // um lugar para o bando: o hábitat da espécie, longe o bastante do acampamento e dos outros bandos
@@ -7205,7 +7350,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   K.yieldOf = function (S, b) {
     const f = farmOf(b), d = C.ROCA[f.k];
     if (!d) return 0;
-    const mult = (Sim().def(b).farm || { mult: 1 }).mult;
+    const mult = (Sim().def(b).farm || { mult: 1 }).mult * (G.Regioes ? G.Regioes.rocaMult(S, b) : 1);   // Etapa 17: a seca do sertão
     const terra = G.Deus && G.Deus.dom(S, 'terra') ? C.DOM.terraRoca : 1;   // Etapa 11: Mão na Terra
     return Math.max(0, Math.round(d.yield * mult * (f.bonus || 1) * terra * (1 - Math.min(0.95, f.lost || 0))));
   };
@@ -8070,7 +8215,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   AI.SKILL_LABEL = { coleta: 'Coleta', pesca: 'Pesca', construcao: 'Construção', caca: 'Caça', oficio: 'Ofício', plantio: 'Plantio', criacao: 'Criação', mineracao: 'Mineração' };
   const RES_LABEL = { madeira: 'madeira', pedra: 'pedra', agua: 'água', frutas: 'frutas', peixe: 'peixe', carne: 'carne', couro: 'couro',
     argila: 'argila', defumado: 'defumado', seca: 'fruta seca', ferramentas: 'ferramentas', roupas: 'roupas',
-    tabuas: 'tábuas', fibra: 'fibra', mantas: 'mantas', redes: 'redes',
+    tabuas: 'tábuas', fibra: 'fibra', mantas: 'mantas', redes: 'redes', sal: 'sal', nobre: 'madeira nobre',
     feijao: 'feijão', milho: 'milho', abobora: 'abóbora', mandioca: 'mandioca', ovos: 'ovos', leite: 'leite',
     carvao: 'carvão', minerio: 'minério', prata: 'prata', ouro: 'ouro', gemas: 'pedras preciosas', ferro: 'ferramentas de ferro', joias: 'joias' };
   AI.RES_LABEL = RES_LABEL;
@@ -8326,8 +8471,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     } else if (c.k === 'agua') S.stock.agua = Math.min(Tech.waterCap(S), S.stock.agua + c.n);
     else S.stock[c.k] += c.n;
     if (c.fibra) { S.stock.fibra += c.fibra; S.stats.fibraGot = (S.stats.fibraGot || 0) + c.fibra; }   // embira da casca (Etapa 7) e lã (Etapa 10)
+    if (c.nobre || c.ouro) G.Regioes.trouxe(S, p, c);   // Etapa 17: madeira nobre e ouro do veio
     if (c.k === 'frutas' || c.k === 'peixe') { const got = S.stats.got || (S.stats.got = {}); got[c.k] = (got[c.k] || 0) + c.n; }   // missões do Ato 1
-    if (c.k !== 'obra' && c.k !== 'caca' && c.k !== 'cria') Sim.float(S, p.x, p.y - 0.6, '+' + c.n + ' ' + RES_LABEL[c.k] + (c.fibra ? ' +' + c.fibra + ' fibra' : ''));
+    if (c.k !== 'obra' && c.k !== 'caca' && c.k !== 'cria') Sim.float(S, p.x, p.y - 0.6, '+' + c.n + ' ' + RES_LABEL[c.k] + (c.fibra ? ' +' + c.fibra + ' fibra' : '') + (c.nobre ? ' +' + c.nobre + ' nobre' : '') + (c.ouro ? ' +1 ouro' : ''));
     // Etapa 15: o que rendeu (por hora, desde que a pessoa começou o trabalho) ensina o jeito
     const a = p.act;
     if (G.Gente && a && a.t0 !== undefined && c.k !== 'obra' && c.k !== 'cria') G.Gente.onYield(S, p, a.type, c.k === 'caca' ? (c.carne || 0) + (c.couro || 0) : c.n, (S.t - a.t0) / 60);
@@ -9425,12 +9571,15 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
             a.obj.k = 'stump'; a.obj.regrow = 0; a.obj.res = 0;
             W.refreshBlock(w, a.obj.y * w.W + a.obj.x);
             p.carry = { k: 'madeira', n: C.TREE_WOOD, fibra: G.Obras ? G.Obras.embira(S) : 0 };
+            if (a.obj.sp === 'nobre') p.carry.nobre = C.NOBRE_WOOD;   // Etapa 17: o jequitibá da mata fechada
             S.events.push({ k: 'fell', x: a.obj.x, y: a.obj.y });
           } else if (kind === 'pedra') {
             if (!objOk(a.obj, kind)) return FAIL;
             if (a.t < C.MINE_MIN) return RUN;
             a.obj.ch--;
-            p.carry = { k: 'pedra', n: C.ROCK_STONE };
+            // Etapa 17: a salina dá sal; o veio da serra, pedra e às vezes ouro
+            p.carry = a.obj.sal ? { k: 'sal', n: C.SAL_N } : { k: 'pedra', n: C.ROCK_STONE };
+            if (a.obj.ouro && S.rng.next() < C.VEIO_OURO) p.carry.ouro = 1;
             if (a.obj.ch <= 0) W.removeObj(w, a.obj);
           } else if (kind === 'frutas') {
             const o = a.obj;
@@ -17650,7 +17799,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   const Sim = () => G.Sim, Fam = () => G.Family;
   const DAY = () => C.DAY_MIN;
 
-  const GRANDES = ['templo', 'muralha', 'torre', 'aqueduto'];
+  const GRANDES = ['templo', 'muralha', 'torre', 'aqueduto', 'ponte'];   // a ponte de pedra veio com a Etapa 17
   const INST = ['guarda', 'brigada', 'hospital', 'escola', 'biblioteca', 'mercado'];   // a ordem em que o líder olha
   Ci.GRANDES = GRANDES; Ci.INST = INST;
   Ci.isCidade = (t) => GRANDES.indexOf(t) >= 0 || INST.indexOf(t) >= 0;
@@ -17682,6 +17831,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     templo: (S) => (vivos(S) >= 20 ? '' : 'pede uma aldeia de 20 pessoas'),
     muralha: (S) => (vivos(S) >= 30 ? '' : 'pede uma vila de 30 pessoas'),
     aqueduto: (S) => (vivos(S) >= 30 ? '' : 'pede uma vila de 30 pessoas'),
+    ponte: (S) => (vivos(S) >= 15 ? '' : 'pede uma aldeia de 15 pessoas'),
     escola: (S) => (!escrita(S) ? 'pede a escrita' : criancas(S) < 12 ? 'pede 12 crianças na aldeia' : ''),
     biblioteca: (S) => (escrita(S) ? '' : 'pede a escrita'),
     hospital: (S) => (vivos(S) >= 40 ? '' : 'pede 40 pessoas'),
@@ -17692,7 +17842,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // '' pode; texto: por que não; null: não é obra desta etapa
   Ci.openWhy = function (S, type) {
     if (!ABRE[type]) return null;
-    if (S.buildings.some((b) => b.type === type)) return 'a aldeia já tem ' + (C.BUILD[type].a === 'o' ? 'o seu ' : 'a sua ') + C.BUILD[type].name.toLowerCase();
+    if (type !== 'ponte' && S.buildings.some((b) => b.type === type)) return 'a aldeia já tem ' + (C.BUILD[type].a === 'o' ? 'o seu ' : 'a sua ') + C.BUILD[type].name.toLowerCase();
     const w = ABRE[type](S);
     // a obra que pede tábua só abre com a marcenaria de pé (senão a grande obra parava no meio, sem explicação)
     if (!w && C.BUILD[type].cost.tabuas && !S.buildings.some((b) => b.type === 'marcenaria' && b.built)) return 'pede tábuas: construa uma marcenaria';
@@ -17969,7 +18119,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   }
 
   // ---------- a troca da feira ----------
-  const TROCA = ['madeira', 'pedra', 'argila', 'tabuas', 'fibra', 'frutas', 'peixe', 'carne', 'feijao', 'milho', 'mandioca', 'couro'];
+  const TROCA = ['madeira', 'pedra', 'argila', 'tabuas', 'fibra', 'frutas', 'peixe', 'carne', 'feijao', 'milho', 'mandioca', 'couro', 'sal', 'nobre'];
   function feira(S) {
     const lv = Ci.nivel(S, 'mercado'), v = S.soc && S.soc.vila;
     if (!lv || !v || v.fim || S.ck.day % C.MERCADO_D[lv]) return;
@@ -18031,6 +18181,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // ---------- obra pronta ----------
   Ci.onBuilt = function (S, b) {
     if (!Ci.isCidade(b.type)) return false;
+    if (b.type === 'ponte') { if (G.Regioes) G.Regioes.ponte(S, b); return true; }   // Etapa 17
     const d = C.BUILD[b.type];
     if (d.grande) {
       const dias = b.t0 ? Math.max(1, Math.round((S.t - b.t0) / DAY())) : 0;
@@ -18087,6 +18238,138 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   };
   // os motivos e os nomes que o líder usa ao marcar (a Sociedade carrega antes)
   if (G.Soc) { Object.assign(G.Soc.FALTA, Ci.FALTA); if (G.Soc.NOME_OBRA) Object.assign(G.Soc.NOME_OBRA, Ci.NOME_OBRA); }
+})(globalThis.G = globalThis.G || {});
+
+/* ---- js/regioes.js ---- */
+/* Gods · Etapa 17 (0.18): o mundo grande e as regiões. O mundo de geração 2 tem seis regiões (litoral, mangue,
+   serra alta, sertão, mata fechada e pântano), cada uma com o seu chão, bicho, recurso e perigo; o recurso raro mora
+   longe (sal no litoral, ouro na serra, madeira nobre na mata). Aqui ficam o que a região faz com o povo (a primeira
+   vez em cada uma, o mosquito, a roça do sertão), a ponte de pedra e o mapa do mundo. Sem DOM. */
+(function (G) {
+  'use strict';
+  const C = G.CFG;
+  const Rg = G.Regioes = {};
+  const Sim = () => G.Sim;
+  const R = () => G.REG;
+
+  Rg.init = function (S) {
+    const r = S.regioes || (S.regioes = {});
+    r.vistas = r.vistas || {};   // a primeira vez que alguém pisou em cada região
+    const st = S.stats;
+    for (const k of ['salGot', 'nobreGot', 'ouroVeio', 'mosquito', 'pontes']) st[k] = st[k] || 0;
+  };
+  Rg.de = (S, x, y) => { const w = S.world; return w.reg ? w.reg[Math.floor(y) * w.W + Math.floor(x)] : 0; };
+  Rg.nome = (k) => G.RNAME[k] || '';
+
+  // o que a região conta da primeira vez que alguém do povo pisa nela
+  const PRIMEIRA = {
+    1: 'chegou ao litoral: areia, maré e, na beira, o sal que o mar deixa.',
+    2: 'entrou no mangue: lama até o joelho, caranguejo e mosquito.',
+    3: 'subiu a serra alta: frio de doer e, na pedra, riscos de ouro.',
+    4: 'entrou no sertão: seco, quente, cacto e cabra solta.',
+    5: 'entrou na mata fechada: árvore que não acaba e, entre elas, o jequitibá, madeira nobre.',
+    6: 'chegou ao pântano: junco, água parada, jacaré e febre.',
+  };
+  function primeiras(S) {
+    const v = S.regioes.vistas;
+    for (const p of S.people) {
+      if (!p.alive || p.carriedBy) continue;
+      const k = Rg.de(S, p.x, p.y);
+      if (!k || v[k]) continue;
+      v[k] = S.t;
+      Sim().chron(S, p.name + ' ' + PRIMEIRA[k]);
+    }
+  }
+  // o mosquito do mangue e do pântano passa a febre (a da Etapa 16) para quem está ali; de noite, o dobro
+  function mosquito(S) {
+    if (!G.Cidade || !S.cidade || S.safe) return;
+    const noite = S.ctx && S.ctx.night;
+    for (const p of S.people) {
+      if (!p.alive || p.carriedBy || p.sick || p.imune > S.t) continue;
+      const k = Rg.de(S, p.x, p.y);
+      if (k !== 2 && k !== 6) continue;
+      if (S.rng.next() >= C.MOSQUITO_H * (noite ? 2 : 1)) continue;
+      if (!S.cidade.peste) {
+        S.cidade.peste = { t0: S.t, n: 0, mortes: 0 };
+        Sim().chron(S, p.name + ' voltou ' + (k === 2 ? 'do mangue' : 'do pântano') + ' com febre: foi o mosquito.');
+      }
+      G.Cidade.adoece(S, p);
+      S.stats.mosquito++;
+    }
+  }
+  // o que chega da região: a madeira nobre do jequitibá e o ouro do veio
+  Rg.trouxe = function (S, p, c) {
+    if (c.nobre) {
+      S.stock.nobre = (S.stock.nobre || 0) + c.nobre; S.stats.nobreGot += c.nobre;
+      if (S.stats.nobreGot === c.nobre) Sim().chron(S, p.name + ' derrubou um jequitibá na mata fechada e trouxe a primeira madeira nobre.');
+    }
+    if (c.ouro) {
+      S.stock.ouro = (S.stock.ouro || 0) + c.ouro; S.stats.ouroVeio += c.ouro;
+      if (S.stats.ouroVeio === 1) Sim().chron(S, p.name + ' quebrou uma pedra da serra e achou ouro dentro.');
+    }
+  };
+  Rg.hourly = function (S) {
+    if (!S.regioes) Rg.init(S);
+    if (!S.world.reg) return;
+    primeiras(S);
+    mosquito(S);
+  };
+  Rg.daily = function (S) {
+    if (!S.regioes) Rg.init(S);
+    const sal = S.stock.sal || 0;
+    if (sal > 0 && !S.regioes.salVisto) { S.regioes.salVisto = S.t; Sim().chron(S, 'Chegou sal ao estoque: a carne e o peixe salgados duram o dobro.'); }
+  };
+  // a roça do sertão rende menos (a seca longa)
+  Rg.rocaMult = (S, b) => (Rg.de(S, b.x + 1, b.y + 1) === 4 ? C.SERTAO_ROCA : 1);
+
+  // ---------- a ponte de pedra ----------
+  // vai em cima do rio ou da água rasa (nunca da funda) e precisa de terra dos dois lados, a até 8 passos
+  function travessia(S, x, y) {
+    const w = S.world, T = G.T, agua = (tx, ty) => tx >= 0 && ty >= 0 && tx < w.W && ty < w.H && G.IS_WATER[w.tile[ty * w.W + tx]];
+    const best = [];
+    for (const [dx, dy] of [[1, 0], [0, 1]]) {
+      let a = 0, b = 0;
+      while (a < 9 && agua(x - dx * (a + 1), y - dy * (a + 1)) && agua(x + dy - dx * (a + 1), y + dx - dy * (a + 1))) a++;
+      while (b < 9 && agua(x + dx * (2 + b), y + dy * (2 + b)) && agua(x + dy + dx * (2 + b), y + dx + dy * (2 + b))) b++;
+      if (a < 9 && b < 9) best.push({ dx, dy, a, b, n: a + b + 2 });
+    }
+    best.sort((p, q) => p.n - q.n);
+    return best[0] || null;
+  }
+  Rg.ponteWhy = function (S, x, y) {
+    const w = S.world, T = G.T;
+    for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) {
+      const tx = x + dx, ty = y + dy;
+      if (tx < 1 || ty < 1 || tx >= w.W - 1 || ty >= w.H - 1) return 'Fora do mapa';
+      const i = ty * w.W + tx;
+      if (S.seen && !S.seen[i]) return 'A névoa cobre esse lugar';
+      if (!G.IS_WATER[w.tile[i]]) return 'A ponte vai em cima do rio ou da água rasa';
+      if (w.tile[i] === T.DEEP) return 'A água funda é larga demais para ponte';
+      if (w.bgrid[i] >= 0) return 'Já tem uma obra aqui';
+    }
+    return travessia(S, x, y) ? '' : 'Precisa de terra dos dois lados, a até 8 passos';
+  };
+  // pronta: a água do caminho vira chão de pedra (o caminho de pedra, desenhado por cima da água) e a obra sai
+  Rg.ponte = function (S, b) {
+    const w = S.world, tv = travessia(S, b.x, b.y);
+    const marcar = (tx, ty) => { const i = ty * w.W + tx; if (G.IS_WATER[w.tile[i]] && G.Obras) G.Obras.setRoad(S, i, 3); };
+    if (tv) for (let k = -tv.a; k < 2 + tv.b; k++) { marcar(b.x + tv.dx * k, b.y + tv.dy * k); marcar(b.x + tv.dy + tv.dx * k, b.y + tv.dx + tv.dy * k); }
+    S.stats.pontes++;
+    Sim().chron(S, 'A ponte de pedra ficou pronta: agora se atravessa o rio a pé enxuto, e o bicho de criação também passa.');
+    Sim().removeBuilding(S, b);
+    if (G.R && G.R.invalidate) G.R.invalidate();
+  };
+
+  // ---------- o mapa do mundo ----------
+  // o que o mapa mostra: o tamanho, quanto já foi visto, e as regiões que o povo já conhece
+  Rg.mapaInfo = function (S) {
+    const w = S.world, seen = S.seen;
+    let vis = 0;
+    for (let i = 0; i < seen.length; i++) if (seen[i]) vis++;
+    const conhecidas = Object.keys((S.regioes && S.regioes.vistas) || {}).map((k) => G.RNAME[k]);
+    const pc = vis / seen.length * 100;
+    return { W: w.W, visto: pc < 10 ? Math.round(pc * 10) / 10 : Math.round(pc), conhecidas, gen: w.gen || 1 };
+  };
 })(globalThis.G = globalThis.G || {});
 
 /* ---- js/save.js ---- */
@@ -18187,7 +18470,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       return q;
     });
     return {
-      v: 1, game: 'genesis', seed: S.seed, size: w.W, t: S.t, rng: S.rng.s, camp: S.camp, siteLabel: S.siteLabel,
+      v: 1, game: 'genesis', seed: S.seed, size: w.W, gen: w.gen || 1, t: S.t, rng: S.rng.s, camp: S.camp, siteLabel: S.siteLabel,
       stock: S.stock, vontades: S.vontades, nextPid: S.nextPid, nextBid: S.nextBid,
       chron: S.chron, goals: S.goals, stats: S.stats, over: S.over, arrived: S.arrived,
       people, buildings: S.buildings, objD, graves: extra, holy, god: S.god, seen: packSeen(S.seen), narr: packNarr(S.narr),
@@ -18200,13 +18483,14 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       soc: G.Soc && S.soc ? G.Soc.pack(S) : null,   // Etapa 14: crimes, líder, pedidos, quem foi embora, a vila de fora
       gente: S.gente || null,   // Etapa 15: a média de cada trabalho, as tentativas, quem aprendeu com quem
       cidade: S.cidade || null,   // Etapa 16: o que está escrito, a febre, as primeiras vezes
+      regioes: S.regioes || null,   // Etapa 17: as regiões que o povo já conhece
       povo: S.povo || null,   // 0.16: o nome e o título do lugar
     };
   };
 
   Save.deserialize = function (d) {
     if (!d || d.v !== 1 || d.game !== 'genesis') return null;
-    const w = G.W.generate(d.seed, d.size || C.MAP);
+    const w = G.W.generate(d.seed, d.size || C.MAP, d.gen || 1);   // 0.18: o save de antes refaz o mundo sem regiões, como era
     const K = ['gone', 'tree', 'stump', 'rock', 'bush'];
     // 0.16: só o que mudou desde a geração (no mapa enorme, a lista inteira pesava demais)
     if (d.objD) for (let j = 0; j + 3 < d.objD.length; j += 4) {
@@ -18253,6 +18537,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       soc: d.soc || null,
       gente: d.gente || null,
       cidade: d.cidade || null,
+      regioes: d.regioes || null,
       povo: d.povo || null,
     };
     for (const p of S.people) {
@@ -20005,6 +20290,14 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     anta: { w: 18, body: ['...kkkkkkkk.......', '..kFFFFFFFFkk.kk..', '.kFFFFFFFFFFFkWk..', 'kFFFFFFFFFFFFFFFk.', 'kFFFFFFFFFFFFFeFFk', 'kfFFFFFFFFFFFFFFFk', 'kffFFFFFFFFFFkfFFn', '.kffffffffffk..kk.'],
       legs: [['..kfk....kfk......', '..kfk....kfk......', '..kk.....kk.......'], ['..kfk....kfk......', '.kfk......kfk.....', '.kk........kk.....'], ['..kfk....kfk......', '...kfk..kfk.......', '...kk...kk........']],
       map: { k: '#141014', F: '#4c4648', f: '#343032', W: '#e0d8d0', e: '#b8a890', n: '#2a2428' }, alt: { F: '#565052' } },
+    // Etapa 17: o caranguejo do mangue e a cabra do sertão
+    caranguejo: { w: 11, body: ['.k.......k.', 'kRk.....kRk', '.kRk...kRk.', '..kRRRRRk..', '.kReRReRRk.', 'kRRRRRRRRRk', '.kffffffk..'],
+      legs: [['k.k.k.k.k..', '...........'], ['.k.k.k.k.k.', '...........'], ['k.k.k.k.k..', '.k.......k.']],
+      map: { k: '#3a1c1c', R: '#c4542e', f: '#8a3020', e: '#181425' }, alt: { R: '#b0602e' } },
+    cabra: { w: 14, body: ['..........kk..', '.........kHk.k', '.........kFFkH', '........kFFeFk', '........kFFFFn', '.kkkkkkkFFFk..', 'kWFFFFFFFFFk..', 'kFFFFFFFFFFk..', '.kfFFFFFFffk..'],
+      dead: ['.kkkkkkkkkk.k.', 'kWFFFFFFFFFkFk', 'kFFFFFFFFFFFFn', '.kfFFFFFFffkk.'],
+      legs: [['..kf....kf....', '..kf....kf....', '..kk....kk....'], ['..kf....kf....', '.kf......kf...', 'kk........kk..'], ['..kf....kf....', '...kf..kf.....', '....kk.kk.....']],
+      map: { k: '#2a2420', F: '#d8ccb4', f: '#a89a82', W: '#f4eee0', H: '#6e6050', e: '#181425', n: '#3a2c28' }, alt: { F: '#9a7a5a', f: '#6e563e' } },
     jacu: { w: 11, body: ['......kkk..', '.....kFFFk.', '.....kFeFGk', 'kk..kFFRRk.', 'kFk.kWFFRk.', '.kFkFFWFk..', '..kFFFFk...'],
       legs: [['....r.r....', '...rr.rr...'], ['...r...r...', '..rr...rr..'], ['....r.r....', '....rrrr...']],
       map: { k: '#141014', F: '#3e3034', f: '#2a2224', R: '#e43b44', W: '#cfc4bc', G: '#8b9bb4', e: '#e8d8a0', r: '#b04a4a' }, alt: { F: '#48383a' } },
@@ -20088,6 +20381,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 
   // ---------- ícones da interface (10 x 10) ----------
   const ICONS = {
+    mapa: [['..........', '.kkkkkkkk.', '.kggkbbbk.', '.kgggkbbk.', '.kgykggbk.', '.kgggggkk.', '.kbgggrgk.', '.kbbggggk.', '.kkkkkkkk.', '..........'], { k: P.ink2, g: P.leaf, b: P.sky, y: P.tan, r: P.red }],   // Etapa 17: o mapa do mundo
+    ponte: [['..........', '..........', 'kkkkkkkkkk', 'kssssssssk', 'kSSSSSSSSk', 'kkkkkkkkkk', 'ks.sk.sk.k', 'k...k..k.k', 'bbbbbbbbbb', '.b.b.b.b.b'], { k: P.ink2, s: P.silver, S: P.mist, b: P.sky }],   // Etapa 17
     // Etapa 16: as grandes obras e as instituições
     templo: [['....yy....', '...kkkk...', '..kssssk..', '.kkkkkkkk.', '.ks.ss.sk.', '.ks.ss.sk.', '.ks.ss.sk.', 'kkkkkkkkkk', 'kssssssssk', 'kkkkkkkkkk'],
       { k: P.ink2, s: P.silver, y: P.gold }],
@@ -20883,6 +21178,90 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     return b.canvas();
   }
 
+  // ---------- Etapa 17: o que só nasce em cada região ----------
+  // as cores do chão de cada região (primavera, verão e outono; no inverno, só a água turva muda). Por tipo de tile
+  const RT = {
+    1: { 3: ['#c8a874', '#dcc08c', '#ecd6a8'] },   // litoral: areia clara de praia
+    2: { 1: ['#2c5450', '#386660', '#56847a'], 2: ['#2c5450', '#386660', '#56847a'], 3: ['#58503a', '#685e44', '#7a6e50'], 4: ['#3c5838', '#48683e', '#5a7a48'] },   // mangue: lama e água escura
+    3: { 6: ['#5e6e52', '#70805a', '#86946a'], 7: ['#64606c', '#7c7a8a', '#d6dae4'] },   // serra alta: pedra fria com neve no alto
+    4: { 3: ['#c09660', '#d2aa72', '#e2c08c'], 4: ['#7c7840', '#928a4a', '#a89c5a'], 6: ['#88783f', '#9c8a4c', '#b09c5c'], 8: ['#9e7a46', '#b49058', '#c8a66c'] },   // sertão
+    5: { 4: ['#3c6232', '#4a6e37', '#5c8040'], 5: ['#223e2a', '#2c4a2f', '#385734'] },   // mata fechada
+    6: { 1: ['#3a5446', '#465f4e', '#627a62'], 2: ['#3a5446', '#465f4e', '#627a62'], 3: ['#6a5c3e', '#7a6a46', '#8e7c54'], 4: ['#4a5c32', '#586a38', '#6a7a42'], 5: ['#30442f', '#3a5034', '#475c3a'] },   // pântano
+  };
+  A.REGION_TERRAIN = [RT, RT, RT, { 2: { 1: RT[2][1], 2: RT[2][2] }, 6: { 1: RT[6][1], 2: RT[6][2] } }];
+  TREE_TONES.nobre = ['#17241f', '#1d3a2c', '#28503a', '#3a6a3c', '#5e8a40', '#a8b45a'];
+  TREE_TONES.mangue = ['#18282a', '#1f3a34', '#2a5040', '#3c6a46', '#5a864c', '#90a85e'];
+  // jequitibá: a copa maior e mais escura da mata fechada (a madeira nobre)
+  function nobreTree(v, season) {
+    if (season === 3) return broadTree(v, 3);
+    const b = new Buf(22, 26);
+    trunk(b, 10, 13, 23, [[10, 15, 5, 9], [11, 15, 16, 9]]);
+    const tones = season === 2 ? TREE_TONES.autumnY : TREE_TONES.nobre;
+    clumps(b, BROAD[(v + 1) % 3].map(([x, y, r]) => [x, y, r + 0.6]), tones, 140 + v * 13 + season);
+    return b.canvas();
+  }
+  // a árvore do mangue: copa baixa sobre raízes em arco, fincadas na lama
+  function mangueTree(v, season) {
+    const b = new Buf(20, 22), cx = 10;
+    for (const [x0, x1] of [[3, 8], [6, 9], [16, 11], [13, 11]]) {
+      line(b, x0, 21, Math.round((x0 + x1) / 2), 15, BARK[1]);
+      line(b, Math.round((x0 + x1) / 2), 15, x1, 13, BARK[2]);
+    }
+    for (let y = 10; y <= 15; y++) { b.set(cx - 1, y, BARK[3]); b.set(cx, y, BARK[2]); b.set(cx + 1, y, BARK[1]); }
+    const tones = season === 3 ? TREE_TONES.bushW : TREE_TONES.mangue;
+    clumps(b, [[6, 7, 3.4], [10, 5, 3.8], [14, 7, 3.4], [8, 10, 3], [12, 10, 3]].map(([x, y, r]) => [x + (v === 1 ? 1 : 0), y, r]), tones, 170 + v);
+    return b.canvas();
+  }
+  // mandacaru: colunas verdes com espinho claro; com fruta, um botão vermelho no alto
+  function cacto(fruit, season) {
+    const b = fromRows([
+      '.....kk.....',
+      '....kGgk....',
+      '.k..kGgk..k.',
+      'kGk.kGgk.kGk',
+      'kGgkkGgk.kGk',
+      'kGgGGGgk.kGk',
+      '.kgGGGgkkGgk',
+      '..kkkGgGGGgk',
+      '....kGgggkk.',
+      '....kGgk....',
+      '....kGgk....',
+      '...kkggkk...',
+    ], { k: '#1c2a24', G: season === 3 ? '#6e8a74' : '#5e8a4c', g: season === 3 ? '#4e6a58' : '#3e6a3a' });
+    for (const [x, y] of [[5, 3], [6, 6], [1, 4], [10, 5], [5, 9]]) b.set(x, y, '#d8e2b0');
+    if (fruit > 0) { b.set(5, 0, '#c8423a'); b.set(6, 0, '#8a2a2c'); }
+    return b.canvas();
+  }
+  // junco: um tufo de varas altas na beira da água, com a ponta marrom
+  function junco(v, season) {
+    const b = new Buf(10, 13), cor = season === 3 ? ['#8a8e7a', '#a8aa94'] : season === 2 ? ['#7a6a36', '#a08a46'] : ['#3e5a2c', '#5e7c3a'];
+    const xs = v === 1 ? [1, 3, 5, 7, 8] : [2, 3, 5, 6, 8];
+    xs.forEach((x, k) => {
+      const top = 1 + (k * 3) % 5;
+      for (let y = top; y <= 12; y++) b.set(x + (y < 5 && k % 2 ? 1 : 0), y, y < top + 3 ? cor[1] : cor[0]);
+      if (k % 2 === 0) { b.set(x, top, '#6e4a35'); b.set(x, top + 1, '#6e4a35'); }
+    });
+    return b.canvas();
+  }
+  // a salina: cristais brancos de sal empilhados na areia
+  function salina() {
+    return fromRows([
+      '.....kk.......',
+      '....kWwk..kk..',
+      '..kkWWwwkkWwk.',
+      '.kWWwWWwwWWwwk',
+      'kWwwWWwwwWwwSk',
+      '.kSSSSSSSSSSk.',
+    ], { k: '#8a8278', W: '#ffffff', w: '#e2e6ea', S: '#b8b4ae' }).canvas();
+  }
+  // o veio de ouro: a pedra grande da serra com riscos de ouro
+  function veio(v, snow) {
+    const b = fromRows(ROCKS[1][v], ROCK_TONES);
+    for (const [x, y] of [[3, 3], [4, 4], [6, 5], [7, 5], [8, 6], [5, 2]]) if (b.get(x, y) && b.get(x, y) !== ROCK_TONES.k) b.set(x, y, (x + y) % 2 ? '#f2da72' : '#eaaa3c');
+    if (snow) for (let x = 0; x < b.w; x++) { const y = [...Array(b.h).keys()].find((yy) => b.get(x, yy) && b.get(x, yy) !== ROCK_TONES.k); if (y !== undefined) b.set(x, y, '#ffffff'); }
+    return b.canvas();
+  }
+
   // ---------- Etapa 16: as grandes obras e as instituições ----------
   // parede de pedra em fiadas desencontradas (a da casa de pedra), com a quina escura
   function stoneWall(b, x0, y0, x1, y1, seed) {
@@ -21023,8 +21402,23 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     for (let x = 2; x < 64; x += 6) b.set(x, 5, '#9cc2d4');
     return b.canvas();
   }
+  // a ponte de pedra (32 x 32): o tabuleiro de lajes com a mureta dos dois lados, os arcos por baixo
+  function ponteSpr() {
+    const b = new Buf(32, 32);
+    stoneWall(b, 0, 4, 31, 7, 90);
+    for (let y = 8; y <= 21; y++) for (let x = 0; x <= 31; x++) {
+      const row = Math.floor((y - 8) / 3), off = row % 2 ? 2 : 0, junta = (y - 8) % 3 === 2 || (x + off) % 6 === 0;
+      b.set(x, y, junta ? STONE[2] : H7(Math.floor((x + off) / 6), row, 91) < 0.5 ? STONE[3] : '#a2aec4');
+    }
+    stoneWall(b, 0, 22, 31, 24, 92);
+    for (const ax of [5, 16, 27]) for (let y = 26; y <= 31; y++) for (let x = ax - 4; x <= ax + 4; x++) {
+      const r = Math.hypot(x + 0.5 - ax, y - 31);
+      if (r > 4.6) b.set(x, y, STONE[2]); else if (r > 3.6) b.set(x, y, STONE[1]);
+    }
+    return b.canvas();
+  }
   A.cidadeSprites = function () {
-    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto() };
+    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr() };
     for (const k of ['escola', 'biblioteca', 'hospital', 'guarda', 'brigada', 'mercado']) out[k] = [null, instituicao(k, 1), instituicao(k, 2), instituicao(k, 3)];
     return out;
   };
@@ -21041,6 +21435,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     S.bush = [0, 1, 2, 3].map((s) => [0, 1, 2, 3].map((f) => bush(f, s)));
     S.holyBush = [0, 1, 2, 3, 4, 5].map((f) => bush(f, 0, true));   // Etapa 11
     S.rock = [0, 1, 2].map((sz) => [false, true].map((sn) => [0, 1].map((v) => rock(sz, v, sn))));
+    // Etapa 17: o jequitibá, a árvore do mangue, o mandacaru, o junco, a salina e o veio de ouro
+    S.nobre = [0, 1, 2, 3].map((s) => [0, 1, 2].map((v) => nobreTree(v, s)));
+    S.mangue = [0, 1, 2, 3].map((s) => [0, 1].map((v) => mangueTree(v, s)));
+    S.cacto = [0, 1, 2, 3].map((s) => [0, 1].map((f) => cacto(f, s)));
+    S.junco = [0, 1, 2, 3].map((s) => [0, 1].map((v) => junco(v, s)));
+    S.salina = salina();
+    S.veio = [0, 1].map((v) => [false, true].map((sn) => veio(v, sn)));
     S.stump = [stump(false), stump(true)];
     polishOn = true;   // 0.16: daqui até os itens do estoque, o acabamento de luz
     S.grave = grave().canvas();
@@ -21159,6 +21560,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     PAL.detail = A.DETAIL.map((d) => ({ tuft: pack(d.tuft), tip: pack(d.tip), flowers: d.flowers.map(pack), leaf: d.leaf.map(pack) }));
     PAL.pebble = [pack('#938a8c'), pack('#6d6672'), pack('#bdb2a6')];
     PAL.snowSpark = pack('#ffffff');
+    // Etapa 17: as cores do chão de cada região, por estação
+    PAL.reg = (A.REGION_TERRAIN || []).map((seas) => { const o = []; for (const rg in seas) { o[rg] = []; for (const t in seas[rg]) o[rg][t] = seas[rg][t].map(pack); } return o; });
   }
 
   // trama ordenada 4x4 (de -0.5 a 0.5) e os tufos de capim desenhados à mão (l = ponta clara, d = base escura)
@@ -21202,7 +21605,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const img = x.createImageData(N, M), buf = new Uint32Array(img.data.buffer), pal = PAL[season], shade = shadeField(w);
     const tree = pal[T.FOREST][0], rock = PAL.pebble[0], bush = pal[T.FOREST][2];
     for (let ty = 0; ty < w.H; ty++) for (let tx = 0; tx < w.W; tx++) {
-      const i = ty * w.W + tx, t = w.tile[i], tones = pal[t];
+      const i = ty * w.W + tx, t = w.tile[i], rg = w.reg ? w.reg[i] : 0, rp = rg && PAL.reg[season] && PAL.reg[season][rg], tones = rp && rp[t] ? rp[t] : pal[t];   // Etapa 17: a cor da região
       let tone = 1;
       if (!IS_WATER[t]) { const d = shade[i]; if (d > 0.03) tone = 2; else if (d < -0.03) tone = 0; }
       else if (t === T.DEEP) tone = w.elev[i] < 0.2 ? 0 : w.elev[i] < 0.27 ? 1 : 2;
@@ -21219,12 +21622,39 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     ovKey = key; ovImg = c;
     return c;
   }
+  // Etapa 17: o mapa do mundo, um pixel por passo (mais, no mapa menor): só o que o povo já viu, com o chão de cada
+  // região; as obras, o povo, o centro e a vila de fora por cima
+  R.REGCOR = ['', '#dcc08c', '#386660', '#d6dae4', '#c8a66c', '#2c4a2f', '#5b6b3a'];
+  R.mapaMundo = function (S, cv) {
+    if (!PAL) buildPal();
+    const w = S.world, N = w.W, px = Math.max(1, Math.floor(384 / N)), season = S.ck.season, pal = PAL[season], seen = S.seen;
+    cv.width = N * px; cv.height = N * px;
+    const [tc, tx] = A.mk(N, N), img = tx.createImageData(N, N), buf = new Uint32Array(img.data.buffer), escuro = pack('#141218');
+    for (let i = 0; i < N * N; i++) {
+      if (seen && !seen[i]) { buf[i] = escuro; continue; }
+      const t = w.tile[i], rg = w.reg ? w.reg[i] : 0, rp = rg && PAL.reg[season] && PAL.reg[season][rg];
+      buf[i] = rp && rp[t] ? rp[t][1] : pal[t][1];
+    }
+    tx.putImageData(img, 0, 0);
+    const x = cv.getContext('2d');
+    x.imageSmoothingEnabled = false;
+    x.drawImage(tc, 0, 0, N * px, N * px);
+    x.fillStyle = '#e2cfa4';
+    for (const b of S.buildings) x.fillRect(b.x * px, b.y * px, Math.max(2, b.w * px), Math.max(2, b.h * px));
+    x.fillStyle = '#f2da72';
+    for (const p of S.people) if (p.alive && !p.fora && !p.carriedBy) x.fillRect(Math.floor(p.x) * px, Math.floor(p.y) * px, Math.max(1, px), Math.max(1, px));
+    x.strokeStyle = '#f2da72'; x.lineWidth = Math.max(1, px);
+    x.strokeRect((S.camp.x - 2) * px, (S.camp.y - 2) * px, 6 * px, 6 * px);
+    const v = S.soc && S.soc.vila;
+    if (v && !v.fim && v.x >= 0 && v.x < N) { x.fillStyle = '#c8423a'; x.fillRect((v.x - 1) * px, (v.y - 1) * px, 4 * px, 4 * px); }
+    return G.Regioes ? G.Regioes.mapaInfo(S) : { W: N, visto: 0, conhecidas: [], gen: 1 };
+  };
   function renderChunk(w, cx, cy, season) {
     if (!PAL) buildPal();
     const [c, x] = A.mk(CPX, CPX);
     const img = x.createImageData(CPX, CPX);
     const buf = new Uint32Array(img.data.buffer);
-    const pal = PAL[season], seed = w.seed, Wt = w.W, Ht = w.H;
+    const pal = PAL[season], seed = w.seed, Wt = w.W, Ht = w.H, REG = w.reg || null;
     const MG = 2, M = CPX + MG * 2;
     const types = new Uint8Array(M * M), E = new Float32Array(M * M), SH = new Float32Array(M * M);
     const shade = shadeField(w);
@@ -21250,7 +21680,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     for (let j = MG; j < M - MG; j++) {
       for (let i = MG; i < M - MG; i++) {
         const k = j * M + i, t = types[k], wx = ox0 + i, wy = oy0 + j;
-        const tones = pal[t];
+        let tones = pal[t];
+        if (REG) {   // Etapa 17: a região do pixel (a borda entre uma e outra é tremida, para não sair em quadrados)
+          const gx = Math.min(Wt - 1, Math.max(0, ((wx + (vnoise(wx, wy, 3, seed + 91) - 0.5) * 14) / TS) | 0)), gy = Math.min(Ht - 1, Math.max(0, ((wy + (vnoise(wy, wx, 3, seed + 93) - 0.5) * 14) / TS) | 0));
+          const rp = PAL.reg[season] && PAL.reg[season][REG[gy * Wt + gx]];
+          if (rp && rp[t]) tones = rp[t];
+        }
         const h = G.hash2(wx, wy, seed + 9);
         let col;
         if (IS_WATER[t]) {
@@ -22074,11 +22509,15 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         const arau = o.sp === 'arau', dx = tiny ? 0 : swayOf(o, now || 0);
         if (!tiny) blit(S.bigShadow, bx - 3 + (dx > 0 ? 1 : 0), by + 11);
         if (arau) blitTree(S.arau[season][o.v], bx - 3, by + 13 - 30, 8, dx);
+        else if (o.sp === 'nobre') blitTree(S.nobre[season][o.v % 3], bx - 3, by + 13 - 23, 6, dx);   // Etapa 17
+        else if (o.sp === 'mangue') blitTree(S.mangue[season][o.v % 2], bx - 2, by + 13 - 20, 8, dx);
         else blitTree(S.broad[season][o.v], bx - 3, by + 13 - 23, 6, dx);
         break;
       }
       case 'stump': blit(S.stump[snow ? 1 : 0], bx + 3, by + 7); break;
+      case 'junco': blit(S.junco[season][o.v % 2], bx + 3, by + 2); break;   // Etapa 17
       case 'bush':
+        if (o.sp === 'cacto') { blit(S.cacto[season][o.fruit > 0 ? 1 : 0], bx + 2, by + 3); break; }   // Etapa 17: o mandacaru
         if (o.holy) {
           // Etapa 11: a árvore de Deus, de fruta dourada (e um brilho de vez em quando)
           blit(S.holyBush[Math.min(5, o.fruit)], bx + 1, by + 4);
@@ -22086,6 +22525,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         } else blit(S.bush[season][Math.min(3, o.fruit)], bx + 1, by + 4);
         break;
       case 'rock': {
+        if (o.sal) { blit(S.salina, bx + 1, by + 9); break; }   // Etapa 17: a salina e o veio de ouro
+        if (o.ouro) { const im = S.veio[o.v % 2][snow ? 1 : 0]; blit(im, bx + 8 - im.width / 2, by + 14 - im.height); break; }
         const sz = o.big ? (o.ch >= 3 ? 2 : 1) : 0;
         const img = S.rock[sz][snow ? 1 : 0][o.v % 2];
         blit(img, bx + 8 - img.width / 2, by + 14 - img.height);
@@ -22204,8 +22645,10 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       drawShop(S, S2, b, bx, by, ghost, lv, now);
     } else if (b.type === 'estatua') {
       // Etapa 11: a estátua (o nicho com a cor do milagre); consagrada, uma luz gira em volta da cabeça
-      const img = A.statue(lv, b.built ? b.milagre : null), top = by + 31 - img.height;
+      // Etapa 17: a grande estátua sobe num pedestal de pedra
+      const ped = lv >= 3 ? 7 : 0, img = A.statue(lv, b.built ? b.milagre : null), top = by + 31 - img.height - ped;
       blit(S2.bigShadow, bx + 6, by + 27, ghost ? 0.4 : undefined);
+      if (ped) { rect(bx + 3, by + 24, 26, 8, '#6d6672'); rect(bx + 3, by + 24, 26, 2, '#bdb2a6'); rect(bx + 3, by + 31, 26, 1, '#2b2733'); rect(bx + 5, by + 27, 22, 1, '#938a8c'); }
       blit(img, bx, top, ghost ? 0.45 : undefined);
       if (b.built && b.milagre) {
         const col = A.GEM[b.milagre] || '#fee761';
@@ -23977,7 +24420,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     UI.hooks = hooks;
     // ícones estáticos
     document.querySelectorAll('#mobnav button').forEach((b) => {
-      const n = { vontades: 'verao', construir: 'construir', deus: 'deus', povo: 'pessoa', cronica: 'cronica' }[b.dataset.open];
+      const n = { vontades: 'verao', construir: 'construir', deus: 'deus', povo: 'pessoa', cronica: 'cronica' }[b.dataset.open] || (b.id === 'btn-mapa' ? 'mapa' : '');
+      if (!n || !b.querySelector('img')) return;
       b.querySelector('img').src = ic(n);
     });
     $('#btn-cronica img').src = ic('cronica');
@@ -24002,7 +24446,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       ['marcenaria', 'marcenaria'], ['tecelagem', 'tecelagem'], ['roca', 'roca'], ['curral', 'curral'], ['mina', 'mina'], ['ferraria', 'ferraria'], ['estatua', 'estatua'], ['cemiterio', 'cemiterio'],
       // Etapa 16: as instituições e as grandes obras (aparecem quando a sociedade pede)
       ['guarda', 'guarda'], ['brigada', 'brigada'], ['hospital', 'hospital'], ['escola', 'escola'], ['biblioteca', 'biblioteca'], ['mercado', 'mercado'],
-      ['torre', 'torre'], ['templo', 'templo'], ['muralha', 'muralha'], ['aqueduto', 'aqueduto']];
+      ['torre', 'torre'], ['templo', 'templo'], ['muralha', 'muralha'], ['aqueduto', 'aqueduto'], ['ponte', 'ponte']];
     const SHORT = { barraca: 'Barraca', forno: 'Forno' };   // nome curto no botão (o painel fica em duas fileiras)
     $('#builds').innerHTML = builds.map(([t, icn]) => {
       const d = C.BUILD[t];
@@ -25809,7 +26253,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // ---------- escolha do local ----------
   UI.siteInfo = function (w, s) {
     if (!s) { $('#site-title').textContent = 'Nenhum lugar escolhido'; $('#site-stats').innerHTML = ''; $('#site-reason').hidden = true; $('#btn-start').disabled = true; return; }
-    $('#site-title').textContent = s.valid ? G.TNAME[s.tile] + ', ' + G.W.siteLabel(w, s) : 'Aqui não dá';
+    const rg = w.reg ? w.reg[s.y * w.W + s.x] : 0;   // Etapa 17: a região do lugar
+    $('#site-title').textContent = s.valid ? (rg ? G.RNAME[rg] : G.TNAME[s.tile]) + ', ' + G.W.siteLabel(w, s) : 'Aqui não dá';
     const clima = s.cold > 0.35 ? 'Frio (montanha)' : s.cold > 0.15 ? 'Fresco' : 'Ameno';
     $('#site-stats').innerHTML = [
       ['madeira', 'Árvores', s.trees], ['pedra', 'Pedras', s.rocks], ['frutas', 'Pitangueiras', s.bushes],
@@ -27283,6 +27728,17 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // ---------- teclado ----------
   let lastSpeed = 1;
   function setSpeed(i) { i = Math.max(0, Math.min(C.SPEEDS.length - 1, i | 0)); if (i > 0) lastSpeed = i; speed = i; UI.update(0, true); }
+  // Etapa 17: o mapa do mundo, com a legenda das regiões (as que o povo ainda não conhece, apagadas)
+  function abrirMapa() {
+    if (!S) return;
+    const info = G.R.mapaMundo(S, $('#mapa-cv'));
+    const tam = (C.MAP_SIZES.find((m) => m.n === info.W) || { name: '' }).name;
+    $('#mapa-info').textContent = 'Mapa ' + (tam ? tam.toLowerCase() + ' ' : '') + '(' + info.W + ' × ' + info.W + ' passos) · ' + info.visto + '% já visto pelo povo.' + (info.gen < 2 ? ' Este mundo é de antes das regiões.' : '');
+    const leg = $('#mapa-legenda');
+    leg.innerHTML = info.gen < 2 ? '' : G.RNAME.slice(1).map((n, k) => '<li class="' + (info.conhecidas.indexOf(n) >= 0 ? '' : 'nao') + '"><i style="background:' + G.R.REGCOR[k + 1] + '"></i>' + n + '</li>').join('') +
+      '<li><i style="background:#f2da72"></i>o povo</li><li><i style="background:#e2cfa4"></i>obras</li>' + (S.soc && S.soc.vila && !S.soc.vila.fim ? '<li><i style="background:#c8423a"></i>' + S.soc.vila.nome + '</li>' : '');
+    $('#modal-mapa').hidden = false;
+  }
   function onKey(e) {
     // quem digita num campo (ou escolhe numa lista) não aperta atalho; nem quem usa um atalho do navegador (Ctrl+R...)
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
@@ -27302,6 +27758,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       }
       return;
     }
+    if (k === 'm' && !placing) { const md = $('#modal-mapa'); if (md.hidden) abrirMapa(); else md.hidden = true; return; }   // Etapa 17: o mapa do mundo
     if (k === ' ') { e.preventDefault(); setSpeed(speed === 0 ? (lastSpeed || 1) : 0); }
     else if (k >= '1' && k <= '6' && k.length === 1) setSpeed(+k);
     else if (k === 'f') startPlacing('fogueira');
@@ -27488,6 +27945,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     });
     $('#btn-mundos').addEventListener('click', openMundos);
     $('#btn-mundos-close').addEventListener('click', () => { $('#modal-mundos').hidden = true; });
+    $('#btn-mapa').addEventListener('click', () => abrirMapa());   // Etapa 17
+    $('#btn-mapa-close').addEventListener('click', () => { $('#modal-mapa').hidden = true; });
     $('#btn-mundos-new').addEventListener('click', () => { $('#modal-mundos').hidden = true; setMode('site'); newSiteWorld(); });
 
     const hot = window.claude && window.claude.hot;
