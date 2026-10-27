@@ -107,6 +107,7 @@
       memoria: G.Memoria && S.memoria ? packMem(S.memoria) : null,   // Etapa 13: corpos, contos, a erva e o rito
       soc: G.Soc && S.soc ? G.Soc.pack(S) : null,   // Etapa 14: crimes, líder, pedidos, quem foi embora, a vila de fora
       gente: S.gente || null,   // Etapa 15: a média de cada trabalho, as tentativas, quem aprendeu com quem
+      cidade: S.cidade || null,   // Etapa 16: o que está escrito, a febre, as primeiras vezes
       povo: S.povo || null,   // 0.16: o nome e o título do lugar
     };
   };
@@ -159,6 +160,7 @@
       memoria: d.memoria || null,
       soc: d.soc || null,
       gente: d.gente || null,
+      cidade: d.cidade || null,
       povo: d.povo || null,
     };
     for (const p of S.people) {

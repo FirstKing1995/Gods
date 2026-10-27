@@ -1,3 +1,34 @@
+# Gods · Etapa 16 (Grandes obras e instituições) · versão 0.17
+
+## O que mudou na 0.17
+
+A etapa 16 do roteiro traz duas famílias de obra: as grandes obras, que levam meses e marcam o mundo, e as instituições, que a sociedade pede quando cresce.
+
+**Grandes obras.** Cada uma pede centenas de peças e muitas mãos e sobe em fases: o povo constrói até onde o material entregue deixa, sem esperar tudo chegar, e no mapa ela aparece de baixo para cima, com andaimes. Uma obra comum que dá para fazer passa na frente, para a grande não travar a aldeia.
+- **Torre de vigia** (abre com 15 pessoas): a névoa se abre e fica aberta num raio de 24 passos; com a guarda, quem vigia vê também de noite e mais longe.
+- **Templo** (20 pessoas): lugar de reza da manhã, preferido à estátua; quem reza ali ganha o dobro de fé.
+- **Muralha** (30 pessoas): um anel de pedra de 16 passos em volta do centro, com portão. Lá dentro, lobo e onça não pegam ninguém, e ninguém leva a comida guardada.
+- **Aqueduto** (30 pessoas e a cerâmica): o estoque de água se enche sozinho, e ninguém precisa mais ir buscar.
+
+**Instituições**, cada uma com três níveis (palha, tábuas, pedra). Aparecem quando a sociedade pede, e no modo "O povo decide" o líder marca a que falta e sobe de nível a que não dá mais conta:
+
+| Casa | Aparece com | Níveis | O que faz |
+|---|---|---|---|
+| Escola | a escrita e 12 crianças | roda de ensino, escola, faculdade | a criança aprende de dia o que os grandes sabem, inclusive o jeito das técnicas sem precisar ver; depois, o adulto aprende 15% e 35% mais depressa |
+| Biblioteca | a escrita | estante, biblioteca, arquivo | o jeito das técnicas fica escrito e não se perde com quem morre; quem trabalha nele aprende pelo livro; no arquivo, todos aprendem 15% mais |
+| Hospital | 40 pessoas | curandeiro, enfermaria, hospital | a febre tira menos saúde, a ferida sara, o parto difícil tem quem ajude; o hospital quase fecha o contágio |
+| Guarda | o primeiro crime grave | vigia, guarda, delegacia | o malfeito cai (25%, 50%, 60%) e o que acontece perto da guarda tem testemunha |
+| Brigada do fogo | o primeiro incêndio | fila de baldes, brigada, quartel | apaga mais vezes e em metade do tempo; o quartel não depende da água do estoque |
+| Mercado | a vila de fora | banca, feira, mercado | troca o que sobra pelo que falta com a vila de fora: por semana, a cada três dias, todo dia |
+
+**Profissões.** Cada instituição pede gente fixa (professor, bibliotecário, curandeiro, guarda, bombeiro, feirante; uma, duas ou três pessoas por nível), escolhida pelo ofício que mais combina. Quem tem posto serve lá das 8 às 17 e sai do trabalho comum. Só com fartura: com 3 dias de comida ou mais alguém é chamado; abaixo de 1,5 dia, todos voltam à roça. A instituição só vale enquanto alguém serve nela.
+
+**Os desafios da etapa.**
+- **A febre.** Numa aldeia de 15 pessoas ou mais aparece de vez em quando, mais no inverno. Passa de um para outro, muito mais entre quem dorme na mesma casa. Dura de 5 a 9 dias, e enquanto dura a pessoa rende metade e a saúde não volta. A criança e o velho sofrem mais. Quem sara fica imune por um ano.
+- **O fogo por acaso.** No verão seco, numa aldeia com 6 casas de palha ou mais, uma faísca pode pegar numa casa de dia. É o fogo que abre a brigada.
+
+---
+
 # Gods · versão 0.16 (Mundos e casas)
 
 ## O que mudou na 0.16
@@ -35,7 +66,7 @@
 - Árvores de copa em tufos, com luz e sombra em cada tufo; a araucária virou candelabro, com os andares de galhos e os pompons nas pontas; pedras desenhadas à mão, com face clara, rachadura e musgo.
 - Gente, bichos e obras ganharam o acabamento de luz do alto à esquerda, e o contorno preto virou um tom escuro da própria cor. As pessoas têm cintura, mãos e sombra no rosto.
 
-*A 0.16 foi de correções e de visual; a etapa 16 do roteiro (Grandes obras e instituições) continua sendo a próxima.*
+*A 0.16 foi de correções e de visual; a etapa 16 do roteiro (Grandes obras e instituições) saiu na 0.17.*
 
 ---
 
@@ -571,9 +602,8 @@ Fontes: Pixelify Sans e Crimson Pro (Google Fonts) e os dígitos do Jersey 10 (T
 
 ## Próximas etapas
 
-A 0.15 fechou a etapa 15 (Gente viva), o último dos pedidos urgentes de 12 de outubro: gostos, pensamentos, conversas de verdade, descobertas por tentativa e o saber que passa de mão em mão. A 0.14 tinha fechado a etapa 14 (Sociedade), com a correção da IA que a abria, os três pedidos de 5 de outubro (gente ruim e castigo pela gravidade, obras por conta própria, quem vai embora e funda outra vila) e os outros pedidos urgentes de 12 de outubro (o povo constrói o que precisa sem você marcar, o 1x mais calmo, a aldeia de 300 pessoas sem travar, a Crônica sem excesso de romance e a tela de início sem os nomes). O resto segue nesta ordem (o detalhe de cada etapa está no documento de design):
+A 0.17 fechou a etapa 16 (Grandes obras e instituições), menos a ponte de pedra e a grande estátua, que ficaram para a etapa 17 (mundo grande, onde os rios largos pedem ponte). A 0.15 fechou a etapa 15 (Gente viva), o último dos pedidos urgentes de 12 de outubro: gostos, pensamentos, conversas de verdade, descobertas por tentativa e o saber que passa de mão em mão. A 0.14 tinha fechado a etapa 14 (Sociedade), com a correção da IA que a abria, os três pedidos de 5 de outubro (gente ruim e castigo pela gravidade, obras por conta própria, quem vai embora e funda outra vila) e os outros pedidos urgentes de 12 de outubro (o povo constrói o que precisa sem você marcar, o 1x mais calmo, a aldeia de 300 pessoas sem travar, a Crônica sem excesso de romance e a tela de início sem os nomes). O resto segue nesta ordem (o detalhe de cada etapa está no documento de design):
 
-- **16 · Grandes obras e instituições**: as obras de muitos anos (templo, muralha, torre, aqueduto) e as casas que a sociedade pede quando cresce, cada uma com níveis e com o que a sociedade já sabe: escola, curso de ofício, faculdade, biblioteca, hospital, cemitério, guarda, brigada do fogo, mercado.
 - **17 · Mundo grande**: mapa várias vezes maior, com regiões diferentes de verdade (litoral, mangue, serra alta, sertão, mata fechada, pântano), cada uma com o seu bicho, o seu recurso e o seu perigo. É onde as vilas de fora ganham lugar para se espalhar.
 - **18 · Barcos e outras terras**: canoa, barco, navio; a expedição que acha uma terra nova e funda colônia.
 - **19 e 20 · Eras**: das cavernas e da pedra ao bronze, ao ferro e à monarquia; o povo dominante dá o rumo (matriarcado, guildas, clãs, magia no lugar da máquina) e cada era traz o seu desafio (praga, guerra, pobreza, natalidade).

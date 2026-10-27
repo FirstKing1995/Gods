@@ -590,7 +590,7 @@
     if (Sim.canPlace(S, type, x, y)) return null;
     const def = C.BUILD[type], w = S.world;
     const b = { id: S.nextBid++, type, lv: 1, kind: null, x, y, w: def.w, h: def.h, built: false, progress: 0,
-      have: {}, fuel: 0, beds: [], up: null };
+      have: {}, fuel: 0, beds: [], up: null, t0: S.t };
     for (const k of C.MATERIALS) b.have[k] = 0;
     for (let dy = 0; dy < def.h; dy++) for (let dx = 0; dx < def.w; dx++) {
       const i = (y + dy) * w.W + x + dx;
@@ -787,6 +787,8 @@
         // a estátua (Etapa 11)
       } else if (G.Memoria && G.Memoria.onBuilt(S, b)) {
         // o cemitério (Etapa 13)
+      } else if (G.Cidade && G.Cidade.onBuilt(S, b)) {
+        // as grandes obras e as instituições (Etapa 16)
       } else {
         if (!S.stats.firstTent) { S.stats.firstTent = true; Sim.chron(S, 'Ergueram a primeira barraca.'); }
         else Sim.toast(S, C.BUILD[b.type].name + ' pronta.');
@@ -823,7 +825,7 @@
     ctx.fireNeedsFuel = !!(fire && fire.fuel <= C.FIRE_REFUEL_AT && st.madeira > 0 && (cold || (G.Narr && G.Narr.wantFire(S))));
     // obra da vez: a primeira que dá para tocar (material entregue ou no estoque); senão, a primeira da fila
     // 0.16: com gente dormindo ao relento, a casa que dá para tocar passa na frente das outras obras
-    let job = null, needs = null, doable = false, jobCasa = false;
+    let job = null, needs = null, doable = false, jobCasa = false, jobGr = false;
     const semCasa = !!(S.soc && S.soc.semCama > 0);
     const short = {};
     for (const k of C.MATERIALS) short[k] = 0;
@@ -833,8 +835,13 @@
       const m = Sim.missing(j);
       let sum = 0, can = false;
       for (const k of C.MATERIALS) { sum += m[k]; short[k] += m[k]; if (m[k] > 0 && st[k] > 0) can = true; }
-      const ok = sum === 0 || can, casa = semCasa && b.type === 'barraca';
-      if (!job || (ok && !doable) || (ok && casa && !jobCasa)) { job = j; needs = m; doable = ok; jobCasa = casa && ok; }
+      // Etapa 16: a grande obra anda com o material que já chegou, mas só pega a vez quando nenhuma outra dá
+      // e só com fartura: sem comida guardada, o povo larga a pedra e vai buscar o que comer (senão a vila morria de fome
+      // erguendo o templo)
+      const gr = !!(G.Cidade && G.Cidade.isGrande(b));
+      if (gr && ctx.foodDays < C.GRANDE_FARTURA) { for (const k of C.MATERIALS) short[k] -= m[k]; continue; }
+      const ok = sum === 0 || can || (gr && G.Cidade.podeErguer(j)), casa = semCasa && b.type === 'barraca';
+      if (!job || (ok && !doable) || (ok && casa && !jobCasa) || (ok && jobGr && !gr)) { job = j; needs = m; doable = ok; jobCasa = casa && ok; jobGr = gr; }
     }
     if (G.Campo) short.madeira += G.Campo.fenceShort(S);   // as cercas marcadas pedem vara (Etapa 10)
     for (const k of C.MATERIALS) short[k] = Math.max(0, short[k] - (st[k] || 0));
@@ -886,7 +893,7 @@
     if (n.sede <= 0) { const d = C.HEALTH_DAY.sede / 24 * h; n.saude -= d; p.dmg.sede += d; hurt = true; }
     if (n.calor <= 0) { const d = C.HEALTH_DAY.frio / 24 * h; n.saude -= d; p.dmg.frio += d; hurt = true; }
     else if (n.calor < C.HYPOTHERMIA_BELOW) { const d = C.HYPOTHERMIA_DAY / 24 * h; n.saude -= d; p.dmg.frio += d; hurt = true; }
-    if (!hurt && n.fome > 25 && n.sede > 25 && n.calor > 25) n.saude += C.HEALTH_REGEN_DAY / 24 * h * (G.Deus && G.Deus.saber(S, 'medicina') ? C.MEDICINA_REGEN : 1);
+    if (!hurt && !p.sick && n.fome > 25 && n.sede > 25 && n.calor > 25) n.saude += C.HEALTH_REGEN_DAY / 24 * h * (G.Deus && G.Deus.saber(S, 'medicina') ? C.MEDICINA_REGEN : 1);
     n.saude = Math.min(100, n.saude);
     // saúde cheia: as feridas antigas não contam mais para a causa de uma morte futura
     if (n.saude >= 100) { const d = p.dmg; if (d.fome || d.sede || d.frio || d.raio || d.parto || d.lobo || d.onca || d.jacare || d.bicho) { d.fome = d.sede = d.frio = 0; d.raio = d.parto = d.lobo = d.onca = d.jacare = d.bicho = 0; } }
@@ -1046,6 +1053,7 @@
     if (G.Memoria) G.Memoria.daily(S);   // Etapa 13: visitas à cova, promessas, o costume do rito
     if (G.Soc) G.Soc.daily(S);   // Etapa 14: a índole, o descontentamento, as penas, a vila de fora
     if (G.Gente) { if (S.resumido) G.Gente.resumo(S); else G.Gente.daily(S); }   // Etapa 15: tentativas, a estação de que gosta
+    if (G.Cidade) G.Cidade.daily(S);   // Etapa 16: quem serve, a aula, a estante, a febre, a faísca, a feira
     if (G.Life) G.Life.daily(S);
   }
   function rot(S, k, rate) {
@@ -1093,6 +1101,7 @@
     if (G.Memoria) G.Memoria.hourly(S);   // Etapa 13: o corpo, o velório, o rito, o dia dos mortos
     if (G.Soc) G.Soc.hourly(S);   // Etapa 14: os crimes, o julgamento, o líder, as obras do povo
     if (G.Gente) G.Gente.hourly(S);   // Etapa 15: aprender vendo, o combinado, o que se pensa em voz alta
+    if (G.Cidade) G.Cidade.hourly(S);   // Etapa 16: a febre, o fogo por acaso, o aqueduto
     if (G.Life) G.Life.hourly(S);
     checkGoals(S);
   }
@@ -1195,6 +1204,8 @@
     if (beasts[0][1] > 0 && beasts[0][1] >= Math.max(d.frio, d.fome, d.sede, d.raio || 0, d.parto || 0)) p.cause = beasts[0][0];
     if (d.velhice) p.cause = 'velhice';
     if (d.crime) p.cause = 'crime';   // Etapa 14: morto por outra pessoa
+    if ((d.doenca || 0) > 0 && p.needs.saude <= 0 && d.doenca >= Math.max(d.frio, d.fome, d.sede)) p.cause = 'doenca';   // Etapa 16: a febre
+    if (G.Cidade) G.Cidade.onDeath(S, p);
     S.stats.lastDeathAt = S.t;   // o Narrador dá um respiro depois de uma perda
     if (G.Narr) G.Narr.onDeath(S);
     G.AI.abort(S, p);
@@ -1209,7 +1220,7 @@
       if (r) G.W.addObj(w, 'grave', r.idx % w.W, (r.idx / w.W) | 0, { name: p.name, pid: p.id, t: S.t });
     }
     const causeTxt = { frio: 'de frio', sede: 'de sede', fome: 'de fome', raio: 'atingid' + (p.sex === 'F' ? 'a' : 'o') + ' por um raio', parto: 'no parto', velhice: 'de velhice', lobos: 'no ataque dos lobos',
-      onca: 'no ataque da onça', jacare: 'no ataque de um jacaré', bicho: 'atacad' + (p.sex === 'F' ? 'a' : 'o') + ' por um bicho', crime: 'pelas mãos de outra pessoa' }[p.cause];
+      onca: 'no ataque da onça', jacare: 'no ataque de um jacaré', bicho: 'atacad' + (p.sex === 'F' ? 'a' : 'o') + ' por um bicho', crime: 'pelas mãos de outra pessoa', doenca: 'de febre' }[p.cause];
     const age = Sim.ageOf(S, p);
     Sim.chron(S, p.name + ' morreu ' + causeTxt + (age < 1 ? ', com poucos meses.' : ', ' + (age < 12 ? 'com ' : 'aos ') + age + (age === 1 ? ' ano.' : ' anos.')));
     G.Family.onDeath(S, p);
@@ -1330,6 +1341,7 @@
     if (G.Memoria) G.Memoria.init(S);   // Etapa 13: corpos, contos, a erva e o rito
     if (G.Soc) G.Soc.init(S);   // Etapa 14: índole, crimes, líder, quem foi embora
     if (G.Gente) G.Gente.init(S);   // Etapa 15: gostos, jeito, o saber nas pessoas
+    if (G.Cidade) G.Cidade.init(S);   // Etapa 16: grandes obras e instituições
     fixGoals(S);
     if (!S.seen) {
       S.seen = new Uint8Array(S.world.W * S.world.H);

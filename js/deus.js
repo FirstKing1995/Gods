@@ -473,7 +473,7 @@
   D.wantPray = function (S, p) {
     const h = S.ck.hour;
     if (h < 6 || h >= 8.5 || p.prayedDay === S.ck.day || p.carriedBy || p.labor || p.sleeping || p.fe < 60 || Fam().age(S, p) < 7) return 0;
-    if (!S.buildings.some((b) => b.type === 'estatua' && b.built)) return 0;
+    if (!S.buildings.some((b) => (b.type === 'estatua' || b.type === 'templo') && b.built)) return 0;   // Etapa 16: o templo também
     if (G.Narr && (G.Narr.beastsOut(S) || G.Narr.is(S, 'nevasca') || G.Narr.is(S, 'tempestade'))) return 0;
     if (p.needs.fome < 30 || p.needs.sede < 30 || p.needs.calor < 30 || p.needs.energia < 20) return 0;
     return 34 + (has(p, 'Devoto') ? 8 : 0) + (p.escolhido ? 10 : 0);
@@ -481,6 +481,8 @@
   D.prayerStatue = function (S, p) {
     let best = null, bd = 40;
     for (const b of D.statues(S)) { const d = Math.hypot(b.x + 1 - p.x, b.y + 1 - p.y); if (d < bd) { bd = d; best = b; } }
+    // Etapa 16: o templo vale o dobro e é preferido, mesmo um pouco mais longe
+    if (G.Cidade) for (const b of G.Cidade.templos(S)) { const d = Math.hypot(b.x + 2 - p.x, b.y + 2 - p.y) * 0.6; if (d < bd) { bd = d; best = b; } }
     return best;
   };
   const MORNING = ['{n}, cuida da gente hoje.', 'Obrigad{a} pela noite, {n}.', '{n}, dá força pro trabalho.', 'Bom dia, {n}.'];

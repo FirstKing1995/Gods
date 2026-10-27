@@ -1259,7 +1259,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.16.0',
+    VERSION: '0.17.0',
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
     SAVE_KEY: 'genesis.save.v1',
@@ -1433,6 +1433,54 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         desc: 'O lugar dos que partiram. O povo vela ao pé do fogo, enterra aqui, traz flores e volta todo ano, no último dia do outono.',
         up: [{ name: 'Cemitério cercado', cost: { madeira: 20 }, work: 300, mem: { r: 8, vale: 1.5 },
           desc: 'Uma cerca baixa e um portal de madeira: cabe mais gente, e a visita e o dia dos mortos consolam metade a mais.' }] },
+      // Etapa 16 (0.17): as grandes obras. Pedem centenas de peças e meses de muitas mãos; sobem em fases (grande: o
+      // povo constrói até onde o material entregue deixa, sem esperar tudo chegar) e valem para a aldeia inteira
+      templo: { name: 'Templo', a: 'o', key: '', w: 4, h: 4, cost: { pedra: 160, madeira: 60, tabuas: 50 }, work: 36000, grande: true, god: { reach: 0, reza: 2 },
+        desc: 'A casa de Deus, de pedra e de muitas mãos. Quem tem fé reza ali de manhã e ganha o dobro de fé; a festa e o rito ficam maiores perto dele.' },
+      muralha: { name: 'Muralha', a: 'a', key: '', w: 3, h: 2, cost: { pedra: 200, madeira: 40 }, work: 30000, grande: true, wall: { r: 16 },
+        desc: 'Um anel de pedra em volta do centro, com portão. Lobo e onça não entram, e ninguém leva a comida guardada lá dentro.' },
+      torre: { name: 'Torre de vigia', a: 'a', key: '', w: 2, h: 2, cost: { pedra: 80, tabuas: 40, madeira: 30 }, work: 18000, grande: true, watch: { r: 24 },
+        desc: 'Do alto se vê longe: a névoa se abre em volta dela, o bicho que vem chegando é avisado antes e o malfeito da noite tem testemunha.' },
+      aqueduto: { name: 'Aqueduto', a: 'o', key: '', w: 4, h: 2, cost: { pedra: 180, argila: 60, tabuas: 20 }, work: 33000, grande: true, need: 'ceramica', water: { h: 3 },
+        desc: 'Arcos de pedra que trazem a água para dentro da aldeia: o estoque de água se enche sozinho, e ninguém precisa mais ir buscar.' },
+      // Etapa 16: as instituições. Aparecem quando a sociedade pede, sobem de nível e pedem gente fixa (staff por
+      // nível), que sai do trabalho comum para servir ali. Só com fartura: com fome, todos voltam à roça
+      escola: { name: 'Roda de ensino', a: 'a', key: '', w: 3, h: 3, cost: { madeira: 20, fibra: 6 }, work: 600, inst: { k: 'escola', staff: 1 },
+        desc: 'Um professor junta as crianças à sombra: elas aprendem de dia o que os grandes sabem, e as técnicas passam sem precisar ver.',
+        up: [
+          { name: 'Escola', cost: { tabuas: 24, pedra: 12 }, work: 900, inst: { k: 'escola', staff: 2 }, desc: 'Uma casa com bancos e lousa: as crianças aprendem o dobro, e o adulto que estuda se especializa (aprende 15% mais depressa).' },
+          { name: 'Faculdade', cost: { pedra: 36, tabuas: 24 }, work: 1200, inst: { k: 'escola', staff: 3 }, desc: 'Faculdade e curso técnico: o adulto aprende 35% mais depressa, e o mestre de um ofício forma outros sem sair da bancada.' },
+        ] },
+      biblioteca: { name: 'Estante', a: 'a', key: '', w: 3, h: 3, cost: { madeira: 16, tabuas: 6 }, work: 540, inst: { k: 'biblioteca', staff: 1 },
+        desc: 'O que foi escrito não se perde: o jeito de uma técnica fica guardado, mesmo quando morre o último que sabia.',
+        up: [
+          { name: 'Biblioteca', cost: { tabuas: 22, pedra: 12 }, work: 900, inst: { k: 'biblioteca', staff: 1 }, desc: 'Quem trabalha numa técnica escrita aprende pelo livro, como se tivesse um mestre por perto.' },
+          { name: 'Arquivo', cost: { pedra: 30, tabuas: 18 }, work: 1080, inst: { k: 'biblioteca', staff: 2 }, desc: 'Tudo guardado e copiado: todo o povo aprende 15% mais depressa.' },
+        ] },
+      hospital: { name: 'Curandeiro', a: 'o', key: '', w: 3, h: 3, cost: { madeira: 16, fibra: 10 }, work: 600, inst: { k: 'hospital', staff: 1 },
+        desc: 'A casa das ervas: quem adoece se cura mais depressa e morre menos, e o ferido sara melhor. Sem milagre.',
+        up: [
+          { name: 'Enfermaria', cost: { tabuas: 20, fibra: 10 }, work: 900, inst: { k: 'hospital', staff: 2 }, desc: 'Camas e mãos treinadas: a doença pega menos, e o parto difícil tem quem ajude.' },
+          { name: 'Hospital', cost: { pedra: 32, tabuas: 20 }, work: 1200, inst: { k: 'hospital', staff: 3 }, desc: 'Quase ninguém morre de doença, e a peste mal se espalha.' },
+        ] },
+      guarda: { name: 'Vigia', a: 'o', key: '', w: 3, h: 3, cost: { madeira: 14, pedra: 6 }, work: 480, inst: { k: 'guarda', staff: 1 },
+        desc: 'Alguém de olho na aldeia: o malfeito diminui, e o que acontece perto da guarda tem testemunha.',
+        up: [
+          { name: 'Guarda', cost: { tabuas: 16, pedra: 12 }, work: 840, inst: { k: 'guarda', staff: 2 }, desc: 'Dois de vigia e uma cela: o malfeito cai pela metade.' },
+          { name: 'Delegacia', cost: { pedra: 28, tabuas: 16 }, work: 1080, inst: { k: 'guarda', staff: 3 }, desc: 'Ronda de dia e de noite: o malfeito cai a menos da metade, e quase nada passa sem ser visto.' },
+        ] },
+      brigada: { name: 'Fila de baldes', a: 'a', key: '', w: 3, h: 3, cost: { madeira: 12, argila: 6 }, work: 420, inst: { k: 'brigada', staff: 1 },
+        desc: 'Baldes prontos e alguém que puxa a fila: o fogo é apagado mais vezes e mais cedo.',
+        up: [
+          { name: 'Brigada do fogo', cost: { tabuas: 14, pedra: 8 }, work: 780, inst: { k: 'brigada', staff: 2 }, desc: 'Gente treinada: o fogo quase sempre é apagado antes de levar a obra.' },
+          { name: 'Quartel', cost: { pedra: 26, tabuas: 16 }, work: 1020, inst: { k: 'brigada', staff: 3 }, desc: 'Sino e caixa d’água: o fogo é apagado na hora, mesmo com pouca água no estoque.' },
+        ] },
+      mercado: { name: 'Banca', a: 'a', key: '', w: 3, h: 3, cost: { madeira: 12, tabuas: 4 }, work: 420, inst: { k: 'mercado', staff: 1 },
+        desc: 'Uma banca de troca com a vila de fora: uma vez por semana, o que sobra aqui vira o que falta, sem esperar o mascate.',
+        up: [
+          { name: 'Feira', cost: { tabuas: 18, fibra: 6 }, work: 720, inst: { k: 'mercado', staff: 1 }, desc: 'Feira a cada três dias, com mais coisa na troca.' },
+          { name: 'Mercado', cost: { pedra: 24, tabuas: 18 }, work: 960, inst: { k: 'mercado', staff: 2 }, desc: 'Troca todo dia, e a vila de fora fica mais amiga.' },
+        ] },
     },
     // nível 3 da barraca: a casa que o lugar pede (env: o que precisa ter em volta)
     HOUSES: {
@@ -1475,6 +1523,16 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 
     // ---- IA ----
     VONTADE_W: [0, 0.5, 1, 1.6],
+    // Etapa 16: profissões (só com PROF_FARTURA dias de comida; abaixo de PROF_SOLTA, voltam ao trabalho comum), a peste
+    // (por ano, numa aldeia de PESTE_GENTE ou mais; dura PESTE_D dias; tira PESTE_H de saúde por hora, sem a saúde voltar
+    // enquanto dura; pega com PESTE_PEGA)
+    // e o fogo por acaso (no verão seco, por dia, numa aldeia com FOGO_ACASO_CASAS casas de palha ou mais)
+    PROF_FARTURA: 3, PROF_SOLTA: 1.5, GRANDE_FARTURA: 5,   // a grande obra só anda com GRANDE_FARTURA dias de comida guardada
+    PROF_MIN: 60, SERVIR_MIN: 120,
+    PESTE_ANO: 0.35, PESTE_GENTE: 15, PESTE_D: [5, 9], PESTE_H: 0.4, PESTE_PEGA: 0.16, PESTE_RUA: 0.04,
+    FOGO_ACASO: 0.025, FOGO_ACASO_CASAS: 6,
+    ESCOLA_XP: [0, 1, 1.15, 1.35], ARQUIVO_XP: 1.15, GUARDA_CRIME: [1, 0.75, 0.5, 0.4], BRIGADA_APAGA: [0, 0.3, 0.55, 0.8], HOSP_CURA: [1, 0.45, 0.25, 0.1],
+    MERCADO_D: [0, 7, 3, 1], MERCADO_N: [0, 10, 16, 24],
     WORK_BASE: 32, WORK_CAP: 75, CRITICAL: 15, CRITICAL_BONUS: 70, EVENING_BONUS: 18,
     DEFAULT_VONTADES: { frutas: 2, agua: 2, madeira: 2, pedra: 1, pesca: 2, caca: 2, argila: 1, construir: 2, oficio: 2, conservar: 2, fogo: 3, roca: 2, criacao: 2, mina: 2 },
     REEVAL_MIN: 20,
@@ -2847,7 +2905,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (Sim.canPlace(S, type, x, y)) return null;
     const def = C.BUILD[type], w = S.world;
     const b = { id: S.nextBid++, type, lv: 1, kind: null, x, y, w: def.w, h: def.h, built: false, progress: 0,
-      have: {}, fuel: 0, beds: [], up: null };
+      have: {}, fuel: 0, beds: [], up: null, t0: S.t };
     for (const k of C.MATERIALS) b.have[k] = 0;
     for (let dy = 0; dy < def.h; dy++) for (let dx = 0; dx < def.w; dx++) {
       const i = (y + dy) * w.W + x + dx;
@@ -3044,6 +3102,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         // a estátua (Etapa 11)
       } else if (G.Memoria && G.Memoria.onBuilt(S, b)) {
         // o cemitério (Etapa 13)
+      } else if (G.Cidade && G.Cidade.onBuilt(S, b)) {
+        // as grandes obras e as instituições (Etapa 16)
       } else {
         if (!S.stats.firstTent) { S.stats.firstTent = true; Sim.chron(S, 'Ergueram a primeira barraca.'); }
         else Sim.toast(S, C.BUILD[b.type].name + ' pronta.');
@@ -3080,7 +3140,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     ctx.fireNeedsFuel = !!(fire && fire.fuel <= C.FIRE_REFUEL_AT && st.madeira > 0 && (cold || (G.Narr && G.Narr.wantFire(S))));
     // obra da vez: a primeira que dá para tocar (material entregue ou no estoque); senão, a primeira da fila
     // 0.16: com gente dormindo ao relento, a casa que dá para tocar passa na frente das outras obras
-    let job = null, needs = null, doable = false, jobCasa = false;
+    let job = null, needs = null, doable = false, jobCasa = false, jobGr = false;
     const semCasa = !!(S.soc && S.soc.semCama > 0);
     const short = {};
     for (const k of C.MATERIALS) short[k] = 0;
@@ -3090,8 +3150,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       const m = Sim.missing(j);
       let sum = 0, can = false;
       for (const k of C.MATERIALS) { sum += m[k]; short[k] += m[k]; if (m[k] > 0 && st[k] > 0) can = true; }
-      const ok = sum === 0 || can, casa = semCasa && b.type === 'barraca';
-      if (!job || (ok && !doable) || (ok && casa && !jobCasa)) { job = j; needs = m; doable = ok; jobCasa = casa && ok; }
+      // Etapa 16: a grande obra anda com o material que já chegou, mas só pega a vez quando nenhuma outra dá
+      // e só com fartura: sem comida guardada, o povo larga a pedra e vai buscar o que comer (senão a vila morria de fome
+      // erguendo o templo)
+      const gr = !!(G.Cidade && G.Cidade.isGrande(b));
+      if (gr && ctx.foodDays < C.GRANDE_FARTURA) { for (const k of C.MATERIALS) short[k] -= m[k]; continue; }
+      const ok = sum === 0 || can || (gr && G.Cidade.podeErguer(j)), casa = semCasa && b.type === 'barraca';
+      if (!job || (ok && !doable) || (ok && casa && !jobCasa) || (ok && jobGr && !gr)) { job = j; needs = m; doable = ok; jobCasa = casa && ok; jobGr = gr; }
     }
     if (G.Campo) short.madeira += G.Campo.fenceShort(S);   // as cercas marcadas pedem vara (Etapa 10)
     for (const k of C.MATERIALS) short[k] = Math.max(0, short[k] - (st[k] || 0));
@@ -3143,7 +3208,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (n.sede <= 0) { const d = C.HEALTH_DAY.sede / 24 * h; n.saude -= d; p.dmg.sede += d; hurt = true; }
     if (n.calor <= 0) { const d = C.HEALTH_DAY.frio / 24 * h; n.saude -= d; p.dmg.frio += d; hurt = true; }
     else if (n.calor < C.HYPOTHERMIA_BELOW) { const d = C.HYPOTHERMIA_DAY / 24 * h; n.saude -= d; p.dmg.frio += d; hurt = true; }
-    if (!hurt && n.fome > 25 && n.sede > 25 && n.calor > 25) n.saude += C.HEALTH_REGEN_DAY / 24 * h * (G.Deus && G.Deus.saber(S, 'medicina') ? C.MEDICINA_REGEN : 1);
+    if (!hurt && !p.sick && n.fome > 25 && n.sede > 25 && n.calor > 25) n.saude += C.HEALTH_REGEN_DAY / 24 * h * (G.Deus && G.Deus.saber(S, 'medicina') ? C.MEDICINA_REGEN : 1);
     n.saude = Math.min(100, n.saude);
     // saúde cheia: as feridas antigas não contam mais para a causa de uma morte futura
     if (n.saude >= 100) { const d = p.dmg; if (d.fome || d.sede || d.frio || d.raio || d.parto || d.lobo || d.onca || d.jacare || d.bicho) { d.fome = d.sede = d.frio = 0; d.raio = d.parto = d.lobo = d.onca = d.jacare = d.bicho = 0; } }
@@ -3303,6 +3368,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (G.Memoria) G.Memoria.daily(S);   // Etapa 13: visitas à cova, promessas, o costume do rito
     if (G.Soc) G.Soc.daily(S);   // Etapa 14: a índole, o descontentamento, as penas, a vila de fora
     if (G.Gente) { if (S.resumido) G.Gente.resumo(S); else G.Gente.daily(S); }   // Etapa 15: tentativas, a estação de que gosta
+    if (G.Cidade) G.Cidade.daily(S);   // Etapa 16: quem serve, a aula, a estante, a febre, a faísca, a feira
     if (G.Life) G.Life.daily(S);
   }
   function rot(S, k, rate) {
@@ -3350,6 +3416,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (G.Memoria) G.Memoria.hourly(S);   // Etapa 13: o corpo, o velório, o rito, o dia dos mortos
     if (G.Soc) G.Soc.hourly(S);   // Etapa 14: os crimes, o julgamento, o líder, as obras do povo
     if (G.Gente) G.Gente.hourly(S);   // Etapa 15: aprender vendo, o combinado, o que se pensa em voz alta
+    if (G.Cidade) G.Cidade.hourly(S);   // Etapa 16: a febre, o fogo por acaso, o aqueduto
     if (G.Life) G.Life.hourly(S);
     checkGoals(S);
   }
@@ -3452,6 +3519,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (beasts[0][1] > 0 && beasts[0][1] >= Math.max(d.frio, d.fome, d.sede, d.raio || 0, d.parto || 0)) p.cause = beasts[0][0];
     if (d.velhice) p.cause = 'velhice';
     if (d.crime) p.cause = 'crime';   // Etapa 14: morto por outra pessoa
+    if ((d.doenca || 0) > 0 && p.needs.saude <= 0 && d.doenca >= Math.max(d.frio, d.fome, d.sede)) p.cause = 'doenca';   // Etapa 16: a febre
+    if (G.Cidade) G.Cidade.onDeath(S, p);
     S.stats.lastDeathAt = S.t;   // o Narrador dá um respiro depois de uma perda
     if (G.Narr) G.Narr.onDeath(S);
     G.AI.abort(S, p);
@@ -3466,7 +3535,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       if (r) G.W.addObj(w, 'grave', r.idx % w.W, (r.idx / w.W) | 0, { name: p.name, pid: p.id, t: S.t });
     }
     const causeTxt = { frio: 'de frio', sede: 'de sede', fome: 'de fome', raio: 'atingid' + (p.sex === 'F' ? 'a' : 'o') + ' por um raio', parto: 'no parto', velhice: 'de velhice', lobos: 'no ataque dos lobos',
-      onca: 'no ataque da onça', jacare: 'no ataque de um jacaré', bicho: 'atacad' + (p.sex === 'F' ? 'a' : 'o') + ' por um bicho', crime: 'pelas mãos de outra pessoa' }[p.cause];
+      onca: 'no ataque da onça', jacare: 'no ataque de um jacaré', bicho: 'atacad' + (p.sex === 'F' ? 'a' : 'o') + ' por um bicho', crime: 'pelas mãos de outra pessoa', doenca: 'de febre' }[p.cause];
     const age = Sim.ageOf(S, p);
     Sim.chron(S, p.name + ' morreu ' + causeTxt + (age < 1 ? ', com poucos meses.' : ', ' + (age < 12 ? 'com ' : 'aos ') + age + (age === 1 ? ' ano.' : ' anos.')));
     G.Family.onDeath(S, p);
@@ -3587,6 +3656,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (G.Memoria) G.Memoria.init(S);   // Etapa 13: corpos, contos, a erva e o rito
     if (G.Soc) G.Soc.init(S);   // Etapa 14: índole, crimes, líder, quem foi embora
     if (G.Gente) G.Gente.init(S);   // Etapa 15: gostos, jeito, o saber nas pessoas
+    if (G.Cidade) G.Cidade.init(S);   // Etapa 16: grandes obras e instituições
     fixGoals(S);
     if (!S.seen) {
       S.seen = new Uint8Array(S.world.W * S.world.H);
@@ -3693,6 +3763,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if ((st === 'jovem' || st === 'crianca') && elders(S).some((q) => q !== p && Math.hypot(q.x - p.x, q.y - p.y) < 6)) f *= 1.25;
     if (G.Deus && G.Deus.saber(S, 'escrita')) f *= C.ESCRITA_XP;   // a escrita (Etapa 11): todos aprendem mais rápido
     if (S.povos && S.povos.mixed && G.Povos) f *= G.Povos.xp(S, p);   // Etapa 12: o versátil aprende com os outros povos
+    if (G.Cidade && S.cidade) f *= G.Cidade.xp(S, p);   // Etapa 16: a escola e o arquivo
     return f;
   };
   // 0.14: quem amamenta, calculado uma vez por passo (antes, cada pergunta varria o povo inteiro: com 300, era 90 mil
@@ -6279,6 +6350,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const d = C.BUILD[type];
     if (d && d.open === 'inverno' && !(S.stats.winters >= 1)) return 'abre depois do primeiro inverno';
     if (type === 'estatua') return G.Deus ? G.Deus.buildWhy(S, type) : 'chega com o nível 3 de Deus';   // Etapa 11
+    if (G.Cidade) { const w = G.Cidade.openWhy(S, type); if (w !== null) return w; }   // Etapa 16
     return '';
   };
 })(globalThis.G = globalThis.G || {});
@@ -8936,6 +9008,31 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     };
     return ringRoute(S, p, cx, cy, ring, taken, maxCost || 90, r1);
   }
+  // Etapa 16: servir no posto (a escola, o hospital, a guarda...): vai até lá, fica um turno e conta o tempo servido
+  ACT.servir = {
+    start(S, p, a) {
+      const b = G.Cidade && G.Cidade.alvo(S, p);
+      if (!b || !b.built || !toRing(S, p, b.x + b.w / 2, b.y + b.h / 2, 0.8, b.w / 2 + 1.6, 160)) return false;
+      if (!p.path) setPath(p, [tileOf(S, p)]);
+      a.b = b.id;
+      return true;
+    },
+    run(S, p, a, dt) {
+      const b = Sim.building(S, a.b);
+      if (!b || !b.built || p.cargo !== b.id) return FAIL;
+      if (a.stage === 'go') {
+        a.walk = (a.walk || 0) + dt;
+        if (a.walk > 120) return FAIL;
+        if (moving(p)) return RUN;
+        if (p.stuck) return FAIL;
+        a.stage = 'work'; a.t = 0;
+        face(p, b.x + b.w / 2, b.y + b.h / 2);
+      }
+      a.t += dt;
+      if (a.t >= C.SERVIR_MIN || S.ck.hour >= 17) { G.Cidade.serviu(S, p, b, a.t); return DONE; }
+      return RUN;
+    },
+  };
   // reza da manhã: vai até a estátua, reza um pouco e segue o dia
   ACT.rezar = {
     start(S, p, a) {
@@ -9423,10 +9520,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         let cap = Fam.carryCap(S, p);
         const take = {};
         for (const k of MATS) { const t = Math.max(0, Math.min(miss[k] || 0, S.stock[k] || 0, cap)); take[k] = t; cap -= t; }
-        if (sumMat(take) === 0) return false;
-        if (!toCamp(S, p)) return false;
-        a.take = take; a.stage = 'fetch';
-        return true;
+        if (sumMat(take) > 0) {
+          if (!toCamp(S, p)) return false;
+          a.take = take; a.stage = 'fetch';
+          return true;
+        }
+        if (!(G.Cidade && G.Cidade.podeErguer(job))) return false;   // Etapa 16: a grande obra sobe com o que já chegou
       }
       if (!toBuilding(S, p, b)) return false;
       return true;
@@ -9458,7 +9557,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       if (a.stage === 'go') {
         if (moving(p)) return RUN;
         if (p.stuck) return FAIL;
-        if (sumMat(Sim.missing(job)) > 0) return DONE;
+        if (sumMat(Sim.missing(job)) > 0 && !(G.Cidade && G.Cidade.podeErguer(job))) return DONE;
         a.stage = 'build'; a.t = 0;
         face(p, b.x, b.y);
         say(S, p, 'construir', 0.3);
@@ -9469,6 +9568,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       p.skills.construcao += dt / 60 * Fam.xpFactor(S, p);
       a.t += dt;
       if (job.progress >= 1) { Sim.complete(S, b); return DONE; }
+      if (sumMat(Sim.missing(job)) > 0 && G.Cidade && !G.Cidade.podeErguer(job)) return DONE;   // a fase subiu até onde o material deixa
       return RUN;
     },
     end(S, p) {
@@ -10277,6 +10377,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       const pr = G.Deus.wantPray(S, p);
       if (pr > 0) add('rezar', pr);
     }
+    // Etapa 16: quem tem posto (professor, curandeiro, guarda...) serve nele no horário de trabalho
+    if (G.Cidade && p.cargo) { const sv = G.Cidade.want(S, p); if (sv > 0) add('servir', sv); }
     // Etapa 13: velar, enterrar, visitar a cova, o dia dos mortos, colher a erva, o rito
     if (G.Memoria && S.memoria && st !== 'bebe') { const mm = G.Memoria.want(S, p); if (mm) add('memoria', mm.score, { hint: mm.k }); }
     // Etapa 14: o julgamento, o que não se deve, o exílio, a partida de quem vai embora
@@ -10506,6 +10608,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         return sm ? (st === 'tell' ? 'Pregando a palavra de ' + G.Deus.call(S) + ' ao pé do fogo' : 'Indo pregar ao pé do fogo') : st === 'tell' ? 'Contando uma história ao pé do fogo' : 'Indo contar uma história'; }
       case 'ouvir': { const t = person(S, a.teller), sm = S.life && S.life.story && S.life.story.id === a.st && S.life.story.sermon;
         return sm ? (st === 'listen' ? 'Ouvindo a pregação de ' + (t ? t.name : '…') : 'Indo ouvir a pregação') : st === 'listen' ? 'Ouvindo a história de ' + (t ? t.name : '…') : 'Indo ouvir uma história'; }
+      case 'servir': { const ob = a.b ? Sim.building(S, a.b) : null; return st === 'work' && ob ? G.Cidade.fazendo(ob) : 'Indo para o posto'; }
       case 'rezar': return st === 'pray' ? 'Rezando ao pé da estátua de ' + G.Deus.call(S) : 'Indo rezar na estátua';
       case 'curar': { const t = person(S, a.q); return st === 'heal' ? 'Curando ' + (t ? t.name : '…') + ' com as mãos' : 'Indo curar ' + (t ? t.name : '…'); }
       case 'festa': return st === 'dance' ? 'Dançando na festa' : 'Indo para a festa';
@@ -11488,7 +11591,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   D.wantPray = function (S, p) {
     const h = S.ck.hour;
     if (h < 6 || h >= 8.5 || p.prayedDay === S.ck.day || p.carriedBy || p.labor || p.sleeping || p.fe < 60 || Fam().age(S, p) < 7) return 0;
-    if (!S.buildings.some((b) => b.type === 'estatua' && b.built)) return 0;
+    if (!S.buildings.some((b) => (b.type === 'estatua' || b.type === 'templo') && b.built)) return 0;   // Etapa 16: o templo também
     if (G.Narr && (G.Narr.beastsOut(S) || G.Narr.is(S, 'nevasca') || G.Narr.is(S, 'tempestade'))) return 0;
     if (p.needs.fome < 30 || p.needs.sede < 30 || p.needs.calor < 30 || p.needs.energia < 20) return 0;
     return 34 + (has(p, 'Devoto') ? 8 : 0) + (p.escolhido ? 10 : 0);
@@ -11496,6 +11599,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   D.prayerStatue = function (S, p) {
     let best = null, bd = 40;
     for (const b of D.statues(S)) { const d = Math.hypot(b.x + 1 - p.x, b.y + 1 - p.y); if (d < bd) { bd = d; best = b; } }
+    // Etapa 16: o templo vale o dobro e é preferido, mesmo um pouco mais longe
+    if (G.Cidade) for (const b of G.Cidade.templos(S)) { const d = Math.hypot(b.x + 2 - p.x, b.y + 2 - p.y) * 0.6; if (d < bd) { bd = d; best = b; } }
     return best;
   };
   const MORNING = ['{n}, cuida da gente hoje.', 'Obrigad{a} pela noite, {n}.', '{n}, dá força pro trabalho.', 'Bom dia, {n}.'];
@@ -12219,7 +12324,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     return false;
   };
   // a salvo: na barraca, no colo, perto do fogo aceso ou dentro do Calor de Deus
-  N.safeSpot = function (S, p) { return !!(p.inTent || p.carriedBy || repelAt(S, p.x, p.y)); };
+  N.safeSpot = function (S, p) { return !!(p.inTent || p.carriedBy || repelAt(S, p.x, p.y) || (G.Cidade && G.Cidade.dentro(S, p.x, p.y))); };   // Etapa 16: a muralha
   N.wolvesOut = (S) => !!(S.narr && S.narr.ents.some((e) => e.k === 'lobo' && e.state !== 'embora'));
   N.wolvesNear = (S, x, y, r) => !!(S.narr && S.narr.ents.some((e) => e.k === 'lobo' && e.state !== 'embora' && Math.hypot(e.x - x, e.y - y) < r));
   // Etapa 9: feras por perto (lobos, ou a onça fora da toca)
@@ -12259,6 +12364,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   function stockOpen(S) {
     if (!(S.ctx && S.ctx.food > 0)) return false;
     const c = camp(S);
+    if (G.Cidade && G.Cidade.dentro(S, c.x, c.y)) return false;   // Etapa 16: atrás da muralha, a comida fica
     return !repelAt(S, c.x, c.y);
   }
   function spawnWolves(S, pack) {
@@ -15068,6 +15174,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // (não gasta o da simulação): numa aldeia de gente boa, nada muda
   function tentar(S) {
     if (!podeCrime(S)) return;
+    if (G.Cidade && S.cidade) { const cm = G.Cidade.crimeMult(S); if (cm < 1 && S.rng.next() > cm) return; }   // Etapa 16: a guarda segura o malfeito (sem guarda, não gasta o sorteio)
     const s = S.soc, h = hourOf(S), hi = Math.floor(S.t / 60);
     if (h < 6) return;
     const work = h >= 8 && h < 17, st = S.stock;
@@ -15129,6 +15236,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       if (Math.hypot(q.x - x, q.y - y) <= R) out.push(q.id);
     }
     if (vic && vic.alive && !vic.sleeping && out.indexOf(vic.id) < 0) out.push(vic.id);
+    if (G.Cidade && S.cidade) G.Cidade.guardas(S, x, y, out, p);   // Etapa 16: quem está de vigia vê
     return out;
   }
   // a testemunha conta o que viu? Par e parente próximo de quem fez calam (a não ser que a vítima também seja deles);
@@ -15318,10 +15426,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     for (const b of S.buildings.slice()) {
       if (!b.fogo) continue;
       if (S.precip === 'chuva' || (S.god && S.god.rainUntil > S.t)) { apagou(S, b, 'A chuva apagou o fogo'); continue; }
-      if (S.t - b.fogo < C.FOGO_MIN) continue;
+      if (S.t - b.fogo < C.FOGO_MIN * (G.Cidade && S.cidade ? G.Cidade.fogoMin(S) : 1)) continue;
       let n = 0;
       for (const q of S.people) if (here(q) && !q.sleeping && age(S, q) >= 12 && Math.hypot(q.x - b.x, q.y - b.y) <= 14) n++;
-      const ch = Math.min(0.9, 0.15 + 0.15 * n) * (S.stock.agua >= C.FOGO_AGUA ? 1 : 0.35);
+      const bri = G.Cidade && S.cidade ? G.Cidade.apaga(S) : 0;   // Etapa 16: a brigada do fogo
+      const ch = Math.min(0.97, 0.15 + 0.15 * n + bri) * (S.stock.agua >= C.FOGO_AGUA || (bri && G.Cidade.semAgua(S)) ? 1 : 0.35);
       if (S.rng.next() < ch) { S.stock.agua = Math.max(0, S.stock.agua - C.FOGO_AGUA); apagou(S, b, 'O povo apagou o fogo a tempo'); }
       else queimou(S, b);
     }
@@ -15940,6 +16049,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       if (b) out.push({ type: 'cerca', why: 'cerca', perto: b });
     }
     if (s.semPedra >= 2 && !tem('mina') && C.BUILD.mina && G.Tech.buildOpen(S, 'mina')) out.push({ type: 'mina', why: 'mina' });
+    if (G.Cidade && S.cidade) for (const f of G.Cidade.faltas(S)) out.push(f);   // Etapa 16: a instituição que a sociedade pede
     return out;
   }
   So.faltas = faltas;
@@ -16023,6 +16133,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     // 0.16: o armazém não fica mais preso ao centro: o das casas longe vai para o meio delas
     if (f.type === 'armazem') return f.perto ? lugar(S, 'armazem', f.perto.x + 1, f.perto.y + 1, 2, 9) : lugar(S, 'armazem', cx, cy, 2, 9);
     if (f.type === 'mina') return lugar(S, 'mina', cx, cy, 3, 40);
+    if (G.Cidade && G.Cidade.isCidade(f.type)) return lugar(S, f.type, cx, cy, 3, 16) || lugar(S, f.type, cx, cy, 4, 26);   // Etapa 16
     // a casa nova perto das outras
     const casas = S.buildings.filter((b) => Sm.def(b).cap);
     const mx = casas.length ? casas.reduce((a, b) => a + b.x, 0) / casas.length : cx, my = casas.length ? casas.reduce((a, b) => a + b.y, 0) / casas.length : cy;
@@ -16037,6 +16148,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     return true;
   }
   const NOME_OBRA = { barraca: 'uma barraca', fogueira: 'uma fogueira', armazem: 'um armazém', cerca: 'uma cerca em volta da roça', mina: 'uma mina' };
+  So.NOME_OBRA = NOME_OBRA;
   function marcar(S, q, L) {
     const Sm = Sim(), K = G.Campo;
     let ok = false;
@@ -16828,7 +16940,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     return 'Pensando no que fazer';
   };
   // quem cumpre pena trabalha mais (e não vai à festa); quem adoeceu de castigo, menos
-  So.workMult = (S, p) => (p.pena ? C.PENA_WORK : 1) * (p.doente > S.t ? 0.6 : 1);
+  So.workMult = (S, p) => (p.pena ? C.PENA_WORK : 1) * (p.doente > S.t ? 0.6 : 1) * (p.sick ? 0.5 : 1);   // Etapa 16: com febre, rende metade
   So.semLazer = (S, p) => !!p.pena;
 
   // ---------- o que espera a resposta do jogador ----------
@@ -17154,6 +17266,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   const TEC_NOME = { machado: 'o machado', rede: 'a rede de pesca', anzol: 'o anzol', arco: 'o arco', cestos: 'os cestos' };
   const DE_TEC = { machado: 'do machado', rede: 'da rede de pesca', anzol: 'do anzol', arco: 'do arco', cestos: 'dos cestos' };
   Ge.TEC_NOME = TEC_NOME;
+  Ge.DE_TEC = DE_TEC;
   Ge.dom = (S, p, id) => (p && p.sabe && p.sabe[id]) || 0;
   // o ganho de uma técnica vale pela metade sem domínio e inteiro com ele: base + (cheio - base) × (½ + ½ domínio)
   Ge.ganho = (S, p, id, base, cheio) => base + (cheio - base) * (0.5 + 0.5 * Ge.dom(S, p, id));
@@ -17187,6 +17300,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     for (const id of Ge.TECNICAS) {
       if ((dead.sabe[id] || 0) < C.DOM_MESTRE) continue;
       if (S.people.some((q) => q.alive && q !== dead && (q.sabe && q.sabe[id] || 0) >= C.DOM_MESTRE)) continue;
+      // Etapa 16: o que está escrito na biblioteca não se perde
+      if (G.Cidade && G.Cidade.escrito(S, id)) { Sim().chron(S, 'Com ' + dead.name + ' foi-se quem mais sabia o jeito ' + DE_TEC[id] + ', mas ele está escrito. Quem ler, aprende.'); continue; }
       S.stats.perdeuTec++;
       Sim().chron(S, 'Com ' + dead.name + ' foi-se o jeito ' + DE_TEC[id] + ': ninguém mais sabe tão bem. Vão ter de reaprender.');
     }
@@ -17531,6 +17646,458 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   };
 })(globalThis.G = globalThis.G || {});
 
+/* ---- js/cidade.js ---- */
+/* Gods · Etapa 16 (0.17): grandes obras e instituições.
+   As grandes obras (templo, muralha, torre de vigia, aqueduto) pedem centenas de peças e meses de muitas mãos, sobem
+   em fases e valem para a aldeia inteira. As instituições (escola, biblioteca, hospital, guarda, brigada do fogo,
+   mercado) aparecem quando a sociedade pede, sobem de nível e pedem gente fixa, que sai do trabalho comum: só com
+   fartura. A febre e o fogo por acaso são os desafios que dão serviço ao hospital e à brigada. Sem DOM. */
+(function (G) {
+  'use strict';
+  const C = G.CFG;
+  const Ci = G.Cidade = {};
+  const Sim = () => G.Sim, Fam = () => G.Family;
+  const DAY = () => C.DAY_MIN;
+
+  const GRANDES = ['templo', 'muralha', 'torre', 'aqueduto'];
+  const INST = ['guarda', 'brigada', 'hospital', 'escola', 'biblioteca', 'mercado'];   // a ordem em que o líder olha
+  Ci.GRANDES = GRANDES; Ci.INST = INST;
+  Ci.isCidade = (t) => GRANDES.indexOf(t) >= 0 || INST.indexOf(t) >= 0;
+  Ci.isGrande = (b) => !!(b && C.BUILD[b.type] && C.BUILD[b.type].grande && !b.built);
+
+  const here = (p) => p.alive && !p.fora && !p.carriedBy;
+  const vivos = (S) => S.people.filter((p) => p.alive && !p.fora).length;
+  const age = (S, p) => Fam().age(S, p);
+  const oa = (p) => (p.sex === 'F' ? 'a' : 'o');
+  const escrita = (S) => !!(G.Deus && G.Deus.saber(S, 'escrita'));
+  const criancas = (S) => S.people.filter((p) => here(p) && age(S, p) >= 3 && age(S, p) < 13).length;
+  const chron = (S, t) => Sim().chron(S, t);
+  const toast = (S, t, k) => Sim().toast(S, t, k === undefined ? '' : k);
+
+  Ci.init = function (S) {
+    const c = S.cidade || (S.cidade = {});
+    c.escrito = c.escrito || {};
+    c.first = c.first || {};
+    c.peste = c.peste || null;
+    c.fogos = c.fogos || 0;
+    c.faisca = c.faisca || 0;
+    const st = S.stats;
+    for (const k of ['aulas', 'servMin', 'doentes', 'mortesPeste', 'curados', 'trocasMercado', 'fogosAcaso']) st[k] = st[k] || 0;
+  };
+
+  // ---------- quando cada uma aparece ----------
+  const ABRE = {
+    torre: (S) => (vivos(S) >= 15 ? '' : 'pede uma aldeia de 15 pessoas'),
+    templo: (S) => (vivos(S) >= 20 ? '' : 'pede uma aldeia de 20 pessoas'),
+    muralha: (S) => (vivos(S) >= 30 ? '' : 'pede uma vila de 30 pessoas'),
+    aqueduto: (S) => (vivos(S) >= 30 ? '' : 'pede uma vila de 30 pessoas'),
+    escola: (S) => (!escrita(S) ? 'pede a escrita' : criancas(S) < 12 ? 'pede 12 crianças na aldeia' : ''),
+    biblioteca: (S) => (escrita(S) ? '' : 'pede a escrita'),
+    hospital: (S) => (vivos(S) >= 40 ? '' : 'pede 40 pessoas'),
+    guarda: (S) => ((S.stats.crimesG && S.stats.crimesG[3] > 0) ? '' : 'aparece depois do primeiro crime grave'),
+    brigada: (S) => ((S.stats.incendios || 0) + ((S.cidade && S.cidade.fogos) || 0) > 0 ? '' : 'aparece depois do primeiro incêndio'),
+    mercado: (S) => (S.soc && S.soc.vila && !S.soc.vila.fim ? '' : 'pede uma vila de fora para trocar'),
+  };
+  // '' pode; texto: por que não; null: não é obra desta etapa
+  Ci.openWhy = function (S, type) {
+    if (!ABRE[type]) return null;
+    if (S.buildings.some((b) => b.type === type)) return 'a aldeia já tem ' + (C.BUILD[type].a === 'o' ? 'o seu ' : 'a sua ') + C.BUILD[type].name.toLowerCase();
+    const w = ABRE[type](S);
+    // a obra que pede tábua só abre com a marcenaria de pé (senão a grande obra parava no meio, sem explicação)
+    if (!w && C.BUILD[type].cost.tabuas && !S.buildings.some((b) => b.type === 'marcenaria' && b.built)) return 'pede tábuas: construa uma marcenaria';
+    return w;
+  };
+
+  // ---------- quem serve ----------
+  const CARGO = { escola: ['professor', 'professora'], biblioteca: ['bibliotecário', 'bibliotecária'], hospital: ['curandeiro', 'curandeira'],
+    guarda: ['guarda', 'guarda'], brigada: ['bombeiro', 'bombeira'], mercado: ['feirante', 'feirante'] };
+  const SKILL = { escola: null, biblioteca: 'oficio', hospital: 'coleta', guarda: 'caca', brigada: 'construcao', mercado: 'oficio' };
+  Ci.cargoNome = (S, p) => { const b = p.cargo ? Sim().building(S, p.cargo) : null; return b && CARGO[b.type] ? CARGO[b.type][p.sex === 'F' ? 1 : 0] : ''; };
+  const instOf = (b) => { const d = Sim().def(b); return d && d.inst ? d.inst : null; };
+  Ci.staffOf = (S, b) => S.people.filter((p) => here(p) && p.cargo === b.id);
+  // ativa: alguém serviu ali ontem ou hoje (com o jogo fechado, basta ter quem sirva)
+  function ativa(S, b) {
+    if (!b.built || !instOf(b)) return false;
+    if (S.resumido) return Ci.staffOf(S, b).length > 0;
+    const sv = b.serv;
+    return !!(sv && S.ck.day - sv.day <= 1 && (sv.min >= C.PROF_MIN || (sv.prev || 0) >= C.PROF_MIN));
+  }
+  Ci.ativa = ativa;
+  // o nível de cada instituição em serviço (com cache por hora: a escola entra na conta de aprender de cada um)
+  let cacheT = -1, cache = {};
+  Ci.nivel = function (S, k) {
+    const h = Math.floor(S.t / 60);
+    if (h !== cacheT) {
+      cacheT = h; cache = {};
+      for (const b of S.buildings) if (b.built && instOf(b) && ativa(S, b)) cache[b.type] = Math.max(cache[b.type] || 0, b.lv || 1);
+    }
+    return cache[k] || 0;
+  };
+  Ci.feita = (S, k) => S.buildings.find((b) => b.type === k && b.built) || null;
+
+  function candidatos(S) {
+    const L = S.soc ? S.soc.lider : 0;
+    return S.people.filter((p) => here(p) && !p.cargo && age(S, p) >= 18 && Fam().bodyAge(S, p) < C.OLD_HEAVY_AGE && !p.exilio && !p.pena && p.id !== L);
+  }
+  function nota(p, k) {
+    const sk = SKILL[k];
+    let v = sk ? (p.skills[sk] || 0) : Object.keys(p.skills).reduce((a, s) => a + (p.skills[s] || 0), 0) / 4;
+    if (Sim().has(p, 'Trabalhador')) v += 2;
+    if (Sim().has(p, 'Preguiçoso')) v -= 4;
+    return v;
+  }
+  function contratar(S) {
+    const fd = S.ctx ? S.ctx.foodDays : 0, soltos = [];
+    for (const p of S.people) {
+      if (!p.cargo) continue;
+      const b = Sim().building(S, p.cargo);
+      if (!p.alive || p.fora || !b || !b.built || !instOf(b)) { p.cargo = 0; continue; }
+      if (fd < C.PROF_SOLTA) { p.cargo = 0; soltos.push(p); }
+    }
+    if (soltos.length && !S.resumido) toast(S, 'A comida está curta: ' + Sim().listNames(soltos) + (soltos.length > 1 ? ' deixaram' : ' deixou') + ' o posto e ' + (soltos.length > 1 ? 'voltaram' : 'voltou') + ' ao trabalho comum.', 'warn');
+    if (fd < C.PROF_FARTURA) return;
+    for (const b of S.buildings) {
+      const ins = b.built ? instOf(b) : null;
+      if (!ins) continue;
+      const have = Ci.staffOf(S, b);
+      for (let k = ins.staff; k < have.length; k++) have[k].cargo = 0;
+      for (let n = have.length; n < ins.staff; n++) {
+        const cand = candidatos(S).sort((a, c) => nota(c, b.type) - nota(a, b.type) || a.id - c.id);
+        const p = cand[0];
+        if (!p) break;
+        p.cargo = b.id;
+        G.AI.abort(S, p);
+        const nome = CARGO[b.type][p.sex === 'F' ? 1 : 0];
+        if (!S.cidade.first['c_' + b.type]) {
+          S.cidade.first['c_' + b.type] = S.t;
+          chron(S, p.name + ' virou ' + (p.sex === 'F' ? 'a primeira ' : 'o primeiro ') + nome + ' da aldeia. Sai do trabalho comum para servir ' + (C.BUILD[b.type].a === 'o' ? 'no ' : 'na ') + Sim().def(b).name.toLowerCase() + '.');
+        } else if (!S.resumido) toast(S, p.name + ' agora é ' + nome + '.');
+      }
+    }
+  }
+
+  // a IA: quem tem posto vai para lá no horário de trabalho
+  Ci.want = function (S, p) {
+    if (!p.cargo || p.sleeping || p.labor || p.carriedBy) return 0;
+    const h = S.ck.hour;
+    if (h < 8 || h >= 17) return 0;
+    const b = Sim().building(S, p.cargo);
+    if (!b || !b.built) return 0;
+    if (p.needs.fome < 30 || p.needs.sede < 30 || p.needs.energia < 20) return 0;
+    if (p.servDia === S.ck.day && (p.servMin || 0) >= C.SERVIR_MIN * 3) return 0;
+    return C.WORK_CAP + 3;
+  };
+  Ci.alvo = (S, p) => (p.cargo ? Sim().building(S, p.cargo) : null);
+  Ci.serviu = function (S, p, b, min) {
+    const day = S.ck.day;
+    if (!b.serv || b.serv.day !== day) b.serv = { day, min: 0, prev: b.serv && b.serv.day === day - 1 ? b.serv.min : 0 };
+    b.serv.min += min;
+    if (p.servDia !== day) { p.servDia = day; p.servMin = 0; }
+    p.servMin += min;
+    S.stats.servMin += min;
+    const sk = SKILL[b.type];
+    if (sk) p.skills[sk] = (p.skills[sk] || 0) + min / 60 * 0.5;
+  };
+  Ci.fazendo = function (b) {
+    return { escola: 'Dando aula', biblioteca: 'Copiando o que se sabe', hospital: 'Cuidando dos doentes', guarda: 'De vigia', brigada: 'Cuidando dos baldes', mercado: 'Na banca de troca' }[b.type] || 'No posto';
+  };
+
+  // ---------- efeitos ----------
+  // quanto se aprende: a escola (o adulto que estuda) e o arquivo (todos)
+  Ci.xp = function (S, p) {
+    let f = 1;
+    const e = Ci.nivel(S, 'escola');
+    if (e >= 2 && age(S, p) >= 16) f *= C.ESCOLA_XP[e];
+    if (Ci.nivel(S, 'biblioteca') >= 3) f *= C.ARQUIVO_XP;
+    return f;
+  };
+  // a aula do dia: cada criança ganha prática em dois ofícios e o jeito das técnicas que alguém sabe (ou que está escrito)
+  const OFICIOS = ['coleta', 'pesca', 'construcao', 'caca', 'oficio', 'plantio', 'criacao'];
+  function aula(S) {
+    const lv = Ci.nivel(S, 'escola');
+    if (!lv) return;
+    const Ge = G.Gente, T = G.Tech;
+    const tecs = Ge ? Ge.TECNICAS.filter((id) => T.known(S, id) && (S.cidade.escrito[id] || S.people.some((q) => here(q) && Ge.dom(S, q, id) >= C.DOM_MESTRE))) : [];
+    let n = 0;
+    for (const p of S.people) {
+      if (!here(p)) continue;
+      const a = age(S, p);
+      if (a < 6 || a >= 16) continue;
+      for (let k = 0; k < 2; k++) {
+        const sk = OFICIOS[(p.id * 7 + S.ck.day * 3 + k * 5) % OFICIOS.length];
+        if (p.skills[sk] !== undefined) p.skills[sk] += 0.8 * lv;
+      }
+      for (const id of tecs) Ge.aprende(S, p, id, C.DOM_PERTO * 2 * lv, null);
+      n++;
+    }
+    if (!n) return;
+    S.stats.aulas += n;
+    if (!S.cidade.first.aula) { S.cidade.first.aula = S.t; chron(S, 'Primeiro dia de aula: ' + n + (n > 1 ? ' crianças sentaram' : ' criança sentou') + ' para aprender o que os grandes sabem.'); }
+  }
+  // a estante: o jeito de quem sabe vira escrito; na biblioteca, quem trabalha nele aprende pelo livro
+  function estante(S) {
+    const lv = Ci.nivel(S, 'biblioteca'), Ge = G.Gente;
+    if (!lv || !Ge) return;
+    for (const id of Ge.TECNICAS) {
+      if (S.cidade.escrito[id] || !G.Tech.known(S, id)) continue;
+      if (!S.people.some((q) => here(q) && Ge.dom(S, q, id) >= C.DOM_MESTRE)) continue;
+      S.cidade.escrito[id] = S.t;
+      chron(S, 'O jeito ' + Ge.DE_TEC[id] + ' foi escrito na ' + Sim().def(Ci.feita(S, 'biblioteca')).name.toLowerCase() + '. Agora não se perde mais.');
+    }
+    if (lv < 2) return;
+    for (const p of S.people) {
+      if (!here(p) || age(S, p) < 12) continue;
+      for (const id of Ge.TECNICAS) if (S.cidade.escrito[id] && Ge.dom(S, p, id) > 0 && Ge.dom(S, p, id) < 1) Ge.aprende(S, p, id, C.DOM_PERTO, null);
+    }
+  }
+  Ci.escrito = (S, id) => !!(S.cidade && S.cidade.escrito[id]);
+  // a guarda: menos malfeito, e quem vigia vê o que acontece perto (com a torre, também de noite)
+  Ci.crimeMult = (S) => C.GUARDA_CRIME[Ci.nivel(S, 'guarda')];
+  Ci.guardas = function (S, x, y, out, autor) {
+    const lv = Ci.nivel(S, 'guarda');
+    if (!lv) return;
+    const b = Ci.feita(S, 'guarda'), torre = Ci.feita(S, 'torre');
+    let r = 10 + 4 * lv;
+    if (torre) r += 8;
+    if (S.ctx.night && !torre && lv < 3) return;
+    if (Math.hypot(x - b.x - 1.5, y - b.y - 1.5) > r && lv < 3) return;
+    for (const q of Ci.staffOf(S, b)) if (q !== autor && out.indexOf(q.id) < 0) out.push(q.id);
+  };
+  // a brigada: apaga mais vezes e mais cedo; o quartel não depende da água do estoque
+  Ci.apaga = (S) => C.BRIGADA_APAGA[Ci.nivel(S, 'brigada')];
+  Ci.fogoMin = (S) => (Ci.nivel(S, 'brigada') ? 0.5 : 1);
+  Ci.semAgua = (S) => Ci.nivel(S, 'brigada') >= 3;
+  // a muralha: lobo e onça não entram, e a comida guardada lá dentro fica
+  Ci.dentro = function (S, x, y) {
+    for (const b of S.buildings) {
+      if (b.type !== 'muralha' || !b.built) continue;
+      if (Math.hypot(x - (S.camp.x + 1), y - (S.camp.y + 1)) <= C.BUILD.muralha.wall.r) return true;
+    }
+    return false;
+  };
+  // o templo é lugar de reza (vale o dobro)
+  Ci.templos = (S) => S.buildings.filter((b) => b.type === 'templo' && b.built);
+
+  // ---------- a febre ----------
+  function adoece(S, p) {
+    const hl = Ci.nivel(S, 'hospital');
+    const d = C.PESTE_D[0] + S.rng.next() * (C.PESTE_D[1] - C.PESTE_D[0]);
+    p.sick = S.t + d * (hl ? 0.7 : 1) * DAY();
+    S.stats.doentes++;
+    if (S.cidade.peste) S.cidade.peste.n++;
+  }
+  Ci.adoece = adoece;
+  const podePegar = (S, p) => here(p) && !p.sick && !(p.imune > S.t);
+  function pesteDia(S) {
+    const c = S.cidade, hl = Ci.nivel(S, 'hospital');
+    if (!c.peste) {
+      if (S.safe || S.resumido || vivos(S) < C.PESTE_GENTE) return;
+      const ch = C.PESTE_ANO / C.YEAR_DAYS * (S.ck.season === 3 ? 1.6 : 1);
+      if (S.rng.next() >= ch) return;
+      const cand = S.people.filter((p) => podePegar(S, p) && age(S, p) >= 6);
+      if (!cand.length) return;
+      const p0 = S.rng.pick(cand);
+      c.peste = { t0: S.t, n: 0, mortes: 0 };
+      adoece(S, p0);
+      chron(S, 'Uma febre apareceu na aldeia. ' + p0.name + ' foi ' + (p0.sex === 'F' ? 'a primeira' : 'o primeiro') + ' a cair de cama.' + (hl ? '' : ' Não há casa de cura.'));
+      toast(S, 'Febre na aldeia: ' + p0.name + ' adoeceu. Ela passa de um para outro, mais dentro de casa.', 'warn');
+      return;
+    }
+    // passa adiante: quem dorme na mesma casa pega mais; na rua, menos. A enfermaria isola, o hospital quase fecha
+    const doentes = S.people.filter((p) => here(p) && p.sick);
+    if (!doentes.length) {
+      const pz = c.peste;
+      chron(S, 'A febre passou. Adoeceram ' + pz.n + (pz.mortes ? '; ' + (pz.mortes > 1 ? pz.mortes + ' morreram.' : 'um morreu.') : ', e ninguém morreu.'));
+      c.peste = null;
+      return;
+    }
+    const iso = hl >= 3 ? 0.35 : hl >= 2 ? 0.6 : 1;
+    const novos = [];
+    for (const d of doentes) {
+      const casa = S.buildings.find((b) => b.beds && b.beds.indexOf(d.id) >= 0);
+      for (const q of S.people) {
+        if (!podePegar(S, q) || novos.indexOf(q) >= 0) continue;
+        const junto = casa && casa.beds.indexOf(q.id) >= 0;
+        if (S.rng.next() < (junto ? C.PESTE_PEGA : C.PESTE_RUA / Math.max(1, doentes.length * 0.5)) * iso) novos.push(q);
+      }
+    }
+    for (const q of novos) adoece(S, q);
+  }
+  // de hora em hora: a febre tira saúde (mais da criança e do velho); a casa de cura segura, e cura a ferida
+  function pesteHora(S) {
+    const hl = Ci.nivel(S, 'hospital');
+    for (const p of S.people) {
+      if (!p.alive || p.fora) continue;
+      if (p.sick) {
+        if (S.t >= p.sick) {
+          delete p.sick; p.imune = S.t + C.YEAR_DAYS * DAY();
+          S.stats.curados++;
+          continue;
+        }
+        const a = age(S, p), fraco = a < 6 || Fam().bodyAge(S, p) >= C.OLD_HEAVY_AGE;
+        const dmg = C.PESTE_H * C.HOSP_CURA[hl] * (fraco ? 1.6 : 1);
+        p.needs.saude -= dmg;
+        p.dmg.doenca = (p.dmg.doenca || 0) + dmg;
+        if (p.needs.saude <= 0) Sim().die(S, p);
+      } else if (hl && p.needs.saude < 70) p.needs.saude = Math.min(100, p.needs.saude + 0.5 * hl);
+      // a enfermaria ajuda no parto difícil, sem milagre
+      if (hl >= 2 && p.labor && p.labor.hard && !p.labor.helped) {
+        p.labor.helped = true;
+        if (!S.cidade.first.parto) { S.cidade.first.parto = S.t; chron(S, 'Pela primeira vez, a ' + Sim().def(Ci.feita(S, 'hospital')).name.toLowerCase() + ' ajudou num parto difícil: ' + p.name + ' teve quem segurasse a mão.'); }
+      }
+    }
+  }
+  Ci.workMult = (S, p) => (p.sick ? 0.5 : 1);
+  Ci.onDeath = function (S, p) { if (p.sick && S.cidade && S.cidade.peste) S.cidade.peste.mortes++; if (p.cause === 'doenca') S.stats.mortesPeste++; delete p.sick; };
+
+  // ---------- o fogo por acaso ----------
+  // no verão sem chuva, numa aldeia de muitas casas de palha, uma faísca pega numa casa de dia
+  const PALHA = (b) => b.type === 'barraca' && (!b.kind || b.kind === 'oca' || b.kind === 'palafita');
+  function faiscaDia(S) {
+    const c = S.cidade;
+    if (S.safe || S.resumido || c.faisca || S.ck.season !== 1 || S.precip) return;
+    const casas = S.buildings.filter((b) => b.built && PALHA(b) && !b.fogo);
+    if (casas.length < C.FOGO_ACASO_CASAS || S.rng.next() >= C.FOGO_ACASO) return;
+    c.faisca = S.t + (10 + S.rng.next() * 7) * 60;
+  }
+  function faiscaHora(S) {
+    const c = S.cidade;
+    if (!c.faisca || S.t < c.faisca) return;
+    c.faisca = 0;
+    if (S.precip || !S.soc) return;
+    const casas = S.buildings.filter((b) => b.built && PALHA(b) && !b.fogo);
+    if (!casas.length) return;
+    const b = S.rng.pick(casas);
+    b.fogo = S.t; S.soc.arde = 1;
+    c.fogos++; S.stats.fogosAcaso++;
+    for (const q of S.people) if (here(q) && q.inTent === b.id && !q.labor) { G.AI.abort(S, q); q.fail.dormir = S.t + C.FOGO_MIN + 15; q.nextEval = S.t; }
+    if (!S.safe) S.events.push({ k: 'soc', ev: 'fogo', on: true, bid: b.id, x: b.x + b.w / 2, y: b.y + b.h / 2 });
+    const d = Sim().def(b);
+    toast(S, 'Uma faísca pegou na palha ' + (d.a === 'o' ? 'do ' : 'da ') + d.name.toLowerCase() + '. Fogo!', 'warn');
+    if (c.fogos === 1) chron(S, 'Uma faísca do verão seco pegou na palha ' + (d.a === 'o' ? 'do ' : 'da ') + d.name.toLowerCase() + '. Foi o primeiro fogo sem culpado.');
+  }
+
+  // ---------- a troca da feira ----------
+  const TROCA = ['madeira', 'pedra', 'argila', 'tabuas', 'fibra', 'frutas', 'peixe', 'carne', 'feijao', 'milho', 'mandioca', 'couro'];
+  function feira(S) {
+    const lv = Ci.nivel(S, 'mercado'), v = S.soc && S.soc.vila;
+    if (!lv || !v || v.fim || S.ck.day % C.MERCADO_D[lv]) return;
+    const N = C.MERCADO_N[lv], st = S.stock;
+    const ks = TROCA.filter((k) => st[k] !== undefined);
+    if (ks.length < 2) return;
+    const sobra = ks.slice().sort((a, b) => (st[b] || 0) - (st[a] || 0))[0];
+    const falta = ks.filter((k) => k !== sobra).sort((a, b) => (st[a] || 0) - (st[b] || 0))[0];
+    if ((st[sobra] || 0) < N * 2 || (st[falta] || 0) >= st[sobra] / 2) return;
+    const veio = Math.round(N * 0.8);
+    st[sobra] -= N; st[falta] = (st[falta] || 0) + veio;
+    v.laco = Math.min(100, (v.laco || 0) + (lv >= 3 ? 1 : 0.4));
+    S.stats.trocasMercado++;
+    const nome = (k) => (G.AI && G.AI.LABEL && G.AI.LABEL[k]) || C.ITEM_NAMES && C.ITEM_NAMES[k] || k;
+    const txt = 'Na ' + Sim().def(Ci.feita(S, 'mercado')).name.toLowerCase() + ', ' + N + ' de ' + nome(sobra).toLowerCase() + ' viraram ' + veio + ' de ' + nome(falta).toLowerCase() + ', com gente ' + (v.art ? 'd' + v.art + ' ' : 'de ') + v.nome + '.';
+    if (S.stats.trocasMercado === 1) chron(S, 'Primeira troca na banca: ' + txt.charAt(0).toLowerCase() + txt.slice(1));
+    else if (!S.resumido) toast(S, txt, 'good');
+  }
+
+  // ---------- o líder: marca a instituição que falta e sobe de nível a que não dá mais conta ----------
+  Ci.FALTA = {
+    guarda: 'Depois do crime grave, o povo quer alguém de vigia.', brigada: 'Depois do fogo, o povo quer baldes prontos.',
+    hospital: 'Gente demais para cuidar sem uma casa de cura.', escola: 'As crianças precisam de quem ensine.',
+    biblioteca: 'O que se sabe precisa ficar escrito.', mercado: 'A troca com a vila de fora pede um lugar.',
+  };
+  Ci.NOME_OBRA = { guarda: 'um posto de vigia', brigada: 'uma fila de baldes', hospital: 'a casa do curandeiro', escola: 'uma roda de ensino',
+    biblioteca: 'uma estante', mercado: 'uma banca de troca' };
+  Ci.faltas = function (S) {
+    if (S.buildings.some((b) => INST.indexOf(b.type) >= 0 && (!b.built || b.up))) return [];
+    for (const k of INST) if (Ci.openWhy(S, k) === '' && G.Tech.buildOpen(S, k)) return [{ type: k, why: k }];
+    return [];
+  };
+  const SOBE = {
+    escola: (S, lv) => (lv === 1 ? criancas(S) >= 20 : vivos(S) >= 80),
+    biblioteca: (S, lv) => vivos(S) >= (lv === 1 ? 50 : 100),
+    hospital: (S, lv) => (lv === 1 ? vivos(S) >= 60 || S.stats.doentes >= 8 : vivos(S) >= 100 || S.stats.mortesPeste >= 3),
+    guarda: (S, lv) => ((S.stats.crimesG && S.stats.crimesG[3]) || 0) >= (lv === 1 ? 3 : 6) || vivos(S) >= (lv === 1 ? 70 : 120),
+    brigada: (S, lv) => (S.stats.incendios || 0) + S.cidade.fogos >= (lv === 1 ? 2 : 4) || vivos(S) >= (lv === 1 ? 70 : 120),
+    mercado: (S, lv) => S.stats.trocasMercado >= (lv === 1 ? 6 : 20),
+  };
+  function subir(S) {
+    const s = S.soc;
+    if (!s || !G.Soc || s.modo !== 'decide' || S.resumido) return;
+    if (S.buildings.some((b) => INST.indexOf(b.type) >= 0 && (!b.built || b.up))) return;
+    const L = G.Soc.lider(S);
+    if (!L) return;
+    for (const k of INST) {
+      const b = S.buildings.find((x) => x.type === k && x.built);
+      if (!b || (b.lv || 1) >= 3 || !SOBE[k](S, b.lv || 1)) continue;
+      const up = Sim().defOf(k, (b.lv || 1) + 1);
+      if (!up || Object.keys(up.cost).some((m) => up.cost[m] > Math.floor((S.stock[m] || 0) * C.SOC_TETO))) continue;
+      if (!Sim().startUpgrade(S, b)) continue;
+      b.povo = 1;
+      toast(S, L.name + ' marcou a melhoria ' + (C.BUILD[k].a === 'o' ? 'do ' : 'da ') + Sim().def(b).name.toLowerCase() + ' para ' + up.name.toLowerCase() + ': ela não dá mais conta.');
+      return;
+    }
+  }
+
+  // ---------- obra pronta ----------
+  Ci.onBuilt = function (S, b) {
+    if (!Ci.isCidade(b.type)) return false;
+    const d = C.BUILD[b.type];
+    if (d.grande) {
+      const dias = b.t0 ? Math.max(1, Math.round((S.t - b.t0) / DAY())) : 0;
+      chron(S, (d.a === 'o' ? 'O ' : 'A ') + d.name.toLowerCase() + ' ficou ' + (d.a === 'o' ? 'pronto' : 'pronta') + (dias ? ', depois de ' + dias + ' dias de obra e muitas mãos.' : '.') + ' ' + d.desc.split(':')[0].split('.')[0] + '.');
+      if (b.type === 'torre') Sim().reveal(S, b.x + 1, b.y + 1, d.watch.r);
+      for (const p of S.people) if (p.alive) Sim().addMem(S, p, 'obra');
+    } else {
+      chron(S, (d.a === 'o' ? 'O ' : 'A ') + d.name.toLowerCase() + ' ficou ' + (d.a === 'o' ? 'pronto' : 'pronta') + '. ' + d.desc.split('.')[0] + '.');
+    }
+    return true;
+  };
+
+  // ---------- o relógio ----------
+  Ci.daily = function (S) {
+    if (!S.cidade) Ci.init(S);
+    cacheT = -1;
+    for (const b of S.buildings) if (b.serv && b.serv.day < S.ck.day - 1) b.serv = null;
+    contratar(S);
+    aula(S);
+    estante(S);
+    pesteDia(S);
+    faiscaDia(S);
+    feira(S);
+    subir(S);
+    for (const b of S.buildings) if (b.type === 'torre' && b.built) Sim().reveal(S, b.x + 1, b.y + 1, C.BUILD.torre.watch.r);
+  };
+  Ci.hourly = function (S) {
+    if (!S.cidade) Ci.init(S);
+    pesteHora(S);
+    faiscaHora(S);
+    const aq = S.buildings.find((b) => b.type === 'aqueduto' && b.built);
+    if (aq) S.stock.agua = Math.min(G.Tech.waterCap(S), (S.stock.agua || 0) + C.BUILD.aqueduto.water.h);
+  };
+
+  // ---------- grandes obras: o quanto já chegou de material (o povo constrói até onde ele deixa) ----------
+  Ci.frac = function (job) {
+    let tot = 0, have = 0;
+    for (const k in job.cost) { tot += job.cost[k]; have += Math.min(job.cost[k], job.have[k] || 0); }
+    return tot ? have / tot : 1;
+  };
+  Ci.podeErguer = (job) => !!(job && job.b && Ci.isGrande(job.b) && job.progress < Ci.frac(job) - 0.002);
+  Ci.parada = (S, b) => Ci.isGrande(b) && S.ctx && S.ctx.foodDays < C.GRANDE_FARTURA;   // a fome segura a grande obra
+
+  // ---------- para a ficha ----------
+  Ci.info = function (S, b) {
+    const ins = instOf(b);
+    if (!ins || !b.built) return null;
+    const st = Ci.staffOf(S, b);
+    return { staff: st.map((p) => p.name), quer: ins.staff, ativa: ativa(S, b), cargo: CARGO[b.type] };
+  };
+  Ci.status = function (S) {
+    const c = S.cidade || {};
+    return { peste: c.peste ? { n: c.peste.n, doentes: S.people.filter((p) => here(p) && p.sick).length } : null, escrito: Object.keys(c.escrito || {}) };
+  };
+  // os motivos e os nomes que o líder usa ao marcar (a Sociedade carrega antes)
+  if (G.Soc) { Object.assign(G.Soc.FALTA, Ci.FALTA); if (G.Soc.NOME_OBRA) Object.assign(G.Soc.NOME_OBRA, Ci.NOME_OBRA); }
+})(globalThis.G = globalThis.G || {});
+
 /* ---- js/save.js ---- */
 /* Gods · save: seed + o que mudou. O mundo é regerado pela seed ao carregar. */
 (function (G) {
@@ -17641,6 +18208,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       memoria: G.Memoria && S.memoria ? packMem(S.memoria) : null,   // Etapa 13: corpos, contos, a erva e o rito
       soc: G.Soc && S.soc ? G.Soc.pack(S) : null,   // Etapa 14: crimes, líder, pedidos, quem foi embora, a vila de fora
       gente: S.gente || null,   // Etapa 15: a média de cada trabalho, as tentativas, quem aprendeu com quem
+      cidade: S.cidade || null,   // Etapa 16: o que está escrito, a febre, as primeiras vezes
       povo: S.povo || null,   // 0.16: o nome e o título do lugar
     };
   };
@@ -17693,6 +18261,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       memoria: d.memoria || null,
       soc: d.soc || null,
       gente: d.gente || null,
+      cidade: d.cidade || null,
       povo: d.povo || null,
     };
     for (const p of S.people) {
@@ -19528,6 +20097,27 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 
   // ---------- ícones da interface (10 x 10) ----------
   const ICONS = {
+    // Etapa 16: as grandes obras e as instituições
+    templo: [['....yy....', '...kkkk...', '..kssssk..', '.kkkkkkkk.', '.ks.ss.sk.', '.ks.ss.sk.', '.ks.ss.sk.', 'kkkkkkkkkk', 'kssssssssk', 'kkkkkkkkkk'],
+      { k: P.ink2, s: P.silver, y: P.gold }],
+    muralha: [['..........', 'k.k....k.k', 'kkk....kkk', 'ksk.kk.ksk', 'kskkddkksk', 'ksskddkssk', 'ksskddkssk', 'ksskddkssk', 'kkkkkkkkkk', '..........'],
+      { k: P.ink2, s: P.mist, d: P.bark }],
+    torre: [['...kkkk...', '..kyyyyk..', '.kkkkkkkk.', '..kwwwwk..', '..kssssk..', '..ksddsk..', '..kssssk..', '.ksssssk..', '.kssssssk.', 'kkkkkkkkkk'],
+      { k: P.ink2, s: P.mist, y: P.tan, w: P.wood, d: P.ink }],
+    aqueduto: [['..........', 'kkkkkkkkkk', 'kbbbbbbbbk', 'kkkkkkkkkk', 'ks.ssk.ssk', 'k...k...sk', 'ks..ks..sk', 'ks..ks..sk', 'kk..kk..kk', '..........'],
+      { k: P.ink2, s: P.mist, b: P.sky }],
+    escola: [['..........', '.kkkk.kkkk', '.kwwk.kwwk', '.kwlkkklwk', '.kwwwkwwwk', '.kwlwkwlwk', '.kwwwkwwwk', '.kkkkkkkkk', '..........', '..........'],
+      { k: P.ink2, w: P.parch, l: P.slate }],
+    biblioteca: [['..........', '.k.kk.kk..', 'krkbbkgk..', 'krkbbkgk.k', 'krkbbkgkkk', 'krkbbkgkyk', 'krkbbkgkyk', 'kkkkkkkkkk', '..........', '..........'],
+      { k: P.ink2, r: P.wine, b: P.blue, g: P.green, y: P.gold }],
+    hospital: [['..........', '...kkkk...', '...kggk...', '.kkkggkkk.', '.kggggggk.', '.kggggggk.', '.kkkggkkk.', '...kggk...', '...kkkk...', '..........'],
+      { k: P.ink2, g: P.leaf }],
+    guarda: [['..........', '.kkkkkkk..', '.ksssrssk.', '.ksssrssk.', '.ksssrssk.', '..ksrrsk..', '..kssssk..', '...kssk...', '....kk....', '..........'],
+      { k: P.ink2, s: P.silver, r: P.red }],
+    brigada: [['..........', '..kkkkk...', '.k.....k..', '.kkkkkkk..', '.kbbbbbk..', '.kbiibbk..', '..kbbbk...', '..kkkkk...', '.......b..', '......b.b.'],
+      { k: P.ink2, b: P.sky, i: P.ice }],
+    mercado: [['..........', 'kkkkkkkkkk', 'kyykrrkyyk', 'kkkkkkkkkk', '.k......k.', '.k.oo.g.k.', '.kkkkkkkk.', '.kwwwwwwk.', '.k......k.', '..........'],
+      { k: P.ink2, y: P.gold, r: P.red, o: P.orange, g: P.leaf, w: P.wood }],
     madeira: [['..........', '..........', '...kkkkkk.', '..kyykbbbk', '.kyooykbbk', '.kyooykBBk', '..kyykBBBk', '...kkkkkk.', '..........', '..........'],
       { k: P.maroon, y: P.tan, o: P.wood, b: P.wood, B: P.bark }],
     pedra: [['..........', '..........', '....kkk...', '..kkLLlk..', '.kLLlllmk.', '.kLlllmmk.', 'kllllmmmmk', '.kkkkkkkk.', '..........', '..........'],
@@ -20302,6 +20892,152 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     return b.canvas();
   }
 
+  // ---------- Etapa 16: as grandes obras e as instituições ----------
+  // parede de pedra em fiadas desencontradas (a da casa de pedra), com a quina escura
+  function stoneWall(b, x0, y0, x1, y1, seed) {
+    for (let y = y0; y <= y1; y++) {
+      const row = Math.floor((y - y0) / 3), off = row % 2 ? 3 : 0;
+      for (let x = x0; x <= x1; x++) {
+        const bx = Math.floor((x + off) / 5), mortar = (y - y0) % 3 === 2 || (x + off) % 5 === 0;
+        let c = mortar ? STONE[1] : H7(bx, row, seed) < 0.35 ? STONE[2] : H7(bx, row, seed + 1) < 0.5 ? STONE[3] : '#a2aec4';
+        if (!mortar && (x + off) % 5 === 1 && (y - y0) % 3 === 0) c = STONE[4];
+        if (x === x0 || x === x1) c = STONE[1];
+        b.set(x, y, c);
+      }
+    }
+    for (let x = x0; x <= x1; x++) b.set(x, y1 + 1, STONE[0]);
+  }
+  const TELHA = ['#3e2731', '#733e39', '#a8482c', '#c46a3e', '#d98a52'];
+  // a placa de cada instituição (7 x 6): o que se faz ali, sem letra
+  const EMBLEMA = {
+    escola: ['kkkkkkk', 'kWWkWWk', 'kWwkwWk', 'kWwkwWk', 'kWWkWWk', 'kkkkkkk'],
+    biblioteca: ['.......', 'kk.kkk.', 'kRkkBkk', 'kRkkBkG', 'kRkkBkG', 'kkkkkkk'],
+    hospital: ['..kkk..', '..kGk..', 'kkkGkkk', 'kGGGGGk', 'kkkGkkk', '..kGk..'],
+    guarda: ['kkkkkkk', 'kSSRSSk', 'kSSRSSk', '.kSRSk.', '.kSRSk.', '..kkk..'],
+    brigada: ['.kkkkk.', 'k.....k', 'kkkkkkk', 'kBBBBBk', '.kBBBk.', '.kkkkk.'],
+    mercado: ['kRkWkRk', 'kRkWkRk', 'kkkkkkk', '.kYkOk.', 'kYYkOOk', 'kkkkkkk'],
+  };
+  const EMB_MAP = { k: P.ink, W: '#ead4aa', w: '#c9a068', R: '#a22633', B: '#124e89', G: '#3e8948', S: '#8b9bb4', Y: '#feae34', O: '#d77643' };
+  function placa(b, k, x0, y0) {
+    rect7(b, x0 - 1, y0 - 1, x0 + 7, y0 + 6, PLANK[1]);
+    rect7(b, x0, y0, x0 + 6, y0 + 5, PLANK[3]);
+    stamp(b, EMBLEMA[k], EMB_MAP, x0, y0);
+  }
+  // o que fica embaixo do telheiro no nível 1 (cada instituição tem o seu)
+  function miudos(b, k) {
+    if (k === 'escola') { for (const x of [10, 22, 34]) { rect7(b, x, 40, x + 7, 40, PLANK[3]); rect7(b, x, 41, x + 7, 41, PLANK[1]); b.set(x + 1, 42, PLANK[0]); b.set(x + 6, 42, PLANK[0]); } rect7(b, 18, 30, 29, 36, '#3a4a3c'); rect7(b, 18, 30, 29, 30, PLANK[2]); b.set(21, 33, '#dfe6f0'); b.set(22, 33, '#dfe6f0'); b.set(25, 32, '#dfe6f0'); }
+    else if (k === 'biblioteca') { for (let s = 0; s < 3; s++) { const y = 30 + s * 5; rect7(b, 12, y + 4, 35, y + 4, PLANK[1]); for (let x = 13; x < 35; x += 2) { const c = ['#a22633', '#124e89', '#3e8948', '#c9a068', '#5e3a5c'][(x * 3 + s) % 5]; rect7(b, x, y + 1 - (x % 3 === 0 ? 1 : 0), x, y + 3, c); } } }
+    else if (k === 'hospital') { for (const x of [11, 27]) { rect7(b, x, 38, x + 9, 41, '#ead4aa'); rect7(b, x, 38, x + 2, 39, '#ffffff'); rect7(b, x, 42, x + 9, 42, PLANK[0]); } for (let x = 14; x < 34; x += 4) { b.set(x, 28, '#3e8948'); b.set(x + 1, 29, '#63c74d'); b.set(x, 30, '#3e8948'); } }
+    else if (k === 'guarda') { for (let x = 15; x <= 31; x += 4) line(b, x, 29, x, 42, PLANK[2]); rect7(b, 13, 41, 33, 42, PLANK[1]); for (let x = 15; x <= 31; x += 4) { b.set(x, 28, '#8b9bb4'); b.set(x, 27, '#c0cbdc'); } }
+    else if (k === 'brigada') { for (const x of [12, 19, 26, 33]) { rect7(b, x, 37, x + 4, 41, '#6a8a9a'); rect7(b, x, 37, x + 4, 37, '#3e5a6a'); b.set(x + 1, 38, '#0099db'); b.set(x + 2, 38, '#2ce8f5'); rect7(b, x + 1, 35, x + 3, 35, PLANK[0]); } }
+    else if (k === 'mercado') { rect7(b, 10, 34, 37, 36, PLANK[3]); rect7(b, 10, 37, 37, 37, PLANK[0]); for (let x = 12; x < 36; x += 3) { const c = ['#feae34', '#a22633', '#3e8948', '#ead4aa'][(x / 3 | 0) % 4]; rect7(b, x, 32, x + 1, 33, c); } for (const x of [11, 36]) line(b, x, 38, x, 42, PLANK[1]); }
+  }
+  // a instituição em 48 x 48 (3 x 3 passos): nível 1 telheiro de palha sobre esteios, 2 casa de tábuas, 3 casa de pedra
+  function instituicao(k, lv) {
+    const W = 48, H = 48, b = new Buf(W, H), cx = 23.5;
+    if (lv === 1) {
+      for (const x of [6, 41]) { rect7(b, x, 22, x + 1, 44, PLANK[2]); b.set(x + 1, 22, PLANK[1]); rect7(b, x - 1, 45, x + 2, 45, PLANK[0]); }
+      thatch(b, 24, 6, 24, 4, 22, 160 + k.length);
+      miudos(b, k);
+      placa(b, k, 21, 26);
+      return b.canvas();
+    }
+    if (lv === 2) {
+      plankWall(b, 5, 24, 42, 44);
+      for (let x = 5; x <= 42; x++) b.set(x, 45, PLANK[0]);
+      door(b, 20, 34, 27, 44, false);
+      windowAt(b, 9, 30, 5, 4); windowAt(b, 34, 30, 5, 4);
+      shingles(b, 24, 6, 24, 5, 22);
+      placa(b, k, 20, 25);
+    } else {
+      stoneWall(b, 4, 22, 43, 44, 41);
+      for (let y = 32; y <= 44; y++) for (let x = 19; x <= 28; x++) {
+        if (y === 32 && (x === 19 || x === 28)) continue;
+        b.set(x, y, x === 19 || x === 28 ? PLANK[0] : (x % 2 ? PLANK[3] : PLANK[2]));
+      }
+      for (let x = 19; x <= 28; x++) b.set(x, 31, STONE[4]);
+      windowAt(b, 8, 28, 4, 5); windowAt(b, 36, 28, 4, 5);
+      shingles(b, 24, 4, 22, 6, 23, TELHA);
+      placa(b, k, 20, 23);
+      // o mastro com a bandeira da aldeia
+      line(b, 40, 0, 40, 9, PLANK[0]);
+      rect7(b, 41, 1, 45, 4, '#feae34'); rect7(b, 41, 3, 45, 4, '#d77643');
+    }
+    return b.canvas();
+  }
+  // templo (64 x 72, 4 x 4 passos): plataforma em degraus, colunas, frontão e o sol de Deus no alto
+  function templo() {
+    const W = 64, H = 72, b = new Buf(W, H);
+    for (let s = 0; s < 3; s++) stoneWall(b, 2 + s * 3, 64 - s * 4, 61 - s * 3, 66 - s * 4, 50 + s);
+    for (let y = 29; y <= 54; y++) for (let x = 12; x <= 51; x++) b.set(x, y, (x + y) % 7 === 0 ? STONE[2] : '#4a3a4e');
+    for (const x of [12, 20, 28, 35, 43, 50]) {
+      for (let y = 30; y <= 54; y++) { b.set(x - 1, y, STONE[1]); b.set(x, y, STONE[4]); b.set(x + 1, y, STONE[3]); b.set(x + 2, y, STONE[2]); }
+      rect7(b, x - 2, 28, x + 3, 29, STONE[3]); rect7(b, x - 2, 55, x + 3, 55, STONE[3]);
+    }
+    rect7(b, 28, 40, 35, 55, '#2b1d1a'); for (let y = 41; y <= 55; y++) b.set(31, y, '#3e2731');
+    rect7(b, 8, 24, 55, 27, STONE[3]); rect7(b, 8, 27, 55, 27, STONE[1]);
+    for (let y = 8; y <= 23; y++) {
+      const hw = Math.round((y - 8) / 15 * 25);
+      for (let dx = -hw; dx <= hw; dx++) b.set(32 + dx, y, dx === -hw || dx === hw ? STONE[1] : y === 23 ? STONE[2] : dx < 0 ? STONE[3] : STONE[2]);
+    }
+    // o sol: um disco de ouro com raios
+    for (let y = -4; y <= 4; y++) for (let x = -4; x <= 4; x++) { const d = Math.hypot(x, y); if (d <= 3.4) b.set(32 + x, 17 + y, d < 1.6 ? '#fee761' : '#feae34'); }
+    for (const [dx, dy] of [[0, -6], [0, 6], [-6, 0], [6, 0], [-4, -4], [4, -4]]) b.set(32 + dx, 17 + dy, '#feae34');
+    line(b, 32, 0, 32, 7, STONE[2]); b.set(32, 0, '#fee761');
+    return b.canvas();
+  }
+  // a muralha: o portão (48 x 40, 3 x 2 passos) com duas torrinhas; o anel de pedra em volta é desenhado no chão
+  function portao() {
+    const W = 48, H = 40, b = new Buf(W, H);
+    stoneWall(b, 0, 10, 13, 37, 61); stoneWall(b, 34, 10, 47, 37, 62);
+    stoneWall(b, 14, 16, 33, 37, 63);
+    for (const x0 of [0, 34]) for (let x = x0; x <= x0 + 13; x += 3) rect7(b, x, 7, x + 1, 9, STONE[3]);
+    for (let x = 14; x <= 33; x += 3) rect7(b, x, 14, x + 1, 15, STONE[3]);
+    for (let y = 22; y <= 37; y++) for (let x = 17; x <= 30; x++) {
+      const r = Math.hypot(x + 0.5 - 24, y - 26);
+      if (y < 26 && r > 7.2) continue;
+      b.set(x, y, (r > 6.2 && y < 26) || x === 17 || x === 30 ? STONE[4] : (x % 3 === 0 ? PLANK[1] : PLANK[2]));
+    }
+    for (let y = 27; y <= 37; y += 4) rect7(b, 18, y, 29, y, PLANK[0]);
+    windowAt(b, 5, 18, 3, 4); windowAt(b, 40, 18, 3, 4);
+    return b.canvas();
+  }
+  // torre de vigia (32 x 64, 2 x 2 passos): fuste de pedra que afina, plataforma de tábuas e cobertura de palha
+  function torre() {
+    const W = 32, H = 64, b = new Buf(W, H);
+    for (let y = 22; y <= 61; y++) {
+      const hw = Math.round(8 + (y - 22) / 39 * 4);
+      stoneWall(b, 16 - hw, y, 15 + hw, y, 70);
+    }
+    for (let x = 4; x <= 27; x++) b.set(x, 62, STONE[0]);
+    rect7(b, 13, 52, 18, 61, '#2b1d1a'); b.set(13, 52, STONE[1]); b.set(18, 52, STONE[1]);
+    windowAt(b, 14, 34, 3, 4);
+    rect7(b, 3, 18, 28, 21, PLANK[2]); rect7(b, 3, 21, 28, 21, PLANK[0]);
+    for (const x of [4, 15, 27]) line(b, x, 9, x, 18, PLANK[1]);
+    thatch(b, 16, 0, 9, 2, 15, 171);
+    return b.canvas();
+  }
+  // aqueduto (64 x 44, 4 x 2 passos): fila de arcos de pedra com o canal de água correndo em cima
+  function aqueduto() {
+    const W = 64, H = 44, b = new Buf(W, H);
+    stoneWall(b, 0, 8, 63, 41, 80);
+    for (const ax of [8, 24, 40, 56]) for (let y = 18; y <= 42; y++) for (let x = ax - 5; x <= ax + 5; x++) {
+      const r = Math.hypot(x + 0.5 - ax, y - 23);
+      if (y < 23 && r > 5.5) continue;
+      if (r > 4.6 && y < 23) b.set(x, y, STONE[4]);
+      else if (x === ax - 5 || x === ax + 5) b.set(x, y, STONE[1]);
+      else b.set(x, y, null);
+    }
+    rect7(b, 0, 4, 63, 7, STONE[3]); rect7(b, 0, 5, 63, 6, '#3a86a8');
+    for (let x = 2; x < 64; x += 6) b.set(x, 5, '#9cc2d4');
+    return b.canvas();
+  }
+  A.cidadeSprites = function () {
+    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto() };
+    for (const k of ['escola', 'biblioteca', 'hospital', 'guarda', 'brigada', 'mercado']) out[k] = [null, instituicao(k, 1), instituicao(k, 2), instituicao(k, 3)];
+    return out;
+  };
+
   // 0.16: gente e bicho saem com o mesmo acabamento de luz das casas
   for (const k of ['personSheet', 'kidSheet', 'capiSheet', 'capiDead', 'wolfSheet', 'beastSheet', 'beastDead', 'bundle', 'birdFly', 'jacareWater']) {
     const f = A[k];
@@ -20334,6 +21070,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     S.cova = { h: cova('h'), e: cova('e'), a: cova('a'), a0: cova('a0'), f: cova('f'), arv: covaArvore() };
     S.florCova = florCova(); S.ofertaCova = ofertaCova(); S.velaCova = [velaCova(0), velaCova(1)]; S.corpo = corpoEsteira(); S.erva = ervaSonho();
     S.shop.cemiterio = [null, cemiterio1(), cemiterio2()];
+    S.cidade = A.cidadeSprites();   // Etapa 16: grandes obras e instituições
     S.demolir = markDemolir(); S.mover = markMover();
     S.bench = { h: benchH(), v: benchV() };
     S.mat = mat();
@@ -21430,6 +22167,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       rect(x * TS + 7, y * TS + 3, 2, 1, 'rgba(254,174,52,0.9)');
       if (j.prog > 0) rect(x * TS + 2, y * TS + TS - 3, (TS - 4) * Math.min(1, j.prog), 2, '#63c74d');
     }
+    const mu = S.buildings.find((b) => b.type === 'muralha');
+    if (mu) drawMuralha(S, mu, tx0, ty0, tx1, ty1);   // Etapa 16
     const w = S.world, jobs = S.obras && S.obras.jobs;
     if (!jobs || !jobs.length) return;
     for (const j of jobs) {
@@ -21468,6 +22207,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       if (b.built && G.Tech.known(S, 'tambor') && G.Life && G.Life.campFire(S) === b && !drumPlaying(S)) blit(S2.tambor, bx + 17, by + 4);
     } else if (b.type === 'moquem' || b.type === 'jirau' || b.type === 'forno') {
       drawWorks(S2, b, bx, by, ghost, now, lv);
+    } else if (S2.cidade && S2.cidade[b.type]) {
+      drawCidade(S, S2, b, bx, by, ghost, lv);   // Etapa 16
     } else if (S2.shop[b.type]) {
       drawShop(S, S2, b, bx, by, ghost, lv, now);
     } else if (b.type === 'estatua') {
@@ -21603,6 +22344,35 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     blit(S2.bigShadow, bx + 5, by + 27, ghost ? 0.4 : undefined);
     if (big) blit(S2.works2.forno, bx, by - 1, al);
     else blit(S2.forno, bx, by + 1, al);
+  }
+  // Etapa 16: grandes obras e instituições. A grande obra em andamento sobe de baixo para cima até onde o trabalho
+  // chegou, com o desenho inteiro apagadinho atrás e os andaimes por cima
+  function drawCidade(S, S2, b, bx, by, ghost, lv) {
+    const set = S2.cidade[b.type], img = Array.isArray(set) ? set[Math.max(1, Math.min(set.length - 1, lv))] : set;
+    const base = by + b.h * TS, top = base - img.height, gr = C.BUILD[b.type].grande;
+    blit(S2.bigShadow, bx + b.w * TS / 2 - 10, base - 5, ghost ? 0.4 : undefined);
+    if (!gr || b.built || !(b.progress > 0)) { blit(img, bx, top, ghost ? 0.45 : undefined); return; }
+    const vis = Math.max(2, Math.round(img.height * Math.min(1, b.progress))), sy = img.height - vis;
+    blit(img, bx, top, 0.22);
+    const X = (v) => Math.round(v * sc + ox), Y = (v) => Math.round(v * sc + oy);
+    ctx.drawImage(img, 0, sy, img.width, vis, X(bx), Y(top + sy), Math.round(img.width * sc), Y(top + img.height) - Y(top + sy));
+    const yS = top + sy;
+    for (let x = bx + 2; x < bx + img.width - 1; x += 7) rect(x, yS - 6, 1, Math.min(10, vis + 6), '#93683f');
+    rect(bx + 1, yS - 4, img.width - 2, 1, '#6e4a35');
+  }
+  // Etapa 16: o anel da muralha em volta do centro, pedra por pedra (sobe junto com a obra); o portão fica de fora
+  function drawMuralha(S, mu, tx0, ty0, tx1, ty1) {
+    const r = C.BUILD.muralha.wall.r, cx = (S.camp.x + 1) * TS, cy = (S.camp.y + 1) * TS, R = r * TS;
+    if ((S.camp.x + 1 + r) < tx0 - 1 || (S.camp.x + 1 - r) > tx1 + 1 || (S.camp.y + 1 + r) < ty0 - 1 || (S.camp.y + 1 - r) > ty1 + 1) return;
+    const n = Math.round(2 * Math.PI * R / 5), frac = mu.built ? 1 : Math.min(1, mu.progress || 0);
+    const gx = (mu.x + mu.w / 2) * TS, gy = (mu.y + mu.h / 2) * TS;
+    for (let k = 0; k < Math.round(n * frac); k++) {
+      const a = k / n * Math.PI * 2, px = Math.round(cx + Math.cos(a) * R), py = Math.round(cy + Math.sin(a) * R);
+      if (Math.hypot(px - gx, py - gy) < 30) continue;
+      rect(px - 3, py - 4, 6, 5, k % 3 ? '#8b9bb4' : '#a2aec4');
+      rect(px - 3, py - 4, 6, 1, '#c0cbdc');
+      rect(px - 3, py + 1, 6, 1, '#3a4466');
+    }
   }
   // armazém, marcenaria e tecelagem: a obra e um pouco do que ela guarda ou faz
   function drawShop(S, S2, b, bx, by, ghost, lv, now) {
@@ -22013,6 +22783,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       }
       return { img: S2[key], dy: -12 };
     }
+    if (S2.cidade && S2.cidade[type]) { const set = S2.cidade[type], im = Array.isArray(set) ? set[Math.max(1, Math.min(3, lv))] : set; return { img: im, dy: C.BUILD[type].h * TS - im.height }; }   // Etapa 16
     const shop = S2.shop[type];
     const img = shop ? shop[Math.max(1, Math.min(shop.length - 1, lv))] : houseImg({ lv, kind });
     return { img, dy: 31 - img.height };
@@ -23237,7 +24008,10 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     });
     // construir (as das descobertas aparecem com elas; o armazém, depois do primeiro inverno) e a ferramenta de caminho
     const builds = [['fogueira', 'fogo'], ['barraca', 'barraca'], ['armazem', 'armazem'], ['moquem', 'moquem'], ['jirau', 'jirau'], ['forno', 'forno'],
-      ['marcenaria', 'marcenaria'], ['tecelagem', 'tecelagem'], ['roca', 'roca'], ['curral', 'curral'], ['mina', 'mina'], ['ferraria', 'ferraria'], ['estatua', 'estatua'], ['cemiterio', 'cemiterio']];
+      ['marcenaria', 'marcenaria'], ['tecelagem', 'tecelagem'], ['roca', 'roca'], ['curral', 'curral'], ['mina', 'mina'], ['ferraria', 'ferraria'], ['estatua', 'estatua'], ['cemiterio', 'cemiterio'],
+      // Etapa 16: as instituições e as grandes obras (aparecem quando a sociedade pede)
+      ['guarda', 'guarda'], ['brigada', 'brigada'], ['hospital', 'hospital'], ['escola', 'escola'], ['biblioteca', 'biblioteca'], ['mercado', 'mercado'],
+      ['torre', 'torre'], ['templo', 'templo'], ['muralha', 'muralha'], ['aqueduto', 'aqueduto']];
     const SHORT = { barraca: 'Barraca', forno: 'Forno' };   // nome curto no botão (o painel fica em duas fileiras)
     $('#builds').innerHTML = builds.map(([t, icn]) => {
       const d = C.BUILD[t];
@@ -24079,6 +24853,19 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         'Ferramenta de ferro: ' + C.FERRO_COST.minerio + ' de minério e ' + C.FERRO_COST.carvao + ' de carvão, em ' + Math.round(C.FERRO_MIN / d.shop.speed) + ' min. No estoque: minério ' + S.stock.minerio + ', carvão ' + S.stock.carvao + ', ferramentas de ferro ' + S.stock.ferro + '.' +
         (d.shop.joias ? ' Joia: 1 de prata ou de ouro, em ' + Math.round(C.JOIA_MIN / d.shop.speed) + ' min.' : '');
     }
+    if (G.Cidade && G.Cidade.isCidade(b.type)) {   // Etapa 16: quem serve ali, e o que a grande obra faz
+      const Ci = G.Cidade, inf = Ci.info(S, b);
+      if (!b.built && C.BUILD[b.type].grande) { const j = Sim.jobOf(b); return j ? 'Material entregue: ' + Math.round(Ci.frac(j) * 100) + '% · a obra vai em ' + Math.round((b.progress || 0) * 100) + '%. ' + (Ci.parada(S, b) ? 'Parada: com menos de ' + C.GRANDE_FARTURA + ' dias de comida guardada, o povo cuida de comer primeiro.' : 'O povo ergue até onde o material deixa; as outras obras passam na frente.') : ''; }
+      if (inf) {
+        const nome = inf.cargo[0], nomes = nome === 'guarda' || nome === 'feirante' ? nome + 's' : nome + 'es';
+        return (inf.staff.length ? 'No posto: ' + listPT(inf.staff) + ' (' + inf.staff.length + ' de ' + inf.quer + ')' + (inf.ativa ? ' · em serviço.' : ' · ainda não serviu hoje.')
+          : 'Sem ' + nomes + ': só com fartura (' + C.PROF_FARTURA + ' dias de comida ou mais) alguém sai do trabalho comum para servir aqui.') + ' ' + d.desc;
+      }
+      if (b.type === 'templo') return 'Quem tem fé reza aqui de manhã e ganha o dobro de fé.';
+      if (b.type === 'muralha') return 'Dentro do anel de ' + C.BUILD.muralha.wall.r + ' passos em volta do centro, lobo e onça não pegam ninguém, e a comida guardada fica.';
+      if (b.type === 'torre') return 'A névoa fica aberta num raio de ' + C.BUILD.torre.watch.r + ' passos. Com a guarda, quem vigia vê também de noite e mais longe.';
+      if (b.type === 'aqueduto') return 'Água no estoque: ' + S.stock.agua + ' de ' + T.waterCap(S) + '. Ninguém precisa mais ir buscar.';
+    }
     if (d.shop) {
       const who = S.people.filter((p) => p.alive && p.act && p.act.type === 'oficio' && p.act.shop === b.id).map((p) => p.name);
       const make = d.shop.k === 'tabuas' ? 'Tábuas: 2 de madeira dão 1, em ' + Math.round(C.TABUA_MIN / d.shop.speed) + ' min. No estoque: ' + S.stock.tabuas + '.' :
@@ -24536,6 +25323,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (info.pena) bits.push('Cumpre pena: ' + (info.pena.dias === 1 ? 'falta 1 dia' : 'faltam ' + info.pena.dias + ' dias') + ' de trabalho para todos.');
     if (info.exilio) bits.push(p.exilio.t > S.t ? 'Vai embora da aldeia ao amanhecer.' : 'Está indo embora da aldeia.');
     if (info.doente) bits.push('Adoeceu por castigo: uns dias de fraqueza.');
+    // Etapa 16: o posto e a febre
+    if (G.Cidade && p.cargo) { const cg = G.Cidade.cargoNome(S, p); if (cg) bits.push('É ' + cg + ': sai do trabalho comum para servir no posto, das 8 às 17.'); }
+    if (p.sick) bits.push('Está com febre: rende metade e a saúde não volta até passar.' + (G.Cidade && G.Cidade.nivel(S, 'hospital') ? ' A casa de cura segura o pior.' : ''));
     if (info.desc >= 30) bits.push((info.desc >= C.DISS_DESC ? 'Pensa em ir embora' : 'Não anda contente') + (DESC1[info.descPq] ? ': ' + DESC1[info.descPq].replace('Deus', G.Deus ? G.Deus.call(S) : 'Deus') : '') + '.');
     // o que a vida fez com a índole (no celular não há a dica do rótulo): "A mão piorou com a fome."
     const EIXO_ART = { g: 'A mão', m: 'O gênio', f: 'A palavra' };

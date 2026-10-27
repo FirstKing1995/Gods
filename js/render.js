@@ -1049,6 +1049,8 @@
       rect(x * TS + 7, y * TS + 3, 2, 1, 'rgba(254,174,52,0.9)');
       if (j.prog > 0) rect(x * TS + 2, y * TS + TS - 3, (TS - 4) * Math.min(1, j.prog), 2, '#63c74d');
     }
+    const mu = S.buildings.find((b) => b.type === 'muralha');
+    if (mu) drawMuralha(S, mu, tx0, ty0, tx1, ty1);   // Etapa 16
     const w = S.world, jobs = S.obras && S.obras.jobs;
     if (!jobs || !jobs.length) return;
     for (const j of jobs) {
@@ -1087,6 +1089,8 @@
       if (b.built && G.Tech.known(S, 'tambor') && G.Life && G.Life.campFire(S) === b && !drumPlaying(S)) blit(S2.tambor, bx + 17, by + 4);
     } else if (b.type === 'moquem' || b.type === 'jirau' || b.type === 'forno') {
       drawWorks(S2, b, bx, by, ghost, now, lv);
+    } else if (S2.cidade && S2.cidade[b.type]) {
+      drawCidade(S, S2, b, bx, by, ghost, lv);   // Etapa 16
     } else if (S2.shop[b.type]) {
       drawShop(S, S2, b, bx, by, ghost, lv, now);
     } else if (b.type === 'estatua') {
@@ -1222,6 +1226,35 @@
     blit(S2.bigShadow, bx + 5, by + 27, ghost ? 0.4 : undefined);
     if (big) blit(S2.works2.forno, bx, by - 1, al);
     else blit(S2.forno, bx, by + 1, al);
+  }
+  // Etapa 16: grandes obras e instituições. A grande obra em andamento sobe de baixo para cima até onde o trabalho
+  // chegou, com o desenho inteiro apagadinho atrás e os andaimes por cima
+  function drawCidade(S, S2, b, bx, by, ghost, lv) {
+    const set = S2.cidade[b.type], img = Array.isArray(set) ? set[Math.max(1, Math.min(set.length - 1, lv))] : set;
+    const base = by + b.h * TS, top = base - img.height, gr = C.BUILD[b.type].grande;
+    blit(S2.bigShadow, bx + b.w * TS / 2 - 10, base - 5, ghost ? 0.4 : undefined);
+    if (!gr || b.built || !(b.progress > 0)) { blit(img, bx, top, ghost ? 0.45 : undefined); return; }
+    const vis = Math.max(2, Math.round(img.height * Math.min(1, b.progress))), sy = img.height - vis;
+    blit(img, bx, top, 0.22);
+    const X = (v) => Math.round(v * sc + ox), Y = (v) => Math.round(v * sc + oy);
+    ctx.drawImage(img, 0, sy, img.width, vis, X(bx), Y(top + sy), Math.round(img.width * sc), Y(top + img.height) - Y(top + sy));
+    const yS = top + sy;
+    for (let x = bx + 2; x < bx + img.width - 1; x += 7) rect(x, yS - 6, 1, Math.min(10, vis + 6), '#93683f');
+    rect(bx + 1, yS - 4, img.width - 2, 1, '#6e4a35');
+  }
+  // Etapa 16: o anel da muralha em volta do centro, pedra por pedra (sobe junto com a obra); o portão fica de fora
+  function drawMuralha(S, mu, tx0, ty0, tx1, ty1) {
+    const r = C.BUILD.muralha.wall.r, cx = (S.camp.x + 1) * TS, cy = (S.camp.y + 1) * TS, R = r * TS;
+    if ((S.camp.x + 1 + r) < tx0 - 1 || (S.camp.x + 1 - r) > tx1 + 1 || (S.camp.y + 1 + r) < ty0 - 1 || (S.camp.y + 1 - r) > ty1 + 1) return;
+    const n = Math.round(2 * Math.PI * R / 5), frac = mu.built ? 1 : Math.min(1, mu.progress || 0);
+    const gx = (mu.x + mu.w / 2) * TS, gy = (mu.y + mu.h / 2) * TS;
+    for (let k = 0; k < Math.round(n * frac); k++) {
+      const a = k / n * Math.PI * 2, px = Math.round(cx + Math.cos(a) * R), py = Math.round(cy + Math.sin(a) * R);
+      if (Math.hypot(px - gx, py - gy) < 30) continue;
+      rect(px - 3, py - 4, 6, 5, k % 3 ? '#8b9bb4' : '#a2aec4');
+      rect(px - 3, py - 4, 6, 1, '#c0cbdc');
+      rect(px - 3, py + 1, 6, 1, '#3a4466');
+    }
   }
   // armazém, marcenaria e tecelagem: a obra e um pouco do que ela guarda ou faz
   function drawShop(S, S2, b, bx, by, ghost, lv, now) {
@@ -1632,6 +1665,7 @@
       }
       return { img: S2[key], dy: -12 };
     }
+    if (S2.cidade && S2.cidade[type]) { const set = S2.cidade[type], im = Array.isArray(set) ? set[Math.max(1, Math.min(3, lv))] : set; return { img: im, dy: C.BUILD[type].h * TS - im.height }; }   // Etapa 16
     const shop = S2.shop[type];
     const img = shop ? shop[Math.max(1, Math.min(shop.length - 1, lv))] : houseImg({ lv, kind });
     return { img, dy: 31 - img.height };

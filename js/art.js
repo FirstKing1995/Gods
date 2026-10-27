@@ -1338,6 +1338,27 @@
 
   // ---------- ícones da interface (10 x 10) ----------
   const ICONS = {
+    // Etapa 16: as grandes obras e as instituições
+    templo: [['....yy....', '...kkkk...', '..kssssk..', '.kkkkkkkk.', '.ks.ss.sk.', '.ks.ss.sk.', '.ks.ss.sk.', 'kkkkkkkkkk', 'kssssssssk', 'kkkkkkkkkk'],
+      { k: P.ink2, s: P.silver, y: P.gold }],
+    muralha: [['..........', 'k.k....k.k', 'kkk....kkk', 'ksk.kk.ksk', 'kskkddkksk', 'ksskddkssk', 'ksskddkssk', 'ksskddkssk', 'kkkkkkkkkk', '..........'],
+      { k: P.ink2, s: P.mist, d: P.bark }],
+    torre: [['...kkkk...', '..kyyyyk..', '.kkkkkkkk.', '..kwwwwk..', '..kssssk..', '..ksddsk..', '..kssssk..', '.ksssssk..', '.kssssssk.', 'kkkkkkkkkk'],
+      { k: P.ink2, s: P.mist, y: P.tan, w: P.wood, d: P.ink }],
+    aqueduto: [['..........', 'kkkkkkkkkk', 'kbbbbbbbbk', 'kkkkkkkkkk', 'ks.ssk.ssk', 'k...k...sk', 'ks..ks..sk', 'ks..ks..sk', 'kk..kk..kk', '..........'],
+      { k: P.ink2, s: P.mist, b: P.sky }],
+    escola: [['..........', '.kkkk.kkkk', '.kwwk.kwwk', '.kwlkkklwk', '.kwwwkwwwk', '.kwlwkwlwk', '.kwwwkwwwk', '.kkkkkkkkk', '..........', '..........'],
+      { k: P.ink2, w: P.parch, l: P.slate }],
+    biblioteca: [['..........', '.k.kk.kk..', 'krkbbkgk..', 'krkbbkgk.k', 'krkbbkgkkk', 'krkbbkgkyk', 'krkbbkgkyk', 'kkkkkkkkkk', '..........', '..........'],
+      { k: P.ink2, r: P.wine, b: P.blue, g: P.green, y: P.gold }],
+    hospital: [['..........', '...kkkk...', '...kggk...', '.kkkggkkk.', '.kggggggk.', '.kggggggk.', '.kkkggkkk.', '...kggk...', '...kkkk...', '..........'],
+      { k: P.ink2, g: P.leaf }],
+    guarda: [['..........', '.kkkkkkk..', '.ksssrssk.', '.ksssrssk.', '.ksssrssk.', '..ksrrsk..', '..kssssk..', '...kssk...', '....kk....', '..........'],
+      { k: P.ink2, s: P.silver, r: P.red }],
+    brigada: [['..........', '..kkkkk...', '.k.....k..', '.kkkkkkk..', '.kbbbbbk..', '.kbiibbk..', '..kbbbk...', '..kkkkk...', '.......b..', '......b.b.'],
+      { k: P.ink2, b: P.sky, i: P.ice }],
+    mercado: [['..........', 'kkkkkkkkkk', 'kyykrrkyyk', 'kkkkkkkkkk', '.k......k.', '.k.oo.g.k.', '.kkkkkkkk.', '.kwwwwwwk.', '.k......k.', '..........'],
+      { k: P.ink2, y: P.gold, r: P.red, o: P.orange, g: P.leaf, w: P.wood }],
     madeira: [['..........', '..........', '...kkkkkk.', '..kyykbbbk', '.kyooykbbk', '.kyooykBBk', '..kyykBBBk', '...kkkkkk.', '..........', '..........'],
       { k: P.maroon, y: P.tan, o: P.wood, b: P.wood, B: P.bark }],
     pedra: [['..........', '..........', '....kkk...', '..kkLLlk..', '.kLLlllmk.', '.kLlllmmk.', 'kllllmmmmk', '.kkkkkkkk.', '..........', '..........'],
@@ -2112,6 +2133,152 @@
     return b.canvas();
   }
 
+  // ---------- Etapa 16: as grandes obras e as instituições ----------
+  // parede de pedra em fiadas desencontradas (a da casa de pedra), com a quina escura
+  function stoneWall(b, x0, y0, x1, y1, seed) {
+    for (let y = y0; y <= y1; y++) {
+      const row = Math.floor((y - y0) / 3), off = row % 2 ? 3 : 0;
+      for (let x = x0; x <= x1; x++) {
+        const bx = Math.floor((x + off) / 5), mortar = (y - y0) % 3 === 2 || (x + off) % 5 === 0;
+        let c = mortar ? STONE[1] : H7(bx, row, seed) < 0.35 ? STONE[2] : H7(bx, row, seed + 1) < 0.5 ? STONE[3] : '#a2aec4';
+        if (!mortar && (x + off) % 5 === 1 && (y - y0) % 3 === 0) c = STONE[4];
+        if (x === x0 || x === x1) c = STONE[1];
+        b.set(x, y, c);
+      }
+    }
+    for (let x = x0; x <= x1; x++) b.set(x, y1 + 1, STONE[0]);
+  }
+  const TELHA = ['#3e2731', '#733e39', '#a8482c', '#c46a3e', '#d98a52'];
+  // a placa de cada instituição (7 x 6): o que se faz ali, sem letra
+  const EMBLEMA = {
+    escola: ['kkkkkkk', 'kWWkWWk', 'kWwkwWk', 'kWwkwWk', 'kWWkWWk', 'kkkkkkk'],
+    biblioteca: ['.......', 'kk.kkk.', 'kRkkBkk', 'kRkkBkG', 'kRkkBkG', 'kkkkkkk'],
+    hospital: ['..kkk..', '..kGk..', 'kkkGkkk', 'kGGGGGk', 'kkkGkkk', '..kGk..'],
+    guarda: ['kkkkkkk', 'kSSRSSk', 'kSSRSSk', '.kSRSk.', '.kSRSk.', '..kkk..'],
+    brigada: ['.kkkkk.', 'k.....k', 'kkkkkkk', 'kBBBBBk', '.kBBBk.', '.kkkkk.'],
+    mercado: ['kRkWkRk', 'kRkWkRk', 'kkkkkkk', '.kYkOk.', 'kYYkOOk', 'kkkkkkk'],
+  };
+  const EMB_MAP = { k: P.ink, W: '#ead4aa', w: '#c9a068', R: '#a22633', B: '#124e89', G: '#3e8948', S: '#8b9bb4', Y: '#feae34', O: '#d77643' };
+  function placa(b, k, x0, y0) {
+    rect7(b, x0 - 1, y0 - 1, x0 + 7, y0 + 6, PLANK[1]);
+    rect7(b, x0, y0, x0 + 6, y0 + 5, PLANK[3]);
+    stamp(b, EMBLEMA[k], EMB_MAP, x0, y0);
+  }
+  // o que fica embaixo do telheiro no nível 1 (cada instituição tem o seu)
+  function miudos(b, k) {
+    if (k === 'escola') { for (const x of [10, 22, 34]) { rect7(b, x, 40, x + 7, 40, PLANK[3]); rect7(b, x, 41, x + 7, 41, PLANK[1]); b.set(x + 1, 42, PLANK[0]); b.set(x + 6, 42, PLANK[0]); } rect7(b, 18, 30, 29, 36, '#3a4a3c'); rect7(b, 18, 30, 29, 30, PLANK[2]); b.set(21, 33, '#dfe6f0'); b.set(22, 33, '#dfe6f0'); b.set(25, 32, '#dfe6f0'); }
+    else if (k === 'biblioteca') { for (let s = 0; s < 3; s++) { const y = 30 + s * 5; rect7(b, 12, y + 4, 35, y + 4, PLANK[1]); for (let x = 13; x < 35; x += 2) { const c = ['#a22633', '#124e89', '#3e8948', '#c9a068', '#5e3a5c'][(x * 3 + s) % 5]; rect7(b, x, y + 1 - (x % 3 === 0 ? 1 : 0), x, y + 3, c); } } }
+    else if (k === 'hospital') { for (const x of [11, 27]) { rect7(b, x, 38, x + 9, 41, '#ead4aa'); rect7(b, x, 38, x + 2, 39, '#ffffff'); rect7(b, x, 42, x + 9, 42, PLANK[0]); } for (let x = 14; x < 34; x += 4) { b.set(x, 28, '#3e8948'); b.set(x + 1, 29, '#63c74d'); b.set(x, 30, '#3e8948'); } }
+    else if (k === 'guarda') { for (let x = 15; x <= 31; x += 4) line(b, x, 29, x, 42, PLANK[2]); rect7(b, 13, 41, 33, 42, PLANK[1]); for (let x = 15; x <= 31; x += 4) { b.set(x, 28, '#8b9bb4'); b.set(x, 27, '#c0cbdc'); } }
+    else if (k === 'brigada') { for (const x of [12, 19, 26, 33]) { rect7(b, x, 37, x + 4, 41, '#6a8a9a'); rect7(b, x, 37, x + 4, 37, '#3e5a6a'); b.set(x + 1, 38, '#0099db'); b.set(x + 2, 38, '#2ce8f5'); rect7(b, x + 1, 35, x + 3, 35, PLANK[0]); } }
+    else if (k === 'mercado') { rect7(b, 10, 34, 37, 36, PLANK[3]); rect7(b, 10, 37, 37, 37, PLANK[0]); for (let x = 12; x < 36; x += 3) { const c = ['#feae34', '#a22633', '#3e8948', '#ead4aa'][(x / 3 | 0) % 4]; rect7(b, x, 32, x + 1, 33, c); } for (const x of [11, 36]) line(b, x, 38, x, 42, PLANK[1]); }
+  }
+  // a instituição em 48 x 48 (3 x 3 passos): nível 1 telheiro de palha sobre esteios, 2 casa de tábuas, 3 casa de pedra
+  function instituicao(k, lv) {
+    const W = 48, H = 48, b = new Buf(W, H), cx = 23.5;
+    if (lv === 1) {
+      for (const x of [6, 41]) { rect7(b, x, 22, x + 1, 44, PLANK[2]); b.set(x + 1, 22, PLANK[1]); rect7(b, x - 1, 45, x + 2, 45, PLANK[0]); }
+      thatch(b, 24, 6, 24, 4, 22, 160 + k.length);
+      miudos(b, k);
+      placa(b, k, 21, 26);
+      return b.canvas();
+    }
+    if (lv === 2) {
+      plankWall(b, 5, 24, 42, 44);
+      for (let x = 5; x <= 42; x++) b.set(x, 45, PLANK[0]);
+      door(b, 20, 34, 27, 44, false);
+      windowAt(b, 9, 30, 5, 4); windowAt(b, 34, 30, 5, 4);
+      shingles(b, 24, 6, 24, 5, 22);
+      placa(b, k, 20, 25);
+    } else {
+      stoneWall(b, 4, 22, 43, 44, 41);
+      for (let y = 32; y <= 44; y++) for (let x = 19; x <= 28; x++) {
+        if (y === 32 && (x === 19 || x === 28)) continue;
+        b.set(x, y, x === 19 || x === 28 ? PLANK[0] : (x % 2 ? PLANK[3] : PLANK[2]));
+      }
+      for (let x = 19; x <= 28; x++) b.set(x, 31, STONE[4]);
+      windowAt(b, 8, 28, 4, 5); windowAt(b, 36, 28, 4, 5);
+      shingles(b, 24, 4, 22, 6, 23, TELHA);
+      placa(b, k, 20, 23);
+      // o mastro com a bandeira da aldeia
+      line(b, 40, 0, 40, 9, PLANK[0]);
+      rect7(b, 41, 1, 45, 4, '#feae34'); rect7(b, 41, 3, 45, 4, '#d77643');
+    }
+    return b.canvas();
+  }
+  // templo (64 x 72, 4 x 4 passos): plataforma em degraus, colunas, frontão e o sol de Deus no alto
+  function templo() {
+    const W = 64, H = 72, b = new Buf(W, H);
+    for (let s = 0; s < 3; s++) stoneWall(b, 2 + s * 3, 64 - s * 4, 61 - s * 3, 66 - s * 4, 50 + s);
+    for (let y = 29; y <= 54; y++) for (let x = 12; x <= 51; x++) b.set(x, y, (x + y) % 7 === 0 ? STONE[2] : '#4a3a4e');
+    for (const x of [12, 20, 28, 35, 43, 50]) {
+      for (let y = 30; y <= 54; y++) { b.set(x - 1, y, STONE[1]); b.set(x, y, STONE[4]); b.set(x + 1, y, STONE[3]); b.set(x + 2, y, STONE[2]); }
+      rect7(b, x - 2, 28, x + 3, 29, STONE[3]); rect7(b, x - 2, 55, x + 3, 55, STONE[3]);
+    }
+    rect7(b, 28, 40, 35, 55, '#2b1d1a'); for (let y = 41; y <= 55; y++) b.set(31, y, '#3e2731');
+    rect7(b, 8, 24, 55, 27, STONE[3]); rect7(b, 8, 27, 55, 27, STONE[1]);
+    for (let y = 8; y <= 23; y++) {
+      const hw = Math.round((y - 8) / 15 * 25);
+      for (let dx = -hw; dx <= hw; dx++) b.set(32 + dx, y, dx === -hw || dx === hw ? STONE[1] : y === 23 ? STONE[2] : dx < 0 ? STONE[3] : STONE[2]);
+    }
+    // o sol: um disco de ouro com raios
+    for (let y = -4; y <= 4; y++) for (let x = -4; x <= 4; x++) { const d = Math.hypot(x, y); if (d <= 3.4) b.set(32 + x, 17 + y, d < 1.6 ? '#fee761' : '#feae34'); }
+    for (const [dx, dy] of [[0, -6], [0, 6], [-6, 0], [6, 0], [-4, -4], [4, -4]]) b.set(32 + dx, 17 + dy, '#feae34');
+    line(b, 32, 0, 32, 7, STONE[2]); b.set(32, 0, '#fee761');
+    return b.canvas();
+  }
+  // a muralha: o portão (48 x 40, 3 x 2 passos) com duas torrinhas; o anel de pedra em volta é desenhado no chão
+  function portao() {
+    const W = 48, H = 40, b = new Buf(W, H);
+    stoneWall(b, 0, 10, 13, 37, 61); stoneWall(b, 34, 10, 47, 37, 62);
+    stoneWall(b, 14, 16, 33, 37, 63);
+    for (const x0 of [0, 34]) for (let x = x0; x <= x0 + 13; x += 3) rect7(b, x, 7, x + 1, 9, STONE[3]);
+    for (let x = 14; x <= 33; x += 3) rect7(b, x, 14, x + 1, 15, STONE[3]);
+    for (let y = 22; y <= 37; y++) for (let x = 17; x <= 30; x++) {
+      const r = Math.hypot(x + 0.5 - 24, y - 26);
+      if (y < 26 && r > 7.2) continue;
+      b.set(x, y, (r > 6.2 && y < 26) || x === 17 || x === 30 ? STONE[4] : (x % 3 === 0 ? PLANK[1] : PLANK[2]));
+    }
+    for (let y = 27; y <= 37; y += 4) rect7(b, 18, y, 29, y, PLANK[0]);
+    windowAt(b, 5, 18, 3, 4); windowAt(b, 40, 18, 3, 4);
+    return b.canvas();
+  }
+  // torre de vigia (32 x 64, 2 x 2 passos): fuste de pedra que afina, plataforma de tábuas e cobertura de palha
+  function torre() {
+    const W = 32, H = 64, b = new Buf(W, H);
+    for (let y = 22; y <= 61; y++) {
+      const hw = Math.round(8 + (y - 22) / 39 * 4);
+      stoneWall(b, 16 - hw, y, 15 + hw, y, 70);
+    }
+    for (let x = 4; x <= 27; x++) b.set(x, 62, STONE[0]);
+    rect7(b, 13, 52, 18, 61, '#2b1d1a'); b.set(13, 52, STONE[1]); b.set(18, 52, STONE[1]);
+    windowAt(b, 14, 34, 3, 4);
+    rect7(b, 3, 18, 28, 21, PLANK[2]); rect7(b, 3, 21, 28, 21, PLANK[0]);
+    for (const x of [4, 15, 27]) line(b, x, 9, x, 18, PLANK[1]);
+    thatch(b, 16, 0, 9, 2, 15, 171);
+    return b.canvas();
+  }
+  // aqueduto (64 x 44, 4 x 2 passos): fila de arcos de pedra com o canal de água correndo em cima
+  function aqueduto() {
+    const W = 64, H = 44, b = new Buf(W, H);
+    stoneWall(b, 0, 8, 63, 41, 80);
+    for (const ax of [8, 24, 40, 56]) for (let y = 18; y <= 42; y++) for (let x = ax - 5; x <= ax + 5; x++) {
+      const r = Math.hypot(x + 0.5 - ax, y - 23);
+      if (y < 23 && r > 5.5) continue;
+      if (r > 4.6 && y < 23) b.set(x, y, STONE[4]);
+      else if (x === ax - 5 || x === ax + 5) b.set(x, y, STONE[1]);
+      else b.set(x, y, null);
+    }
+    rect7(b, 0, 4, 63, 7, STONE[3]); rect7(b, 0, 5, 63, 6, '#3a86a8');
+    for (let x = 2; x < 64; x += 6) b.set(x, 5, '#9cc2d4');
+    return b.canvas();
+  }
+  A.cidadeSprites = function () {
+    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto() };
+    for (const k of ['escola', 'biblioteca', 'hospital', 'guarda', 'brigada', 'mercado']) out[k] = [null, instituicao(k, 1), instituicao(k, 2), instituicao(k, 3)];
+    return out;
+  };
+
   // 0.16: gente e bicho saem com o mesmo acabamento de luz das casas
   for (const k of ['personSheet', 'kidSheet', 'capiSheet', 'capiDead', 'wolfSheet', 'beastSheet', 'beastDead', 'bundle', 'birdFly', 'jacareWater']) {
     const f = A[k];
@@ -2144,6 +2311,7 @@
     S.cova = { h: cova('h'), e: cova('e'), a: cova('a'), a0: cova('a0'), f: cova('f'), arv: covaArvore() };
     S.florCova = florCova(); S.ofertaCova = ofertaCova(); S.velaCova = [velaCova(0), velaCova(1)]; S.corpo = corpoEsteira(); S.erva = ervaSonho();
     S.shop.cemiterio = [null, cemiterio1(), cemiterio2()];
+    S.cidade = A.cidadeSprites();   // Etapa 16: grandes obras e instituições
     S.demolir = markDemolir(); S.mover = markMover();
     S.bench = { h: benchH(), v: benchV() };
     S.mat = mat();
