@@ -1,3 +1,44 @@
+# Gods · versão 0.16 (Mundos e casas)
+
+## O que mudou na 0.16
+
+**Correções**
+- **Vários mundos.** Até a 0.15, começar um mundo novo apagava o antigo (havia uma gaveta só no navegador). Agora cada mundo fica guardado na sua, e a tela de início ganhou **Seus mundos**: a lista com o casal, o lugar, o tamanho, a data e quantos vivem, com Jogar e Apagar (que pede confirmação). O save de antes da 0.16 entra na lista sozinho. O mundo que acaba também fica guardado. A nuvem continua com um mundo por conta: o último jogado.
+- **O povo constrói a casa que falta.** Eram três falhas juntas: (1) o líder só marcava a barraca com 2,5 vezes o material dela no estoque (o teto de 40%), e ninguém juntava madeira para uma obra que ainda não existia; (2) a conta olhava só o total de lugares, então quem sobrava em barracas pela metade dormia na rua com a conta "fechando"; (3) com o jogo fechado ninguém marcava casa, e quem nascia ou crescia longe da vista voltava dormindo ao relento. Agora a casa é marcada sem esperar o estoque (o povo vai buscar a madeira), conta quem está de fato sem lugar, passa na frente das outras obras quando há gente na rua e também é marcada com o jogo fechado. No modo "Só eu marco", um aviso lembra quando alguém dorme fora.
+- **Ninguém mais passa dos 100 por engano.** O modo seguro do jogo fechado pulava a morte por velhice: quem jogava muito com o jogo fechado via humanos com mais de 100 anos (num teste, oito velhos de 70 a 87 passaram 3 anos fora sem nenhuma morte). Agora a velhice vale com o jogo fechado também (só não leva o último vivo). Elfos e anões seguem vivendo mais, como sempre: a velhice deles chega aos 150 e aos 110.
+- **Velho trabalha como velho.** Antes, o idoso rendia 80% em qualquer serviço até morrer. Agora a força cai ano a ano (80% aos 60, 58% aos 70, 35% depois dos 80), o passo fica mais lento, depois dos 70 só faz trabalho leve (colher, pescar, ofício, roça, fogo; nada de cortar árvore, quebrar pedra, caçar, minerar ou construir) e escolhe trabalhar menos, sobrando tempo para contar história e ensinar.
+- Pessoa sem fé marcada (NaN) parava de trabalhar sem aviso: agora começa do meio.
+- O número da versão no código ainda dizia 0.14.
+
+**O centro e o nome do lugar**
+- **O estoque tem várias bocas.** Continua sendo um estoque só (a aldeia divide tudo), mas agora cada armazém pronto também recebe e entrega: quem carrega leva à boca mais perto, e quem precisa comer, beber ou buscar material tira da mais perto. Antes, tudo ia ao quadrado do centro, que virava um formigueiro.
+- **O armazém pode ficar em qualquer lugar** (antes, só a até 8 passos do centro). Um bairro de casas a 14 passos ou mais de todo estoque faz o líder pedir um armazém no meio dele.
+- **Mudar o centro**: no painel do Povo, *Mudar o centro*, e você escolhe o lugar como se fosse uma obra. No modo "O povo decide", o líder também muda o centro sozinho para o meio das casas quando a aldeia cresce para longe dele (no máximo a cada 60 dias); em "O povo pede", ele só sugere.
+- **O lugar tem nome e título**, que sobem com o povo e ficam: acampamento, aldeia (8 pessoas), vila (30), cidade (80) e reino (200). Ao virar aldeia, o líder dá o nome; você troca quando quiser no painel do Povo (*Dar nome* / *Trocar o nome*). Cada subida entra na Crônica.
+
+**Mapa maior**
+- Na escolha do lugar, três tamanhos: **Médio** (128 × 128, o de antes), **Grande** (192 × 192, o padrão, 2,25 vezes a área) e **Enorme** (256 × 256, 4 vezes). A escolha fica lembrada. Saves antigos abrem no tamanho de antes.
+- De longe, o mapa aparece inteiro na hora (uma imagem só do mundo, com árvores e pedras), em vez de ser montado aos pedaços.
+- Zoom novo de 0,5x no jogo (roda do mouse, − ou pinça) para ver a região de longe.
+- Nos mapas maiores há mais bandos de bichos espalhados longe do acampamento.
+- O save guarda só o que mudou desde a geração do mundo: o do mapa enorme pesa quase o mesmo que o médio pesava.
+
+**Visual**
+- Vento nas copas: o alto de cada árvore balança um pixel numa rajada que atravessa o mapa; mais forte na chuva, na tempestade e na nevasca.
+- Sombras de nuvem passando devagar pelo chão durante o dia.
+- O ar de cada estação: folhas secas caindo no outono, pétalas na primavera, borboletas de dia na primavera e no verão.
+- Cantos da tela escurecidos de leve, e a tela de início com um texto que diz do que o jogo trata.
+
+**Arte nova**
+- Paleta própria, terrosa, com a sombra puxando para o azul e a luz para o amarelo, no lugar da paleta pronta e do verde de néon. Vale para tudo: chão, plantas, gente, bichos, casas e itens.
+- O chão tem manchas grandes de tom com a borda em pontilhado ordenado (antes, um ponto de cor sorteado por pixel); o capim nasce em touceiras, a flor em canteiros de uma cor só e a mata tem folha caída. A água ganhou ondinhas.
+- Árvores de copa em tufos, com luz e sombra em cada tufo; a araucária virou candelabro, com os andares de galhos e os pompons nas pontas; pedras desenhadas à mão, com face clara, rachadura e musgo.
+- Gente, bichos e obras ganharam o acabamento de luz do alto à esquerda, e o contorno preto virou um tom escuro da própria cor. As pessoas têm cintura, mãos e sombra no rosto.
+
+*A 0.16 foi de correções e de visual; a etapa 16 do roteiro (Grandes obras e instituições) continua sendo a próxima.*
+
+---
+
 # Gods · Etapa 15 (Gente viva) · versão 0.15
 
 *O jogo se chamava Gênesis até a 0.11. O nome mudou; os saves, o endereço e o servidor continuam os mesmos.*

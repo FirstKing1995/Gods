@@ -1126,7 +1126,7 @@
     pede: ['O povo pede', 'O líder aponta o lugar e espera o seu sim.'],
     decide: ['O povo decide', 'O líder marca sozinho o que falta, usando até ' + Math.round(C.SOC_TETO * 100) + '% de cada material do estoque. Numa aldeia grande, várias obras ao mesmo tempo.'],
   };
-  So.FALTA = { casa: 'Tem gente dormindo ao relento.', fogo: 'Há casa longe de qualquer fogo.', armazem: 'A comida está estragando no estoque.', cerca: 'Bicho entrou na roça.', mina: 'Falta pedra.' };
+  So.FALTA = { casa: 'Tem gente dormindo ao relento.', longe: 'As casas de lá ficam longe do estoque.', fogo: 'Há casa longe de qualquer fogo.', armazem: 'A comida está estragando no estoque.', cerca: 'Bicho entrou na roça.', mina: 'Falta pedra.' };
   So.setModo = function (S, m) {
     if (!So.MODOS[m]) return false;
     S.soc.modo = m;
@@ -1151,15 +1151,36 @@
     }
     return null;
   }
+  // 0.16: quem não tem lugar fixo em casa nenhuma (em lugares de cama). Até a 0.15 a conta era só o total (lugares
+  // pedidos contra lugares de pé): três sozinhos em barracas pela metade dormiam ao relento com o total "fechando", e o
+  // líder nunca marcava a casa que faltava
+  // A cama fixa só é dada na hora de dormir: quem ainda não tem uma procura agora (como faria ao deitar), para a casa
+  // que acabou de ficar pronta não contar como falta
+  function semTeto(S) {
+    const F = Fam(), dentro = new Set();
+    for (const b of S.buildings) if (b.built && b.beds) for (const id of b.beds) dentro.add(id);
+    let n = 0;
+    for (const p of S.people) {
+      if (!here(p) || dentro.has(p.id) || !F.bedUnits(S, p)) continue;
+      const t = G.AI && G.AI.pickTent ? G.AI.pickTent(S, p) : null;
+      if (t) { for (const id of t.beds) dentro.add(id); continue; }
+      n += F.bedUnits(S, p);
+    }
+    return n;
+  }
+  So.semTeto = semTeto;
+  const faltaCasa = (S) => Fam().bedsNeeded(S) > capFutura(S) || semTeto(S) > capFutura(S) - Fam().bedsTotal(S);
   // o que falta, na ordem em que o líder olha
   function faltas(S) {
-    const s = S.soc, F = Fam(), Sm = Sim(), K = G.Campo, out = [];
+    const s = S.soc, Sm = Sim(), K = G.Campo, out = [];
     const tem = (t) => S.buildings.some((b) => b.type === t);
-    if (F.bedsNeeded(S) > capFutura(S) && s.semCama >= 2) out.push({ type: 'barraca', why: 'casa' });
+    if (s.semCama >= 2 && faltaCasa(S)) out.push({ type: 'barraca', why: 'casa' });
     const fires = S.buildings.filter((b) => b.type === 'fogueira');
     const casa = S.buildings.find((b) => b.built && Sm.def(b).cap && !fires.some((f) => Math.hypot(f.x - b.x, f.y - b.y) <= C.SOC_FOGO_LONGE));
     if (casa) out.push({ type: 'fogueira', why: 'fogo', perto: casa });
     if (s.rot >= C.SOC_ROT && !tem('armazem') && G.Tech.buildOpen(S, 'armazem')) out.push({ type: 'armazem', why: 'armazem' });
+    // 0.16: um bairro de casas longe de todo estoque pede um armazém no meio dele (é por ali que vão entregar e pegar)
+    else if (G.Tech.buildOpen(S, 'armazem') && !S.buildings.some((b) => b.type === 'armazem' && !b.built)) { const b = bairroLonge(S); if (b) out.push({ type: 'armazem', why: 'longe', perto: b }); }
     if (K && K.known(S, 'cerca') && S.campo && !S.campo.fjobs.length) {
       const b = S.buildings.find((x) => x.type === 'roca' && x.built && x.farm && x.farm.raidDay !== undefined && S.ck.day - x.farm.raidDay <= 12 && !K.enclosed(S, x));
       if (b) out.push({ type: 'cerca', why: 'cerca', perto: b });
@@ -1168,6 +1189,43 @@
     return out;
   }
   So.faltas = faltas;
+  // 0.16: a casa mais longe de qualquer estoque (o centro ou um armazém), se houver CENTRO_LONGE passos ou mais e
+  // pelo menos 3 casas por ali
+  function bairroLonge(S) {
+    const Sm = Sim(), stores = [{ x: S.camp.x, y: S.camp.y }].concat(S.buildings.filter((b) => b.type === 'armazem' && b.built));
+    const dist = (b) => Math.min(...stores.map((s) => Math.hypot(s.x - b.x, s.y - b.y)));
+    const casas = S.buildings.filter((b) => b.built && Sm.def(b).cap);
+    let far = null;
+    for (const b of casas) if (dist(b) >= C.CENTRO_LONGE && (!far || dist(b) > dist(far))) far = b;
+    if (!far || casas.filter((b) => Math.hypot(b.x - far.x, b.y - far.y) <= 8).length < 3) return null;
+    return far;
+  }
+  So.bairroLonge = bairroLonge;
+  // 0.16: o líder muda o centro para o meio das casas, quando a aldeia cresceu para longe dele (no modo "O povo pede",
+  // só sugere; em "Só eu marco", fica com você). No máximo uma vez a cada CENTRO_MUDA_D dias
+  function centroDia(S) {
+    const s = S.soc, Sm = Sim();
+    if (s.modo === 'eu' || S.t - (S.stats.centroT || 0) < C.CENTRO_MUDA_D * DAY) return;
+    const casas = S.buildings.filter((b) => b.built && Sm.def(b).cap);
+    if (casas.length < 4) return;
+    const mx = Math.round(casas.reduce((a, b) => a + b.x + b.w / 2, 0) / casas.length) - 1, my = Math.round(casas.reduce((a, b) => a + b.y + b.h / 2, 0) / casas.length) - 1;
+    if (Math.hypot(mx - S.camp.x, my - S.camp.y) < C.CENTRO_LONGE + 4) return;
+    let at = null;
+    for (let r = 0; r <= 8 && !at; r++) for (let dy = -r; dy <= r && !at; dy++) for (let dx = -r; dx <= r; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== r || Sm.campWhy(S, mx + dx, my + dy)) continue;
+      at = { x: mx + dx, y: my + dy }; break;
+    }
+    if (!at) return;
+    const L = So.lider(S) || adults(S, 18).sort((a, b) => a.born - b.born || a.id - b.id)[0];
+    if (s.modo === 'pede') {
+      if (s.centroPedido && S.t - s.centroPedido < 20 * DAY) return;
+      s.centroPedido = S.t;
+      Sm.toast(S, (L ? L.name : 'O povo') + ' acha que o centro devia ficar no meio das casas. Dá para mudar no painel do Povo, em Mudar o centro.', '');
+      return;
+    }
+    Sm.moveCamp(S, at.x, at.y, L ? L.name : 'O povo');
+  }
+  So.centroDia = centroDia;
   // os lugares de dormir que vão existir: as obras de pé, as marcadas e as melhorias em andamento (pelo nível que vão ter)
   function capFutura(S) {
     const Sm = Sim();
@@ -1208,12 +1266,13 @@
       return tiles.length >= 4 ? { x: b.x, y: b.y, tiles } : null;
     }
     if (f.type === 'fogueira') return f.perto ? lugar(S, 'fogueira', f.perto.x + 1, f.perto.y + 1, 2, 5) : null;
-    if (f.type === 'armazem') return lugar(S, 'armazem', cx, cy, 2, C.BUILD.armazem.near - 1);
+    // 0.16: o armazém não fica mais preso ao centro: o das casas longe vai para o meio delas
+    if (f.type === 'armazem') return f.perto ? lugar(S, 'armazem', f.perto.x + 1, f.perto.y + 1, 2, 9) : lugar(S, 'armazem', cx, cy, 2, 9);
     if (f.type === 'mina') return lugar(S, 'mina', cx, cy, 3, 40);
     // a casa nova perto das outras
     const casas = S.buildings.filter((b) => Sm.def(b).cap);
     const mx = casas.length ? casas.reduce((a, b) => a + b.x, 0) / casas.length : cx, my = casas.length ? casas.reduce((a, b) => a + b.y, 0) / casas.length : cy;
-    return lugar(S, 'barraca', mx, my, 2, 14) || lugar(S, 'barraca', cx, cy, 3, 16);
+    return lugar(S, 'barraca', mx, my, 2, 14) || lugar(S, 'barraca', cx, cy, 3, 22);
   }
   const custoDe = (q) => (q.type === 'cerca' ? { madeira: q.tiles.length * C.CERCA_WOOD } : C.BUILD[q.type].cost || {});
   So.custoDe = custoDe;
@@ -1254,20 +1313,37 @@
     const max = So.obrasMax(S);
     delete s.espera;
     let primeiro = null;
+    // 0.16: gente dormindo ao relento passa na frente. Com a fila cheia de obras (do jogador ou do povo), a casa que
+    // faltava esperava para sempre; agora uma casa entra mesmo assim, se nenhuma outra está sendo erguida
+    const casaAndando = S.buildings.some((b) => b.type === 'barraca' && (!b.built || b.up));
     // numa aldeia grande, várias de uma vez (no modo "pede", uma pergunta de cada vez)
     for (let k = 0; k < max; k++) {
-      if (obrasAtivas(S) >= max || S.buildings.filter((b) => !b.built || b.up).length >= max + 2) break;
-      const q = umaObra(S, L);
+      const cheio = obrasAtivas(S) >= max || S.buildings.filter((b) => !b.built || b.up).length >= max + 2;
+      if (cheio && (k > 0 || casaAndando)) break;
+      const q = umaObra(S, L, cheio ? 'casa' : '');
       if (!q) break;
       primeiro = primeiro || q;
-      if (s.modo === 'pede') break;
+      if (s.modo === 'pede' || cheio) break;
     }
     return primeiro;
   }
   So.planejarObra = planejarObra;
-  function umaObra(S, L) {
+  // 0.16: com o jogo fechado, o líder também marca a casa que falta. Antes, quem nascia ou crescia longe da vista
+  // voltava dormindo na rua: os dias resumidos erguiam as obras marcadas, mas ninguém marcava a casa
+  So.casaFechado = function (S) {
+    const s = S.soc;
+    if (!s || s.modo === 'eu' || s.pedidos.length || !faltaCasa(S)) return null;
+    if (S.buildings.some((b) => b.type === 'barraca' && (!b.built || b.up))) return null;
+    const L = So.lider(S) || adults(S, 18).sort((a, b) => a.born - b.born || a.id - b.id)[0];
+    if (!L) return null;
+    s.semCama = Math.max(s.semCama, 2);
+    return umaObra(S, L, 'casa');
+  };
+  // so: só olha este motivo ('casa'); vazio, olha tudo o que falta
+  function umaObra(S, L, so) {
     const s = S.soc;
     for (const f of faltas(S)) {
+      if (so && f.why !== so) continue;
       if (s.recusa[f.type] > S.t) continue;
       const at = ondeObra(S, f);
       if (!at) { s.recusa[f.type] = S.t + 5 * DAY; continue; }
@@ -1294,7 +1370,10 @@
           return { type: 'melhoria', why: 'casa', x: m.b.x, y: m.b.y, bid: m.b.id };
         }
       }
-      if (!cabe(S, q)) { s.espera = { type: f.type, why: f.why, t: S.t }; continue; }
+      // 0.16: casa não espera o estoque. Com o teto de 40%, a barraca de 14 de madeira pedia 35 guardados, e ninguém
+      // juntava madeira para uma obra que não existia: o povo dormia na rua para sempre. Marcada, a obra pede o
+      // material que falta e o povo vai buscar
+      if (f.why !== 'casa' && !cabe(S, q)) { s.espera = { type: f.type, why: f.why, t: S.t }; continue; }
       if (marcar(S, q, L)) return q;
     }
     return null;
@@ -2073,7 +2152,12 @@
     for (const p of S.people) if (!p.indole) p.indole = natural(S, p);
     vilaDia(S);
     if (rest(S)) return;
-    s.semCama = F.bedsNeeded(S) > F.bedsTotal(S) ? s.semCama + 1 : 0;
+    s.semCama = F.bedsNeeded(S) > F.bedsTotal(S) || semTeto(S) > 0 ? s.semCama + 1 : 0;
+    // 0.16: no modo "só eu marco", ninguém marca a casa por você: o aviso lembra (no 2º dia e depois a cada 5)
+    if (s.modo === 'eu' && s.semCama >= 2 && (s.semCama - 2) % 5 === 0 && !S.buildings.some((b) => b.type === 'barraca' && !b.built)) {
+      const n = S.people.filter((p) => here(p) && F.bedUnits(S, p) && !S.buildings.some((b) => b.built && b.beds && b.beds.indexOf(p.id) >= 0)).length;
+      if (n) Sim().toast(S, (n === 1 ? 'Uma pessoa dorme' : n + ' pessoas dormem') + ' ao relento. Marque uma casa em Construir, ou deixe o povo decidir as obras em Povo.', 'warn');
+    }
     s.rot = +(s.rot * 0.7 + (S.stats.rottedToday || 0) * 0.3).toFixed(2);
     s.semPedra = S.stock.pedra < C.SOC_PEDRA ? s.semPedra + 1 : 0;
     if (s.cinzas.length) s.cinzas = s.cinzas.filter((c) => S.t - c.t < 20 * DAY);
@@ -2083,6 +2167,7 @@
     esfriar(S);
     promessaDia(S);
     juntar(S);
+    centroDia(S);
     if (S.ck.dos === 1 && S.ck.season === 0) eleger(S);       // todo começo de ano o povo confere se a voz ainda é a mesma
   };
   // a morte de alguém: o líder, o acusado, quem ia embora

@@ -72,6 +72,13 @@
     if (!f.made) {
       f.made = true; f.v9 = true;
       for (const sp of F.SPECIES) for (let k = 0; k < C.BICHOS[sp].n; k++) newHerd(S, sp);
+      // 0.16: no mapa grande, mais bandos espalhados longe do acampamento (quem explora acha bicho, não um mundo vazio)
+      const mais = (S.world.W * S.world.H) / (128 * 128) - 1;
+      if (mais > 0) for (const sp of F.SPECIES) {
+        if (C.BICHOS[sp].hab === 'deus') continue;
+        const extra = Math.floor(C.BICHOS[sp].n * mais * 0.35 + S.rng.next());
+        for (let k = 0; k < extra; k++) newHerd(S, sp, 0, [C.FAUNA_DIST[1], C.FAUNA_DIST[1] + S.world.W * 0.35]);
+      }
     } else if (!f.v9) {
       // save de antes da Etapa 9: só havia capivaras; chegam os outros bichos
       f.v9 = true;
@@ -79,9 +86,10 @@
     }
   };
   // um lugar para o bando: o hábitat da espécie, longe o bastante do acampamento e dos outros bandos
-  function herdSpot(S, sp) {
+  // longe (0.16): a faixa de distância dos bandos extras do mapa grande
+  function herdSpot(S, sp, longe) {
     const w = S.world, cx = S.camp.x + 1, cy = S.camp.y + 1;
-    const hab = C.BICHOS[sp].hab, dist = hab === 'lago' ? [C.JACARE_DIST, C.FAUNA_DIST[1]] : hab === 'deus' ? [8, 18] : C.FAUNA_DIST;
+    const hab = C.BICHOS[sp].hab, dist = longe || (hab === 'lago' ? [C.JACARE_DIST, C.FAUNA_DIST[1]] : hab === 'deus' ? [8, 18] : C.FAUNA_DIST);
     const taken = S.fauna.herds;
     for (let k = 0; k < 160; k++) {
       const a = S.rng.next() * Math.PI * 2, d = dist[0] + S.rng.next() * (dist[1] - dist[0]);
@@ -92,8 +100,8 @@
     }
     return null;
   }
-  function newHerd(S, sp, n) {
-    const f = S.fauna, d = C.BICHOS[sp], spot = herdSpot(S, sp);
+  function newHerd(S, sp, n, longe) {
+    const f = S.fauna, d = C.BICHOS[sp], spot = herdSpot(S, sp, longe);
     if (!spot) return null;
     const h = { id: f.nextHerd++, sp, x: spot.x, y: spot.y, lastBirth: S.ck ? S.ck.day : 0, empty: 0 };
     f.herds.push(h);

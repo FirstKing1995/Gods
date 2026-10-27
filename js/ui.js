@@ -222,6 +222,12 @@
     $('#btn-tree img').src = ic('arvore');
     $('#btn-tree').addEventListener('click', () => UI.tree());
     $('#tree-close').addEventListener('click', () => { $('#modal-tree').hidden = true; });
+    // 0.16: o nome do lugar e o centro
+    const vilaForm = (on) => { $('#vila-form').hidden = !on; $('#btn-vila-nome').parentElement.hidden = on; if (on) { const v = G.Obras.povoacao(S); $('#vila-nome').value = v.nome || G.Obras.nomeSugerido(S, 1); $('#vila-nome').focus(); $('#vila-nome').select(); } };
+    $('#btn-vila-nome').addEventListener('click', () => { if (S) vilaForm(true); });
+    $('#vila-cancel').addEventListener('click', () => vilaForm(false));
+    $('#vila-form').addEventListener('submit', (e) => { e.preventDefault(); if (S && G.Obras.renomear(S, $('#vila-nome').value)) { vilaForm(false); UI.update(0, true); } });
+    $('#btn-centro').addEventListener('click', () => { if (UI.hooks.centro) UI.hooks.centro(); });
     $('#btn-disc img').src = ic('lasca');
     $('#btn-disc').addEventListener('click', () => UI.disc());
     $('#disc-close').addEventListener('click', () => { $('#modal-disc').hidden = true; });
@@ -676,6 +682,13 @@
     for (const p of S.people) if (p.alive) alive++;
     setText($('#povo-title'), 'Seu povo · ' + alive);
     if (!UI.isOpen('povo')) return;
+    // 0.16: o nome do lugar, o título e quanto falta para o próximo
+    if (G.Obras && G.Obras.povoacao) {
+      const v = G.Obras.povoacao(S);
+      setText($('#vila-label'), v.label);
+      setText($('#vila-next'), v.prox ? '· ' + v.prox.t.toLowerCase() + ' com ' + v.prox.n + ' pessoas' : '');
+      setText($('#btn-vila-nome'), v.nome ? 'Trocar o nome' : 'Dar nome');
+    }
     const ord = order(), compact = alive > COMPACT_AT;
     const key = (compact ? 'c' : 'f') + listQ;
     if (ord !== listDrawn || key !== list._key) {

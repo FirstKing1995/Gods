@@ -20,8 +20,9 @@
     return T.GRASS;
   }
 
-  function generate(seed) {
-    const N = C.MAP, W = N, H = N, n = W * H;
+  // size: lado do mapa em tiles (0.16: médio, grande ou enorme; sem ele, o tamanho de antes)
+  function generate(seed, size) {
+    const N = size || C.MAP, W = N, H = N, n = W * H;
     const nE = new G.Simplex(seed >>> 0);
     const nM = new G.Simplex((seed ^ 0x51ed27) >>> 0);
     const nR = new G.Simplex((seed ^ 0x2b7e15) >>> 0);

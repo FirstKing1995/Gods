@@ -84,14 +84,15 @@
     let d = delta;
     if (d > 0) { if (has(p, 'Devoto')) d *= 1.5; if (has(p, 'Cético')) d *= 0.5; if (S.god.align > 30) d *= 1.2; if (p.criado === 'confiante') d *= C.CONFIANTE_GANHO; }
     else { if (has(p, 'Devoto')) d *= 0.5; if (has(p, 'Cético')) d *= 1.5; if (S.god.align < -30) d *= 0.7; }
-    p.fe = U.clamp(p.fe + d, 0, 100);
+    // 0.16: quem chegou sem fé marcada começa do meio (antes virava NaN, e a pessoa parava de trabalhar sem aviso)
+    p.fe = U.clamp((Number.isFinite(p.fe) ? p.fe : C.FAITH_START) + d, 0, 100);
     if (p.fe >= 99.5) p.fe100At = S.t;   // Etapa 11: fé inteira (quem chega lá pode virar escolhido)
   };
   God.align = function (S, d) { S.god.align = U.clamp(S.god.align + d, -100, 100); };
 
   // expoente que aplica às Vontades: fé alta obedece mais
   God.obedience = function (S, p) {
-    let o = 0.6 + 0.8 * (p.fe === undefined ? 50 : p.fe) / 100;
+    let o = 0.6 + 0.8 * (Number.isFinite(p.fe) ? p.fe : 50) / 100;
     if (has(p, 'Devoto')) o += 0.2;
     if (has(p, 'Cético')) o -= 0.25;
     if (S.god && S.god.align < -30) o += 0.15;

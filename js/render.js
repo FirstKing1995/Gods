@@ -45,13 +45,16 @@
   }
   function buildPal() {
     PAL = A.TERRAIN.map((seas) => { const o = []; for (let t = 0; t < 9; t++) o[t] = seas[t].map(pack); return o; });
-    PAL.foam = [pack('#c8f4ff'), pack('#c8f4ff'), pack('#dff4ff'), pack('#eef6fb')];
-    PAL.wet = [pack('#b0845a'), pack('#b4885c'), pack('#a8805a'), pack('#a8a2a0')];
-    PAL.detail = A.DETAIL.map((d) => ({ tuft: pack(d.tuft), flowers: d.flowers.map(pack) }));
-    PAL.pebble = [pack('#8b9bb4'), pack('#5a6988'), pack('#c0cbdc')];
+    PAL.foam = [pack('#cfe6e2'), pack('#cfe6e2'), pack('#d8e6dc'), pack('#eef3f6')];
+    PAL.wet = [pack('#8a7048'), pack('#8e744a'), pack('#86704e'), pack('#a29c98')];
+    PAL.detail = A.DETAIL.map((d) => ({ tuft: pack(d.tuft), tip: pack(d.tip), flowers: d.flowers.map(pack), leaf: d.leaf.map(pack) }));
+    PAL.pebble = [pack('#938a8c'), pack('#6d6672'), pack('#bdb2a6')];
     PAL.snowSpark = pack('#ffffff');
   }
 
+  // trama ordenada 4x4 (de -0.5 a 0.5) e os tufos de capim desenhados à mão (l = ponta clara, d = base escura)
+  const BAYER4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => v / 16 - 0.47);
+  const TUFTS = [['..l..', 'l.d.l', '.ddd.'], ['.l.', 'ld.', '.d.'], ['l.l', '.d.'], ['l', 'd'], ['.l..', 'ld.l', '.dd.']];
   // ruído de valor suave numa grade de 2^sh px
   function vnoise(wx, wy, sh, seed) {
     const gx = wx >> sh, gy = wy >> sh, s = 1 << sh;
@@ -78,6 +81,35 @@
     return top + (bot - top) * ty;
   }
 
+  // 0.16: o mundo inteiro numa imagem pequena (OVP px por tile), para o zoom bem de longe; refeita só quando muda o
+  // mundo ou a estação
+  const OVP = 3;
+  let ovKey = '', ovImg = null;
+  function overview(w, season) {
+    const key = w.seed + ':' + w.W + ':' + season;
+    if (key === ovKey && ovImg) return ovImg;
+    if (!PAL) buildPal();
+    const N = w.W * OVP, M = w.H * OVP, [c, x] = A.mk(N, M);
+    const img = x.createImageData(N, M), buf = new Uint32Array(img.data.buffer), pal = PAL[season], shade = shadeField(w);
+    const tree = pal[T.FOREST][0], rock = PAL.pebble[0], bush = pal[T.FOREST][2];
+    for (let ty = 0; ty < w.H; ty++) for (let tx = 0; tx < w.W; tx++) {
+      const i = ty * w.W + tx, t = w.tile[i], tones = pal[t];
+      let tone = 1;
+      if (!IS_WATER[t]) { const d = shade[i]; if (d > 0.03) tone = 2; else if (d < -0.03) tone = 0; }
+      else if (t === T.DEEP) tone = w.elev[i] < 0.2 ? 0 : w.elev[i] < 0.27 ? 1 : 2;
+      const o = w.objGrid[i] >= 0 ? w.objs[w.objGrid[i]] : null, k = o ? o.k : '';
+      for (let py = 0; py < OVP; py++) for (let px = 0; px < OVP; px++) {
+        let col = tones[tone];
+        if (k === 'tree' && (px + py) % 3 !== 2) col = tree;
+        else if (k === 'rock' && px === 1 && py >= 1) col = rock;
+        else if (k === 'bush' && px === 1 && py === 1) col = bush;
+        buf[(ty * OVP + py) * N + tx * OVP + px] = col;
+      }
+    }
+    x.putImageData(img, 0, 0);
+    ovKey = key; ovImg = c;
+    return c;
+  }
   function renderChunk(w, cx, cy, season) {
     if (!PAL) buildPal();
     const [c, x] = A.mk(CPX, CPX);
@@ -122,15 +154,17 @@
               let tone = e < 0.2 ? 0 : e < 0.27 ? 1 : 2;
               if (h < 0.12 && tone > 0) tone--;
               col = n2 ? tones[2] : tones[tone];
-            } else col = n2 ? tones[2] : (h < 0.05 ? tones[2] : tones[1]);
+            } else col = n2 ? tones[2] : tones[1];
+            // ondinhas: traços curtos e desencontrados, em vez de pontos soltos
+            if (!n2 && (wy + ((wx >> 3) & 1) * 3) % 6 === 0 && G.hash2(wx >> 2, wy, seed + 13) < 0.3) col = tones[2];
           }
         } else {
+          // manchas grandes de tom, com a borda em pontilhado ordenado (a trama de quem desenha pixel, não ruído)
           let tone = 1;
-          const hb = vnoise(wx, wy, 4, seed + 21);
-          if (hb < 0.3) tone = hb < 0.24 || h < 0.35 ? 0 : 1;
-          else if (hb > 0.74) tone = hb > 0.8 || h < 0.35 ? 2 : 1;
-          if (h < 0.05) tone = 0; else if (h > 0.965) tone = 2;
-          const dE = SH[k] + (h - 0.5) * 0.012;
+          const bay = BAYER4[(wy & 3) * 4 + (wx & 3)];
+          const hb = vnoise(wx, wy, 5, seed + 21) + bay * 0.07;
+          if (hb < 0.33) tone = 0; else if (hb > 0.69) tone = 2;
+          const dE = SH[k] + bay * 0.01;
           const th = (t === T.HILL || t === T.MOUNTAIN) ? 0.018 : 0.042;
           if (dE > th) tone = Math.min(2, tone + 1); else if (dE < -th) tone = Math.max(0, tone - 1);
           col = tones[tone];
@@ -148,22 +182,48 @@
       if (gx >= Wt || gy >= Ht) continue;
       const t = w.tile[gy * Wt + gx];
       if (IS_WATER[t]) continue;
-      for (let n = 0; n < 3; n++) {
-        const hx = G.hash2(gx * 3 + n, gy, seed + 31), hy = G.hash2(gx, gy * 3 + n, seed + 37), hk = G.hash2(gx + n, gy - n, seed + 41);
-        const px = tx * TS + 1 + Math.floor(hx * 13), py = ty * TS + 2 + Math.floor(hy * 13);
-        if (at(px, py) !== t) continue;
-        const o = py * CPX + px;
-        if (t === T.SAND || t === T.MOUNTAIN) {
-          if (hk < 0.45) { buf[o] = PAL.pebble[1]; if (px + 1 < CPX) buf[o + 1] = PAL.pebble[0]; if (py > 0) buf[o - CPX] = PAL.pebble[2]; }
-        } else if (season === 3) {
-          if (hk < 0.3) buf[o] = PAL.snowSpark;
-          else if (hk < 0.5 && px > 0 && px + 1 < CPX && py > 0) { buf[o] = det.tuft; buf[o - CPX - 1] = det.tuft; }
-        } else if (hk < 0.62) {
-          if (px > 0 && px + 1 < CPX && py > 0) { buf[o] = det.tuft; buf[o - CPX - 1] = det.tuft; buf[o - CPX + 1] = det.tuft; }
-        } else if (det.flowers.length && hk < 0.62 + (season === 0 ? 0.3 : 0.12) && t !== T.FOREST) {
-          const f = det.flowers[Math.floor(G.hash2(gx, gy, seed + n + 51) * det.flowers.length)];
-          buf[o] = f;
-          if (px > 0 && px + 1 < CPX && py > 0 && py + 1 < CPX && season === 0) { buf[o - 1] = f; buf[o + 1] = f; buf[o - CPX] = f; buf[o + CPX] = det.tuft; }
+      // 0.16: o capim nasce em touceiras (onde a mancha é densa, muitos tufos; fora dela, quase nada) e a flor em
+      // canteiros de uma cor só. Antes, um tufo e uma flor de cor sorteada por tile: o confete que denunciava o código
+      const put = (px, py, c) => { if (px >= 0 && py >= 0 && px < CPX && py < CPX && at(px, py) === t) buf[py * CPX + px] = c; };
+      const stamp = (st, px, py) => {
+        for (let r = 0; r < st.length; r++) for (let q = 0; q < st[r].length; q++) {
+          const ch = st[r][q];
+          if (ch !== '.') put(px + q - (st[r].length >> 1), py + r - st.length + 1, ch === 'l' ? det.tip : det.tuft);
+        }
+      };
+      const dens = vnoise(gx * TS, gy * TS, 6, seed + 33), hk0 = G.hash2(gx, gy, seed + 41);
+      if (t === T.SAND || t === T.MOUNTAIN) {
+        for (let n = 0; n < 2; n++) {
+          if (G.hash2(gx + n, gy - n, seed + 41) > 0.4) continue;
+          const px = tx * TS + 2 + Math.floor(G.hash2(gx * 3 + n, gy, seed + 31) * 12), py = ty * TS + 3 + Math.floor(G.hash2(gx, gy * 3 + n, seed + 37) * 11);
+          put(px, py, PAL.pebble[1]); put(px + 1, py, PAL.pebble[0]); put(px, py - 1, PAL.pebble[2]);
+        }
+        continue;
+      }
+      const nT = season === 3 ? (hk0 < 0.4 ? 1 : 0) : t === T.FOREST ? 2 : dens > 0.62 ? 5 : dens > 0.45 ? 2 : hk0 < 0.5 ? 1 : 0;
+      for (let n = 0; n < nT; n++) {
+        const hx = G.hash2(gx * 3 + n, gy, seed + 31), hy = G.hash2(gx, gy * 3 + n, seed + 37), hs = G.hash2(gx + n, gy - n, seed + 43);
+        const px = tx * TS + 2 + Math.floor(hx * 12), py = ty * TS + 3 + Math.floor(hy * 12);
+        if (season === 3) { if (hs < 0.5) put(px, py, PAL.snowSpark); else stamp(TUFTS[3], px, py); continue; }
+        stamp(TUFTS[Math.floor(hs * TUFTS.length)], px, py);
+      }
+      if (t === T.FOREST) {
+        // chão da mata: folha caída, uma ou duas
+        if (det.leaf.length) for (let n = 0; n < 2; n++) {
+          const hl = G.hash2(gx - n, gy + n * 7, seed + 61);
+          if (hl < 0.45) put(tx * TS + 1 + Math.floor(G.hash2(gx, gy + n, seed + 63) * 14), ty * TS + 1 + Math.floor(G.hash2(gx + n, gy, seed + 67) * 14), det.leaf[Math.floor(hl * 9) % det.leaf.length]);
+        }
+      } else if (det.flowers.length) {
+        const fp = vnoise(gx * TS, gy * TS, 6, seed + 57) + (hk0 - 0.5) * 0.12;
+        if (fp > (season === 0 ? 0.6 : 0.7)) {
+          const f = det.flowers[Math.floor(G.hash2(gx >> 2, gy >> 2, seed + 59) * det.flowers.length)];
+          const nf = 1 + Math.floor(G.hash2(gx, gy, seed + 53) * (season === 0 ? 4 : 3));
+          for (let n = 0; n < nf; n++) {
+            const px = tx * TS + 2 + Math.floor(G.hash2(gx * 5 + n, gy, seed + 71) * 12), py = ty * TS + 3 + Math.floor(G.hash2(gx, gy * 5 + n, seed + 73) * 11);
+            put(px, py + 1, det.tuft);
+            put(px, py, f);
+            if (season === 0 && n % 2 === 0) { put(px - 1, py, f); put(px + 1, py, f); put(px, py - 1, f); }
+          }
         }
       }
     }
@@ -256,7 +316,7 @@
   // chunks que precisam ser refeitos (um caminho mudou): o velho segue na tela até o novo ficar pronto
   const dirty = new Set();
   function dirtyTile(i) {
-    const Wt = C.MAP, x = i % Wt, y = (i / Wt) | 0;
+    const Wt = lastS ? lastS.world.W : C.MAP, x = i % Wt, y = (i / Wt) | 0;
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
       const tx = x + dx, ty = y + dy;
       if (tx < 0 || ty < 0 || tx >= Wt || ty >= Wt) continue;
@@ -375,6 +435,18 @@
       for (let i = 0; i < 10; i++) spawn({ x: e.x * TS + (Math.random() - 0.5) * 6, y: e.y * TS - 4 + (Math.random() - 0.5) * 6, vx: (Math.random() - 0.5) * 30, vy: -12 - Math.random() * 16, g: 60, life: 0.7, col: Math.random() < 0.7 ? '#e43b44' : '#ffffff' });
     }
   };
+  // 0.16: o que paira no ar conforme a estação, só na área à vista: folhas secas no outono, pétalas na primavera,
+  // borboletas de dia no verão e na primavera (wob: vai e vem de lado; flap: bate as asas)
+  const view = { x0: 0, y0: 0, x1: 0, y1: 0 };
+  const LEAF = ['#e4a672', '#b86f50', '#be4a2f', '#feae34'], PETAL = ['#f6757a', '#ffd0dc', '#fff4f4'], WING = ['#fee761', '#ffffff', '#f77622', '#2ce8f5'];
+  function ambient(S, dt) {
+    if (parts.length > 320 || sc < 1) return;
+    const se = S.ck.season, dia = darkness(S.ck.hour) < 0.25, area = Math.max(1, (view.x1 - view.x0) * (view.y1 - view.y0) / (TS * TS * 600));
+    const rx = () => view.x0 + Math.random() * (view.x1 - view.x0), ry = () => view.y0 + Math.random() * (view.y1 - view.y0);
+    if (se === 2 && Math.random() < dt * 5 * area * wind) spawn({ x: rx(), y: view.y0 + Math.random() * (view.y1 - view.y0) * 0.6, vx: 7 * wind + Math.random() * 5, vy: 5 + Math.random() * 4, g: 0, life: 3 + Math.random() * 3, col: LEAF[(Math.random() * 4) | 0], wob: 9, ph: Math.random() * 6, sz: Math.random() < 0.4 ? 2 : 1 });
+    if (se === 0 && !S.precip && Math.random() < dt * 2 * area) spawn({ x: rx(), y: ry(), vx: 4 * wind + Math.random() * 3, vy: 2 + Math.random() * 2, g: 0, life: 3 + Math.random() * 2, col: PETAL[(Math.random() * 3) | 0], wob: 6, ph: Math.random() * 6 });
+    if ((se === 0 || se === 1) && dia && !S.precip && Math.random() < dt * 0.5 * area) spawn({ x: rx(), y: ry(), vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 6, g: 0, life: 6 + Math.random() * 5, col: WING[(Math.random() * 4) | 0], wob: 14, ph: Math.random() * 6, flap: 1 });
+  }
   function updateParts(dt, S, now) {
     for (let i = parts.length - 1; i >= 0; i--) {
       const p = parts[i];
@@ -382,8 +454,10 @@
       if (p.life <= 0) { parts.splice(i, 1); continue; }
       p.vy += (p.g || 0) * dt;
       p.x += p.vx * dt; p.y += p.vy * dt;
+      if (p.wob) { p.ph += dt * (p.flap ? 2.2 : 3.1); p.x += Math.sin(p.ph) * p.wob * dt; if (p.flap) p.y += Math.cos(p.ph * 1.7) * p.wob * 0.6 * dt; }
     }
     if (!S) return;
+    ambient(S, dt);
     // festa: notas de música sobre quem dança; cantoria: sobre o fogo; a flauta (Etapa 8): sobre quem toca
     const flute = S.life && S.life.story && S.life.story.on && S.life.story.music ? S.life.story.teller : 0;
     for (const q of S.people) {
@@ -467,6 +541,8 @@
     if (!w) return;
     sc = scale();
     const season = S ? S.ck.season : 0;
+    const Nw = G.Narr;
+    wind = !S ? 1 : Nw && (Nw.is(S, 'tempestade') || Nw.is(S, 'nevasca')) ? 2.4 : S.precip ? 1.5 : season === 2 ? 1.2 : 1;
     const key = w.seed + ':' + season;
     if (key !== chunkKey) { chunks.clear(); chunkKey = key; }
     ox = Math.round(W / 2 - cam.x * sc); oy = Math.round(H / 2 - cam.y * sc);
@@ -478,7 +554,16 @@
     const cx0 = Math.max(0, Math.floor(vx0 / CPX)), cy0 = Math.max(0, Math.floor(vy0 / CPX));
     const cx1 = Math.min(Math.ceil(w.W / CH) - 1, Math.floor(vx1 / CPX)), cy1 = Math.min(Math.ceil(w.H / CH) - 1, Math.floor(vy1 / CPX));
     let budget = R.chunkBudget || 3;   // pedaços do chão refeitos por quadro (main.js sobe isto para um quadro inteiro de uma vez)
-    for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
+    // 0.16: de muito longe (a escolha do lugar no mapa grande), uma imagem só do mundo inteiro, com as árvores e as pedras
+    // já pintadas nela: montar 144 pedaços em alta e desenhar dez mil árvores minúsculas travava a tela por segundos
+    const far = sc * TS < 5;
+    if (far) {
+      const img = overview(w, season);
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(img, ox, oy, Math.round(w.W * TS * sc), Math.round(w.H * TS * sc));
+      ctx.imageSmoothingEnabled = sc < 1;
+    }
+    if (!far) for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
       const k = cx + ',' + cy;
       let c = chunks.get(k);
       if ((!c || dirty.has(k)) && budget > 0) { budget--; dirty.delete(k); c = renderChunk(w, cx, cy, season); chunks.set(k, c); }
@@ -508,7 +593,7 @@
     // lista ordenada por y
     const list = [], fence = S ? w.fence : null;
     const levado = {};
-    for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
+    if (!far) for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
       if (fence && fence[ty * w.W + tx]) list.push({ y: ty * TS + 13, fe: ty * w.W + tx });   // cercas (Etapa 10)
       const oi = w.objGrid[ty * w.W + tx];
       if (oi < 0) continue;
@@ -608,12 +693,16 @@
     }
     if (spears.length) drawSpears(now);
     // partículas
+    view.x0 = vx0; view.y0 = vy0; view.x1 = vx1; view.y1 = vy1;
     updateParts(dt, S, now);
     for (const p of parts) {
       if (p.spr) blit(A.spr[p.spr], p.x - 2, p.y - 2, Math.min(1, p.life / 1.2));
       else if (p.col === 'smoke') { const a = Math.min(1, p.life / 2.2); rect(p.x, p.y, 2, 2, 'rgba(192,203,220,' + (a * 0.5).toFixed(2) + ')'); }
-      else rect(p.x, p.y, 1, 1, p.col);
+      else if (p.flap) { const open = Math.floor(now / 110 + p.ph * 10) % 2; rect(p.x - (open ? 1 : 0), p.y, open ? 3 : 1, 1, p.col); rect(p.x, p.y + 1, 1, 1, '#3f2832'); }
+      else rect(p.x, p.y, p.sz || 1, 1, p.col);
     }
+    // 0.16: sombras de nuvem passando devagar pelo chão (de dia, com o céu limpo ou nublado)
+    if (S) drawClouds(S, w, now);
     // névoa sobre o que o povo ainda não viu
     if (S && S.seen) drawFog(S);
     // sobreposições do jogador
@@ -855,15 +944,28 @@
     for (let x = X0; x <= X1; x += 8) { post(x, Y0); post(x, Y1); }
     for (let y = Y0 + 8; y < Y1; y += 8) { post(X0, y); post(X1 - 1, y); }
   }
+  // 0.16: vento nas copas. O alto da árvore anda um pixel de lado numa onda que atravessa o mapa (a rajada passa de
+  // árvore em árvore); o tronco fica parado. Na chuva o vento sobe, na tempestade e na nevasca mais ainda
+  let wind = 1;
+  function swayOf(o, now) {
+    const ph = now / 1000 * 1.25 - o.x * 0.31 - o.y * 0.12;
+    return Math.round((Math.sin(ph) + Math.sin(ph * 0.47 + o.id) * 0.45) * 0.62 * wind);
+  }
+  function blitTree(img, wx, wy, trunk, dx) {
+    if (!dx) { blit(img, wx, wy); return; }
+    const cut = img.height - trunk, X = (v) => Math.round(v * sc + ox), Y = (v) => Math.round(v * sc + oy), w = Math.round(img.width * sc);
+    ctx.drawImage(img, 0, 0, img.width, cut, X(wx + dx), Y(wy), w, Y(wy + cut) - Y(wy));
+    ctx.drawImage(img, 0, cut, img.width, trunk, X(wx), Y(wy + cut), w, Y(wy + img.height) - Y(wy + cut));
+  }
   function drawObj(o, season, snow, tiny, st, now) {
     const bx = o.x * TS, by = o.y * TS;
     const S = A.spr;
     switch (o.k) {
       case 'tree': {
-        const arau = o.sp === 'arau';
-        if (!tiny) blit(S.bigShadow, bx - 3, by + 11);
-        if (arau) blit(S.arau[season][o.v], bx - 3, by + 13 - 30);
-        else blit(S.broad[season][o.v], bx - 3, by + 13 - 23);
+        const arau = o.sp === 'arau', dx = tiny ? 0 : swayOf(o, now || 0);
+        if (!tiny) blit(S.bigShadow, bx - 3 + (dx > 0 ? 1 : 0), by + 11);
+        if (arau) blitTree(S.arau[season][o.v], bx - 3, by + 13 - 30, 8, dx);
+        else blitTree(S.broad[season][o.v], bx - 3, by + 13 - 23, 6, dx);
         break;
       }
       case 'stump': blit(S.stump[snow ? 1 : 0], bx + 3, by + 7); break;
@@ -1543,8 +1645,8 @@
   }
   function drawGhost(S, g, now) {
     if (!S) return;
-    const gi = ghostImg(g.type, g.lv, g.kind);
-    const def = C.BUILD[g.type];
+    const gi = g.type === 'centro' ? { img: A.spr.mat, dy: 0 } : ghostImg(g.type, g.lv, g.kind);   // 0.16: o centro novo
+    const def = C.BUILD[g.type] || { w: 2, h: 2 };
     blit(gi.img, g.x * TS, g.y * TS + gi.dy, 0.6);
     ctx.fillStyle = g.ok ? 'rgba(254,174,52,0.22)' : 'rgba(228,59,68,0.35)';
     ctx.fillRect(Math.round(g.x * TS * sc + ox), Math.round(g.y * TS * sc + oy), Math.round(def.w * TS * sc), Math.round(def.h * TS * sc));
@@ -1555,16 +1657,6 @@
       const bob = Math.round(Math.sin((now || 0) / 260) * 0.7 + 0.7), mx = x0 + (w >> 1), my = y0 + (h >> 1);
       arrowMark(mx, y0 - 4 - bob, 0, col); arrowMark(x0 + w + 3 + bob, my, 1, col);
       arrowMark(mx, y0 + h + 3 + bob, 2, col); arrowMark(x0 - 4 - bob, my, 3, col);
-    }
-    // o armazém tem que ficar perto do estoque: mostra até onde
-    if (def.near) {
-      const cx = (S.camp.x + 1) * TS * sc + ox, cy = (S.camp.y + 1) * TS * sc + oy;
-      ctx.save();
-      ctx.lineWidth = Math.max(1, dpr * 1.5);
-      ctx.setLineDash([4 * dpr, 4 * dpr]);
-      ctx.strokeStyle = 'rgba(254,174,52,0.8)';
-      ctx.beginPath(); ctx.arc(cx, cy, (def.near + 1) * TS * sc, 0, Math.PI * 2); ctx.stroke();
-      ctx.restore();
     }
   }
   // pincel do caminho: os passos que o dedo (ou o mouse) está marcando
@@ -1608,6 +1700,38 @@
   }
 
   // Etapa 6: arco-íris, estrela cadente, araras e vaga-lumes (por cima da noite, para brilhar)
+  // 0.16: a sombra de uma nuvem: várias manchas redondas e macias numa tela pequena, esticada no chão
+  let cloudImg = null;
+  function cloudShape() {
+    const [c, x] = A.mk(96, 56);
+    const lobes = [[30, 30, 22], [52, 24, 20], [70, 32, 18], [44, 38, 16], [20, 36, 12], [80, 26, 11]];
+    for (const [cx, cy, r] of lobes) {
+      const g = x.createRadialGradient(cx, cy, 0, cx, cy, r);
+      g.addColorStop(0, 'rgba(18,22,48,0.55)'); g.addColorStop(0.65, 'rgba(18,22,48,0.35)'); g.addColorStop(1, 'rgba(18,22,48,0)');
+      x.fillStyle = g; x.fillRect(cx - r, cy - r, r * 2, r * 2);
+    }
+    return c;
+  }
+  function drawClouds(S, w, now) {
+    const dark = darkness(S.ck.hour);
+    if (dark > 0.4) return;
+    if (!cloudImg) cloudImg = cloudShape();
+    const fade = 1 - dark / 0.4, t = now / 1000, Wp = w.W * TS, Hp = w.H * TS;
+    const n = Math.round(w.W * w.H / 1400) + 4, spanX = Wp + 1400, spanY = Hp + 900;
+    const vx0 = -ox / sc, vy0 = -oy / sc, vx1 = (W - ox) / sc, vy1 = (H - oy) / sc;
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    for (let k = 0; k < n; k++) {
+      const hx = G.hash2(k, 1, w.seed), hy = G.hash2(k, 2, w.seed), hs = G.hash2(k, 3, w.seed);
+      const s = 3.2 + hs * 3.6, cw = 96 * s, ch = 56 * s;
+      const x = ((hx * spanX + t * (5 + hs * 4) * wind) % spanX) - 900, y = ((hy * spanY + t * 1.6 * wind) % spanY) - 600;
+      if (x + cw < vx0 || x > vx1 || y + ch < vy0 || y > vy1) continue;
+      ctx.globalAlpha = (0.16 + hs * 0.1) * fade * (S.precip ? 0.6 : 1);
+      ctx.drawImage(cloudImg, Math.round(x * sc + ox), Math.round(y * sc + oy), Math.round(cw * sc), Math.round(ch * sc));
+    }
+    ctx.restore();
+  }
+
   function drawSky(S, now) {
     const l = S.life;
     if (l && l.rainbowUntil > S.t) {

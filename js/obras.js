@@ -233,8 +233,53 @@
     const w = S.world;
     if (w.foot && w.road[i] <= 1) w.foot[i] += 1;
   };
+  // ---------- 0.16: o nome e o tamanho do lugar ----------
+  // o título sobe com o povo e não volta (a cidade que encolhe segue cidade); f: feminino, para o "da"/"do"
+  const TITULOS = [{ n: 0, t: 'Acampamento', f: 0 }, { n: 8, t: 'Aldeia', f: 1 }, { n: 30, t: 'Vila', f: 1 }, { n: 80, t: 'Cidade', f: 1 }, { n: 200, t: 'Reino', f: 0 }];
+  const NOMES = ['Ybyrá', 'Itaúna', 'Jaci', 'Araci', 'Piatã', 'Iporã', 'Guaraci', 'Aratu', 'Taíba', 'Pirajá', 'Ubatã', 'Coaraci', 'Itapuã', 'Juruá', 'Moema', 'Tabatinga', 'Jandaia', 'Ivaí', 'Caraí', 'Iracema', 'Abaeté', 'Jurema', 'Taquari', 'Paraty', 'Cambuí'];
+  O.TITULOS = TITULOS;
+  O.povoacao = function (S) {
+    const v = S.povo || (S.povo = { nome: '', nivel: 0 });
+    const T = TITULOS[Math.min(TITULOS.length - 1, v.nivel || 0)], art = T.f ? 'a' : 'o';
+    return {
+      nome: v.nome, titulo: T.t, nivel: v.nivel || 0,
+      label: v.nome ? T.t + ' ' + v.nome : T.t,
+      de: v.nome ? 'de ' + v.nome : 'd' + art + ' ' + T.t.toLowerCase(),   // "o centro de Ybyrá", "o centro do acampamento"
+      prox: TITULOS[(v.nivel || 0) + 1] || null,
+    };
+  };
+  // o nome que o povo daria (sorteado pela seed, sem repetir o da vila de fora)
+  O.nomeSugerido = function (S, k) {
+    const fora = S.soc && S.soc.vila ? S.soc.vila.nome : '';
+    const ok = NOMES.filter((n) => n !== fora && n !== (S.povo && S.povo.nome));
+    return ok[Math.floor(G.hash2(S.seed, (k || 0) + 7, 991) * ok.length)];
+  };
+  O.renomear = function (S, nome) {
+    nome = String(nome || '').replace(/\s+/g, ' ').trim().slice(0, 22);
+    if (!nome) return false;
+    const v = S.povo || (S.povo = { nome: '', nivel: 0 }), antes = v.nome;
+    v.nome = nome; v.porDeus = true;
+    G.Sim.chron(S, antes ? 'Você deu outro nome ao lugar: ' + antes + ' agora se chama ' + nome + '.' : 'Você deu nome ao lugar: ' + nome + '.');
+    return true;
+  };
+  // uma vez por dia (também com o jogo fechado): o povo cresceu de título? Ao virar aldeia, o povo dá o nome
+  O.povoDia = function (S) {
+    const v = S.povo || (S.povo = { nome: '', nivel: 0 }), n = S.people.filter((p) => p.alive).length;
+    let k = v.nivel || 0;
+    while (TITULOS[k + 1] && n >= TITULOS[k + 1].n) k++;
+    if (k === (v.nivel || 0)) return;
+    const antes = TITULOS[v.nivel || 0], agora = TITULOS[k];
+    v.nivel = k;
+    if (!v.nome) {
+      const L = (G.Soc && G.Soc.lider && G.Soc.lider(S)) || S.people.filter((p) => p.alive && G.Family.age(S, p) >= 18).sort((a, b) => a.born - b.born || a.id - b.id)[0];
+      v.nome = O.nomeSugerido(S, 0);
+      G.Sim.chron(S, (L ? L.name + ' deu' : 'O povo deu') + ' nome ao lugar: ' + v.nome + '. ' + (antes.f ? 'A ' : 'O ') + antes.t.toLowerCase() + ' virou ' + agora.t.toLowerCase() + '. (Dá para trocar o nome no painel do Povo.)');
+    } else G.Sim.chron(S, v.nome + ' cresceu: agora é ' + (agora.f ? 'uma ' : 'um ') + agora.t.toLowerCase() + ', com ' + n + ' pessoas.');
+    G.Sim.toast(S, v.nome + ' agora é ' + (agora.f ? 'uma ' : 'um ') + agora.t.toLowerCase() + '.', 'good');
+  };
   O.daily = function (S) {
     const w = S.world, o = S.obras;
+    O.povoDia(S);
     if (!w.foot || S.resumido) return;   // dia resumido (jogo fechado): ninguém anda, e a trilha, a manta e a rede ficam como estavam
     let made = 0;
     for (let i = 0; i < w.foot.length; i++) {

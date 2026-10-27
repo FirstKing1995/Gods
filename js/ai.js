@@ -152,9 +152,40 @@
     return r;
   }
   const campBox = (S) => [S.camp.x, S.camp.y, S.camp.x + 1, S.camp.y + 1];
-  function toCamp(S, p) { return route(S, p, (i) => (Sim.isCamp(S, i) ? 1 : 0), 180, false, campBox(S)); }
-  // o caminho até o acampamento, de um ponto qualquer (sem mexer no caminho de ninguém)
-  function campFrom(S, i) { const b = campBox(S); return W.findNearestIn(S.world, i, (k) => (Sim.isCamp(S, k) ? 1 : 0), 180, false, b[0], b[1], b[2], b[3]); }
+  // 0.16: o estoque é um só (a aldeia reparte tudo), mas tem várias bocas: o centro e a volta de cada armazém pronto.
+  // Quem carrega leva à boca mais perto e quem precisa tira da mais perto. Até a 0.15 tudo ia ao quadrado do centro,
+  // que virava um formigueiro, e o armazém não aliviava nada
+  const DEP = new WeakMap();
+  function depots(S) {
+    const w = S.world;
+    let key = S.camp.x + ',' + S.camp.y;
+    for (const b of S.buildings) if (b.type === 'armazem' && b.built && !b.demol && !b.site) key += ';' + b.id + ':' + b.x + ',' + b.y;
+    let d = DEP.get(S);
+    if (d && d.key === key && d.w === w) return d;
+    const m = new Uint8Array(w.W * w.H);
+    let x0 = S.camp.x, y0 = S.camp.y, x1 = S.camp.x + 1, y1 = S.camp.y + 1, n = 0;
+    for (let y = S.camp.y; y <= S.camp.y + 1; y++) for (let x = S.camp.x; x <= S.camp.x + 1; x++) m[y * w.W + x] = 1;
+    for (const b of S.buildings) {
+      if (b.type !== 'armazem' || !b.built || b.demol || b.site) continue;
+      // a porta: o anel em volta do armazém (a obra em si não é destino de caminho)
+      for (let y = b.y - 1; y <= b.y + b.h; y++) for (let x = b.x - 1; x <= b.x + b.w; x++) {
+        if (x < 0 || y < 0 || x >= w.W || y >= w.H) continue;
+        const i = y * w.W + x;
+        if (w.bgrid[i] >= 0 || w.block[i] || G.IS_WATER[w.tile[i]]) continue;
+        m[i] = 1; n++;
+        x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
+      }
+    }
+    d = { key, w, m, n, box: [x0, y0, x1, y1] };
+    DEP.set(S, d);
+    return d;
+  }
+  AI.isDepot = (S, i) => depots(S).m[i] === 1;
+  function toCamp(S, p) { const d = depots(S); return route(S, p, (i) => d.m[i], 180, false, d.box); }
+  // o centro mesmo (a greve, quem dorme sem abrigo junto dos outros)
+  function toCenter(S, p) { return route(S, p, (i) => (Sim.isCamp(S, i) ? 1 : 0), 180, false, campBox(S)); }
+  // o caminho até o estoque mais perto, de um ponto qualquer (sem mexer no caminho de ninguém)
+  function campFrom(S, i) { const d = depots(S), b = d.box; return W.findNearestIn(S.world, i, (k) => d.m[k], 180, false, b[0], b[1], b[2], b[3]); }
   function toBuilding(S, p, b) {
     const w = S.world;
     return route(S, p, (i) => {
@@ -239,7 +270,7 @@
     if (c.k === 'obra') { for (const m of C.MATERIALS) S.stock[m] += c[m] || 0; }
     else if (c.k === 'caca') {
       S.stock.carne += c.carne; S.stock.couro += c.couro;
-      Sim.float(S, S.camp.x + 1, S.camp.y + 0.6, '+' + c.carne + ' carne' + (c.couro ? ' +' + c.couro + ' couro' : ''));
+      Sim.float(S, p.x, p.y - 0.6, '+' + c.carne + ' carne' + (c.couro ? ' +' + c.couro + ' couro' : ''));
     } else if (c.k === 'cria') {
       // do curral (Etapa 10): ovos, leite e lã
       S.stock.ovos += c.ovos || 0; S.stock.leite += c.leite || 0;
@@ -248,12 +279,12 @@
       if (c.ovos) parts.push('+' + c.ovos + (c.ovos === 1 ? ' ovo' : ' ovos'));
       if (c.leite) parts.push('+' + c.leite + ' leite');
       if (c.fibra) parts.push('+' + c.fibra + ' lã');
-      Sim.float(S, S.camp.x + 1, S.camp.y + 0.6, parts.join(' '));
+      Sim.float(S, p.x, p.y - 0.6, parts.join(' '));
     } else if (c.k === 'agua') S.stock.agua = Math.min(Tech.waterCap(S), S.stock.agua + c.n);
     else S.stock[c.k] += c.n;
     if (c.fibra) { S.stock.fibra += c.fibra; S.stats.fibraGot = (S.stats.fibraGot || 0) + c.fibra; }   // embira da casca (Etapa 7) e lã (Etapa 10)
     if (c.k === 'frutas' || c.k === 'peixe') { const got = S.stats.got || (S.stats.got = {}); got[c.k] = (got[c.k] || 0) + c.n; }   // missões do Ato 1
-    if (c.k !== 'obra' && c.k !== 'caca' && c.k !== 'cria') Sim.float(S, S.camp.x + 1, S.camp.y + 0.6, '+' + c.n + ' ' + RES_LABEL[c.k] + (c.fibra ? ' +' + c.fibra + ' fibra' : ''));
+    if (c.k !== 'obra' && c.k !== 'caca' && c.k !== 'cria') Sim.float(S, p.x, p.y - 0.6, '+' + c.n + ' ' + RES_LABEL[c.k] + (c.fibra ? ' +' + c.fibra + ' fibra' : ''));
     // Etapa 15: o que rendeu (por hora, desde que a pessoa começou o trabalho) ensina o jeito
     const a = p.act;
     if (G.Gente && a && a.t0 !== undefined && c.k !== 'obra' && c.k !== 'cria') G.Gente.onYield(S, p, a.type, c.k === 'caca' ? (c.carne || 0) + (c.couro || 0) : c.n, (S.t - a.t0) / 60);
@@ -338,6 +369,7 @@
     for (const q of g) if (pick.beds.indexOf(q.id) < 0) pick.beds.push(q.id);
     return pick;
   }
+  AI.pickTent = pickTent;   // 0.16: o jogo fechado reparte as camas antes de ver se falta casa
   const homeOf = (S, q) => S.buildings.find((b) => b.built && Sim.def(b).cap && b.beds.indexOf(q.id) >= 0) || null;
   // noite de visita: quem tem par morando em outra barraca dorme lá em parte das noites
   // (a vontade de ficar em casa pesa VISIT_HOME mais o afeto dos pares que moram junto). Daí vêm filhos de pais diferentes.
@@ -1207,7 +1239,7 @@
   };
 
   ACT.greve = {
-    start(S, p) { toCamp(S, p); return true; },
+    start(S, p) { toCenter(S, p); return true; },
     run(S, p, a, dt) { if (moving(p)) return RUN; a.t += dt; return a.t >= 240 ? DONE : RUN; },
   };
 
@@ -1221,7 +1253,7 @@
       else {
         const tent = pickTent(S, p);
         if (tent && toBuilding(S, p, tent)) { a.src = 'barraca'; a.tent = tent.id; }
-        else if (toCamp(S, p)) a.src = 'campo';   // sem abrigo: junto dos outros, no acampamento
+        else if (toCenter(S, p)) a.src = 'campo';   // sem abrigo: junto dos outros, no acampamento
         else return false;
       }
       say(S, p, 'lobos', 0.6, true);
@@ -1777,7 +1809,7 @@
       for (const k in cost) p.carry.back[k] -= cost[k];
       if (G.Obras) G.Obras.make(S, a.make, 1); else Tech.make(S, a.make, 1);
       if (b) Sim.float(S, b.x + b.w / 2, b.y, '+1 ' + PIECE[a.make]);
-      else Sim.float(S, S.camp.x + 1, S.camp.y + 0.6, '+1 ' + PIECE[a.make]);
+      else Sim.float(S, p.x, p.y - 0.6, '+1 ' + PIECE[a.make]);
       a.done = (a.done || 0) + 1;
       if (--a.pieces > 0) return RUN;
       p.carry = null;
@@ -2282,6 +2314,7 @@
       if (G.Gente) s *= G.Gente.workMult(S, p, wk);   // Etapa 15: o gosto, o jeito e o combinado
       if (has(p, 'Trabalhador')) s *= 1.15;
       if (has(p, 'Preguiçoso')) s *= 0.85;
+      if (st === 'idoso') s *= C.OLD_WORK_W;   // 0.16: o velho trabalha menos e descansa mais
       const sk = SKILL_OF[wk];
       if (sk) s *= 1 + 0.03 * lvl(p, sk);
       if (wk !== 'construir' && wk !== 'fogo' && othersDoing(S, p, wk)) s *= 0.8;

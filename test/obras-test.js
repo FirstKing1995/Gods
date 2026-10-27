@@ -197,7 +197,8 @@ if (isMainThread) {
     days(S, 1);
     check('depois do primeiro inverno, abre (e avisa uma vez)', T.buildOpen(S, 'armazem') && S.stats.armazemOpen);
     const far = { x: S.camp.x + 14, y: S.camp.y };
-    check('longe do estoque não dá', /Longe do estoque/.test(Sim.canPlace(S, 'armazem', far.x, far.y)), Sim.canPlace(S, 'armazem', far.x, far.y));
+    // 0.16: o armazém não fica mais preso ao centro (virou uma boca do estoque onde estiver)
+    check('0.16: longe do estoque não é mais motivo para recusar o armazém', !/Longe do estoque/.test(Sim.canPlace(S, 'armazem', far.x, far.y) || ''), Sim.canPlace(S, 'armazem', far.x, far.y));
     // comida estragando: com e sem armazém (mesma semente, dez dias de verão)
     const rotRun = (lv) => {
       const R = world(777);

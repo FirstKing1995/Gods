@@ -71,12 +71,14 @@
     return out;
   }
   Save.serialize = function (S) {
-    const w = S.world, objs = [], extra = [], holy = [];
+    const w = S.world, objD = [], extra = [], holy = [];
     for (let i = 0; i < w.objs.length; i++) {
       const o = w.objs[i];
       if (i < w.genCount) {
+        // 0.16: só o que mudou desde a geração (árvore de pé e pedra inteira são como nasceram e não vão)
+        if (o.k === 'tree' || (o.k === 'rock' && o.ch === (o.big ? 4 : 2))) continue;
         const c = CODE[o.k] !== undefined ? CODE[o.k] : 0;
-        objs.push(c, c === 2 ? (o.regrow || 0) : c === 3 ? o.ch : c === 4 ? o.fruit : 0, c === 4 ? Math.round(o.grow * 100) : 0);
+        objD.push(i, c, c === 2 ? (o.regrow || 0) : c === 3 ? o.ch : c === 4 ? o.fruit : 0, c === 4 ? Math.round(o.grow * 100) : 0);
       } else if (o.k === 'grave') {
         // Etapa 13: a cova guarda quem é, quando foi, o rito e as flores
         const g = { x: o.x, y: o.y, name: o.name };
@@ -93,10 +95,10 @@
       return q;
     });
     return {
-      v: 1, game: 'genesis', seed: S.seed, t: S.t, rng: S.rng.s, camp: S.camp, siteLabel: S.siteLabel,
+      v: 1, game: 'genesis', seed: S.seed, size: w.W, t: S.t, rng: S.rng.s, camp: S.camp, siteLabel: S.siteLabel,
       stock: S.stock, vontades: S.vontades, nextPid: S.nextPid, nextBid: S.nextBid,
       chron: S.chron, goals: S.goals, stats: S.stats, over: S.over, arrived: S.arrived,
-      people, buildings: S.buildings, objs, graves: extra, holy, god: S.god, seen: packSeen(S.seen), narr: packNarr(S.narr),
+      people, buildings: S.buildings, objD, graves: extra, holy, god: S.god, seen: packSeen(S.seen), narr: packNarr(S.narr),
       tech: S.tech || null, fauna: packFauna(S.fauna), opts: S.opts || null, life: packLife(S.life),
       obras: G.Obras ? G.Obras.pack(S) : null, campo: G.Campo ? G.Campo.pack(S) : null,
       goalsPhase: S.goalsPhase || 1, era: S.era || '', famInit: !!S.famInit, savedAt: G.Net ? G.Net.now() : Date.now(),
@@ -105,14 +107,27 @@
       memoria: G.Memoria && S.memoria ? packMem(S.memoria) : null,   // Etapa 13: corpos, contos, a erva e o rito
       soc: G.Soc && S.soc ? G.Soc.pack(S) : null,   // Etapa 14: crimes, líder, pedidos, quem foi embora, a vila de fora
       gente: S.gente || null,   // Etapa 15: a média de cada trabalho, as tentativas, quem aprendeu com quem
+      povo: S.povo || null,   // 0.16: o nome e o título do lugar
     };
   };
 
   Save.deserialize = function (d) {
     if (!d || d.v !== 1 || d.game !== 'genesis') return null;
-    const w = G.W.generate(d.seed);
+    const w = G.W.generate(d.seed, d.size || C.MAP);
     const K = ['gone', 'tree', 'stump', 'rock', 'bush'];
-    for (let i = 0; i < w.genCount && i * 3 < d.objs.length; i++) {
+    // 0.16: só o que mudou desde a geração (no mapa enorme, a lista inteira pesava demais)
+    if (d.objD) for (let j = 0; j + 3 < d.objD.length; j += 4) {
+      const o = w.objs[d.objD[j]];
+      if (!o) continue;
+      const k = K[d.objD[j + 1]] || 'gone', a = d.objD[j + 2], b = d.objD[j + 3];
+      if (k === 'gone') { G.W.removeObj(w, o); continue; }
+      o.k = k;
+      if (k === 'stump') o.regrow = a;
+      else if (k === 'rock') o.ch = a;
+      else if (k === 'bush') { o.fruit = a; o.grow = b / 100; }
+      G.W.refreshBlock(w, o.y * w.W + o.x);
+    }
+    for (let i = 0; d.objs && i < w.genCount && i * 3 < d.objs.length; i++) {
       const o = w.objs[i], c = d.objs[i * 3], a = d.objs[i * 3 + 1], b = d.objs[i * 3 + 2];
       const k = K[c] || 'gone';
       if (k === 'gone') { G.W.removeObj(w, o); continue; }
@@ -144,6 +159,7 @@
       memoria: d.memoria || null,
       soc: d.soc || null,
       gente: d.gente || null,
+      povo: d.povo || null,
     };
     for (const p of S.people) {
       p.path = null; p.pathI = 0; p.act = null; p.px = p.x; p.py = p.y; p.fail = {}; p.stuck = false;
@@ -155,15 +171,58 @@
   };
 
   // ---------- armazenamento local (navegador) ----------
+  // 0.16: vários mundos. Até a 0.15 havia uma chave só, e o mundo novo apagava o antigo. Agora cada mundo mora na sua
+  // chave (o de antes da 0.16 segue na de sempre, como o mundo 'a') e um índice pequeno guarda o resumo de cada um,
+  // para a tela de título listar sem abrir os saves grandes. Save.slot é o mundo aberto.
+  const IDX = C.SAVE_KEY + '.mundos';
+  const keyOf = (id) => (id === 'a' ? C.SAVE_KEY : C.SAVE_KEY + '.' + id);
+  Save.slot = '';
+  Save.erro = '';   // 'cheio' quando o navegador recusou por falta de espaço
   function ls() { try { return globalThis.localStorage || null; } catch (e) { return null; } }
+  function readIdx(st) { try { const l = JSON.parse(st.getItem(IDX) || '[]'); return Array.isArray(l) ? l : []; } catch (e) { return []; } }
+  function writeIdx(st, l) { try { st.setItem(IDX, JSON.stringify(l)); } catch (e) { /* o índice é refeito na próxima */ } }
+  // o resumo de um save: o casal que chegou primeiro, onde, quando, quantos vivem
+  function metaOf(id, d) {
+    const ppl = (d.people || []).slice().sort((a, b) => a.id - b.id), casal = ppl.slice(0, 2).map((p) => p.name);
+    return {
+      id, seed: d.seed, size: d.size || C.MAP, casal: casal.join(' e '), local: d.siteLabel || '', t: d.t,
+      vivos: ppl.filter((p) => p.alive).length, over: !!d.over, savedAt: d.savedAt || 0, conta: d.conta || '',
+      aldeia: !!(d.stats && d.stats.eraEnd),
+    };
+  }
+  Save.newSlot = function () { Save.slot = Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36); return Save.slot; };
   Save.store = function (S, extra) {
     const st = ls(); if (!st) return null;
+    if (!Save.slot) Save.newSlot();
     try {
       const d = Object.assign(Save.serialize(S), extra || {});
       const txt = JSON.stringify(d);
-      st.setItem(C.SAVE_KEY, txt);
+      st.setItem(keyOf(Save.slot), txt);
+      const l = readIdx(st).filter((m) => m.id !== Save.slot);
+      l.push(metaOf(Save.slot, d));
+      writeIdx(st, l);
+      Save.erro = '';
       return txt;
-    } catch (e) { return null; }
+    } catch (e) { Save.erro = /quota/i.test(String(e && (e.name + e.message))) ? 'cheio' : 'falha'; return null; }
+  };
+  // os mundos guardados neste aparelho, do mais recente ao mais antigo (o save de antes da 0.16 entra na lista aqui)
+  Save.list = function () {
+    const st = ls(); if (!st) return [];
+    let l = readIdx(st);
+    if (!l.some((m) => m.id === 'a')) {
+      try {
+        const raw = st.getItem(C.SAVE_KEY), d = raw ? JSON.parse(raw) : null;
+        if (d && d.game === 'genesis') { l.push(metaOf('a', d)); writeIdx(st, l); }
+      } catch (e) { /* save velho ilegível: fica fora da lista */ }
+    }
+    l = l.filter((m) => { try { return !!st.getItem(keyOf(m.id)); } catch (e) { return false; } });
+    return l.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+  };
+  Save.remove = function (id) {
+    const st = ls(); if (!st || !id) return;
+    try { st.removeItem(keyOf(id)); } catch (e) { /* sem acesso */ }
+    writeIdx(st, readIdx(st).filter((m) => m.id !== id));
+    if (Save.slot === id) Save.slot = '';
   };
   // resumo curto para o ranking e para a tela de título
   Save.summary = function (S) {
@@ -174,9 +233,13 @@
       desc: G.Tech ? G.Tech.count(S) : 0, aldeia: !!(S.stats && S.stats.eraEnd),
     };
   };
-  Save.read = function () {
+  // um mundo pelo id (sem id: o aberto; sem mundo aberto: o mais recente)
+  Save.read = function (id) {
     const st = ls(); if (!st) return null;
-    try { const raw = st.getItem(C.SAVE_KEY); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+    const k = id || Save.slot || (Save.list()[0] || {}).id;
+    if (!k) return null;
+    try { const raw = st.getItem(keyOf(k)); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
   };
-  Save.clear = function () { const st = ls(); if (!st) return; try { st.removeItem(C.SAVE_KEY); } catch (e) { /* sem acesso */ } };
+  // apaga só o mundo aberto (os outros ficam)
+  Save.clear = function () { if (Save.slot) Save.remove(Save.slot); };
 })(globalThis.G = globalThis.G || {});

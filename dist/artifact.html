@@ -54,6 +54,11 @@ button { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
 
 #view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; image-rendering: pixelated; cursor: grab; }
+/* 0.16: cantos da tela escurecidos de leve (puxa o olho para o meio do mundo) */
+body[data-mode="game"]::after, body[data-mode="site"]::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 4;
+  background: radial-gradient(ellipse 75% 70% at 50% 50%, transparent 55%, rgba(16, 12, 30, 0.38) 100%);
+}
 #view.dragging { cursor: grabbing; }
 body[data-placing] #view { cursor: crosshair; }
 
@@ -109,6 +114,26 @@ body[data-placing] #view { cursor: crosshair; }
 .site-stats dt { color: var(--muted); display: flex; align-items: center; gap: 6px; }
 .site-stats dd { margin: 0; text-align: right; }
 
+.title-lede { font-family: var(--story); font-size: clamp(16px, 2vw, 19px); line-height: 1.45; color: #d9c7a3; max-width: 42ch; }
+.title-actions .btn-small { min-width: 0; min-height: 36px; font-size: 14px; }
+/* 0.16: o tamanho do mundo (botões colados) e a lista dos mundos guardados */
+.seg-group { display: inline-flex; }
+.seg {
+  min-height: 32px; padding: 4px 10px; font-size: 13px; cursor: pointer;
+  background: var(--panel-2); color: var(--muted); border: 2px solid var(--night); margin-left: -2px;
+  box-shadow: inset 0 0 0 2px var(--edge);
+}
+.seg:first-child { margin-left: 0; }
+.seg.on { background: var(--gold); color: var(--night); font-weight: 700; box-shadow: inset 0 0 0 2px var(--gold-hi); }
+.mundos-card { width: min(560px, 100%); max-height: calc(100dvh - 2 * var(--gut)); grid-template-rows: auto auto minmax(0, 1fr) auto; }
+.mundos-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; overflow-y: auto; min-height: 0; }
+.mundo-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 12px; background: var(--night); box-shadow: inset 0 0 0 2px var(--edge); }
+.mundo-row.fim { opacity: 0.7; }
+.mundo-info { display: grid; gap: 2px; min-width: 0; }
+.mundo-info strong { font-size: 15px; color: var(--gold-hi); overflow-wrap: anywhere; }
+.mundo-acts { display: flex; gap: 6px; flex: none; }
+.btn.danger { background: var(--blood); color: #fff; box-shadow: inset 0 0 0 2px #f6757a, inset 0 -4px 0 #a22633; }
+@media (max-width: 520px) { .mundo-row { flex-direction: column; align-items: stretch; } .mundo-acts .btn { flex: 1; } }
 .modal { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: var(--gut); background: rgba(24, 20, 37, 0.7); }
 .modal-card { width: min(420px, 100%); display: grid; gap: 10px; padding: 20px; }
 .modal-card label { font-size: 13px; color: var(--muted); margin-top: 6px; }
@@ -717,6 +742,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 .crimelist li.crime { align-items: start; }
 .crimelist li.crime > .ico { margin-top: 2px; }
 
+/* 0.16: o nome do lugar e o centro, no painel do Povo */
+.povo-place { display: grid; gap: 6px; padding: 8px 0 10px; border-bottom: 2px solid var(--edge); margin-bottom: 8px; }
+.povo-place b { color: var(--gold-hi); }
+.vila-form { display: flex; flex-wrap: wrap; gap: 6px; }
+.vila-form input { flex: 1 1 100%; min-width: 0; min-height: 32px; padding: 4px 8px; font: inherit; background: var(--night); color: var(--text); border: 2px solid var(--edge); }
+
 </style>
 <canvas id="view" aria-label="Mundo do jogo"></canvas>
 <div id="fx" aria-hidden="true"></div>
@@ -726,11 +757,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   <div class="title-card">
     <h1 class="wordmark">Gods</h1>
     <p class="pitch">Um casal. Um lugar. Todas as eras.</p>
+    <p class="title-lede">Você escolhe onde eles chegam. O resto, eles aprendem: o fogo, a casa, o luto, a fé em você.</p>
     <div class="title-actions">
       <p id="acct-line" class="small acct-line" hidden></p>
       <button id="btn-continue" class="btn btn-gold" hidden>Continuar</button>
       <p id="continue-info" class="small muted" hidden></p>
       <button id="btn-new" class="btn">Novo mundo</button>
+      <button id="btn-mundos" class="btn btn-small" hidden>Seus mundos</button>
       <div id="acct-actions" class="acct-actions" hidden>
         <button id="btn-login" class="btn btn-small">Entrar</button>
         <button id="btn-signup" class="btn btn-small">Criar conta</button>
@@ -744,6 +777,19 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   </div>
 </section>
 
+<!-- 0.16: os mundos guardados neste aparelho -->
+<div id="modal-mundos" class="modal" hidden>
+  <div class="panel modal-card mundos-card">
+    <h2>Seus mundos</h2>
+    <p class="small muted">Cada mundo segue guardado neste aparelho. Começar outro não apaga nenhum.</p>
+    <ul id="mundos-list" class="mundos-list"></ul>
+    <div class="modal-actions">
+      <button type="button" id="btn-mundos-close" class="btn">Fechar</button>
+      <button type="button" id="btn-mundos-new" class="btn btn-gold">Novo mundo</button>
+    </div>
+  </div>
+</div>
+
 <!-- escolha do local -->
 <section id="scr-site" class="screen" hidden>
   <header class="site-bar panel">
@@ -752,6 +798,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       <p class="small muted">Toque no mapa. Água perto, árvores, pedras e pitangueiras ajudam no primeiro inverno.</p>
     </div>
     <div class="site-bar-actions">
+      <div id="size-opts" class="seg-group" role="group" aria-label="Tamanho do mundo"></div>
       <span id="seed-label" class="small muted"></span>
       <button id="btn-reroll" class="btn btn-small">Outro mundo</button>
     </div>
@@ -1021,6 +1068,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     </aside>
     <aside id="p-povo" class="panel sheet" data-sheet="povo">
       <div class="povo-head"><h2 id="povo-title">Seu povo</h2><div class="povo-tools"><button id="btn-tree" class="btn btn-small" title="Árvore da família (T)"><img class="ico" alt=""> Árvore</button><button id="btn-disc" class="btn btn-small" title="Descobertas (I)"><img class="ico" alt=""> Descobertas</button></div></div>
+      <div class="povo-place" id="povo-place">
+        <p class="small"><b id="vila-label"></b> <span id="vila-next" class="muted"></span></p>
+        <form id="vila-form" class="vila-form" hidden><input id="vila-nome" maxlength="22" autocomplete="off" spellcheck="false" aria-label="Nome do lugar"><button class="btn btn-small btn-gold" type="submit">Salvar</button><button class="btn btn-small" type="button" id="vila-cancel">Cancelar</button></form>
+        <div class="povo-tools"><button id="btn-vila-nome" class="btn btn-small" type="button">Dar nome</button><button id="btn-centro" class="btn btn-small" type="button" title="Escolha onde fica o estoque do centro">Mudar o centro</button></div>
+      </div>
       <div class="povo-filter">
         <input id="povo-search" type="search" maxlength="14" autocomplete="off" spellcheck="false" placeholder="Buscar pelo nome" aria-label="Buscar pelo nome">
         <select id="povo-sort" class="select" aria-label="Ordem da lista" title="Ordem da lista">
@@ -1198,16 +1250,18 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.14.0',
+    VERSION: '0.16.0',
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
     SAVE_KEY: 'genesis.save.v1',
     // endereço do Web App do Google Apps Script (termina em /exec). Vazio = jogo só local.
-    API_URL: '',
+    API_URL: 'https://script.google.com/macros/s/AKfycbzDy7z7jS8Xd9ejZINSNtR6_S7_3zmfqDaPa77NKVEoEFBY8N_F6-EHTvlsbX0-wGsQ/exec',
     CLOUD_SAVE_SEC: 180,
 
     // ---- mapa ----
-    MAP: 128,            // 128 x 128 tiles
+    MAP: 128,            // 128 x 128 tiles: o tamanho dos mundos de antes da 0.16 (save sem tamanho abre com este)
+    // 0.16: o jogador escolhe o tamanho do mundo novo (o padrão é o grande, mais de duas vezes a área de antes)
+    MAP_SIZES: [{ n: 128, name: 'Médio' }, { n: 192, name: 'Grande' }, { n: 256, name: 'Enorme' }], MAP_NEW: 192,
     TILE: 16,            // px por tile
     CHUNK: 16,           // tiles por bloco de render
 
@@ -1341,8 +1395,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         up: [{ name: 'Ferraria com ourives', cost: { pedra: 10, tabuas: 8 }, work: 300, shop: { k: 'ferro', speed: 1.3, joias: true },
           desc: 'Forja 30% mais depressa e ganha a bancada do ourives: de 1 de prata ou de ouro sai uma joia.' }] },
       // Etapa 7: obras novas
-      armazem: { name: 'Armazém', a: 'o', key: 'G', w: 2, h: 2, cost: { madeira: 16, pedra: 6 }, work: 300, store: { rot: 0.75 }, near: 8, open: 'inverno',
-        desc: 'Guarda a comida do estoque: estraga 25% menos e o lobo não leva. Tem que ficar a até 8 passos do estoque.',
+      armazem: { name: 'Armazém', a: 'o', key: 'G', w: 2, h: 2, cost: { madeira: 16, pedra: 6 }, work: 300, store: { rot: 0.75 }, open: 'inverno',
+        desc: 'Guarda a comida: estraga 25% menos e o lobo não leva. Pode ficar em qualquer lugar: quem passa perto entrega e pega ali, sem ir até o centro.',
         up: [{ name: 'Armazém de tábuas', cost: { tabuas: 12, argila: 6 }, work: 360, store: { rot: 0.55 }, desc: 'Fechado e alto: a comida estraga 45% menos.' }] },
       // shop: oficina do Ofício · k = o que sai dela · speed = rapidez
       marcenaria: { name: 'Marcenaria', a: 'a', key: 'K', w: 2, h: 2, cost: { madeira: 14, pedra: 4 }, work: 300, need: 'pedra', shop: { k: 'tabuas', speed: 1 },
@@ -1475,6 +1529,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 
     // ---- família (Etapa 3) · tempo em anos de jogo (1 ano = 60 dias = 1 h real em 1x) ----
     CHILD_HELP_AGE: 7, OLD_AGE: 60, CARRY_CHILD: 5,
+    // 0.16: velhice de verdade. A força cai OLD_FORCA_ANO por ano (até OLD_FORCA_MIN); depois de OLD_HEAVY_AGE (idade do
+    // corpo) só trabalho leve; a vontade de trabalhar do velho pesa OLD_WORK_W (sobra tempo para contar história e ensinar)
+    OLD_FORCA_ANO: 0.022, OLD_FORCA_MIN: 0.35, OLD_HEAVY_AGE: 70, OLD_WORK_W: 0.7,
     AFETO_START: 60, AFETO_CHAT: 2, AFETO_NIGHT: 1, AFETO_MIN: 40, AFETO_DECAY: 0.5,
     COUPLE_TALKS: 6, COUPLE_DAILY: 0.1,
     // Etapa 6: relações livres. Até 4 pares do outro sexo por pessoa; cada par que já tem pesa 0,6 na chance de outro
@@ -1801,6 +1858,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     SOC_TETO: 0.4, PEDIDO_D: 5, RECUSA_D: 10, SOC_FOGO_LONGE: 9, SOC_ROT: 3, SOC_PEDRA: 6,
     // 0.14: o padrão é "o povo decide"; obras do povo ao mesmo tempo: 1 + adultos / SOC_OBRAS_POR, até SOC_OBRAS_MAX
     SOC_OBRAS_POR: 12, SOC_OBRAS_MAX: 8,
+    // 0.16: casas a CENTRO_LONGE passos de todo estoque pedem um armazém por ali; o meio das casas a CENTRO_LONGE + 4
+    // do centro faz o líder mudar o centro (no máximo uma vez a cada CENTRO_MUDA_D dias)
+    CENTRO_LONGE: 14, CENTRO_MUDA_D: 60,
 
     // ---- Etapa 15 · Gente viva: gostos, jeito, pensamentos, conversas, tentativas e o saber nas pessoas ----
     GOSTO_HERDA: 0.35,            // chance de cada gosto puxar a um dos pais
@@ -1850,8 +1910,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     return T.GRASS;
   }
 
-  function generate(seed) {
-    const N = C.MAP, W = N, H = N, n = W * H;
+  // size: lado do mapa em tiles (0.16: médio, grande ou enorme; sem ele, o tamanho de antes)
+  function generate(seed, size) {
+    const N = size || C.MAP, W = N, H = N, n = W * H;
     const nE = new G.Simplex(seed >>> 0);
     const nM = new G.Simplex((seed ^ 0x51ed27) >>> 0);
     const nR = new G.Simplex((seed ^ 0x2b7e15) >>> 0);
@@ -2726,7 +2787,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   };
   Sim.canPlace = function (S, type, x, y) {
     const def = C.BUILD[type], w = S.world;
-    if (def.near && Math.hypot(x + def.w / 2 - S.camp.x - 1, y + def.h / 2 - S.camp.y - 1) > def.near + 1) return 'Longe do estoque: tem que ficar a até ' + def.near + ' passos';
+    // 0.16: nenhuma obra fica mais presa à distância do centro (o armazém virou uma boca do estoque onde estiver)
     if (def.env && G.Obras && !G.Obras.envOk(S, { x, y, w: def.w, h: def.h }, def.env)) return 'Pede ' + C.ENV[def.env].name;   // Etapa 12: a mina
     for (let dy = 0; dy < def.h; dy++) for (let dx = 0; dx < def.w; dx++) {
       const tx = x + dx, ty = y + dy;
@@ -2741,6 +2802,37 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       if (o && o.k !== 'stump' && o.k !== 'bush') return o.k === 'tree' ? 'Tem uma árvore no caminho' : o.k === 'rock' ? 'Tem uma pedra no caminho' : 'Lugar ocupado';
     }
     return '';
+  };
+  // 0.16: o centro (o lugar do estoque, 2 × 2) pode mudar de lugar. Pede chão conhecido, seco e livre: sem obra,
+  // sem cerca, sem árvore nem pedra (toco e arbusto saem); o caminho pode passar por baixo
+  Sim.campWhy = function (S, x, y) {
+    const w = S.world;
+    if (x === S.camp.x && y === S.camp.y) return 'O centro já é aqui';
+    for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) {
+      const tx = x + dx, ty = y + dy;
+      if (tx < 1 || ty < 1 || tx >= w.W - 1 || ty >= w.H - 1) return 'Fora do mapa';
+      const i = ty * w.W + tx;
+      if (S.seen && !S.seen[i]) return 'A névoa cobre esse lugar';
+      if (G.IS_WATER[w.tile[i]]) return 'O estoque não fica na água';
+      if (w.bgrid[i] >= 0) return 'Já tem uma obra aqui';
+      if (w.fence && (w.fence[i] || (w.fenceJob && w.fenceJob[i]))) return 'Tem cerca aqui';
+      const o = G.W.objAt(w, i);
+      if (o && o.k !== 'stump' && o.k !== 'bush') return o.k === 'tree' ? 'Tem uma árvore no caminho' : o.k === 'rock' ? 'Tem uma pedra no caminho' : 'Lugar ocupado';
+    }
+    return '';
+  };
+  // o povo leva o estoque para o centro novo (by: quem decidiu, para a Crônica)
+  Sim.moveCamp = function (S, x, y, by) {
+    if (Sim.campWhy(S, x, y)) return false;
+    const old = S.camp, dist = Math.round(Math.hypot(x - old.x, y - old.y));
+    S.camp = { x, y };
+    foundCamp(S);
+    S.stats.centros = (S.stats.centros || 0) + 1;
+    S.stats.centroT = S.t;
+    const nome = G.Obras && G.Obras.povoacao ? G.Obras.povoacao(S).nome : 'a aldeia';
+    Sim.chron(S, (by ? by + ' decidiu' : 'Você decidiu') + ' mudar o centro de ' + nome + ' para ' + dist + ' passos dali. O povo levou o estoque nas costas, viagem por viagem.');
+    S.events.push({ k: 'camp' });
+    return true;
   };
   Sim.placeBlueprint = function (S, type, x, y) {
     if (Sim.canPlace(S, type, x, y)) return null;
@@ -2978,7 +3070,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     // com frio, ou com lobos rondando (o fogo espanta), a fogueira não pode apagar
     ctx.fireNeedsFuel = !!(fire && fire.fuel <= C.FIRE_REFUEL_AT && st.madeira > 0 && (cold || (G.Narr && G.Narr.wantFire(S))));
     // obra da vez: a primeira que dá para tocar (material entregue ou no estoque); senão, a primeira da fila
-    let job = null, needs = null, doable = false;
+    // 0.16: com gente dormindo ao relento, a casa que dá para tocar passa na frente das outras obras
+    let job = null, needs = null, doable = false, jobCasa = false;
+    const semCasa = !!(S.soc && S.soc.semCama > 0);
     const short = {};
     for (const k of C.MATERIALS) short[k] = 0;
     for (const b of S.buildings) {
@@ -2987,8 +3081,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       const m = Sim.missing(j);
       let sum = 0, can = false;
       for (const k of C.MATERIALS) { sum += m[k]; short[k] += m[k]; if (m[k] > 0 && st[k] > 0) can = true; }
-      const ok = sum === 0 || can;
-      if (!job || (ok && !doable)) { job = j; needs = m; doable = ok; }
+      const ok = sum === 0 || can, casa = semCasa && b.type === 'barraca';
+      if (!job || (ok && !doable) || (ok && casa && !jobCasa)) { job = j; needs = m; doable = ok; jobCasa = casa && ok; }
     }
     if (G.Campo) short.madeira += G.Campo.fenceShort(S);   // as cercas marcadas pedem vara (Etapa 10)
     for (const k of C.MATERIALS) short[k] = Math.max(0, short[k] - (st[k] || 0));
@@ -3378,6 +3472,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     }
   }
 
+  Sim.die = die;   // 0.16: a velhice com o jogo fechado
+
   // ---------- névoa: Deus vê e age só onde o povo já esteve ----------
   function reveal(S, x, y, r) {
     const w = S.world, seen = S.seen;
@@ -3544,8 +3640,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (st === 'bebe' || p.labor || (p.rest && p.rest > S.t)) return false;   // resguardo depois do parto
     if (p.sangue && G.Povos && !G.Povos.canWork(p, wk)) return false;   // Etapa 12: elfo não derruba árvore, anão não pesca
     if (st === 'crianca') return F.age(S, p) >= C.CHILD_HELP_AGE && (wk === 'frutas' || wk === 'agua' || wk === 'criacao');   // Etapa 10: ovos e ração
+    if (st === 'idoso' && F.bodyAge(S, p) >= C.OLD_HEAVY_AGE && OLD_HEAVY.has(wk)) return false;   // 0.16: o corpo já não aguenta
     return true;
   };
+  // 0.16: o trabalho pesado que o velho larga depois de OLD_HEAVY_AGE (segue no leve: colher, pescar, ofício, roça, fogo)
+  const OLD_HEAVY = new Set(['madeira', 'pedra', 'mina', 'caca', 'construir', 'cerca', 'caminho', 'argila']);
+  // 0.16: a força cai ano a ano depois da velhice (de 80% aos 60 até OLD_FORCA_MIN), em vez de 80% até morrer
+  F.oldForce = (S, p) => Math.max(C.OLD_FORCA_MIN, 0.8 - (F.bodyAge(S, p) - C.OLD_AGE) * C.OLD_FORCA_ANO);
   F.carrying = (S, p) => S.people.some((b) => b.alive && b.carriedBy === p.id);
   // 0.14: quem leva alguém no colo, contado uma vez por passo (o fator de trabalho é pedido por quem trabalha, a cada
   // passo; varrer o povo inteiro para cada um pesava numa aldeia grande)
@@ -3562,14 +3663,14 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   F.latePregnant = (S, p) => !!(p.preg && p.preg.due - S.t < C.LATE_PREG_DAYS * C.DAY_MIN);
   F.workFactor = function (S, p) {
     const st = F.stage(S, p);
-    let f = st === 'crianca' ? 0.5 : st === 'jovem' ? 0.75 : st === 'idoso' ? 0.8 : 1;
+    let f = st === 'crianca' ? 0.5 : st === 'jovem' ? 0.75 : st === 'idoso' ? F.oldForce(S, p) : 1;
     if (carriers(S).has(p.id)) f *= 0.85;
     if (F.latePregnant(S, p)) f *= 0.7;
     return f;
   };
   F.walkFactor = function (S, p) {
     const st = F.stage(S, p);
-    let f = st === 'crianca' ? 0.9 : st === 'idoso' ? 0.85 : 1;
+    let f = st === 'crianca' ? 0.9 : st === 'idoso' ? Math.max(0.6, 0.88 - (F.bodyAge(S, p) - C.OLD_AGE) * 0.012) : 1;
     if (F.latePregnant(S, p)) f *= 0.85;
     if (p.hurt && p.hurt.until > S.t) f *= p.hurt.walk;   // pé torcido
     if (p.sangue && G.Povos) f *= G.Povos.body(p).walk;   // Etapa 12: o passo de cada povo
@@ -4202,9 +4303,15 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     else Sm.toast(S, 'Aniversário de ' + p.name + ': ' + age + ' anos.');
   }
   function oldAge(S, p, age) {
-    if (S.safe || age < C.OLD_AGE) return;
+    if (age < C.OLD_AGE) return;
     const yearly = (C.OLD_DEATH_BASE + (age - C.OLD_AGE) * C.OLD_DEATH_STEP) * (G.Deus && G.Deus.saber(S, 'medicina') ? C.MEDICINA_OLD : 1);   // a medicina adia a velhice
-    if (S.rng.next() < yearly / C.YEAR_DAYS) { p.dmg.velhice = 999; p.needs.saude = -999; }   // abaixo de zero: a cura natural do passo não salva
+    if (S.rng.next() >= yearly / C.YEAR_DAYS) return;
+    // 0.16: a velhice vale também com o jogo fechado. Até a 0.15 o modo seguro a pulava, e quem jogava muito com o
+    // jogo fechado via o povo passar dos 100 anos. Lá, a morte é na hora (o dia resumido não passa pelo passo);
+    // só não leva o último vivo, para o mundo não acabar longe dos olhos
+    p.dmg.velhice = 999; p.needs.saude = -999;   // abaixo de zero: a cura natural do passo não salva
+    if (S.safe && S.people.filter((q) => q.alive).length > 1) Sim().die(S, p);
+    else if (S.safe) { p.dmg.velhice = 0; p.needs.saude = 30; }
   }
 
   // ---------- metas da família ----------
@@ -5982,8 +6089,53 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const w = S.world;
     if (w.foot && w.road[i] <= 1) w.foot[i] += 1;
   };
+  // ---------- 0.16: o nome e o tamanho do lugar ----------
+  // o título sobe com o povo e não volta (a cidade que encolhe segue cidade); f: feminino, para o "da"/"do"
+  const TITULOS = [{ n: 0, t: 'Acampamento', f: 0 }, { n: 8, t: 'Aldeia', f: 1 }, { n: 30, t: 'Vila', f: 1 }, { n: 80, t: 'Cidade', f: 1 }, { n: 200, t: 'Reino', f: 0 }];
+  const NOMES = ['Ybyrá', 'Itaúna', 'Jaci', 'Araci', 'Piatã', 'Iporã', 'Guaraci', 'Aratu', 'Taíba', 'Pirajá', 'Ubatã', 'Coaraci', 'Itapuã', 'Juruá', 'Moema', 'Tabatinga', 'Jandaia', 'Ivaí', 'Caraí', 'Iracema', 'Abaeté', 'Jurema', 'Taquari', 'Paraty', 'Cambuí'];
+  O.TITULOS = TITULOS;
+  O.povoacao = function (S) {
+    const v = S.povo || (S.povo = { nome: '', nivel: 0 });
+    const T = TITULOS[Math.min(TITULOS.length - 1, v.nivel || 0)], art = T.f ? 'a' : 'o';
+    return {
+      nome: v.nome, titulo: T.t, nivel: v.nivel || 0,
+      label: v.nome ? T.t + ' ' + v.nome : T.t,
+      de: v.nome ? 'de ' + v.nome : 'd' + art + ' ' + T.t.toLowerCase(),   // "o centro de Ybyrá", "o centro do acampamento"
+      prox: TITULOS[(v.nivel || 0) + 1] || null,
+    };
+  };
+  // o nome que o povo daria (sorteado pela seed, sem repetir o da vila de fora)
+  O.nomeSugerido = function (S, k) {
+    const fora = S.soc && S.soc.vila ? S.soc.vila.nome : '';
+    const ok = NOMES.filter((n) => n !== fora && n !== (S.povo && S.povo.nome));
+    return ok[Math.floor(G.hash2(S.seed, (k || 0) + 7, 991) * ok.length)];
+  };
+  O.renomear = function (S, nome) {
+    nome = String(nome || '').replace(/\s+/g, ' ').trim().slice(0, 22);
+    if (!nome) return false;
+    const v = S.povo || (S.povo = { nome: '', nivel: 0 }), antes = v.nome;
+    v.nome = nome; v.porDeus = true;
+    G.Sim.chron(S, antes ? 'Você deu outro nome ao lugar: ' + antes + ' agora se chama ' + nome + '.' : 'Você deu nome ao lugar: ' + nome + '.');
+    return true;
+  };
+  // uma vez por dia (também com o jogo fechado): o povo cresceu de título? Ao virar aldeia, o povo dá o nome
+  O.povoDia = function (S) {
+    const v = S.povo || (S.povo = { nome: '', nivel: 0 }), n = S.people.filter((p) => p.alive).length;
+    let k = v.nivel || 0;
+    while (TITULOS[k + 1] && n >= TITULOS[k + 1].n) k++;
+    if (k === (v.nivel || 0)) return;
+    const antes = TITULOS[v.nivel || 0], agora = TITULOS[k];
+    v.nivel = k;
+    if (!v.nome) {
+      const L = (G.Soc && G.Soc.lider && G.Soc.lider(S)) || S.people.filter((p) => p.alive && G.Family.age(S, p) >= 18).sort((a, b) => a.born - b.born || a.id - b.id)[0];
+      v.nome = O.nomeSugerido(S, 0);
+      G.Sim.chron(S, (L ? L.name + ' deu' : 'O povo deu') + ' nome ao lugar: ' + v.nome + '. ' + (antes.f ? 'A ' : 'O ') + antes.t.toLowerCase() + ' virou ' + agora.t.toLowerCase() + '. (Dá para trocar o nome no painel do Povo.)');
+    } else G.Sim.chron(S, v.nome + ' cresceu: agora é ' + (agora.f ? 'uma ' : 'um ') + agora.t.toLowerCase() + ', com ' + n + ' pessoas.');
+    G.Sim.toast(S, v.nome + ' agora é ' + (agora.f ? 'uma ' : 'um ') + agora.t.toLowerCase() + '.', 'good');
+  };
   O.daily = function (S) {
     const w = S.world, o = S.obras;
+    O.povoDia(S);
     if (!w.foot || S.resumido) return;   // dia resumido (jogo fechado): ninguém anda, e a trilha, a manta e a rede ficam como estavam
     let made = 0;
     for (let i = 0; i < w.foot.length; i++) {
@@ -6197,6 +6349,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (!f.made) {
       f.made = true; f.v9 = true;
       for (const sp of F.SPECIES) for (let k = 0; k < C.BICHOS[sp].n; k++) newHerd(S, sp);
+      // 0.16: no mapa grande, mais bandos espalhados longe do acampamento (quem explora acha bicho, não um mundo vazio)
+      const mais = (S.world.W * S.world.H) / (128 * 128) - 1;
+      if (mais > 0) for (const sp of F.SPECIES) {
+        if (C.BICHOS[sp].hab === 'deus') continue;
+        const extra = Math.floor(C.BICHOS[sp].n * mais * 0.35 + S.rng.next());
+        for (let k = 0; k < extra; k++) newHerd(S, sp, 0, [C.FAUNA_DIST[1], C.FAUNA_DIST[1] + S.world.W * 0.35]);
+      }
     } else if (!f.v9) {
       // save de antes da Etapa 9: só havia capivaras; chegam os outros bichos
       f.v9 = true;
@@ -6204,9 +6363,10 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     }
   };
   // um lugar para o bando: o hábitat da espécie, longe o bastante do acampamento e dos outros bandos
-  function herdSpot(S, sp) {
+  // longe (0.16): a faixa de distância dos bandos extras do mapa grande
+  function herdSpot(S, sp, longe) {
     const w = S.world, cx = S.camp.x + 1, cy = S.camp.y + 1;
-    const hab = C.BICHOS[sp].hab, dist = hab === 'lago' ? [C.JACARE_DIST, C.FAUNA_DIST[1]] : hab === 'deus' ? [8, 18] : C.FAUNA_DIST;
+    const hab = C.BICHOS[sp].hab, dist = longe || (hab === 'lago' ? [C.JACARE_DIST, C.FAUNA_DIST[1]] : hab === 'deus' ? [8, 18] : C.FAUNA_DIST);
     const taken = S.fauna.herds;
     for (let k = 0; k < 160; k++) {
       const a = S.rng.next() * Math.PI * 2, d = dist[0] + S.rng.next() * (dist[1] - dist[0]);
@@ -6217,8 +6377,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     }
     return null;
   }
-  function newHerd(S, sp, n) {
-    const f = S.fauna, d = C.BICHOS[sp], spot = herdSpot(S, sp);
+  function newHerd(S, sp, n, longe) {
+    const f = S.fauna, d = C.BICHOS[sp], spot = herdSpot(S, sp, longe);
     if (!spot) return null;
     const h = { id: f.nextHerd++, sp, x: spot.x, y: spot.y, lastBirth: S.ck ? S.ck.day : 0, empty: 0 };
     f.herds.push(h);
@@ -7963,9 +8123,40 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     return r;
   }
   const campBox = (S) => [S.camp.x, S.camp.y, S.camp.x + 1, S.camp.y + 1];
-  function toCamp(S, p) { return route(S, p, (i) => (Sim.isCamp(S, i) ? 1 : 0), 180, false, campBox(S)); }
-  // o caminho até o acampamento, de um ponto qualquer (sem mexer no caminho de ninguém)
-  function campFrom(S, i) { const b = campBox(S); return W.findNearestIn(S.world, i, (k) => (Sim.isCamp(S, k) ? 1 : 0), 180, false, b[0], b[1], b[2], b[3]); }
+  // 0.16: o estoque é um só (a aldeia reparte tudo), mas tem várias bocas: o centro e a volta de cada armazém pronto.
+  // Quem carrega leva à boca mais perto e quem precisa tira da mais perto. Até a 0.15 tudo ia ao quadrado do centro,
+  // que virava um formigueiro, e o armazém não aliviava nada
+  const DEP = new WeakMap();
+  function depots(S) {
+    const w = S.world;
+    let key = S.camp.x + ',' + S.camp.y;
+    for (const b of S.buildings) if (b.type === 'armazem' && b.built && !b.demol && !b.site) key += ';' + b.id + ':' + b.x + ',' + b.y;
+    let d = DEP.get(S);
+    if (d && d.key === key && d.w === w) return d;
+    const m = new Uint8Array(w.W * w.H);
+    let x0 = S.camp.x, y0 = S.camp.y, x1 = S.camp.x + 1, y1 = S.camp.y + 1, n = 0;
+    for (let y = S.camp.y; y <= S.camp.y + 1; y++) for (let x = S.camp.x; x <= S.camp.x + 1; x++) m[y * w.W + x] = 1;
+    for (const b of S.buildings) {
+      if (b.type !== 'armazem' || !b.built || b.demol || b.site) continue;
+      // a porta: o anel em volta do armazém (a obra em si não é destino de caminho)
+      for (let y = b.y - 1; y <= b.y + b.h; y++) for (let x = b.x - 1; x <= b.x + b.w; x++) {
+        if (x < 0 || y < 0 || x >= w.W || y >= w.H) continue;
+        const i = y * w.W + x;
+        if (w.bgrid[i] >= 0 || w.block[i] || G.IS_WATER[w.tile[i]]) continue;
+        m[i] = 1; n++;
+        x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
+      }
+    }
+    d = { key, w, m, n, box: [x0, y0, x1, y1] };
+    DEP.set(S, d);
+    return d;
+  }
+  AI.isDepot = (S, i) => depots(S).m[i] === 1;
+  function toCamp(S, p) { const d = depots(S); return route(S, p, (i) => d.m[i], 180, false, d.box); }
+  // o centro mesmo (a greve, quem dorme sem abrigo junto dos outros)
+  function toCenter(S, p) { return route(S, p, (i) => (Sim.isCamp(S, i) ? 1 : 0), 180, false, campBox(S)); }
+  // o caminho até o estoque mais perto, de um ponto qualquer (sem mexer no caminho de ninguém)
+  function campFrom(S, i) { const d = depots(S), b = d.box; return W.findNearestIn(S.world, i, (k) => d.m[k], 180, false, b[0], b[1], b[2], b[3]); }
   function toBuilding(S, p, b) {
     const w = S.world;
     return route(S, p, (i) => {
@@ -8050,7 +8241,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (c.k === 'obra') { for (const m of C.MATERIALS) S.stock[m] += c[m] || 0; }
     else if (c.k === 'caca') {
       S.stock.carne += c.carne; S.stock.couro += c.couro;
-      Sim.float(S, S.camp.x + 1, S.camp.y + 0.6, '+' + c.carne + ' carne' + (c.couro ? ' +' + c.couro + ' couro' : ''));
+      Sim.float(S, p.x, p.y - 0.6, '+' + c.carne + ' carne' + (c.couro ? ' +' + c.couro + ' couro' : ''));
     } else if (c.k === 'cria') {
       // do curral (Etapa 10): ovos, leite e lã
       S.stock.ovos += c.ovos || 0; S.stock.leite += c.leite || 0;
@@ -8059,12 +8250,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       if (c.ovos) parts.push('+' + c.ovos + (c.ovos === 1 ? ' ovo' : ' ovos'));
       if (c.leite) parts.push('+' + c.leite + ' leite');
       if (c.fibra) parts.push('+' + c.fibra + ' lã');
-      Sim.float(S, S.camp.x + 1, S.camp.y + 0.6, parts.join(' '));
+      Sim.float(S, p.x, p.y - 0.6, parts.join(' '));
     } else if (c.k === 'agua') S.stock.agua = Math.min(Tech.waterCap(S), S.stock.agua + c.n);
     else S.stock[c.k] += c.n;
     if (c.fibra) { S.stock.fibra += c.fibra; S.stats.fibraGot = (S.stats.fibraGot || 0) + c.fibra; }   // embira da casca (Etapa 7) e lã (Etapa 10)
     if (c.k === 'frutas' || c.k === 'peixe') { const got = S.stats.got || (S.stats.got = {}); got[c.k] = (got[c.k] || 0) + c.n; }   // missões do Ato 1
-    if (c.k !== 'obra' && c.k !== 'caca' && c.k !== 'cria') Sim.float(S, S.camp.x + 1, S.camp.y + 0.6, '+' + c.n + ' ' + RES_LABEL[c.k] + (c.fibra ? ' +' + c.fibra + ' fibra' : ''));
+    if (c.k !== 'obra' && c.k !== 'caca' && c.k !== 'cria') Sim.float(S, p.x, p.y - 0.6, '+' + c.n + ' ' + RES_LABEL[c.k] + (c.fibra ? ' +' + c.fibra + ' fibra' : ''));
     // Etapa 15: o que rendeu (por hora, desde que a pessoa começou o trabalho) ensina o jeito
     const a = p.act;
     if (G.Gente && a && a.t0 !== undefined && c.k !== 'obra' && c.k !== 'cria') G.Gente.onYield(S, p, a.type, c.k === 'caca' ? (c.carne || 0) + (c.couro || 0) : c.n, (S.t - a.t0) / 60);
@@ -8149,6 +8340,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     for (const q of g) if (pick.beds.indexOf(q.id) < 0) pick.beds.push(q.id);
     return pick;
   }
+  AI.pickTent = pickTent;   // 0.16: o jogo fechado reparte as camas antes de ver se falta casa
   const homeOf = (S, q) => S.buildings.find((b) => b.built && Sim.def(b).cap && b.beds.indexOf(q.id) >= 0) || null;
   // noite de visita: quem tem par morando em outra barraca dorme lá em parte das noites
   // (a vontade de ficar em casa pesa VISIT_HOME mais o afeto dos pares que moram junto). Daí vêm filhos de pais diferentes.
@@ -9018,7 +9210,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   };
 
   ACT.greve = {
-    start(S, p) { toCamp(S, p); return true; },
+    start(S, p) { toCenter(S, p); return true; },
     run(S, p, a, dt) { if (moving(p)) return RUN; a.t += dt; return a.t >= 240 ? DONE : RUN; },
   };
 
@@ -9032,7 +9224,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       else {
         const tent = pickTent(S, p);
         if (tent && toBuilding(S, p, tent)) { a.src = 'barraca'; a.tent = tent.id; }
-        else if (toCamp(S, p)) a.src = 'campo';   // sem abrigo: junto dos outros, no acampamento
+        else if (toCenter(S, p)) a.src = 'campo';   // sem abrigo: junto dos outros, no acampamento
         else return false;
       }
       say(S, p, 'lobos', 0.6, true);
@@ -9588,7 +9780,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       for (const k in cost) p.carry.back[k] -= cost[k];
       if (G.Obras) G.Obras.make(S, a.make, 1); else Tech.make(S, a.make, 1);
       if (b) Sim.float(S, b.x + b.w / 2, b.y, '+1 ' + PIECE[a.make]);
-      else Sim.float(S, S.camp.x + 1, S.camp.y + 0.6, '+1 ' + PIECE[a.make]);
+      else Sim.float(S, p.x, p.y - 0.6, '+1 ' + PIECE[a.make]);
       a.done = (a.done || 0) + 1;
       if (--a.pieces > 0) return RUN;
       p.carry = null;
@@ -10093,6 +10285,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       if (G.Gente) s *= G.Gente.workMult(S, p, wk);   // Etapa 15: o gosto, o jeito e o combinado
       if (has(p, 'Trabalhador')) s *= 1.15;
       if (has(p, 'Preguiçoso')) s *= 0.85;
+      if (st === 'idoso') s *= C.OLD_WORK_W;   // 0.16: o velho trabalha menos e descansa mais
       const sk = SKILL_OF[wk];
       if (sk) s *= 1 + 0.03 * lvl(p, sk);
       if (wk !== 'construir' && wk !== 'fogo' && othersDoing(S, p, wk)) s *= 0.8;
@@ -10413,14 +10606,15 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     let d = delta;
     if (d > 0) { if (has(p, 'Devoto')) d *= 1.5; if (has(p, 'Cético')) d *= 0.5; if (S.god.align > 30) d *= 1.2; if (p.criado === 'confiante') d *= C.CONFIANTE_GANHO; }
     else { if (has(p, 'Devoto')) d *= 0.5; if (has(p, 'Cético')) d *= 1.5; if (S.god.align < -30) d *= 0.7; }
-    p.fe = U.clamp(p.fe + d, 0, 100);
+    // 0.16: quem chegou sem fé marcada começa do meio (antes virava NaN, e a pessoa parava de trabalhar sem aviso)
+    p.fe = U.clamp((Number.isFinite(p.fe) ? p.fe : C.FAITH_START) + d, 0, 100);
     if (p.fe >= 99.5) p.fe100At = S.t;   // Etapa 11: fé inteira (quem chega lá pode virar escolhido)
   };
   God.align = function (S, d) { S.god.align = U.clamp(S.god.align + d, -100, 100); };
 
   // expoente que aplica às Vontades: fé alta obedece mais
   God.obedience = function (S, p) {
-    let o = 0.6 + 0.8 * (p.fe === undefined ? 50 : p.fe) / 100;
+    let o = 0.6 + 0.8 * (Number.isFinite(p.fe) ? p.fe : 50) / 100;
     if (has(p, 'Devoto')) o += 0.2;
     if (has(p, 'Cético')) o -= 0.25;
     if (S.god && S.god.align < -30) o += 0.15;
@@ -15677,7 +15871,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     pede: ['O povo pede', 'O líder aponta o lugar e espera o seu sim.'],
     decide: ['O povo decide', 'O líder marca sozinho o que falta, usando até ' + Math.round(C.SOC_TETO * 100) + '% de cada material do estoque. Numa aldeia grande, várias obras ao mesmo tempo.'],
   };
-  So.FALTA = { casa: 'Tem gente dormindo ao relento.', fogo: 'Há casa longe de qualquer fogo.', armazem: 'A comida está estragando no estoque.', cerca: 'Bicho entrou na roça.', mina: 'Falta pedra.' };
+  So.FALTA = { casa: 'Tem gente dormindo ao relento.', longe: 'As casas de lá ficam longe do estoque.', fogo: 'Há casa longe de qualquer fogo.', armazem: 'A comida está estragando no estoque.', cerca: 'Bicho entrou na roça.', mina: 'Falta pedra.' };
   So.setModo = function (S, m) {
     if (!So.MODOS[m]) return false;
     S.soc.modo = m;
@@ -15702,15 +15896,36 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     }
     return null;
   }
+  // 0.16: quem não tem lugar fixo em casa nenhuma (em lugares de cama). Até a 0.15 a conta era só o total (lugares
+  // pedidos contra lugares de pé): três sozinhos em barracas pela metade dormiam ao relento com o total "fechando", e o
+  // líder nunca marcava a casa que faltava
+  // A cama fixa só é dada na hora de dormir: quem ainda não tem uma procura agora (como faria ao deitar), para a casa
+  // que acabou de ficar pronta não contar como falta
+  function semTeto(S) {
+    const F = Fam(), dentro = new Set();
+    for (const b of S.buildings) if (b.built && b.beds) for (const id of b.beds) dentro.add(id);
+    let n = 0;
+    for (const p of S.people) {
+      if (!here(p) || dentro.has(p.id) || !F.bedUnits(S, p)) continue;
+      const t = G.AI && G.AI.pickTent ? G.AI.pickTent(S, p) : null;
+      if (t) { for (const id of t.beds) dentro.add(id); continue; }
+      n += F.bedUnits(S, p);
+    }
+    return n;
+  }
+  So.semTeto = semTeto;
+  const faltaCasa = (S) => Fam().bedsNeeded(S) > capFutura(S) || semTeto(S) > capFutura(S) - Fam().bedsTotal(S);
   // o que falta, na ordem em que o líder olha
   function faltas(S) {
-    const s = S.soc, F = Fam(), Sm = Sim(), K = G.Campo, out = [];
+    const s = S.soc, Sm = Sim(), K = G.Campo, out = [];
     const tem = (t) => S.buildings.some((b) => b.type === t);
-    if (F.bedsNeeded(S) > capFutura(S) && s.semCama >= 2) out.push({ type: 'barraca', why: 'casa' });
+    if (s.semCama >= 2 && faltaCasa(S)) out.push({ type: 'barraca', why: 'casa' });
     const fires = S.buildings.filter((b) => b.type === 'fogueira');
     const casa = S.buildings.find((b) => b.built && Sm.def(b).cap && !fires.some((f) => Math.hypot(f.x - b.x, f.y - b.y) <= C.SOC_FOGO_LONGE));
     if (casa) out.push({ type: 'fogueira', why: 'fogo', perto: casa });
     if (s.rot >= C.SOC_ROT && !tem('armazem') && G.Tech.buildOpen(S, 'armazem')) out.push({ type: 'armazem', why: 'armazem' });
+    // 0.16: um bairro de casas longe de todo estoque pede um armazém no meio dele (é por ali que vão entregar e pegar)
+    else if (G.Tech.buildOpen(S, 'armazem') && !S.buildings.some((b) => b.type === 'armazem' && !b.built)) { const b = bairroLonge(S); if (b) out.push({ type: 'armazem', why: 'longe', perto: b }); }
     if (K && K.known(S, 'cerca') && S.campo && !S.campo.fjobs.length) {
       const b = S.buildings.find((x) => x.type === 'roca' && x.built && x.farm && x.farm.raidDay !== undefined && S.ck.day - x.farm.raidDay <= 12 && !K.enclosed(S, x));
       if (b) out.push({ type: 'cerca', why: 'cerca', perto: b });
@@ -15719,6 +15934,43 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     return out;
   }
   So.faltas = faltas;
+  // 0.16: a casa mais longe de qualquer estoque (o centro ou um armazém), se houver CENTRO_LONGE passos ou mais e
+  // pelo menos 3 casas por ali
+  function bairroLonge(S) {
+    const Sm = Sim(), stores = [{ x: S.camp.x, y: S.camp.y }].concat(S.buildings.filter((b) => b.type === 'armazem' && b.built));
+    const dist = (b) => Math.min(...stores.map((s) => Math.hypot(s.x - b.x, s.y - b.y)));
+    const casas = S.buildings.filter((b) => b.built && Sm.def(b).cap);
+    let far = null;
+    for (const b of casas) if (dist(b) >= C.CENTRO_LONGE && (!far || dist(b) > dist(far))) far = b;
+    if (!far || casas.filter((b) => Math.hypot(b.x - far.x, b.y - far.y) <= 8).length < 3) return null;
+    return far;
+  }
+  So.bairroLonge = bairroLonge;
+  // 0.16: o líder muda o centro para o meio das casas, quando a aldeia cresceu para longe dele (no modo "O povo pede",
+  // só sugere; em "Só eu marco", fica com você). No máximo uma vez a cada CENTRO_MUDA_D dias
+  function centroDia(S) {
+    const s = S.soc, Sm = Sim();
+    if (s.modo === 'eu' || S.t - (S.stats.centroT || 0) < C.CENTRO_MUDA_D * DAY) return;
+    const casas = S.buildings.filter((b) => b.built && Sm.def(b).cap);
+    if (casas.length < 4) return;
+    const mx = Math.round(casas.reduce((a, b) => a + b.x + b.w / 2, 0) / casas.length) - 1, my = Math.round(casas.reduce((a, b) => a + b.y + b.h / 2, 0) / casas.length) - 1;
+    if (Math.hypot(mx - S.camp.x, my - S.camp.y) < C.CENTRO_LONGE + 4) return;
+    let at = null;
+    for (let r = 0; r <= 8 && !at; r++) for (let dy = -r; dy <= r && !at; dy++) for (let dx = -r; dx <= r; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== r || Sm.campWhy(S, mx + dx, my + dy)) continue;
+      at = { x: mx + dx, y: my + dy }; break;
+    }
+    if (!at) return;
+    const L = So.lider(S) || adults(S, 18).sort((a, b) => a.born - b.born || a.id - b.id)[0];
+    if (s.modo === 'pede') {
+      if (s.centroPedido && S.t - s.centroPedido < 20 * DAY) return;
+      s.centroPedido = S.t;
+      Sm.toast(S, (L ? L.name : 'O povo') + ' acha que o centro devia ficar no meio das casas. Dá para mudar no painel do Povo, em Mudar o centro.', '');
+      return;
+    }
+    Sm.moveCamp(S, at.x, at.y, L ? L.name : 'O povo');
+  }
+  So.centroDia = centroDia;
   // os lugares de dormir que vão existir: as obras de pé, as marcadas e as melhorias em andamento (pelo nível que vão ter)
   function capFutura(S) {
     const Sm = Sim();
@@ -15759,12 +16011,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       return tiles.length >= 4 ? { x: b.x, y: b.y, tiles } : null;
     }
     if (f.type === 'fogueira') return f.perto ? lugar(S, 'fogueira', f.perto.x + 1, f.perto.y + 1, 2, 5) : null;
-    if (f.type === 'armazem') return lugar(S, 'armazem', cx, cy, 2, C.BUILD.armazem.near - 1);
+    // 0.16: o armazém não fica mais preso ao centro: o das casas longe vai para o meio delas
+    if (f.type === 'armazem') return f.perto ? lugar(S, 'armazem', f.perto.x + 1, f.perto.y + 1, 2, 9) : lugar(S, 'armazem', cx, cy, 2, 9);
     if (f.type === 'mina') return lugar(S, 'mina', cx, cy, 3, 40);
     // a casa nova perto das outras
     const casas = S.buildings.filter((b) => Sm.def(b).cap);
     const mx = casas.length ? casas.reduce((a, b) => a + b.x, 0) / casas.length : cx, my = casas.length ? casas.reduce((a, b) => a + b.y, 0) / casas.length : cy;
-    return lugar(S, 'barraca', mx, my, 2, 14) || lugar(S, 'barraca', cx, cy, 3, 16);
+    return lugar(S, 'barraca', mx, my, 2, 14) || lugar(S, 'barraca', cx, cy, 3, 22);
   }
   const custoDe = (q) => (q.type === 'cerca' ? { madeira: q.tiles.length * C.CERCA_WOOD } : C.BUILD[q.type].cost || {});
   So.custoDe = custoDe;
@@ -15805,20 +16058,37 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const max = So.obrasMax(S);
     delete s.espera;
     let primeiro = null;
+    // 0.16: gente dormindo ao relento passa na frente. Com a fila cheia de obras (do jogador ou do povo), a casa que
+    // faltava esperava para sempre; agora uma casa entra mesmo assim, se nenhuma outra está sendo erguida
+    const casaAndando = S.buildings.some((b) => b.type === 'barraca' && (!b.built || b.up));
     // numa aldeia grande, várias de uma vez (no modo "pede", uma pergunta de cada vez)
     for (let k = 0; k < max; k++) {
-      if (obrasAtivas(S) >= max || S.buildings.filter((b) => !b.built || b.up).length >= max + 2) break;
-      const q = umaObra(S, L);
+      const cheio = obrasAtivas(S) >= max || S.buildings.filter((b) => !b.built || b.up).length >= max + 2;
+      if (cheio && (k > 0 || casaAndando)) break;
+      const q = umaObra(S, L, cheio ? 'casa' : '');
       if (!q) break;
       primeiro = primeiro || q;
-      if (s.modo === 'pede') break;
+      if (s.modo === 'pede' || cheio) break;
     }
     return primeiro;
   }
   So.planejarObra = planejarObra;
-  function umaObra(S, L) {
+  // 0.16: com o jogo fechado, o líder também marca a casa que falta. Antes, quem nascia ou crescia longe da vista
+  // voltava dormindo na rua: os dias resumidos erguiam as obras marcadas, mas ninguém marcava a casa
+  So.casaFechado = function (S) {
+    const s = S.soc;
+    if (!s || s.modo === 'eu' || s.pedidos.length || !faltaCasa(S)) return null;
+    if (S.buildings.some((b) => b.type === 'barraca' && (!b.built || b.up))) return null;
+    const L = So.lider(S) || adults(S, 18).sort((a, b) => a.born - b.born || a.id - b.id)[0];
+    if (!L) return null;
+    s.semCama = Math.max(s.semCama, 2);
+    return umaObra(S, L, 'casa');
+  };
+  // so: só olha este motivo ('casa'); vazio, olha tudo o que falta
+  function umaObra(S, L, so) {
     const s = S.soc;
     for (const f of faltas(S)) {
+      if (so && f.why !== so) continue;
       if (s.recusa[f.type] > S.t) continue;
       const at = ondeObra(S, f);
       if (!at) { s.recusa[f.type] = S.t + 5 * DAY; continue; }
@@ -15845,7 +16115,10 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
           return { type: 'melhoria', why: 'casa', x: m.b.x, y: m.b.y, bid: m.b.id };
         }
       }
-      if (!cabe(S, q)) { s.espera = { type: f.type, why: f.why, t: S.t }; continue; }
+      // 0.16: casa não espera o estoque. Com o teto de 40%, a barraca de 14 de madeira pedia 35 guardados, e ninguém
+      // juntava madeira para uma obra que não existia: o povo dormia na rua para sempre. Marcada, a obra pede o
+      // material que falta e o povo vai buscar
+      if (f.why !== 'casa' && !cabe(S, q)) { s.espera = { type: f.type, why: f.why, t: S.t }; continue; }
       if (marcar(S, q, L)) return q;
     }
     return null;
@@ -16624,7 +16897,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     for (const p of S.people) if (!p.indole) p.indole = natural(S, p);
     vilaDia(S);
     if (rest(S)) return;
-    s.semCama = F.bedsNeeded(S) > F.bedsTotal(S) ? s.semCama + 1 : 0;
+    s.semCama = F.bedsNeeded(S) > F.bedsTotal(S) || semTeto(S) > 0 ? s.semCama + 1 : 0;
+    // 0.16: no modo "só eu marco", ninguém marca a casa por você: o aviso lembra (no 2º dia e depois a cada 5)
+    if (s.modo === 'eu' && s.semCama >= 2 && (s.semCama - 2) % 5 === 0 && !S.buildings.some((b) => b.type === 'barraca' && !b.built)) {
+      const n = S.people.filter((p) => here(p) && F.bedUnits(S, p) && !S.buildings.some((b) => b.built && b.beds && b.beds.indexOf(p.id) >= 0)).length;
+      if (n) Sim().toast(S, (n === 1 ? 'Uma pessoa dorme' : n + ' pessoas dormem') + ' ao relento. Marque uma casa em Construir, ou deixe o povo decidir as obras em Povo.', 'warn');
+    }
     s.rot = +(s.rot * 0.7 + (S.stats.rottedToday || 0) * 0.3).toFixed(2);
     s.semPedra = S.stock.pedra < C.SOC_PEDRA ? s.semPedra + 1 : 0;
     if (s.cinzas.length) s.cinzas = s.cinzas.filter((c) => S.t - c.t < 20 * DAY);
@@ -16634,6 +16912,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     esfriar(S);
     promessaDia(S);
     juntar(S);
+    centroDia(S);
     if (S.ck.dos === 1 && S.ck.season === 0) eleger(S);       // todo começo de ano o povo confere se a voz ainda é a mesma
   };
   // a morte de alguém: o líder, o acusado, quem ia embora
@@ -17317,12 +17596,14 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     return out;
   }
   Save.serialize = function (S) {
-    const w = S.world, objs = [], extra = [], holy = [];
+    const w = S.world, objD = [], extra = [], holy = [];
     for (let i = 0; i < w.objs.length; i++) {
       const o = w.objs[i];
       if (i < w.genCount) {
+        // 0.16: só o que mudou desde a geração (árvore de pé e pedra inteira são como nasceram e não vão)
+        if (o.k === 'tree' || (o.k === 'rock' && o.ch === (o.big ? 4 : 2))) continue;
         const c = CODE[o.k] !== undefined ? CODE[o.k] : 0;
-        objs.push(c, c === 2 ? (o.regrow || 0) : c === 3 ? o.ch : c === 4 ? o.fruit : 0, c === 4 ? Math.round(o.grow * 100) : 0);
+        objD.push(i, c, c === 2 ? (o.regrow || 0) : c === 3 ? o.ch : c === 4 ? o.fruit : 0, c === 4 ? Math.round(o.grow * 100) : 0);
       } else if (o.k === 'grave') {
         // Etapa 13: a cova guarda quem é, quando foi, o rito e as flores
         const g = { x: o.x, y: o.y, name: o.name };
@@ -17339,10 +17620,10 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       return q;
     });
     return {
-      v: 1, game: 'genesis', seed: S.seed, t: S.t, rng: S.rng.s, camp: S.camp, siteLabel: S.siteLabel,
+      v: 1, game: 'genesis', seed: S.seed, size: w.W, t: S.t, rng: S.rng.s, camp: S.camp, siteLabel: S.siteLabel,
       stock: S.stock, vontades: S.vontades, nextPid: S.nextPid, nextBid: S.nextBid,
       chron: S.chron, goals: S.goals, stats: S.stats, over: S.over, arrived: S.arrived,
-      people, buildings: S.buildings, objs, graves: extra, holy, god: S.god, seen: packSeen(S.seen), narr: packNarr(S.narr),
+      people, buildings: S.buildings, objD, graves: extra, holy, god: S.god, seen: packSeen(S.seen), narr: packNarr(S.narr),
       tech: S.tech || null, fauna: packFauna(S.fauna), opts: S.opts || null, life: packLife(S.life),
       obras: G.Obras ? G.Obras.pack(S) : null, campo: G.Campo ? G.Campo.pack(S) : null,
       goalsPhase: S.goalsPhase || 1, era: S.era || '', famInit: !!S.famInit, savedAt: G.Net ? G.Net.now() : Date.now(),
@@ -17351,14 +17632,27 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       memoria: G.Memoria && S.memoria ? packMem(S.memoria) : null,   // Etapa 13: corpos, contos, a erva e o rito
       soc: G.Soc && S.soc ? G.Soc.pack(S) : null,   // Etapa 14: crimes, líder, pedidos, quem foi embora, a vila de fora
       gente: S.gente || null,   // Etapa 15: a média de cada trabalho, as tentativas, quem aprendeu com quem
+      povo: S.povo || null,   // 0.16: o nome e o título do lugar
     };
   };
 
   Save.deserialize = function (d) {
     if (!d || d.v !== 1 || d.game !== 'genesis') return null;
-    const w = G.W.generate(d.seed);
+    const w = G.W.generate(d.seed, d.size || C.MAP);
     const K = ['gone', 'tree', 'stump', 'rock', 'bush'];
-    for (let i = 0; i < w.genCount && i * 3 < d.objs.length; i++) {
+    // 0.16: só o que mudou desde a geração (no mapa enorme, a lista inteira pesava demais)
+    if (d.objD) for (let j = 0; j + 3 < d.objD.length; j += 4) {
+      const o = w.objs[d.objD[j]];
+      if (!o) continue;
+      const k = K[d.objD[j + 1]] || 'gone', a = d.objD[j + 2], b = d.objD[j + 3];
+      if (k === 'gone') { G.W.removeObj(w, o); continue; }
+      o.k = k;
+      if (k === 'stump') o.regrow = a;
+      else if (k === 'rock') o.ch = a;
+      else if (k === 'bush') { o.fruit = a; o.grow = b / 100; }
+      G.W.refreshBlock(w, o.y * w.W + o.x);
+    }
+    for (let i = 0; d.objs && i < w.genCount && i * 3 < d.objs.length; i++) {
       const o = w.objs[i], c = d.objs[i * 3], a = d.objs[i * 3 + 1], b = d.objs[i * 3 + 2];
       const k = K[c] || 'gone';
       if (k === 'gone') { G.W.removeObj(w, o); continue; }
@@ -17390,6 +17684,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       memoria: d.memoria || null,
       soc: d.soc || null,
       gente: d.gente || null,
+      povo: d.povo || null,
     };
     for (const p of S.people) {
       p.path = null; p.pathI = 0; p.act = null; p.px = p.x; p.py = p.y; p.fail = {}; p.stuck = false;
@@ -17401,15 +17696,58 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   };
 
   // ---------- armazenamento local (navegador) ----------
+  // 0.16: vários mundos. Até a 0.15 havia uma chave só, e o mundo novo apagava o antigo. Agora cada mundo mora na sua
+  // chave (o de antes da 0.16 segue na de sempre, como o mundo 'a') e um índice pequeno guarda o resumo de cada um,
+  // para a tela de título listar sem abrir os saves grandes. Save.slot é o mundo aberto.
+  const IDX = C.SAVE_KEY + '.mundos';
+  const keyOf = (id) => (id === 'a' ? C.SAVE_KEY : C.SAVE_KEY + '.' + id);
+  Save.slot = '';
+  Save.erro = '';   // 'cheio' quando o navegador recusou por falta de espaço
   function ls() { try { return globalThis.localStorage || null; } catch (e) { return null; } }
+  function readIdx(st) { try { const l = JSON.parse(st.getItem(IDX) || '[]'); return Array.isArray(l) ? l : []; } catch (e) { return []; } }
+  function writeIdx(st, l) { try { st.setItem(IDX, JSON.stringify(l)); } catch (e) { /* o índice é refeito na próxima */ } }
+  // o resumo de um save: o casal que chegou primeiro, onde, quando, quantos vivem
+  function metaOf(id, d) {
+    const ppl = (d.people || []).slice().sort((a, b) => a.id - b.id), casal = ppl.slice(0, 2).map((p) => p.name);
+    return {
+      id, seed: d.seed, size: d.size || C.MAP, casal: casal.join(' e '), local: d.siteLabel || '', t: d.t,
+      vivos: ppl.filter((p) => p.alive).length, over: !!d.over, savedAt: d.savedAt || 0, conta: d.conta || '',
+      aldeia: !!(d.stats && d.stats.eraEnd),
+    };
+  }
+  Save.newSlot = function () { Save.slot = Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36); return Save.slot; };
   Save.store = function (S, extra) {
     const st = ls(); if (!st) return null;
+    if (!Save.slot) Save.newSlot();
     try {
       const d = Object.assign(Save.serialize(S), extra || {});
       const txt = JSON.stringify(d);
-      st.setItem(C.SAVE_KEY, txt);
+      st.setItem(keyOf(Save.slot), txt);
+      const l = readIdx(st).filter((m) => m.id !== Save.slot);
+      l.push(metaOf(Save.slot, d));
+      writeIdx(st, l);
+      Save.erro = '';
       return txt;
-    } catch (e) { return null; }
+    } catch (e) { Save.erro = /quota/i.test(String(e && (e.name + e.message))) ? 'cheio' : 'falha'; return null; }
+  };
+  // os mundos guardados neste aparelho, do mais recente ao mais antigo (o save de antes da 0.16 entra na lista aqui)
+  Save.list = function () {
+    const st = ls(); if (!st) return [];
+    let l = readIdx(st);
+    if (!l.some((m) => m.id === 'a')) {
+      try {
+        const raw = st.getItem(C.SAVE_KEY), d = raw ? JSON.parse(raw) : null;
+        if (d && d.game === 'genesis') { l.push(metaOf('a', d)); writeIdx(st, l); }
+      } catch (e) { /* save velho ilegível: fica fora da lista */ }
+    }
+    l = l.filter((m) => { try { return !!st.getItem(keyOf(m.id)); } catch (e) { return false; } });
+    return l.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+  };
+  Save.remove = function (id) {
+    const st = ls(); if (!st || !id) return;
+    try { st.removeItem(keyOf(id)); } catch (e) { /* sem acesso */ }
+    writeIdx(st, readIdx(st).filter((m) => m.id !== id));
+    if (Save.slot === id) Save.slot = '';
   };
   // resumo curto para o ranking e para a tela de título
   Save.summary = function (S) {
@@ -17420,11 +17758,15 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       desc: G.Tech ? G.Tech.count(S) : 0, aldeia: !!(S.stats && S.stats.eraEnd),
     };
   };
-  Save.read = function () {
+  // um mundo pelo id (sem id: o aberto; sem mundo aberto: o mais recente)
+  Save.read = function (id) {
     const st = ls(); if (!st) return null;
-    try { const raw = st.getItem(C.SAVE_KEY); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+    const k = id || Save.slot || (Save.list()[0] || {}).id;
+    if (!k) return null;
+    try { const raw = st.getItem(keyOf(k)); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
   };
-  Save.clear = function () { const st = ls(); if (!st) return; try { st.removeItem(C.SAVE_KEY); } catch (e) { /* sem acesso */ } };
+  // apaga só o mundo aberto (os outros ficam)
+  Save.clear = function () { if (Save.slot) Save.remove(Save.slot); };
 })(globalThis.G = globalThis.G || {});
 
 /* ---- js/offline.js ---- */
@@ -17496,6 +17838,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       // a prática das descobertas que o povo já vinha treinando (a ideia em si sai nos ganchos do dia, como sempre)
       if (b.prat > 0 && S.tech) { const pr = S.tech.prat; for (const id in pr) if (!S.tech.known[id]) pr[id] += b.prat; }
     }
+    if (G.Soc && S.soc) G.Soc.casaFechado(S);   // 0.16: a casa que falta é marcada também com o jogo fechado
     buildDay(job, b);
     lifeDay(S);
     G.Sim.refresh(S);
@@ -17864,10 +18207,41 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   function Buf(w, h) { this.w = w; this.h = h; this.p = new Array(w * h).fill(null); }
   Buf.prototype.set = function (x, y, c) { x |= 0; y |= 0; if (x >= 0 && y >= 0 && x < this.w && y < this.h) this.p[y * this.w + x] = c; };
   Buf.prototype.get = function (x, y) { x |= 0; y |= 0; return x >= 0 && y >= 0 && x < this.w && y < this.h ? this.p[y * this.w + x] : null; };
+  // 0.16: a paleta ENDESGA, que todo jogo de pixel usa, puxada para os tons terrosos da natureza nova. Vale para
+  // todo sprite que passa pelo Buf (gente, bicho, casa, ícone), sem mexer em cada desenho
+  const REMAP = {
+    '#181425': '#1f1a24', '#1c1624': '#1f1a24', '#262b44': '#2b2733', '#3a4466': '#4b4553', '#5a6988': '#6d6672', '#8b9bb4': '#938a8c',
+    '#c0cbdc': '#cdc6bb', '#e43b44': '#c8423a', '#a22633': '#8a2a2c', '#f6757a': '#e0857a', '#3e2731': '#3a2428', '#733e39': '#6e4a35',
+    '#b86f50': '#93683f', '#e4a672': '#d0a46a', '#ead4aa': '#e2cfa4', '#be4a2f': '#a8482c', '#d77643': '#c47a3e', '#f77622': '#e47c2c',
+    '#feae34': '#eaaa3c', '#fee761': '#f2da72', '#63c74d': '#64923f', '#3e8948': '#40723e', '#265c42': '#2c573d', '#193c3e': '#22413a',
+    '#124e89': '#2a4a6e', '#0099db': '#3a86a8', '#2ce8f5': '#7cc8d0', '#68386c': '#5e3a5c', '#b55088': '#a8587a', '#9be070': '#8fb35a',
+  };
+  // acabamento de quem desenha à mão: luz do alto à esquerda. A borda de cima e da esquerda ganha um brilho, a da
+  // direita escurece, e o contorno preto vira, em cima e à esquerda, um tom escuro da cor que ele contorna
+  const INK = new Set(['#1f1a24', '#2b2733']);
+  let polishOn = false;
+  function polish(src, w, h) {
+    const out = src.slice(), at = (x, y) => (x >= 0 && y >= 0 && x < w && y < h ? src[y * w + x] : null);
+    const inner = (c) => c && !INK.has(c);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const c = src[y * w + x];
+      if (!c) continue;
+      const u = at(x, y - 1), l = at(x - 1, y), r = at(x + 1, y), d = at(x, y + 1);
+      if (INK.has(c)) {
+        const n = inner(d) ? d : inner(r) ? r : null;
+        if (n && !inner(u) && !inner(l)) out[y * w + x] = mix(n, '#1f1a24', 0.62);
+      } else if (!inner(u) || !inner(l)) out[y * w + x] = mix(c, '#fff0cc', 0.16);
+      else if (!inner(r) || !inner(d)) out[y * w + x] = mix(c, '#1f1a24', 0.16);
+    }
+    return out;
+  }
+  A.polishWith = function (fn) { const was = polishOn; polishOn = true; try { return fn(); } finally { polishOn = was; } };
   Buf.prototype.canvas = function () {
     const [c, x] = mk(this.w, this.h);
+    let px = this.p.map((col) => (col && REMAP[col.toLowerCase()]) || col);
+    if (polishOn) px = polish(px, this.w, this.h);
     for (let y = 0; y < this.h; y++) for (let i = 0; i < this.w; i++) {
-      const col = this.p[y * this.w + i];
+      const col = px[y * this.w + i];
       if (col) { x.fillStyle = col; x.fillRect(i, y, 1, 1); }
     }
     return c;
@@ -17895,211 +18269,219 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   A.lighten = lighten;
 
   // ---------- terreno: cores por estação ----------
+  // 0.16: paleta própria, terrosa e com a sombra puxando para o azul e a luz para o amarelo (sem o verde de néon)
   // tipos: 0 funda, 1 rasa, 2 rio, 3 areia, 4 campo, 5 floresta, 6 colina, 7 montanha, 8 campo seco
   // cada tom: [escuro, base, claro]
+  const AGUA = { 0: ['#1c3651', '#22466a', '#2b587e'], 1: ['#2e6c86', '#3a8299', '#5fa6b4'], 2: ['#2e6c86', '#3a8299', '#5fa6b4'] };
   A.TERRAIN = [
     { // primavera
-      0: ['#0c3a68', '#124e89', '#1d64a6'], 1: ['#0a7fc0', '#0e93d4', '#35c4ec'], 2: ['#0a7fc0', '#0e93d4', '#35c4ec'],
-      3: ['#c89a6a', '#e4b27c', '#efd2a2'], 4: ['#3e8948', '#58a447', '#79c356'], 5: ['#265c42', '#34713f', '#468a44'],
-      6: ['#4f8a44', '#6a9e4c', '#8ab65e'], 7: ['#56607e', '#67748f', '#8290a8'], 8: ['#7c8a3c', '#99a44c', '#b7bb62'],
+      ...AGUA,
+      3: ['#b48f5c', '#cba870', '#dfc492'], 4: ['#47703a', '#5a8641', '#739a4b'], 5: ['#2f4e33', '#3b5d38', '#4a6d3e'],
+      6: ['#5b7a40', '#6d8a47', '#86a055'], 7: ['#5a5662', '#6e6a74', '#8a858a'], 8: ['#7d7e40', '#94934b', '#ada85c'],
     },
     { // verão
-      0: ['#0c3a68', '#124e89', '#1d64a6'], 1: ['#0a7fc0', '#0e93d4', '#35c4ec'], 2: ['#0a7fc0', '#0e93d4', '#35c4ec'],
-      3: ['#cc9f6c', '#e8b880', '#f2d8a8'], 4: ['#4d8a36', '#70a842', '#95c254'], 5: ['#2c5e36', '#3e773a', '#528e42'],
-      6: ['#6a8a40', '#88a24a', '#a6b85a'], 7: ['#56607e', '#67748f', '#8290a8'], 8: ['#a08a44', '#bea45a', '#d6bc74'],
+      ...AGUA,
+      3: ['#b8925c', '#cfab72', '#e2c896'], 4: ['#4f6f34', '#62803b', '#7a9445'], 5: ['#33502f', '#3f5e33', '#4d6c39'],
+      6: ['#6b7c3e', '#80904a', '#98a25a'], 7: ['#5a5662', '#6e6a74', '#8a858a'], 8: ['#92824a', '#a99658', '#c0ac6a'],
     },
     { // outono
-      0: ['#0c3a68', '#124e89', '#1d64a6'], 1: ['#0a7fc0', '#0e93d4', '#35c4ec'], 2: ['#0a7fc0', '#0e93d4', '#35c4ec'],
-      3: ['#c28f62', '#dcaa76', '#e8c898'], 4: ['#7c7232', '#9c8a40', '#bca656'], 5: ['#5e4a2a', '#7a5c30', '#94723c'],
-      6: ['#7e6c3a', '#98844a', '#b09c5e'], 7: ['#56607e', '#67748f', '#8290a8'], 8: ['#98703e', '#b48a50', '#cca666'],
+      ...AGUA,
+      3: ['#ad8858', '#c4a06a', '#d8bc8c'], 4: ['#6c6836', '#827a40', '#9a8e4e'], 5: ['#4c4230', '#5c4f34', '#6f5e3c'],
+      6: ['#786a3c', '#8d7c48', '#a39058'], 7: ['#5a5662', '#6e6a74', '#8a858a'], 8: ['#8c6c40', '#a3804e', '#b99660'],
     },
     { // inverno
-      0: ['#1a3a5c', '#24507a', '#35668f'], 1: ['#3e7eaa', '#5896c0', '#9ccbe4'], 2: ['#3e7eaa', '#5896c0', '#9ccbe4'],
-      3: ['#bdb4ae', '#d4ccc8', '#e8e4e0'], 4: ['#bcc7d8', '#d6dee9', '#eef3f9'], 5: ['#aab6ca', '#c6d0de', '#e0e7f0'],
-      6: ['#b4bfd0', '#ccd5e2', '#e6ecf4'], 7: ['#7d8aa6', '#a3b0c6', '#dfe6f0'], 8: ['#c2cad8', '#dae0ea', '#f0f4f8'],
+      0: ['#1e3550', '#284a6a', '#365e80'], 1: ['#4a7e9c', '#6596b0', '#9cc2d4'], 2: ['#4a7e9c', '#6596b0', '#9cc2d4'],
+      3: ['#b2aaa4', '#c8c0ba', '#ddd8d2'], 4: ['#b4bccb', '#ccd3df', '#e6eaf1'], 5: ['#a3abbd', '#bcc4d2', '#d6dce6'],
+      6: ['#adb5c5', '#c4cbd8', '#dee3ec'], 7: ['#7a7f94', '#9da2b4', '#d8dce6'], 8: ['#bac0cc', '#d0d5de', '#e8ebf1'],
     },
   ];
-  // detalhes (tufos e flores) por estação
+  // detalhes por estação: tufo (escuro e a ponta clara), flores (cada canteiro é de uma cor só) e folhas no chão da mata
   A.DETAIL = [
-    { tuft: '#2f6e3e', flowers: ['#fee761', '#ffffff', '#f6757a', '#b9a2ff'] },
-    { tuft: '#3e6e2e', flowers: ['#fee761', '#ffffff'] },
-    { tuft: '#6a5a2a', flowers: ['#d77643'] },
-    { tuft: '#8b9bb4', flowers: [] },
+    { tuft: '#2f5430', tip: '#8fb35a', flowers: ['#f2e27a', '#f4efe2', '#e48a98', '#b7a0e0', '#e8a04a'], leaf: ['#5c7a3a', '#7a6a3a'] },
+    { tuft: '#344f2b', tip: '#9cab58', flowers: ['#f2e27a', '#f4efe2', '#e8a04a'], leaf: ['#6a6a36', '#7c5e34'] },
+    { tuft: '#574c2c', tip: '#b6a05c', flowers: ['#d98a3a', '#c8604a'], leaf: ['#b4642e', '#c99a3e', '#8e3f2c'] },
+    { tuft: '#8f9bb0', tip: '#ffffff', flowers: [], leaf: [] },
   ];
 
-  // ---------- árvores ----------
+  // ---------- copas em tufos ----------
+  // A copa é um monte de tufos redondos desenhados de trás (em cima) para a frente (embaixo). Cada tufo tem a luz
+  // no alto à esquerda, e o tufo de trás escurece onde o da frente o cobre: é o que separa as folhagens, como
+  // faria a mão. Tons: [contorno, sombra, meia-sombra, base, luz, brilho]
   const TREE_TONES = {
-    spring: ['#193c3e', '#265c42', '#3e8948', '#63c74d', '#9be070'],
-    ipe: ['#68386c', '#b55088', '#e0708e', '#f6a0b4', '#ffd6e0'],
-    summer: ['#193c3e', '#245a3a', '#377a3c', '#55a944', '#7fcf5a'],
-    autumn: ['#3e2731', '#a22633', '#be4a2f', '#d77643', '#f0a040'],
-    autumnY: ['#733e39', '#b86f50', '#d79b3e', '#feae34', '#fee761'],
+    spring: ['#1b2b2b', '#24443a', '#2f5d40', '#467d42', '#6fa04a', '#a9c766'],
+    summer: ['#1b2a2a', '#22413a', '#2c573d', '#40723e', '#64923f', '#9db558'],
+    ipe: ['#2b1a2c', '#55294a', '#863b66', '#b85686', '#e08aa9', '#f6c4d0'],
+    autumn: ['#2c1e24', '#55292a', '#86392c', '#b65e30', '#d68e3e', '#edc068'],
+    autumnY: ['#2f2420', '#5a3e26', '#8a662e', '#b89434', '#dcba4c', '#f1dc86'],
+    arau: ['#131f24', '#1b3333', '#25493c', '#346241', '#4f7f47', '#7fa45a'],
+    arauW: ['#202634', '#3a4458', '#59657c', '#8c98ae', '#c6cfdc', '#f2f5fa'],
+    bush: ['#1b2a2a', '#24443a', '#30603f', '#467d42', '#6b9a48', '#a2c062'],
+    bushA: ['#2c1e24', '#4f3a26', '#6e5a2e', '#8c7a3a', '#ae9a4c', '#cdbc72'],
+    bushW: ['#2a2430', '#4a3e44', '#6e6064', '#8e8080', '#b0a49e', '#d8d0c8'],
+    holy: ['#1b2b2b', '#2c573d', '#40723e', '#5e9a44', '#8cc25a', '#c8e27a'],
   };
-  function canopy(b, cx, cy, blobs, tones, seed) {
-    const W = b.w, H = b.h, mask = new Uint8Array(W * H);
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      for (const bl of blobs) {
-        if ((x + 0.5 - bl[0]) ** 2 + (y + 0.5 - bl[1]) ** 2 <= bl[2] * bl[2]) { mask[y * W + x] = 1; break; }
+  const BARK = ['#2a1d1f', '#4a3029', '#6e4a35', '#93683f'];
+  const LEAF_DITHER = (x, y) => (((x ^ y) & 1) ? 0.035 : -0.035);
+  function clumps(b, list, tones, seed) {
+    const W = b.w, H = b.h, own = new Int16Array(W * H).fill(-1);
+    const order = list.map((c, i) => i).sort((a, c) => list[a][1] - list[c][1] || a - c);
+    const rank = new Int16Array(list.length);
+    order.forEach((i, k) => { rank[i] = k; });
+    for (const i of order) {
+      const [cx, cy, r] = list[i];
+      for (let y = Math.floor(cy - r - 1); y <= cy + r + 1; y++) for (let x = Math.floor(cx - r - 1); x <= cx + r + 1; x++) {
+        if (x < 0 || y < 0 || x >= W || y >= H) continue;
+        const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
+        // a borda do tufo é falhada: folha, não círculo
+        if (d <= r - 0.6 || (d <= r + 0.2 && G.hash2(x, y, seed + i) < 0.4)) own[y * W + x] = i;
       }
     }
-    const m = (x, y) => (x >= 0 && y >= 0 && x < W && y < H ? mask[y * W + x] : 0);
-    const lx = cx - 4, ly = cy - 5;
+    const O = (x, y) => (x >= 0 && y >= 0 && x < W && y < H ? own[y * W + x] : -1);
+    let top = H, bot = 0;
+    for (const c of list) { top = Math.min(top, c[1] - c[2]); bot = Math.max(bot, c[1] + c[2]); }
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      if (!m(x, y)) continue;
-      const d = Math.hypot(x + 0.5 - lx, y + 0.5 - ly) / 12;
-      let t = d < 0.42 ? 4 : d < 0.72 ? 3 : d < 1.0 ? 2 : 1;
-      if (G.hash2(x, y, seed) < 0.2) t = Math.max(1, t - 1);
-      if (!m(x, y + 1) || !m(x + 1, y)) t = 0;
-      else if (!m(x, y - 1) || !m(x - 1, y)) t = Math.max(1, Math.min(t, 3));
+      const i = O(x, y);
+      if (i < 0) continue;
+      const [cx, cy, r] = list[i];
+      const lt = -((x + 0.5 - cx) * 0.55 + (y + 0.5 - cy) * 0.85) / r + LEAF_DITHER(x, y);
+      let t = lt > 0.78 ? 5 : lt > 0.32 ? 4 : lt > -0.38 ? 3 : 2;
+      // a copa toda: o alto pega mais sol, o de baixo fica na sombra dela mesma
+      const g = (cy - top) / Math.max(1, bot - top);
+      if (g > 0.72 && t > 2) t--;
+      if (g < 0.25 && t < 5 && lt > 0) t++;
+      const below = O(x, y + 1), right = O(x + 1, y);
+      if (below >= 0 && below !== i && rank[below] > rank[i]) t = 1;           // o tufo da frente cobre este
+      else if (right >= 0 && right !== i && rank[right] > rank[i] && t > 2) t = 2;
+      if (below < 0 || right < 0) t = (below < 0 && y > cy) ? 0 : Math.min(t, 1);   // contorno: só embaixo e à direita
+      if (O(x, y - 1) < 0 && O(x - 1, y) < 0 && t >= 3) t = 4;                    // a beirada de cima pega luz
       b.set(x, y, tones[t]);
     }
-    // tufos de folhas: pequenas meias-luas
-    const rng = new G.RNG(seed * 7 + 1);
-    for (let k = 0; k < 9; k++) {
-      const x = Math.floor(rng.range(cx - 7, cx + 7)), y = Math.floor(rng.range(cy - 6, cy + 5));
-      if (!m(x, y) || !m(x, y + 1) || !m(x - 1, y + 1) || !m(x + 1, y + 1) || !m(x, y + 2)) continue;
-      b.set(x - 1, y + 1, tones[1]); b.set(x, y + 1, tones[1]); b.set(x + 1, y + 1, tones[1]);
-      b.set(x, y, tones[Math.min(4, 3 + (y < cy ? 1 : 0))]);
-    }
-    return mask;
+    return own;
   }
+  // tronco de 3 px com a raiz abrindo, e dois galhos que somem na copa
+  function trunk(b, x, y0, y1, forks) {
+    for (const [ax, ay, bx2, by2] of forks || []) { line(b, ax, ay, bx2, by2, BARK[1]); line(b, ax + 1, ay, bx2 + 1, by2, BARK[2]); }
+    for (let y = y0; y <= y1; y++) { b.set(x - 1, y, BARK[3]); b.set(x, y, BARK[2]); b.set(x + 1, y, BARK[1]); b.set(x + 2, y, BARK[0]); }
+    b.set(x - 2, y1, BARK[2]); b.set(x - 2, y1 - 1, BARK[3]); b.set(x + 2, y1, BARK[1]); b.set(x + 3, y1, BARK[0]);
+    b.set(x - 3, y1, BARK[1]);
+    for (let xx = x - 3; xx <= x + 3; xx++) if (!b.get(xx, y1 + 1)) b.set(xx, y1 + 1, BARK[0]);
+    b.set(x, y0 + 3, BARK[1]); b.set(x, y0 + 6, BARK[3]);   // nós da casca
+  }
+  // as três árvores de folha larga: copa cheia, copa alta e copa aberta
+  const BROAD = [
+    [[7, 5, 3.6], [12, 3.8, 3.8], [16, 6, 3.4], [4, 9, 3.4], [10, 7.5, 4.2], [17.5, 10, 3.2], [7, 11.5, 3.8], [13, 10.5, 4], [4, 13.5, 3], [10, 14, 3.6], [15.5, 13.8, 3.4], [19, 13.2, 2.4]],
+    [[11, 3.2, 3.2], [8, 6, 3.4], [14, 6, 3.4], [11, 8.5, 3.8], [6, 10.5, 3.2], [16, 10.5, 3.2], [9, 12.5, 3.8], [13.5, 12.5, 3.6], [6, 15, 2.8], [11, 15.5, 3.2], [16, 15, 2.6]],
+    [[6, 7, 3.4], [11, 5.2, 3.6], [16, 7, 3.4], [2.8, 10.5, 2.8], [9, 9.5, 3.8], [14, 9.5, 3.8], [19, 10.5, 2.8], [5.5, 13, 3.2], [11, 13.2, 3.6], [16.5, 13, 3.2]],
+  ];
   function broadTree(v, season) {
     const b = new Buf(22, 26);
     const tx = 10;
-    for (let y = 13; y < 24; y++) { b.set(tx, y, P.wood); b.set(tx + 1, y, P.bark); }
-    b.set(tx - 1, 23, P.bark); b.set(tx + 2, 23, P.maroon); b.set(tx + 2, 22, P.bark);
     if (season === 3) {
+      // inverno: galhos nus, de 2 px no tronco e afinando; neve por cima de cada galho
+      const br = [[10, 16, 6, 9], [6, 9, 4, 6], [11, 15, 16, 9], [16, 9, 18, 6], [10, 13, 9, 5], [11, 12, 13, 4], [13, 4, 14, 2], [9, 5, 8, 3], [6, 9, 7, 5], [16, 9, 15, 5], [4, 6, 3, 4], [18, 6, 19, 4]];
       const pts = [];
-      const br = [[10, 16, 6, 9], [6, 9, 4, 6], [11, 15, 16, 9], [16, 9, 18, 6], [10, 13, 9, 5], [11, 12, 13, 4], [13, 4, 14, 2], [9, 5, 8, 3], [6, 9, 7, 5], [16, 9, 15, 5]];
-      for (const s of br) line(b, s[0], s[1], s[2], s[3], P.bark, pts);
-      for (const [x, y] of pts) {
-        if (!b.get(x, y - 1) && G.hash2(x, y, v + 50) < 0.75) b.set(x, y - 1, P.white);
-        if (G.hash2(x, y, v + 60) < 0.25) b.set(x + 1, y, P.maroon);
-      }
+      br.forEach((s, k) => { line(b, s[0], s[1], s[2], s[3], k < 3 ? BARK[2] : BARK[1], pts); if (k < 3) line(b, s[0] + 1, s[1], s[2] + 1, s[3], BARK[1]); });
+      for (const [x, y] of pts) if (!b.get(x, y - 1) && G.hash2(x, y, v + 50) < 0.7) b.set(x, y - 1, '#f2f5fa');
+      trunk(b, tx, 14, 23);
+      for (const x of [tx - 1, tx, tx + 1]) b.set(x, 14, '#f2f5fa');
       return b.canvas();
     }
-    const cx = 11 + (v === 1 ? -1 : v === 2 ? 1 : 0), cy = 9;
-    const blobs = [[cx, cy, 7.6], [cx - 5, cy + 2, 4.6], [cx + 5, cy + 2, 4.6], [cx - 2 + v, cy - 4, 4.4], [cx + 3 - v, cy - 3, 4]];
     let tones = TREE_TONES.summer;
     if (season === 0) tones = v === 1 ? TREE_TONES.ipe : TREE_TONES.spring;
     else if (season === 2) tones = v === 2 ? TREE_TONES.autumnY : TREE_TONES.autumn;
-    const mask = canopy(b, cx, cy, blobs, tones, 11 + v * 29 + season * 5);
-    const rng = new G.RNG(300 + v * 13 + season);
-    const inside = (x, y) => mask[y * b.w + x] && mask[(y + 1) * b.w + x] && mask[y * b.w + x + 1];
-    if (season === 0 && v !== 1) {
-      for (let k = 0; k < 14; k++) {
-        const x = rng.int(3, 18), y = rng.int(2, 14);
-        if (inside(x, y)) b.set(x, y, rng.chance(0.5) ? '#ffffff' : '#f6a0b4');
+    trunk(b, tx, 14, 23, [[tx, 16, tx - 4, 11], [tx + 1, 16, tx + 4, 12]]);
+    const own = clumps(b, BROAD[v].map(([x, y, r]) => [x, y + 1, r]), tones, 11 + v * 29 + season * 5);
+    const at = (x, y) => own[y * b.w + x] >= 0;
+    // flor e fruta só onde bate luz, em grupinhos
+    const deco = (n, seed, put) => {
+      const rng = new G.RNG(seed);
+      for (let k = 0, tries = 0; k < n && tries < 200; tries++) {
+        const x = rng.int(2, 19), y = rng.int(2, 15);
+        if (!at(x, y) || !at(x, y + 1) || !at(x + 1, y)) continue;
+        const c = b.get(x, y);
+        if (c !== tones[3] && c !== tones[4]) continue;
+        put(x, y); k++;
       }
-    }
-    if (season === 1 && v === 0) {
-      for (let k = 0; k < 8; k++) {
-        const x = rng.int(4, 17), y = rng.int(5, 14);
-        if (inside(x, y)) { b.set(x, y, P.ember); b.set(x, y - 1, P.gold); }
-      }
-    }
+    };
+    if (season === 0 && v !== 1) deco(9, 300 + v * 13, (x, y) => { b.set(x, y, '#f6eef0'); b.set(x + 1, y, '#e8b4c4'); });
+    if (season === 0 && v === 1) deco(6, 310, (x, y) => b.set(x, y, '#fff2c8'));
+    if (season === 1 && v === 0) deco(7, 320, (x, y) => { b.set(x, y, '#e07a2e'); b.set(x, y - 1, '#f2b84a'); b.set(x + 1, y, '#a8461e'); });
+    if (season === 2) deco(5, 330 + v, (x, y) => b.set(x, y, tones[5]));
     return b.canvas();
   }
+  // araucária: tronco reto e alto, galhos em andares que viram para cima nas pontas, a copa em taça
   function arauTree(v, season) {
     const W = 22, H = 32, b = new Buf(W, H);
-    const cx = 11;
-    for (let y = 9; y < 31; y++) { b.set(cx - 1, y, P.wood); b.set(cx, y, P.bark); }
-    b.set(cx - 2, 30, P.bark); b.set(cx + 1, 30, P.maroon);
-    // tocos de galhos
-    b.set(cx - 2, 18 + v, P.bark); b.set(cx + 1, 22 - v, P.bark);
-    const tones = ['#12302c', '#1f4d3a', '#2f6b40', '#4a9148', '#6fb45a'];
-    const widths = [5, 7.5, 9.5, 10.4, 10.4, 9.8, 8.6, 7];
-    const mask = new Uint8Array(W * H);
-    for (let r = 0; r < widths.length; r++) {
-      const y = 2 + r, hw = widths[r] - (v === 2 ? 0.6 : 0);
-      for (let x = 0; x < W; x++) if (Math.abs(x + 0.5 - cx) <= hw) mask[y * W + x] = 1;
-    }
-    // pontas voltadas para cima
-    const tips = [2 + v % 2, 5, 8, 14, 17, 19 - v % 2];
-    for (const tx of tips) { mask[1 * W + tx] = 1; mask[0 * W + tx] = tx % 2; }
-    // segunda camada
-    for (let r = 0; r < 3; r++) {
-      const y = 11 + r, hw = [5.5, 4.6, 3.2][r];
-      for (let x = 0; x < W; x++) if (Math.abs(x + 0.5 - cx) <= hw) mask[y * W + x] = 1;
-    }
-    const m = (x, y) => (x >= 0 && y >= 0 && x < W && y < H ? mask[y * W + x] : 0);
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      if (!m(x, y)) continue;
-      let t = y <= 3 ? 4 : y <= 5 ? 3 : y <= 8 ? 2 : y <= 11 ? 2 : 1;
-      if ((x + v) % 3 === 0 && y > 3) t = Math.max(1, t - 1);
-      if (!m(x, y + 1)) t = 0;
-      if (G.hash2(x, y, 77 + v) < 0.15) t = Math.max(1, t - 1);
-      b.set(x, y, tones[t]);
-    }
-    if (season === 3) {
-      for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) {
-        if (m(x, y) && !m(x, y - 1)) { b.set(x, y, P.white); if (m(x, y + 1) && G.hash2(x, y, 5) < 0.5) b.set(x, y + 1, P.silver); }
+    const cx = 11, tones = season === 3 ? TREE_TONES.arauW : TREE_TONES.arau;
+    for (let y = 6; y < 31; y++) { b.set(cx - 1, y, BARK[3]); b.set(cx, y, BARK[2]); b.set(cx + 1, y, BARK[1]); }
+    b.set(cx - 2, 30, BARK[2]); b.set(cx + 2, 30, BARK[0]); for (let x = cx - 2; x <= cx + 2; x++) b.set(x, 31, BARK[0]);
+    for (const y of [15 + v, 19, 23 - v, 26]) b.set(cx - 1, y, BARK[1]);
+    // andares em candelabro: cada andar é um feixe de galhos que sai do tronco e sobe até um pompom de folhas na
+    // ponta; entre um andar e outro aparece o céu. [altura do pompom, meia-largura, quantos pompons de cada lado]
+    const tiers = v === 1 ? [[4, 9.5, 2], [8.5, 6.5, 1], [12.5, 3.5, 1], [16, 0, 0]] : v === 2 ? [[5, 8.5, 2], [10, 5, 1], [13.5, 0, 0]] : [[4.5, 10, 2], [9, 6.5, 1], [13, 0, 0]];
+    const list = [];
+    tiers.forEach(([ty, hw, n], k) => {
+      const base = Math.round(ty) + 3 + k;
+      for (let j = -n; j <= n; j++) {
+        if (!hw && j) continue;
+        const x = cx + 0.5 + (n ? j / n : 0) * hw, y = ty + (n && Math.abs(j) < n ? 1 : 0);
+        if (hw) { line(b, cx, base, Math.round(x), Math.round(y) + 1, BARK[1]); line(b, cx, base + 1, Math.round(x), Math.round(y) + 2, BARK[0]); }
+        list.push([x, y, Math.abs(j) === n && n ? 2.6 : 2.3]);
+        if (Math.abs(j) === n && n) list.push([x - Math.sign(j) * 2.4, y + 0.6, 2]);
       }
+    });
+    clumps(b, list, tones, 77 + v);
+    if (season === 3) for (let x = 0; x < W; x++) for (let y = 1; y < 18; y++) {
+      const c = b.get(x, y);
+      if (c && c !== BARK[1] && !b.get(x, y - 1)) b.set(x, y, '#ffffff');
     }
     return b.canvas();
   }
 
   // ---------- arbusto (pitangueira) ----------
-  const BUSH_TONES = [
-    ['#193c3e', '#265c42', '#3e8948', '#63c74d'],
-    ['#193c3e', '#265c42', '#377a3c', '#55a944'],
-    ['#3e2731', '#6a4a2a', '#8a7a3a', '#b8a050'],
-    ['#3e2731', '#6a4a3a', '#8b6d5c', '#b89a80'],
-  ];
   // holy (Etapa 11): a árvore criada por Deus, sempre verde e de fruta dourada
+  const BUSH = [[4, 7, 3], [10, 7, 3], [7, 4, 3.2], [7, 7.5, 3.4], [3.6, 9, 2.4], [10.4, 9, 2.4]];
   function bush(fruit, season, holy) {
     const W = 14, H = 11, b = new Buf(W, H);
-    const blobs = [[7, 6.6, 5.2], [3.8, 7.4, 3.4], [10.2, 7.4, 3.4], [6.2, 3.8, 3.2], [8.8, 4.2, 3]];
-    const mask = new Uint8Array(W * H);
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) for (const bl of blobs) {
-      if ((x + 0.5 - bl[0]) ** 2 + (y + 0.5 - bl[1]) ** 2 <= bl[2] * bl[2]) { mask[y * W + x] = 1; break; }
-    }
-    const m = (x, y) => (x >= 0 && y >= 0 && x < W && y < H ? mask[y * W + x] : 0);
-    const tones = holy ? ['#265c42', '#3e8948', '#63c74d', '#9be070'] : BUSH_TONES[season];
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      if (!m(x, y)) continue;
-      const d = Math.hypot(x + 0.5 - 5, y + 0.5 - 2.5) / 8;
-      let t = d < 0.5 ? 3 : d < 0.85 ? 2 : 1;
-      if (G.hash2(x, y, 91) < 0.18) t = Math.max(1, t - 1);
-      if (!m(x, y + 1) || !m(x + 1, y)) t = 0;
-      b.set(x, y, tones[t]);
-    }
-    if (season === 3 && !holy) for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) if (m(x, y) && !m(x, y - 1)) b.set(x, y, P.white);
-    const spots = [[4, 5], [9, 4], [7, 8], [11, 7], [3, 8], [7, 3]];
+    const tones = holy ? TREE_TONES.holy : [TREE_TONES.bush, TREE_TONES.bush, TREE_TONES.bushA, TREE_TONES.bushW][season];
+    clumps(b, BUSH, tones, 91 + season);
+    if (season === 3 && !holy) for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) if (b.get(x, y) && !b.get(x, y - 1)) b.set(x, y, '#ffffff');
+    const spots = [[4, 6], [9, 5], [7, 8], [11, 8], [3, 9], [7, 3]];
     const n = holy ? Math.min(6, fruit + (fruit >= 3 ? 1 : 0)) : Math.min(6, fruit * 2);
     for (let i = 0; i < n; i++) {
       const [x, y] = spots[i];
-      if (holy) { b.set(x, y, P.gold); b.set(x - 1, y, P.orange); b.set(x, y - 1, P.yellow); }
-      else { b.set(x, y, P.red); b.set(x - 1, y, P.wine); b.set(x, y - 1, P.rose); }
+      if (holy) { b.set(x, y, '#f2b234'); b.set(x + 1, y, '#c8782a'); b.set(x, y - 1, '#ffe98a'); }
+      else { b.set(x, y, '#d8323c'); b.set(x + 1, y, '#8e1f2e'); b.set(x, y - 1, '#f5a0a0'); }
     }
     return b.canvas();
   }
   A.holyBush = (fruit) => bush(fruit, 0, true);
 
   // ---------- pedras ----------
+  // desenhadas à mão: face de cima clara, frente média, lado direito escuro, rachadura e musgo
+  const ROCK_TONES = { k: '#2b2733', D: '#4b4553', M: '#6d6672', t: '#938a8c', T: '#bdb2a6', H: '#ddd3c2', g: '#4f6a36', G: '#7c9a48' };
+  const ROCKS = [
+    [
+      ['..kkkk...', '.kHTTtk..', 'kTTtttMk.', 'kttMMMMDk', 'kMMMMDDDk', '.kDDDDDk.', '..kkkkk..'],
+      ['...kkk...', '..kTHTkk.', '.kTttMMMk', 'kTttMMMDk', 'kMMMDDDDk', '.kkDDDkk.', '...kkk...'],
+    ],
+    [
+      ['....kkkk....', '..kkTHHTkk..', '.kTTTtttTMk.', 'kTTttttMMMDk', 'ktttMMkMMDDk', 'kMMMMMkDDDDk', 'kMMMDDDDDDDk', '.kDDDDDDDDk.', '..kkkkkkkk..'],
+      ['...kkkk.....', '..kGgGGkkk..', '.kgGgTTttMk.', 'kTgtttttMMk.', 'kTttMMMMMDDk', 'ktttMkMMDDDk', 'kMMMMkDDDDDk', '.kMDDDDDDDk.', '..kkkkkkkk..'],
+    ],
+    [
+      ['.....kkkk.......', '...kkTHHTk.kkk..', '..kTTttttTkTHTk.', '.kTttttttMkttMk.', 'kTtttttMMMkMMMDk', 'kttttMMMMDDkMDDk',
+        'kMtMMMMMDDDkDDDk', 'kMMMMMMDDDDDkDDk', 'kMMMMDDDDDDDDDDk', '.kDMDDDDDDDDDDk.', '..kkDDDDDDDDkk..', '....kkkkkkkk....'],
+      ['......kkkkk.....', '....kkGgGGGkk...', '..kkTgGgggGTkk..', '.kTTTtggtttTMMk.', 'kTTtttttttMMMMDk', 'kTtttttMMMMMDDDk',
+        'ktttMMMkMMMDDDDk', 'kMMMMMMkkMDDDDDk', 'kMMMMMDDDkDDDDDk', '.kMDDDDDDDDDDDk.', '..kkDDDDDDDDkk..', '....kkkkkkkk....'],
+    ],
+  ];
   function rock(size, v, snow) {
-    const dims = [[9, 7], [12, 9], [16, 12]][size];
-    const W = dims[0], H = dims[1], b = new Buf(W, H);
-    const cx = W / 2, cy = H * 0.58, rx = W / 2 - 0.6, ry = H * 0.45;
-    const mask = new Uint8Array(W * H);
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      const nx = (x + 0.5 - cx) / rx, ny = (y + 0.5 - cy) / ry;
-      let r = nx * nx + ny * ny;
-      r += (G.hash2(Math.floor(Math.atan2(ny, nx) * 3), v, 13) - 0.5) * 0.25;
-      if (r <= 1 && y < H - 1) mask[y * W + x] = 1;
+    const b = fromRows(ROCKS[size][v], ROCK_TONES);
+    if (snow) for (let x = 0; x < b.w; x++) for (let y = 0; y < b.h - 2; y++) {
+      const c = b.get(x, y), up = b.get(x, y - 1);
+      if (c && c !== ROCK_TONES.k && (!up || up === ROCK_TONES.k)) { b.set(x, y, '#ffffff'); if (b.get(x, y + 1) !== ROCK_TONES.k && y < b.h * 0.45) b.set(x, y + 1, '#d6dce6'); }
     }
-    const m = (x, y) => (x >= 0 && y >= 0 && x < W && y < H ? mask[y * W + x] : 0);
-    const tones = ['#262b44', '#3a4466', '#5a6988', '#8b9bb4', '#c0cbdc'];
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      if (!m(x, y)) continue;
-      const d = Math.hypot(x + 0.5 - cx * 0.6, y + 0.5 - cy * 0.45) / (W * 0.75);
-      let t = d < 0.3 ? 4 : d < 0.62 ? 3 : d < 0.9 ? 2 : 1;
-      if (!m(x, y + 1) || !m(x + 1, y)) t = 0;
-      b.set(x, y, tones[t]);
-    }
-    // rachadura
-    if (size > 0) { const x0 = Math.floor(W * 0.55) + (v % 2); for (let k = 0; k < 3; k++) if (m(x0 + (k > 1 ? 1 : 0), 3 + k)) b.set(x0 + (k > 1 ? 1 : 0), 3 + k, tones[1]); }
-    if (snow) for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) if (m(x, y) && !m(x, y - 1)) { b.set(x, y, P.white); if (m(x, y + 1) && y < H * 0.4) b.set(x, y + 1, P.silver); }
     return b.canvas();
   }
 
@@ -18770,13 +19152,14 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   };
 
   // ---------- pessoas ----------
+  // 0.16: rosto com sombra do lado direito, cintura (o cinto escuro) e as mãos soltas embaixo, em vez do caixote
   const HEAD = {
-    FM: ['.kkkkkk.', 'khhhhhhk', 'khHhhhhk', 'khsssshk', 'ksessesk', '.kssssk.', 'kcccccck', 'scccccCs', 'scccccCs', 'kcccccCk', '.kCCCCk.'],
-    FF: ['.kkkkkk.', 'khhhhhhk', 'khHhhhhk', 'khsssshk', 'hsessesh', 'hhsssshh', 'hcccccch', 'scccccCs', 'scccccCs', 'kcccccCk', 'kCCCCCCk'],
-    BM: ['.kkkkkk.', 'khhhhhhk', 'khHhhhhk', 'khhhhhhk', 'khhhhhhk', '.khhhhk.', 'kcccccck', 'sCccccCs', 'sCccccCs', 'kCccccCk', '.kCCCCk.'],
-    BF: ['.kkkkkk.', 'khhhhhhk', 'khHhhhhk', 'khhhhhhk', 'hhhhhhhh', 'hhhhhhhh', 'hhhhhhhh', 'sChhhhCs', 'sCccccCs', 'kCccccCk', 'kCCCCCCk'],
-    SM: ['.kkkkk..', 'khhhhhk.', 'khHhhhhk', 'khhhsssk', 'khhssesk', '.khsssk.', '.kcccck.', '.kccsck.', '.kccsck.', '.kcccck.', '.kCCCCk.'],
-    SF: ['.kkkkk..', 'khhhhhk.', 'khHhhhhk', 'khhhsssk', 'hhhssesk', 'hhhsssk.', 'hhcccck.', '.hccsck.', '.kccsck.', '.kcccck.', 'kCCCCCk.'],
+    FM: ['.kkkkkk.', 'khhhhhhk', 'khHhhhhk', 'khsssSSk', 'ksesseSk', '.kssSSk.', 'kcccccCk', 'kcccccCk', 'kCCCCCCk', 'scccccCs', '.kcccCk.'],
+    FF: ['.kkkkkk.', 'khhhhhhk', 'khHhhhhk', 'hhsssShh', 'hsesseSh', 'hhssSShh', 'hkcccCkh', 'hcccccCh', '.CCCCCC.', 'scccccCs', 'kcccccCk'],
+    BM: ['.kkkkkk.', 'khhhhhhk', 'khHhhhhk', 'khhhhhhk', 'khhhhhhk', '.khhhhk.', 'kCccccCk', 'kCccccCk', 'kCCCCCCk', 'sCccccCs', '.kCCCCk.'],
+    BF: ['.kkkkkk.', 'khhhhhhk', 'khHhhhhk', 'hhhhhhhh', 'hhhhhhhh', 'hhhhhhhh', 'hhhhhhhh', 'hCccccCh', '.CCCCCC.', 'sCccccCs', 'kCccccCk'],
+    SM: ['.kkkkk..', 'khhhhhk.', 'khHhhhhk', 'khhhssSk', 'khhsseSk', '.khsSSk.', '.kcccCk.', '.kcccCk.', '.kCCCCk.', '.kcscCk.', '.kcccCk.'],
+    SF: ['.kkkkk..', 'khhhhhk.', 'khHhhhhk', 'hhhhssSk', 'hhhsseSk', 'hhhsSSk.', 'hhkccCk.', 'hhcccCk.', '.kCCCCk.', '.kcscCk.', '.kccccCk'],
   };
   const LEGS = {
     F: [['..l..l..', '..l..l..', '.ff..ff.'], ['..l..l..', '.ff..l..', '.....ff.'], ['..l..l..', '..l..ff.', '.ff.....']],
@@ -19910,6 +20293,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     return b.canvas();
   }
 
+  // 0.16: gente e bicho saem com o mesmo acabamento de luz das casas
+  for (const k of ['personSheet', 'kidSheet', 'capiSheet', 'capiDead', 'wolfSheet', 'beastSheet', 'beastDead', 'bundle', 'birdFly', 'jacareWater']) {
+    const f = A[k];
+    if (f) A[k] = function (...a) { return A.polishWith(() => f.apply(this, a)); };
+  }
   A.build = function () {
     const S = A.spr = {};
     S.broad = [0, 1, 2, 3].map((s) => [0, 1, 2].map((v) => broadTree(v, s)));
@@ -19918,6 +20306,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     S.holyBush = [0, 1, 2, 3, 4, 5].map((f) => bush(f, 0, true));   // Etapa 11
     S.rock = [0, 1, 2].map((sz) => [false, true].map((sn) => [0, 1].map((v) => rock(sz, v, sn))));
     S.stump = [stump(false), stump(true)];
+    polishOn = true;   // 0.16: daqui até os itens do estoque, o acabamento de luz
     S.grave = grave().canvas();
     S.fire = [0, 1, 2].map((f) => fireFrame(f, 1));
     S.fireOut = fireBase(false).canvas();
@@ -19945,6 +20334,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     for (const k of ['feijao', 'milho', 'abobora', 'mandioca', 'ovos', 'leite']) S.item[k] = item10(k);   // Etapa 10
     for (const k of ['carvao', 'minerio', 'prata', 'ouro', 'gemas', 'ferro', 'joias']) S.item[k] = item12(k);   // Etapa 12
     S.item.caca = S.item.carne; S.item.cria = S.item.ovos; S.item.racao = S.item.milho; S.item.cerca = S.item.madeira;
+    polishOn = false;
     // sombra
     const ellipse = (w, h, a) => {
       const [c, x] = mk(w, h);
@@ -20027,13 +20417,16 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   }
   function buildPal() {
     PAL = A.TERRAIN.map((seas) => { const o = []; for (let t = 0; t < 9; t++) o[t] = seas[t].map(pack); return o; });
-    PAL.foam = [pack('#c8f4ff'), pack('#c8f4ff'), pack('#dff4ff'), pack('#eef6fb')];
-    PAL.wet = [pack('#b0845a'), pack('#b4885c'), pack('#a8805a'), pack('#a8a2a0')];
-    PAL.detail = A.DETAIL.map((d) => ({ tuft: pack(d.tuft), flowers: d.flowers.map(pack) }));
-    PAL.pebble = [pack('#8b9bb4'), pack('#5a6988'), pack('#c0cbdc')];
+    PAL.foam = [pack('#cfe6e2'), pack('#cfe6e2'), pack('#d8e6dc'), pack('#eef3f6')];
+    PAL.wet = [pack('#8a7048'), pack('#8e744a'), pack('#86704e'), pack('#a29c98')];
+    PAL.detail = A.DETAIL.map((d) => ({ tuft: pack(d.tuft), tip: pack(d.tip), flowers: d.flowers.map(pack), leaf: d.leaf.map(pack) }));
+    PAL.pebble = [pack('#938a8c'), pack('#6d6672'), pack('#bdb2a6')];
     PAL.snowSpark = pack('#ffffff');
   }
 
+  // trama ordenada 4x4 (de -0.5 a 0.5) e os tufos de capim desenhados à mão (l = ponta clara, d = base escura)
+  const BAYER4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => v / 16 - 0.47);
+  const TUFTS = [['..l..', 'l.d.l', '.ddd.'], ['.l.', 'ld.', '.d.'], ['l.l', '.d.'], ['l', 'd'], ['.l..', 'ld.l', '.dd.']];
   // ruído de valor suave numa grade de 2^sh px
   function vnoise(wx, wy, sh, seed) {
     const gx = wx >> sh, gy = wy >> sh, s = 1 << sh;
@@ -20060,6 +20453,35 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     return top + (bot - top) * ty;
   }
 
+  // 0.16: o mundo inteiro numa imagem pequena (OVP px por tile), para o zoom bem de longe; refeita só quando muda o
+  // mundo ou a estação
+  const OVP = 3;
+  let ovKey = '', ovImg = null;
+  function overview(w, season) {
+    const key = w.seed + ':' + w.W + ':' + season;
+    if (key === ovKey && ovImg) return ovImg;
+    if (!PAL) buildPal();
+    const N = w.W * OVP, M = w.H * OVP, [c, x] = A.mk(N, M);
+    const img = x.createImageData(N, M), buf = new Uint32Array(img.data.buffer), pal = PAL[season], shade = shadeField(w);
+    const tree = pal[T.FOREST][0], rock = PAL.pebble[0], bush = pal[T.FOREST][2];
+    for (let ty = 0; ty < w.H; ty++) for (let tx = 0; tx < w.W; tx++) {
+      const i = ty * w.W + tx, t = w.tile[i], tones = pal[t];
+      let tone = 1;
+      if (!IS_WATER[t]) { const d = shade[i]; if (d > 0.03) tone = 2; else if (d < -0.03) tone = 0; }
+      else if (t === T.DEEP) tone = w.elev[i] < 0.2 ? 0 : w.elev[i] < 0.27 ? 1 : 2;
+      const o = w.objGrid[i] >= 0 ? w.objs[w.objGrid[i]] : null, k = o ? o.k : '';
+      for (let py = 0; py < OVP; py++) for (let px = 0; px < OVP; px++) {
+        let col = tones[tone];
+        if (k === 'tree' && (px + py) % 3 !== 2) col = tree;
+        else if (k === 'rock' && px === 1 && py >= 1) col = rock;
+        else if (k === 'bush' && px === 1 && py === 1) col = bush;
+        buf[(ty * OVP + py) * N + tx * OVP + px] = col;
+      }
+    }
+    x.putImageData(img, 0, 0);
+    ovKey = key; ovImg = c;
+    return c;
+  }
   function renderChunk(w, cx, cy, season) {
     if (!PAL) buildPal();
     const [c, x] = A.mk(CPX, CPX);
@@ -20104,15 +20526,17 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
               let tone = e < 0.2 ? 0 : e < 0.27 ? 1 : 2;
               if (h < 0.12 && tone > 0) tone--;
               col = n2 ? tones[2] : tones[tone];
-            } else col = n2 ? tones[2] : (h < 0.05 ? tones[2] : tones[1]);
+            } else col = n2 ? tones[2] : tones[1];
+            // ondinhas: traços curtos e desencontrados, em vez de pontos soltos
+            if (!n2 && (wy + ((wx >> 3) & 1) * 3) % 6 === 0 && G.hash2(wx >> 2, wy, seed + 13) < 0.3) col = tones[2];
           }
         } else {
+          // manchas grandes de tom, com a borda em pontilhado ordenado (a trama de quem desenha pixel, não ruído)
           let tone = 1;
-          const hb = vnoise(wx, wy, 4, seed + 21);
-          if (hb < 0.3) tone = hb < 0.24 || h < 0.35 ? 0 : 1;
-          else if (hb > 0.74) tone = hb > 0.8 || h < 0.35 ? 2 : 1;
-          if (h < 0.05) tone = 0; else if (h > 0.965) tone = 2;
-          const dE = SH[k] + (h - 0.5) * 0.012;
+          const bay = BAYER4[(wy & 3) * 4 + (wx & 3)];
+          const hb = vnoise(wx, wy, 5, seed + 21) + bay * 0.07;
+          if (hb < 0.33) tone = 0; else if (hb > 0.69) tone = 2;
+          const dE = SH[k] + bay * 0.01;
           const th = (t === T.HILL || t === T.MOUNTAIN) ? 0.018 : 0.042;
           if (dE > th) tone = Math.min(2, tone + 1); else if (dE < -th) tone = Math.max(0, tone - 1);
           col = tones[tone];
@@ -20130,22 +20554,48 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       if (gx >= Wt || gy >= Ht) continue;
       const t = w.tile[gy * Wt + gx];
       if (IS_WATER[t]) continue;
-      for (let n = 0; n < 3; n++) {
-        const hx = G.hash2(gx * 3 + n, gy, seed + 31), hy = G.hash2(gx, gy * 3 + n, seed + 37), hk = G.hash2(gx + n, gy - n, seed + 41);
-        const px = tx * TS + 1 + Math.floor(hx * 13), py = ty * TS + 2 + Math.floor(hy * 13);
-        if (at(px, py) !== t) continue;
-        const o = py * CPX + px;
-        if (t === T.SAND || t === T.MOUNTAIN) {
-          if (hk < 0.45) { buf[o] = PAL.pebble[1]; if (px + 1 < CPX) buf[o + 1] = PAL.pebble[0]; if (py > 0) buf[o - CPX] = PAL.pebble[2]; }
-        } else if (season === 3) {
-          if (hk < 0.3) buf[o] = PAL.snowSpark;
-          else if (hk < 0.5 && px > 0 && px + 1 < CPX && py > 0) { buf[o] = det.tuft; buf[o - CPX - 1] = det.tuft; }
-        } else if (hk < 0.62) {
-          if (px > 0 && px + 1 < CPX && py > 0) { buf[o] = det.tuft; buf[o - CPX - 1] = det.tuft; buf[o - CPX + 1] = det.tuft; }
-        } else if (det.flowers.length && hk < 0.62 + (season === 0 ? 0.3 : 0.12) && t !== T.FOREST) {
-          const f = det.flowers[Math.floor(G.hash2(gx, gy, seed + n + 51) * det.flowers.length)];
-          buf[o] = f;
-          if (px > 0 && px + 1 < CPX && py > 0 && py + 1 < CPX && season === 0) { buf[o - 1] = f; buf[o + 1] = f; buf[o - CPX] = f; buf[o + CPX] = det.tuft; }
+      // 0.16: o capim nasce em touceiras (onde a mancha é densa, muitos tufos; fora dela, quase nada) e a flor em
+      // canteiros de uma cor só. Antes, um tufo e uma flor de cor sorteada por tile: o confete que denunciava o código
+      const put = (px, py, c) => { if (px >= 0 && py >= 0 && px < CPX && py < CPX && at(px, py) === t) buf[py * CPX + px] = c; };
+      const stamp = (st, px, py) => {
+        for (let r = 0; r < st.length; r++) for (let q = 0; q < st[r].length; q++) {
+          const ch = st[r][q];
+          if (ch !== '.') put(px + q - (st[r].length >> 1), py + r - st.length + 1, ch === 'l' ? det.tip : det.tuft);
+        }
+      };
+      const dens = vnoise(gx * TS, gy * TS, 6, seed + 33), hk0 = G.hash2(gx, gy, seed + 41);
+      if (t === T.SAND || t === T.MOUNTAIN) {
+        for (let n = 0; n < 2; n++) {
+          if (G.hash2(gx + n, gy - n, seed + 41) > 0.4) continue;
+          const px = tx * TS + 2 + Math.floor(G.hash2(gx * 3 + n, gy, seed + 31) * 12), py = ty * TS + 3 + Math.floor(G.hash2(gx, gy * 3 + n, seed + 37) * 11);
+          put(px, py, PAL.pebble[1]); put(px + 1, py, PAL.pebble[0]); put(px, py - 1, PAL.pebble[2]);
+        }
+        continue;
+      }
+      const nT = season === 3 ? (hk0 < 0.4 ? 1 : 0) : t === T.FOREST ? 2 : dens > 0.62 ? 5 : dens > 0.45 ? 2 : hk0 < 0.5 ? 1 : 0;
+      for (let n = 0; n < nT; n++) {
+        const hx = G.hash2(gx * 3 + n, gy, seed + 31), hy = G.hash2(gx, gy * 3 + n, seed + 37), hs = G.hash2(gx + n, gy - n, seed + 43);
+        const px = tx * TS + 2 + Math.floor(hx * 12), py = ty * TS + 3 + Math.floor(hy * 12);
+        if (season === 3) { if (hs < 0.5) put(px, py, PAL.snowSpark); else stamp(TUFTS[3], px, py); continue; }
+        stamp(TUFTS[Math.floor(hs * TUFTS.length)], px, py);
+      }
+      if (t === T.FOREST) {
+        // chão da mata: folha caída, uma ou duas
+        if (det.leaf.length) for (let n = 0; n < 2; n++) {
+          const hl = G.hash2(gx - n, gy + n * 7, seed + 61);
+          if (hl < 0.45) put(tx * TS + 1 + Math.floor(G.hash2(gx, gy + n, seed + 63) * 14), ty * TS + 1 + Math.floor(G.hash2(gx + n, gy, seed + 67) * 14), det.leaf[Math.floor(hl * 9) % det.leaf.length]);
+        }
+      } else if (det.flowers.length) {
+        const fp = vnoise(gx * TS, gy * TS, 6, seed + 57) + (hk0 - 0.5) * 0.12;
+        if (fp > (season === 0 ? 0.6 : 0.7)) {
+          const f = det.flowers[Math.floor(G.hash2(gx >> 2, gy >> 2, seed + 59) * det.flowers.length)];
+          const nf = 1 + Math.floor(G.hash2(gx, gy, seed + 53) * (season === 0 ? 4 : 3));
+          for (let n = 0; n < nf; n++) {
+            const px = tx * TS + 2 + Math.floor(G.hash2(gx * 5 + n, gy, seed + 71) * 12), py = ty * TS + 3 + Math.floor(G.hash2(gx, gy * 5 + n, seed + 73) * 11);
+            put(px, py + 1, det.tuft);
+            put(px, py, f);
+            if (season === 0 && n % 2 === 0) { put(px - 1, py, f); put(px + 1, py, f); put(px, py - 1, f); }
+          }
         }
       }
     }
@@ -20238,7 +20688,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // chunks que precisam ser refeitos (um caminho mudou): o velho segue na tela até o novo ficar pronto
   const dirty = new Set();
   function dirtyTile(i) {
-    const Wt = C.MAP, x = i % Wt, y = (i / Wt) | 0;
+    const Wt = lastS ? lastS.world.W : C.MAP, x = i % Wt, y = (i / Wt) | 0;
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
       const tx = x + dx, ty = y + dy;
       if (tx < 0 || ty < 0 || tx >= Wt || ty >= Wt) continue;
@@ -20357,6 +20807,18 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       for (let i = 0; i < 10; i++) spawn({ x: e.x * TS + (Math.random() - 0.5) * 6, y: e.y * TS - 4 + (Math.random() - 0.5) * 6, vx: (Math.random() - 0.5) * 30, vy: -12 - Math.random() * 16, g: 60, life: 0.7, col: Math.random() < 0.7 ? '#e43b44' : '#ffffff' });
     }
   };
+  // 0.16: o que paira no ar conforme a estação, só na área à vista: folhas secas no outono, pétalas na primavera,
+  // borboletas de dia no verão e na primavera (wob: vai e vem de lado; flap: bate as asas)
+  const view = { x0: 0, y0: 0, x1: 0, y1: 0 };
+  const LEAF = ['#e4a672', '#b86f50', '#be4a2f', '#feae34'], PETAL = ['#f6757a', '#ffd0dc', '#fff4f4'], WING = ['#fee761', '#ffffff', '#f77622', '#2ce8f5'];
+  function ambient(S, dt) {
+    if (parts.length > 320 || sc < 1) return;
+    const se = S.ck.season, dia = darkness(S.ck.hour) < 0.25, area = Math.max(1, (view.x1 - view.x0) * (view.y1 - view.y0) / (TS * TS * 600));
+    const rx = () => view.x0 + Math.random() * (view.x1 - view.x0), ry = () => view.y0 + Math.random() * (view.y1 - view.y0);
+    if (se === 2 && Math.random() < dt * 5 * area * wind) spawn({ x: rx(), y: view.y0 + Math.random() * (view.y1 - view.y0) * 0.6, vx: 7 * wind + Math.random() * 5, vy: 5 + Math.random() * 4, g: 0, life: 3 + Math.random() * 3, col: LEAF[(Math.random() * 4) | 0], wob: 9, ph: Math.random() * 6, sz: Math.random() < 0.4 ? 2 : 1 });
+    if (se === 0 && !S.precip && Math.random() < dt * 2 * area) spawn({ x: rx(), y: ry(), vx: 4 * wind + Math.random() * 3, vy: 2 + Math.random() * 2, g: 0, life: 3 + Math.random() * 2, col: PETAL[(Math.random() * 3) | 0], wob: 6, ph: Math.random() * 6 });
+    if ((se === 0 || se === 1) && dia && !S.precip && Math.random() < dt * 0.5 * area) spawn({ x: rx(), y: ry(), vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 6, g: 0, life: 6 + Math.random() * 5, col: WING[(Math.random() * 4) | 0], wob: 14, ph: Math.random() * 6, flap: 1 });
+  }
   function updateParts(dt, S, now) {
     for (let i = parts.length - 1; i >= 0; i--) {
       const p = parts[i];
@@ -20364,8 +20826,10 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       if (p.life <= 0) { parts.splice(i, 1); continue; }
       p.vy += (p.g || 0) * dt;
       p.x += p.vx * dt; p.y += p.vy * dt;
+      if (p.wob) { p.ph += dt * (p.flap ? 2.2 : 3.1); p.x += Math.sin(p.ph) * p.wob * dt; if (p.flap) p.y += Math.cos(p.ph * 1.7) * p.wob * 0.6 * dt; }
     }
     if (!S) return;
+    ambient(S, dt);
     // festa: notas de música sobre quem dança; cantoria: sobre o fogo; a flauta (Etapa 8): sobre quem toca
     const flute = S.life && S.life.story && S.life.story.on && S.life.story.music ? S.life.story.teller : 0;
     for (const q of S.people) {
@@ -20449,6 +20913,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (!w) return;
     sc = scale();
     const season = S ? S.ck.season : 0;
+    const Nw = G.Narr;
+    wind = !S ? 1 : Nw && (Nw.is(S, 'tempestade') || Nw.is(S, 'nevasca')) ? 2.4 : S.precip ? 1.5 : season === 2 ? 1.2 : 1;
     const key = w.seed + ':' + season;
     if (key !== chunkKey) { chunks.clear(); chunkKey = key; }
     ox = Math.round(W / 2 - cam.x * sc); oy = Math.round(H / 2 - cam.y * sc);
@@ -20460,7 +20926,16 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const cx0 = Math.max(0, Math.floor(vx0 / CPX)), cy0 = Math.max(0, Math.floor(vy0 / CPX));
     const cx1 = Math.min(Math.ceil(w.W / CH) - 1, Math.floor(vx1 / CPX)), cy1 = Math.min(Math.ceil(w.H / CH) - 1, Math.floor(vy1 / CPX));
     let budget = R.chunkBudget || 3;   // pedaços do chão refeitos por quadro (main.js sobe isto para um quadro inteiro de uma vez)
-    for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
+    // 0.16: de muito longe (a escolha do lugar no mapa grande), uma imagem só do mundo inteiro, com as árvores e as pedras
+    // já pintadas nela: montar 144 pedaços em alta e desenhar dez mil árvores minúsculas travava a tela por segundos
+    const far = sc * TS < 5;
+    if (far) {
+      const img = overview(w, season);
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(img, ox, oy, Math.round(w.W * TS * sc), Math.round(w.H * TS * sc));
+      ctx.imageSmoothingEnabled = sc < 1;
+    }
+    if (!far) for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
       const k = cx + ',' + cy;
       let c = chunks.get(k);
       if ((!c || dirty.has(k)) && budget > 0) { budget--; dirty.delete(k); c = renderChunk(w, cx, cy, season); chunks.set(k, c); }
@@ -20490,7 +20965,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     // lista ordenada por y
     const list = [], fence = S ? w.fence : null;
     const levado = {};
-    for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
+    if (!far) for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
       if (fence && fence[ty * w.W + tx]) list.push({ y: ty * TS + 13, fe: ty * w.W + tx });   // cercas (Etapa 10)
       const oi = w.objGrid[ty * w.W + tx];
       if (oi < 0) continue;
@@ -20590,12 +21065,16 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     }
     if (spears.length) drawSpears(now);
     // partículas
+    view.x0 = vx0; view.y0 = vy0; view.x1 = vx1; view.y1 = vy1;
     updateParts(dt, S, now);
     for (const p of parts) {
       if (p.spr) blit(A.spr[p.spr], p.x - 2, p.y - 2, Math.min(1, p.life / 1.2));
       else if (p.col === 'smoke') { const a = Math.min(1, p.life / 2.2); rect(p.x, p.y, 2, 2, 'rgba(192,203,220,' + (a * 0.5).toFixed(2) + ')'); }
-      else rect(p.x, p.y, 1, 1, p.col);
+      else if (p.flap) { const open = Math.floor(now / 110 + p.ph * 10) % 2; rect(p.x - (open ? 1 : 0), p.y, open ? 3 : 1, 1, p.col); rect(p.x, p.y + 1, 1, 1, '#3f2832'); }
+      else rect(p.x, p.y, p.sz || 1, 1, p.col);
     }
+    // 0.16: sombras de nuvem passando devagar pelo chão (de dia, com o céu limpo ou nublado)
+    if (S) drawClouds(S, w, now);
     // névoa sobre o que o povo ainda não viu
     if (S && S.seen) drawFog(S);
     // sobreposições do jogador
@@ -20837,15 +21316,28 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     for (let x = X0; x <= X1; x += 8) { post(x, Y0); post(x, Y1); }
     for (let y = Y0 + 8; y < Y1; y += 8) { post(X0, y); post(X1 - 1, y); }
   }
+  // 0.16: vento nas copas. O alto da árvore anda um pixel de lado numa onda que atravessa o mapa (a rajada passa de
+  // árvore em árvore); o tronco fica parado. Na chuva o vento sobe, na tempestade e na nevasca mais ainda
+  let wind = 1;
+  function swayOf(o, now) {
+    const ph = now / 1000 * 1.25 - o.x * 0.31 - o.y * 0.12;
+    return Math.round((Math.sin(ph) + Math.sin(ph * 0.47 + o.id) * 0.45) * 0.62 * wind);
+  }
+  function blitTree(img, wx, wy, trunk, dx) {
+    if (!dx) { blit(img, wx, wy); return; }
+    const cut = img.height - trunk, X = (v) => Math.round(v * sc + ox), Y = (v) => Math.round(v * sc + oy), w = Math.round(img.width * sc);
+    ctx.drawImage(img, 0, 0, img.width, cut, X(wx + dx), Y(wy), w, Y(wy + cut) - Y(wy));
+    ctx.drawImage(img, 0, cut, img.width, trunk, X(wx), Y(wy + cut), w, Y(wy + img.height) - Y(wy + cut));
+  }
   function drawObj(o, season, snow, tiny, st, now) {
     const bx = o.x * TS, by = o.y * TS;
     const S = A.spr;
     switch (o.k) {
       case 'tree': {
-        const arau = o.sp === 'arau';
-        if (!tiny) blit(S.bigShadow, bx - 3, by + 11);
-        if (arau) blit(S.arau[season][o.v], bx - 3, by + 13 - 30);
-        else blit(S.broad[season][o.v], bx - 3, by + 13 - 23);
+        const arau = o.sp === 'arau', dx = tiny ? 0 : swayOf(o, now || 0);
+        if (!tiny) blit(S.bigShadow, bx - 3 + (dx > 0 ? 1 : 0), by + 11);
+        if (arau) blitTree(S.arau[season][o.v], bx - 3, by + 13 - 30, 8, dx);
+        else blitTree(S.broad[season][o.v], bx - 3, by + 13 - 23, 6, dx);
         break;
       }
       case 'stump': blit(S.stump[snow ? 1 : 0], bx + 3, by + 7); break;
@@ -21525,8 +22017,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   }
   function drawGhost(S, g, now) {
     if (!S) return;
-    const gi = ghostImg(g.type, g.lv, g.kind);
-    const def = C.BUILD[g.type];
+    const gi = g.type === 'centro' ? { img: A.spr.mat, dy: 0 } : ghostImg(g.type, g.lv, g.kind);   // 0.16: o centro novo
+    const def = C.BUILD[g.type] || { w: 2, h: 2 };
     blit(gi.img, g.x * TS, g.y * TS + gi.dy, 0.6);
     ctx.fillStyle = g.ok ? 'rgba(254,174,52,0.22)' : 'rgba(228,59,68,0.35)';
     ctx.fillRect(Math.round(g.x * TS * sc + ox), Math.round(g.y * TS * sc + oy), Math.round(def.w * TS * sc), Math.round(def.h * TS * sc));
@@ -21537,16 +22029,6 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       const bob = Math.round(Math.sin((now || 0) / 260) * 0.7 + 0.7), mx = x0 + (w >> 1), my = y0 + (h >> 1);
       arrowMark(mx, y0 - 4 - bob, 0, col); arrowMark(x0 + w + 3 + bob, my, 1, col);
       arrowMark(mx, y0 + h + 3 + bob, 2, col); arrowMark(x0 - 4 - bob, my, 3, col);
-    }
-    // o armazém tem que ficar perto do estoque: mostra até onde
-    if (def.near) {
-      const cx = (S.camp.x + 1) * TS * sc + ox, cy = (S.camp.y + 1) * TS * sc + oy;
-      ctx.save();
-      ctx.lineWidth = Math.max(1, dpr * 1.5);
-      ctx.setLineDash([4 * dpr, 4 * dpr]);
-      ctx.strokeStyle = 'rgba(254,174,52,0.8)';
-      ctx.beginPath(); ctx.arc(cx, cy, (def.near + 1) * TS * sc, 0, Math.PI * 2); ctx.stroke();
-      ctx.restore();
     }
   }
   // pincel do caminho: os passos que o dedo (ou o mouse) está marcando
@@ -21590,6 +22072,38 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   }
 
   // Etapa 6: arco-íris, estrela cadente, araras e vaga-lumes (por cima da noite, para brilhar)
+  // 0.16: a sombra de uma nuvem: várias manchas redondas e macias numa tela pequena, esticada no chão
+  let cloudImg = null;
+  function cloudShape() {
+    const [c, x] = A.mk(96, 56);
+    const lobes = [[30, 30, 22], [52, 24, 20], [70, 32, 18], [44, 38, 16], [20, 36, 12], [80, 26, 11]];
+    for (const [cx, cy, r] of lobes) {
+      const g = x.createRadialGradient(cx, cy, 0, cx, cy, r);
+      g.addColorStop(0, 'rgba(18,22,48,0.55)'); g.addColorStop(0.65, 'rgba(18,22,48,0.35)'); g.addColorStop(1, 'rgba(18,22,48,0)');
+      x.fillStyle = g; x.fillRect(cx - r, cy - r, r * 2, r * 2);
+    }
+    return c;
+  }
+  function drawClouds(S, w, now) {
+    const dark = darkness(S.ck.hour);
+    if (dark > 0.4) return;
+    if (!cloudImg) cloudImg = cloudShape();
+    const fade = 1 - dark / 0.4, t = now / 1000, Wp = w.W * TS, Hp = w.H * TS;
+    const n = Math.round(w.W * w.H / 1400) + 4, spanX = Wp + 1400, spanY = Hp + 900;
+    const vx0 = -ox / sc, vy0 = -oy / sc, vx1 = (W - ox) / sc, vy1 = (H - oy) / sc;
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    for (let k = 0; k < n; k++) {
+      const hx = G.hash2(k, 1, w.seed), hy = G.hash2(k, 2, w.seed), hs = G.hash2(k, 3, w.seed);
+      const s = 3.2 + hs * 3.6, cw = 96 * s, ch = 56 * s;
+      const x = ((hx * spanX + t * (5 + hs * 4) * wind) % spanX) - 900, y = ((hy * spanY + t * 1.6 * wind) % spanY) - 600;
+      if (x + cw < vx0 || x > vx1 || y + ch < vy0 || y > vy1) continue;
+      ctx.globalAlpha = (0.16 + hs * 0.1) * fade * (S.precip ? 0.6 : 1);
+      ctx.drawImage(cloudImg, Math.round(x * sc + ox), Math.round(y * sc + oy), Math.round(cw * sc), Math.round(ch * sc));
+    }
+    ctx.restore();
+  }
+
   function drawSky(S, now) {
     const l = S.life;
     if (l && l.rainbowUntil > S.t) {
@@ -22773,6 +23287,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     $('#btn-tree img').src = ic('arvore');
     $('#btn-tree').addEventListener('click', () => UI.tree());
     $('#tree-close').addEventListener('click', () => { $('#modal-tree').hidden = true; });
+    // 0.16: o nome do lugar e o centro
+    const vilaForm = (on) => { $('#vila-form').hidden = !on; $('#btn-vila-nome').parentElement.hidden = on; if (on) { const v = G.Obras.povoacao(S); $('#vila-nome').value = v.nome || G.Obras.nomeSugerido(S, 1); $('#vila-nome').focus(); $('#vila-nome').select(); } };
+    $('#btn-vila-nome').addEventListener('click', () => { if (S) vilaForm(true); });
+    $('#vila-cancel').addEventListener('click', () => vilaForm(false));
+    $('#vila-form').addEventListener('submit', (e) => { e.preventDefault(); if (S && G.Obras.renomear(S, $('#vila-nome').value)) { vilaForm(false); UI.update(0, true); } });
+    $('#btn-centro').addEventListener('click', () => { if (UI.hooks.centro) UI.hooks.centro(); });
     $('#btn-disc img').src = ic('lasca');
     $('#btn-disc').addEventListener('click', () => UI.disc());
     $('#disc-close').addEventListener('click', () => { $('#modal-disc').hidden = true; });
@@ -23227,6 +23747,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     for (const p of S.people) if (p.alive) alive++;
     setText($('#povo-title'), 'Seu povo · ' + alive);
     if (!UI.isOpen('povo')) return;
+    // 0.16: o nome do lugar, o título e quanto falta para o próximo
+    if (G.Obras && G.Obras.povoacao) {
+      const v = G.Obras.povoacao(S);
+      setText($('#vila-label'), v.label);
+      setText($('#vila-next'), v.prox ? '· ' + v.prox.t.toLowerCase() + ' com ' + v.prox.n + ' pessoas' : '');
+      setText($('#btn-vila-nome'), v.nome ? 'Trocar o nome' : 'Dar nome');
+    }
     const ord = order(), compact = alive > COMPACT_AT;
     const key = (compact ? 'c' : 'f') + listQ;
     if (ord !== listDrawn || key !== list._key) {
@@ -24953,7 +25480,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   const C = G.CFG, R = G.R, UI = G.UI, Sim = G.Sim, Save = G.Save, A = G.Art, W = G.W, Net = G.Net, God = G.God;
   const $ = (s) => document.querySelector(s);
   const TS = C.TILE;
-  const ZOOMS = [1, 2, 3, 4, 5, 6];
+  const ZOOMS = [0.5, 1, 2, 3, 4, 5, 6];   // 0.16: 0,5 para ver de longe o mapa maior
+  // 0.16: o tamanho e o nome do que se posiciona (as obras, e o centro, que não é obra: é o lugar do estoque)
+  const bdef = (t) => C.BUILD[t] || (t === 'centro' ? { name: 'Novo centro', w: 2, h: 2 } : null);
 
   let mode = 'title';
   let S = null, speed = 1, acc = 0, lastT = 0, lastSave = 0, lastCloud = 0, cloudBusy = false;
@@ -24979,11 +25508,14 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 
   // ---------- conta ----------
   const session = () => (Net.enabled() ? Net.session() : null);
+  // 0.16: o mundo mais recente desta conta (ou sem conta) que ainda está de pé: { id, d }
   function localSaveFor(email) {
-    const d = Save.read();
-    if (!d || d.game !== 'genesis') return null;
-    if ((d.conta || '') !== (email || '')) return null;
-    return d;
+    for (const m of Save.list()) {
+      if (m.over || (m.conta || '') !== (email || '')) continue;
+      const d = Save.read(m.id);
+      if (d && d.game === 'genesis' && !d.over) return { id: m.id, d };
+    }
+    return null;
   }
   async function login(tab, f) {
     let res;
@@ -25030,17 +25562,22 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     $('#btn-ranking').hidden = !net;
     $('#acct-line').hidden = !s;
     if (s) $('#acct-line').textContent = 'Conectado como ' + s.nome;
-    const d = localSaveFor(s ? s.email : '');
+    const loc = localSaveFor(s ? s.email : ''), d = loc && loc.d;
     const cloud = s && s.mundo && !s.mundo.fim ? s.mundo : null;
     const has = (d && !d.over) || !!cloud;
     $('#btn-continue').hidden = !has;
     $('#continue-info').hidden = !has;
+    // 0.16: todos os mundos guardados neste aparelho
+    const nm = Save.list().length;
+    $('#btn-mundos').hidden = nm < 1 || (nm === 1 && has && !cloud);
+    $('#btn-mundos').textContent = 'Seus mundos (' + nm + ')';
     if (has) {
       // a data e quantos são (os nomes ficam no jogo: com uma aldeia grande, a linha não cabia)
       const gente = (n) => (n === 1 ? '1 pessoa' : n + ' pessoas');
       if (d && !d.over) {
         const n = d.people.filter((p) => p.alive).length;
-        $('#continue-info').textContent = Sim.dateText(d.t) + ' · ' + (n ? gente(n) : 'ninguém vivo');
+        const m = Save.list().find((x) => x.id === loc.id);
+        $('#continue-info').textContent = (m && m.casal ? m.casal + ' · ' : '') + Sim.dateText(d.t) + ' · ' + (n ? gente(n) : 'ninguém vivo');
       } else {
         $('#continue-info').textContent = 'Ano ' + cloud.ano + ', ' + String(cloud.estacao).toLowerCase() + ', dia ' + cloud.dia + (cloud.vivos ? ' · ' + gente(cloud.vivos) : '') + ' (na nuvem)';
       }
@@ -25048,11 +25585,53 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     setMode('title');
   }
 
-  async function continueGame() {
+  // 0.16: a lista dos mundos guardados neste aparelho (jogar ou apagar cada um; apagar pede confirmação)
+  function openMundos() {
+    const box = $('#mundos-list'), s = session(), email = s ? s.email : '';
+    const gente = (n) => (n === 1 ? '1 pessoa' : n + ' pessoas');
+    const tam = (n) => { const z = C.MAP_SIZES.find((q) => q.n === n); return z ? z.name.toLowerCase() : n + '×' + n; };
+    box.innerHTML = '';
+    const l = Save.list();
+    if (!l.length) box.innerHTML = '<li class="small muted">Nenhum mundo guardado neste aparelho.</li>';
+    for (const m of l) {
+      const li = document.createElement('li');
+      li.className = 'mundo-row' + (m.over ? ' fim' : '');
+      const quando = m.savedAt ? new Date(m.savedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : '';
+      const info = document.createElement('div');
+      info.className = 'mundo-info';
+      const h = document.createElement('strong'); h.textContent = m.casal || 'Um casal';
+      const p1 = document.createElement('span'); p1.className = 'small';
+      p1.textContent = (m.local ? m.local.charAt(0).toUpperCase() + m.local.slice(1) + ' · ' : '') + 'mundo ' + tam(m.size) + (m.aldeia ? ' · já é aldeia' : '');
+      const p2 = document.createElement('span'); p2.className = 'small muted';
+      p2.textContent = (m.over ? 'O povo acabou' : Sim.dateText(m.t) + ' · ' + gente(m.vivos)) + (quando ? ' · jogado em ' + quando : '') + (m.conta && m.conta !== email ? ' · de outra conta' : '');
+      info.append(h, p1, p2);
+      const acts = document.createElement('div');
+      acts.className = 'mundo-acts';
+      const go = document.createElement('button');
+      go.className = 'btn btn-small btn-gold'; go.type = 'button'; go.textContent = m.over ? 'Ver' : 'Jogar';
+      go.addEventListener('click', () => continueGame(m.id));
+      const del = document.createElement('button');
+      del.className = 'btn btn-small'; del.type = 'button'; del.textContent = 'Apagar';
+      del.addEventListener('click', () => {
+        if (del.dataset.sure !== '1') { del.dataset.sure = '1'; del.textContent = 'Apagar mesmo?'; del.classList.add('danger'); setTimeout(() => { del.dataset.sure = ''; del.textContent = 'Apagar'; del.classList.remove('danger'); }, 3500); return; }
+        Save.remove(m.id);
+        openMundos();
+        showTitle();
+      });
+      acts.append(go, del);
+      li.append(info, acts);
+      box.appendChild(li);
+    }
+    $('#modal-mundos').hidden = false;
+  }
+  // id (0.16): abrir um mundo escolhido na lista; sem id, o mais recente (e o da nuvem, se for mais novo)
+  async function continueGame(id) {
     const s = session();
-    let d = localSaveFor(s ? s.email : '');
+    const loc = typeof id === 'string' && id ? { id, d: Save.read(id) } : localSaveFor(s ? s.email : '');
+    let d = loc ? loc.d : null, slot = loc ? loc.id : '';
     let nowTrusted = Date.now();
-    if (s) {
+    // a nuvem guarda um mundo por conta: só entra quando é o mesmo mundo, ou quando não se escolheu outro
+    if (s && (!id || (d && (d.conta || '') === s.email))) {
       $('#btn-continue').disabled = true; $('#btn-continue').textContent = 'Buscando seu mundo…';
       const res = await Net.call('carregar', { token: s.token });
       $('#btn-continue').disabled = false; $('#btn-continue').textContent = 'Continuar';
@@ -25061,7 +25640,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         if (res.dados) {
           let cloudD = null;
           try { cloudD = JSON.parse(res.dados); } catch (e) { cloudD = null; }
-          if (cloudD && (!d || (res.savedAt || 0) > (d.savedAt || 0) + 1000)) { cloudD.savedAt = res.savedAt; d = cloudD; }
+          const mesmo = cloudD && d && cloudD.seed === d.seed;
+          if (cloudD && (!d || ((!id || mesmo) && (res.savedAt || 0) > (d.savedAt || 0) + 1000))) {
+            if (!mesmo) { const m = Save.list().find((x) => x.seed === cloudD.seed && (x.conta || '') === s.email); slot = m ? m.id : ''; }
+            cloudD.savedAt = res.savedAt; d = cloudD;
+          }
         }
       } else if (res.sessao === false) { UI.toast('Sua sessão expirou. Entre de novo.', 'warn'); showTitle(); return; }
       else if (!d) { UI.toast(res.erro || 'Não deu para buscar o mundo.', 'warn'); return; }
@@ -25069,6 +25652,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     }
     const st = d && Save.deserialize(d);
     if (!st) { UI.toast('Não achei um mundo salvo.', 'warn'); showTitle(); return; }
+    if (slot) Save.slot = slot; else Save.newSlot();
+    $('#modal-mundos').hidden = true;
     S = st;
     enterGame();
     // o mundo seguiu com o jogo fechado
@@ -25172,13 +25757,35 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   }
 
   // ---------- escolha do local ----------
-  function newSiteWorld() {
-    siteSeed = rng.int(1, 2147483646);
-    siteWorld = W.generate(siteSeed);
+  // 0.16: o tamanho do mundo novo (fica lembrado neste aparelho)
+  let mapSize = C.MAP_NEW;
+  try { const v = +localStorage.getItem('gods.tamanho'); if (C.MAP_SIZES.some((z) => z.n === v)) mapSize = v; } catch (e) { /* sem guardar */ }
+  function sizeButtons() {
+    const box = $('#size-opts');
+    if (!box) return;
+    box.innerHTML = '';
+    for (const z of C.MAP_SIZES) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'seg' + (z.n === mapSize ? ' on' : '');
+      b.textContent = z.name; b.title = z.n + ' × ' + z.n + ' passos';
+      b.setAttribute('aria-pressed', z.n === mapSize ? 'true' : 'false');
+      b.addEventListener('click', () => {
+        if (z.n === mapSize) return;
+        mapSize = z.n;
+        try { localStorage.setItem('gods.tamanho', String(z.n)); } catch (e) { /* sem guardar */ }
+        newSiteWorld(siteSeed);
+      });
+      box.appendChild(b);
+    }
+  }
+  function newSiteWorld(keepSeed) {
+    siteSeed = typeof keepSeed === 'number' && keepSeed ? keepSeed : rng.int(1, 2147483646);
+    siteWorld = W.generate(siteSeed, mapSize);
     siteSel = null;
     R.invalidate();
     R.cam.x = siteWorld.W * TS / 2; R.cam.y = siteWorld.H * TS / 2;
-    R.cam.zoom = Math.max(0.2, R.fitZoom(siteWorld));
+    R.cam.zoom = Math.max(0.08, R.fitZoom(siteWorld));
+    sizeButtons();
     $('#seed-label').textContent = 'Mundo ' + siteSeed;
     UI.siteInfo(siteWorld, null);
     const best = W.bestSite(siteWorld);
@@ -25194,6 +25801,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     S = Sim.newGame(siteSeed, { x: siteSel.x, y: siteSel.y }, names, siteWorld);
     if (kind) G.Narr.setKind(S, kind);
     siteWorld = null;
+    Save.newSlot();   // 0.16: o mundo novo vai para uma gaveta nova; os outros continuam guardados
     enterGame();
     R.overlay.beam = { x: S.camp.x + 1, y: S.camp.y + 1, t0: performance.now() };
     save(true);
@@ -25217,7 +25825,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     lastSave = performance.now();
     const el = $('#save-status');
     const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    if (el) el.textContent = txt ? 'Salvo neste aparelho às ' + hora + '.' : 'Este navegador não deixou salvar.';
+    if (el) el.textContent = txt ? 'Salvo neste aparelho às ' + hora + '.' : Save.erro === 'cheio' ? 'Acabou o espaço deste navegador. Apague um mundo antigo em Seus mundos, na tela de início.' : 'Este navegador não deixou salvar.';
+    // avisa uma vez quando o espaço acaba (senão o jogo segue sem guardar e ninguém percebe)
+    if (!txt && Save.erro === 'cheio' && !save.avisou) { save.avisou = true; UI.toast('Sem espaço para salvar. Apague um mundo antigo em Seus mundos.', 'warn'); }
     if (s && txt && (forceCloud || performance.now() - lastCloud > C.CLOUD_SAVE_SEC * 1000)) cloudSave(txt);
     return !!txt;
   }
@@ -25254,7 +25864,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   //   lv, kind                        o nível e o tipo de casa com que o fantasma é desenhado
   //   x, y                            o tile onde o fantasma começa (já preso)
   function startPlacing(type, opts) {
-    if (mode !== 'game' || !S || !C.BUILD[type]) return;
+    if (mode !== 'game' || !S || !bdef(type)) return;
     if (!opts && placing && !placing.custom && placing.type === type) { cancelPlacing(); return; }   // o mesmo botão de novo: desiste
     cancelCasting(); stopRoad(true); cancelPlacing();
     const o = opts || {};
@@ -25289,7 +25899,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const hint = hintBox('placing'), P = placing;
     hint.innerHTML = `<div class="ph-text"><b class="ph-name"></b><span class="small muted ph-tip">Toque para posicionar, arraste para ajustar.</span><span class="small ph-why" role="status"></span></div>
       <div class="ph-actions"><button class="btn" id="place-cancel" type="button" title="Cancelar (Esc)">Cancelar</button><button class="btn btn-gold" id="place-ok" type="button" title="Confirmar (Enter)" disabled></button></div>`;
-    hint.querySelector('.ph-name').textContent = P.o.label || C.BUILD[P.type].name;
+    hint.querySelector('.ph-name').textContent = P.o.label || bdef(P.type).name;
     $('#place-ok').textContent = P.o.confirm || 'Confirmar';
     $('#place-cancel').onclick = () => cancelPlacing();
     $('#place-ok').onclick = () => confirmPlacing();
@@ -25323,14 +25933,14 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   }
   // o tile do canto de cima da obra, com ela centrada no ponto tocado
   function footprint(type, wx, wy) {
-    const d = C.BUILD[type];
+    const d = bdef(type);
     return { x: Math.floor(wx / TS - (d.w - 1) / 2), y: Math.floor(wy / TS - (d.h - 1) / 2) };
   }
   // põe o fantasma num tile (sem sair do mapa) e confere se o lugar serve
   function setGhost(x, y) {
     const P = placing;
     if (!P || !S) return;
-    const d = C.BUILD[P.type], w = S.world;
+    const d = bdef(P.type), w = S.world;
     P.x = Math.max(0, Math.min(w.W - d.w, x | 0)); P.y = Math.max(0, Math.min(w.H - d.h, y | 0));
     P.why = (P.o.canPlace ? P.o.canPlace(P.x, P.y) : Sim.canPlace(S, P.type, P.x, P.y)) || '';
     P.ok = !P.why;
@@ -25341,12 +25951,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   function pinGhost(wx, wy) { if (!placing) return; placing.pinned = true; aimGhost(wx, wy); }
   // o ponto da tela está em cima do fantasma? (com folga: o dedo é maior que o mouse, e o desenho passa do chão da obra)
   function overGhost(sx, sy, touch) {
-    const P = placing, d = C.BUILD[P.type], w = R.toWorld(sx, sy), m = (touch ? 14 : 4) / R.scale();
+    const P = placing, d = bdef(P.type), w = R.toWorld(sx, sy), m = (touch ? 14 : 4) / R.scale();
     return w.x >= P.x * TS - m && w.x <= (P.x + d.w) * TS + m && w.y >= P.y * TS - m - TS * 0.75 && w.y <= (P.y + d.h) * TS + m;
   }
   // o ponto da tela cai num tile da obra?
   function onGhost(sx, sy) {
-    const P = placing, d = C.BUILD[P.type], w = R.toWorld(sx, sy), tx = Math.floor(w.x / TS), ty = Math.floor(w.y / TS);
+    const P = placing, d = bdef(P.type), w = R.toWorld(sx, sy), tx = Math.floor(w.x / TS), ty = Math.floor(w.y / TS);
     return tx >= P.x && tx < P.x + d.w && ty >= P.y && ty < P.y + d.h;
   }
   // setas do teclado: um tile por vez; se o fantasma for sair da vista, a câmera vai atrás
@@ -25355,7 +25965,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     P.pinned = true;
     setGhost(P.x + dx, P.y + dy);
     if (follow) return;
-    const d = C.BUILD[P.type], cx = (P.x + d.w / 2) * TS, cy = (P.y + d.h / 2) * TS, s = R.toScreen(cx, cy), r = freeRect();
+    const d = bdef(P.type), cx = (P.x + d.w / 2) * TS, cy = (P.y + d.h / 2) * TS, s = R.toScreen(cx, cy), r = freeRect();
     if (s.x < r.l + 40 || s.x > r.r - 40 || s.y < r.t + 40 || s.y > r.b - 40) camTarget = { x: cx, y: cy };
   }
   // Confirmar: marca a obra (ou faz o que o fluxo pediu) e sai do modo
@@ -25691,8 +26301,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       const [a, b] = [...ptrs.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
       const z = pinch.zoom * d / pinch.d;
-      if (mode === 'site') R.cam.zoom = Math.max(0.15, Math.min(4, z));
-      else R.cam.zoom = Math.max(1, Math.min(6, z));
+      if (mode === 'site') R.cam.zoom = Math.max(0.08, Math.min(4, z));
+      else R.cam.zoom = Math.max(0.5, Math.min(6, z));
       if (follow) return;   // seguindo alguém, a pinça só aproxima e afasta
       // os dois dedos também arrastam o mapa
       const s = R.scale();
@@ -25743,7 +26353,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   function onWheel(e) {
     e.preventDefault();
     const before = R.toWorld(e.clientX, e.clientY);
-    if (mode === 'site') R.cam.zoom = Math.max(0.15, Math.min(4, R.cam.zoom * (e.deltaY < 0 ? 1.25 : 0.8)));
+    if (mode === 'site') R.cam.zoom = Math.max(0.08, Math.min(4, R.cam.zoom * (e.deltaY < 0 ? 1.25 : 0.8)));
     else {
       const i = ZOOMS.indexOf(snapZoom(R.cam.zoom));
       R.cam.zoom = ZOOMS[Math.max(0, Math.min(ZOOMS.length - 1, i + (e.deltaY < 0 ? 1 : -1)))];
@@ -26035,6 +26645,15 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       socFire: showSocFire,
       castigo: showCastigo,
       panels: () => { positionHint(); offAt = 0; },   // abriu ou fechou painel: o mapa à vista mudou
+      // 0.16: escolher o lugar do centro novo (o mesmo jeito de posicionar uma obra)
+      centro: () => {
+        if (!S || mode !== 'game') return;
+        startPlacing('centro', {
+          label: 'Novo centro', confirm: 'Mudar para cá',
+          canPlace: (x, y) => Sim.campWhy(S, x, y),
+          onConfirm: (x, y) => { if (!Sim.moveCamp(S, x, y)) return false; R.invalidate(); save(); return true; },
+        });
+      },
       birth: (pid) => {
         if (!S || S.safe || mode !== 'game') return;
         const baby = S.people.find((q) => q.id === pid);
@@ -26047,7 +26666,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         UI.birth(baby, () => { setSpeed(before || 1); save(); });
       },
     });
-    window.addEventListener('resize', () => { R.resize(); positionHint(); if (mode === 'site' && siteWorld) R.cam.zoom = Math.max(0.2, R.fitZoom(siteWorld)); });
+    window.addEventListener('resize', () => { R.resize(); positionHint(); if (mode === 'site' && siteWorld) R.cam.zoom = Math.max(0.08, R.fitZoom(siteWorld)); });
     const c = $('#view');
     c.addEventListener('pointerdown', onDown);
     c.addEventListener('pointermove', onMove);
@@ -26074,14 +26693,19 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     $('#btn-over-new').addEventListener('click', () => {
       const s = session();
       if (s) Net.call('apagar', { token: s.token }).then(() => { s.mundo = null; Net.setSession(s); });
-      Save.clear(); S = null; setMode('site'); newSiteWorld();
+      // 0.16: o mundo que acabou fica guardado (a lista mostra o fim; dá para apagar lá)
+      S = null; Save.slot = ''; setMode('site'); newSiteWorld();
     });
+    $('#btn-mundos').addEventListener('click', openMundos);
+    $('#btn-mundos-close').addEventListener('click', () => { $('#modal-mundos').hidden = true; });
+    $('#btn-mundos-new').addEventListener('click', () => { $('#modal-mundos').hidden = true; setMode('site'); newSiteWorld(); });
 
     const hot = window.claude && window.claude.hot;
     if (hot && typeof hot.snapshot === 'function') {
-      try { hot.snapshot(() => (S && mode === 'game' ? { save: Save.serialize(S) } : {})); } catch (e) { /* opcional */ }
+      try { hot.snapshot(() => (S && mode === 'game' ? { save: Save.serialize(S), slot: Save.slot } : {})); } catch (e) { /* opcional */ }
     }
     if (data && data.save) {
+      if (data.slot) Save.slot = data.slot;
       const st = Save.deserialize(data.save);
       if (st) { S = st; enterGame(); setTimeout(checkPending, 400); } else showTitle();
     } else showTitle();

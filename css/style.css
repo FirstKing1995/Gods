@@ -40,6 +40,11 @@ button { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
 
 #view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; image-rendering: pixelated; cursor: grab; }
+/* 0.16: cantos da tela escurecidos de leve (puxa o olho para o meio do mundo) */
+body[data-mode="game"]::after, body[data-mode="site"]::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 4;
+  background: radial-gradient(ellipse 75% 70% at 50% 50%, transparent 55%, rgba(16, 12, 30, 0.38) 100%);
+}
 #view.dragging { cursor: grabbing; }
 body[data-placing] #view { cursor: crosshair; }
 
@@ -95,6 +100,26 @@ body[data-placing] #view { cursor: crosshair; }
 .site-stats dt { color: var(--muted); display: flex; align-items: center; gap: 6px; }
 .site-stats dd { margin: 0; text-align: right; }
 
+.title-lede { font-family: var(--story); font-size: clamp(16px, 2vw, 19px); line-height: 1.45; color: #d9c7a3; max-width: 42ch; }
+.title-actions .btn-small { min-width: 0; min-height: 36px; font-size: 14px; }
+/* 0.16: o tamanho do mundo (botões colados) e a lista dos mundos guardados */
+.seg-group { display: inline-flex; }
+.seg {
+  min-height: 32px; padding: 4px 10px; font-size: 13px; cursor: pointer;
+  background: var(--panel-2); color: var(--muted); border: 2px solid var(--night); margin-left: -2px;
+  box-shadow: inset 0 0 0 2px var(--edge);
+}
+.seg:first-child { margin-left: 0; }
+.seg.on { background: var(--gold); color: var(--night); font-weight: 700; box-shadow: inset 0 0 0 2px var(--gold-hi); }
+.mundos-card { width: min(560px, 100%); max-height: calc(100dvh - 2 * var(--gut)); grid-template-rows: auto auto minmax(0, 1fr) auto; }
+.mundos-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; overflow-y: auto; min-height: 0; }
+.mundo-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 12px; background: var(--night); box-shadow: inset 0 0 0 2px var(--edge); }
+.mundo-row.fim { opacity: 0.7; }
+.mundo-info { display: grid; gap: 2px; min-width: 0; }
+.mundo-info strong { font-size: 15px; color: var(--gold-hi); overflow-wrap: anywhere; }
+.mundo-acts { display: flex; gap: 6px; flex: none; }
+.btn.danger { background: var(--blood); color: #fff; box-shadow: inset 0 0 0 2px #f6757a, inset 0 -4px 0 #a22633; }
+@media (max-width: 520px) { .mundo-row { flex-direction: column; align-items: stretch; } .mundo-acts .btn { flex: 1; } }
 .modal { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: var(--gut); background: rgba(24, 20, 37, 0.7); }
 .modal-card { width: min(420px, 100%); display: grid; gap: 10px; padding: 20px; }
 .modal-card label { font-size: 13px; color: var(--muted); margin-top: 6px; }
@@ -702,3 +727,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 .side.temido { color: #f6a0a4; }
 .crimelist li.crime { align-items: start; }
 .crimelist li.crime > .ico { margin-top: 2px; }
+
+/* 0.16: o nome do lugar e o centro, no painel do Povo */
+.povo-place { display: grid; gap: 6px; padding: 8px 0 10px; border-bottom: 2px solid var(--edge); margin-bottom: 8px; }
+.povo-place b { color: var(--gold-hi); }
+.vila-form { display: flex; flex-wrap: wrap; gap: 6px; }
+.vila-form input { flex: 1 1 100%; min-width: 0; min-height: 32px; padding: 4px 8px; font: inherit; background: var(--night); color: var(--text); border: 2px solid var(--edge); }

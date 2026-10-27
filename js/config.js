@@ -3,7 +3,7 @@
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.14.0',
+    VERSION: '0.16.0',
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
     SAVE_KEY: 'genesis.save.v1',
@@ -12,7 +12,9 @@
     CLOUD_SAVE_SEC: 180,
 
     // ---- mapa ----
-    MAP: 128,            // 128 x 128 tiles
+    MAP: 128,            // 128 x 128 tiles: o tamanho dos mundos de antes da 0.16 (save sem tamanho abre com este)
+    // 0.16: o jogador escolhe o tamanho do mundo novo (o padrão é o grande, mais de duas vezes a área de antes)
+    MAP_SIZES: [{ n: 128, name: 'Médio' }, { n: 192, name: 'Grande' }, { n: 256, name: 'Enorme' }], MAP_NEW: 192,
     TILE: 16,            // px por tile
     CHUNK: 16,           // tiles por bloco de render
 
@@ -146,8 +148,8 @@
         up: [{ name: 'Ferraria com ourives', cost: { pedra: 10, tabuas: 8 }, work: 300, shop: { k: 'ferro', speed: 1.3, joias: true },
           desc: 'Forja 30% mais depressa e ganha a bancada do ourives: de 1 de prata ou de ouro sai uma joia.' }] },
       // Etapa 7: obras novas
-      armazem: { name: 'Armazém', a: 'o', key: 'G', w: 2, h: 2, cost: { madeira: 16, pedra: 6 }, work: 300, store: { rot: 0.75 }, near: 8, open: 'inverno',
-        desc: 'Guarda a comida do estoque: estraga 25% menos e o lobo não leva. Tem que ficar a até 8 passos do estoque.',
+      armazem: { name: 'Armazém', a: 'o', key: 'G', w: 2, h: 2, cost: { madeira: 16, pedra: 6 }, work: 300, store: { rot: 0.75 }, open: 'inverno',
+        desc: 'Guarda a comida: estraga 25% menos e o lobo não leva. Pode ficar em qualquer lugar: quem passa perto entrega e pega ali, sem ir até o centro.',
         up: [{ name: 'Armazém de tábuas', cost: { tabuas: 12, argila: 6 }, work: 360, store: { rot: 0.55 }, desc: 'Fechado e alto: a comida estraga 45% menos.' }] },
       // shop: oficina do Ofício · k = o que sai dela · speed = rapidez
       marcenaria: { name: 'Marcenaria', a: 'a', key: 'K', w: 2, h: 2, cost: { madeira: 14, pedra: 4 }, work: 300, need: 'pedra', shop: { k: 'tabuas', speed: 1 },
@@ -280,6 +282,9 @@
 
     // ---- família (Etapa 3) · tempo em anos de jogo (1 ano = 60 dias = 1 h real em 1x) ----
     CHILD_HELP_AGE: 7, OLD_AGE: 60, CARRY_CHILD: 5,
+    // 0.16: velhice de verdade. A força cai OLD_FORCA_ANO por ano (até OLD_FORCA_MIN); depois de OLD_HEAVY_AGE (idade do
+    // corpo) só trabalho leve; a vontade de trabalhar do velho pesa OLD_WORK_W (sobra tempo para contar história e ensinar)
+    OLD_FORCA_ANO: 0.022, OLD_FORCA_MIN: 0.35, OLD_HEAVY_AGE: 70, OLD_WORK_W: 0.7,
     AFETO_START: 60, AFETO_CHAT: 2, AFETO_NIGHT: 1, AFETO_MIN: 40, AFETO_DECAY: 0.5,
     COUPLE_TALKS: 6, COUPLE_DAILY: 0.1,
     // Etapa 6: relações livres. Até 4 pares do outro sexo por pessoa; cada par que já tem pesa 0,6 na chance de outro
@@ -606,6 +611,9 @@
     SOC_TETO: 0.4, PEDIDO_D: 5, RECUSA_D: 10, SOC_FOGO_LONGE: 9, SOC_ROT: 3, SOC_PEDRA: 6,
     // 0.14: o padrão é "o povo decide"; obras do povo ao mesmo tempo: 1 + adultos / SOC_OBRAS_POR, até SOC_OBRAS_MAX
     SOC_OBRAS_POR: 12, SOC_OBRAS_MAX: 8,
+    // 0.16: casas a CENTRO_LONGE passos de todo estoque pedem um armazém por ali; o meio das casas a CENTRO_LONGE + 4
+    // do centro faz o líder mudar o centro (no máximo uma vez a cada CENTRO_MUDA_D dias)
+    CENTRO_LONGE: 14, CENTRO_MUDA_D: 60,
 
     // ---- Etapa 15 · Gente viva: gostos, jeito, pensamentos, conversas, tentativas e o saber nas pessoas ----
     GOSTO_HERDA: 0.35,            // chance de cada gosto puxar a um dos pais

@@ -44,8 +44,13 @@
     if (st === 'bebe' || p.labor || (p.rest && p.rest > S.t)) return false;   // resguardo depois do parto
     if (p.sangue && G.Povos && !G.Povos.canWork(p, wk)) return false;   // Etapa 12: elfo não derruba árvore, anão não pesca
     if (st === 'crianca') return F.age(S, p) >= C.CHILD_HELP_AGE && (wk === 'frutas' || wk === 'agua' || wk === 'criacao');   // Etapa 10: ovos e ração
+    if (st === 'idoso' && F.bodyAge(S, p) >= C.OLD_HEAVY_AGE && OLD_HEAVY.has(wk)) return false;   // 0.16: o corpo já não aguenta
     return true;
   };
+  // 0.16: o trabalho pesado que o velho larga depois de OLD_HEAVY_AGE (segue no leve: colher, pescar, ofício, roça, fogo)
+  const OLD_HEAVY = new Set(['madeira', 'pedra', 'mina', 'caca', 'construir', 'cerca', 'caminho', 'argila']);
+  // 0.16: a força cai ano a ano depois da velhice (de 80% aos 60 até OLD_FORCA_MIN), em vez de 80% até morrer
+  F.oldForce = (S, p) => Math.max(C.OLD_FORCA_MIN, 0.8 - (F.bodyAge(S, p) - C.OLD_AGE) * C.OLD_FORCA_ANO);
   F.carrying = (S, p) => S.people.some((b) => b.alive && b.carriedBy === p.id);
   // 0.14: quem leva alguém no colo, contado uma vez por passo (o fator de trabalho é pedido por quem trabalha, a cada
   // passo; varrer o povo inteiro para cada um pesava numa aldeia grande)
@@ -62,14 +67,14 @@
   F.latePregnant = (S, p) => !!(p.preg && p.preg.due - S.t < C.LATE_PREG_DAYS * C.DAY_MIN);
   F.workFactor = function (S, p) {
     const st = F.stage(S, p);
-    let f = st === 'crianca' ? 0.5 : st === 'jovem' ? 0.75 : st === 'idoso' ? 0.8 : 1;
+    let f = st === 'crianca' ? 0.5 : st === 'jovem' ? 0.75 : st === 'idoso' ? F.oldForce(S, p) : 1;
     if (carriers(S).has(p.id)) f *= 0.85;
     if (F.latePregnant(S, p)) f *= 0.7;
     return f;
   };
   F.walkFactor = function (S, p) {
     const st = F.stage(S, p);
-    let f = st === 'crianca' ? 0.9 : st === 'idoso' ? 0.85 : 1;
+    let f = st === 'crianca' ? 0.9 : st === 'idoso' ? Math.max(0.6, 0.88 - (F.bodyAge(S, p) - C.OLD_AGE) * 0.012) : 1;
     if (F.latePregnant(S, p)) f *= 0.85;
     if (p.hurt && p.hurt.until > S.t) f *= p.hurt.walk;   // pé torcido
     if (p.sangue && G.Povos) f *= G.Povos.body(p).walk;   // Etapa 12: o passo de cada povo
@@ -702,9 +707,15 @@
     else Sm.toast(S, 'Aniversário de ' + p.name + ': ' + age + ' anos.');
   }
   function oldAge(S, p, age) {
-    if (S.safe || age < C.OLD_AGE) return;
+    if (age < C.OLD_AGE) return;
     const yearly = (C.OLD_DEATH_BASE + (age - C.OLD_AGE) * C.OLD_DEATH_STEP) * (G.Deus && G.Deus.saber(S, 'medicina') ? C.MEDICINA_OLD : 1);   // a medicina adia a velhice
-    if (S.rng.next() < yearly / C.YEAR_DAYS) { p.dmg.velhice = 999; p.needs.saude = -999; }   // abaixo de zero: a cura natural do passo não salva
+    if (S.rng.next() >= yearly / C.YEAR_DAYS) return;
+    // 0.16: a velhice vale também com o jogo fechado. Até a 0.15 o modo seguro a pulava, e quem jogava muito com o
+    // jogo fechado via o povo passar dos 100 anos. Lá, a morte é na hora (o dia resumido não passa pelo passo);
+    // só não leva o último vivo, para o mundo não acabar longe dos olhos
+    p.dmg.velhice = 999; p.needs.saude = -999;   // abaixo de zero: a cura natural do passo não salva
+    if (S.safe && S.people.filter((q) => q.alive).length > 1) Sim().die(S, p);
+    else if (S.safe) { p.dmg.velhice = 0; p.needs.saude = 30; }
   }
 
   // ---------- metas da família ----------

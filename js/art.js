@@ -26,10 +26,41 @@
   function Buf(w, h) { this.w = w; this.h = h; this.p = new Array(w * h).fill(null); }
   Buf.prototype.set = function (x, y, c) { x |= 0; y |= 0; if (x >= 0 && y >= 0 && x < this.w && y < this.h) this.p[y * this.w + x] = c; };
   Buf.prototype.get = function (x, y) { x |= 0; y |= 0; return x >= 0 && y >= 0 && x < this.w && y < this.h ? this.p[y * this.w + x] : null; };
+  // 0.16: a paleta ENDESGA, que todo jogo de pixel usa, puxada para os tons terrosos da natureza nova. Vale para
+  // todo sprite que passa pelo Buf (gente, bicho, casa, ícone), sem mexer em cada desenho
+  const REMAP = {
+    '#181425': '#1f1a24', '#1c1624': '#1f1a24', '#262b44': '#2b2733', '#3a4466': '#4b4553', '#5a6988': '#6d6672', '#8b9bb4': '#938a8c',
+    '#c0cbdc': '#cdc6bb', '#e43b44': '#c8423a', '#a22633': '#8a2a2c', '#f6757a': '#e0857a', '#3e2731': '#3a2428', '#733e39': '#6e4a35',
+    '#b86f50': '#93683f', '#e4a672': '#d0a46a', '#ead4aa': '#e2cfa4', '#be4a2f': '#a8482c', '#d77643': '#c47a3e', '#f77622': '#e47c2c',
+    '#feae34': '#eaaa3c', '#fee761': '#f2da72', '#63c74d': '#64923f', '#3e8948': '#40723e', '#265c42': '#2c573d', '#193c3e': '#22413a',
+    '#124e89': '#2a4a6e', '#0099db': '#3a86a8', '#2ce8f5': '#7cc8d0', '#68386c': '#5e3a5c', '#b55088': '#a8587a', '#9be070': '#8fb35a',
+  };
+  // acabamento de quem desenha à mão: luz do alto à esquerda. A borda de cima e da esquerda ganha um brilho, a da
+  // direita escurece, e o contorno preto vira, em cima e à esquerda, um tom escuro da cor que ele contorna
+  const INK = new Set(['#1f1a24', '#2b2733']);
+  let polishOn = false;
+  function polish(src, w, h) {
+    const out = src.slice(), at = (x, y) => (x >= 0 && y >= 0 && x < w && y < h ? src[y * w + x] : null);
+    const inner = (c) => c && !INK.has(c);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const c = src[y * w + x];
+      if (!c) continue;
+      const u = at(x, y - 1), l = at(x - 1, y), r = at(x + 1, y), d = at(x, y + 1);
+      if (INK.has(c)) {
+        const n = inner(d) ? d : inner(r) ? r : null;
+        if (n && !inner(u) && !inner(l)) out[y * w + x] = mix(n, '#1f1a24', 0.62);
+      } else if (!inner(u) || !inner(l)) out[y * w + x] = mix(c, '#fff0cc', 0.16);
+      else if (!inner(r) || !inner(d)) out[y * w + x] = mix(c, '#1f1a24', 0.16);
+    }
+    return out;
+  }
+  A.polishWith = function (fn) { const was = polishOn; polishOn = true; try { return fn(); } finally { polishOn = was; } };
   Buf.prototype.canvas = function () {
     const [c, x] = mk(this.w, this.h);
+    let px = this.p.map((col) => (col && REMAP[col.toLowerCase()]) || col);
+    if (polishOn) px = polish(px, this.w, this.h);
     for (let y = 0; y < this.h; y++) for (let i = 0; i < this.w; i++) {
-      const col = this.p[y * this.w + i];
+      const col = px[y * this.w + i];
       if (col) { x.fillStyle = col; x.fillRect(i, y, 1, 1); }
     }
     return c;
@@ -57,211 +88,219 @@
   A.lighten = lighten;
 
   // ---------- terreno: cores por estação ----------
+  // 0.16: paleta própria, terrosa e com a sombra puxando para o azul e a luz para o amarelo (sem o verde de néon)
   // tipos: 0 funda, 1 rasa, 2 rio, 3 areia, 4 campo, 5 floresta, 6 colina, 7 montanha, 8 campo seco
   // cada tom: [escuro, base, claro]
+  const AGUA = { 0: ['#1c3651', '#22466a', '#2b587e'], 1: ['#2e6c86', '#3a8299', '#5fa6b4'], 2: ['#2e6c86', '#3a8299', '#5fa6b4'] };
   A.TERRAIN = [
     { // primavera
-      0: ['#0c3a68', '#124e89', '#1d64a6'], 1: ['#0a7fc0', '#0e93d4', '#35c4ec'], 2: ['#0a7fc0', '#0e93d4', '#35c4ec'],
-      3: ['#c89a6a', '#e4b27c', '#efd2a2'], 4: ['#3e8948', '#58a447', '#79c356'], 5: ['#265c42', '#34713f', '#468a44'],
-      6: ['#4f8a44', '#6a9e4c', '#8ab65e'], 7: ['#56607e', '#67748f', '#8290a8'], 8: ['#7c8a3c', '#99a44c', '#b7bb62'],
+      ...AGUA,
+      3: ['#b48f5c', '#cba870', '#dfc492'], 4: ['#47703a', '#5a8641', '#739a4b'], 5: ['#2f4e33', '#3b5d38', '#4a6d3e'],
+      6: ['#5b7a40', '#6d8a47', '#86a055'], 7: ['#5a5662', '#6e6a74', '#8a858a'], 8: ['#7d7e40', '#94934b', '#ada85c'],
     },
     { // verão
-      0: ['#0c3a68', '#124e89', '#1d64a6'], 1: ['#0a7fc0', '#0e93d4', '#35c4ec'], 2: ['#0a7fc0', '#0e93d4', '#35c4ec'],
-      3: ['#cc9f6c', '#e8b880', '#f2d8a8'], 4: ['#4d8a36', '#70a842', '#95c254'], 5: ['#2c5e36', '#3e773a', '#528e42'],
-      6: ['#6a8a40', '#88a24a', '#a6b85a'], 7: ['#56607e', '#67748f', '#8290a8'], 8: ['#a08a44', '#bea45a', '#d6bc74'],
+      ...AGUA,
+      3: ['#b8925c', '#cfab72', '#e2c896'], 4: ['#4f6f34', '#62803b', '#7a9445'], 5: ['#33502f', '#3f5e33', '#4d6c39'],
+      6: ['#6b7c3e', '#80904a', '#98a25a'], 7: ['#5a5662', '#6e6a74', '#8a858a'], 8: ['#92824a', '#a99658', '#c0ac6a'],
     },
     { // outono
-      0: ['#0c3a68', '#124e89', '#1d64a6'], 1: ['#0a7fc0', '#0e93d4', '#35c4ec'], 2: ['#0a7fc0', '#0e93d4', '#35c4ec'],
-      3: ['#c28f62', '#dcaa76', '#e8c898'], 4: ['#7c7232', '#9c8a40', '#bca656'], 5: ['#5e4a2a', '#7a5c30', '#94723c'],
-      6: ['#7e6c3a', '#98844a', '#b09c5e'], 7: ['#56607e', '#67748f', '#8290a8'], 8: ['#98703e', '#b48a50', '#cca666'],
+      ...AGUA,
+      3: ['#ad8858', '#c4a06a', '#d8bc8c'], 4: ['#6c6836', '#827a40', '#9a8e4e'], 5: ['#4c4230', '#5c4f34', '#6f5e3c'],
+      6: ['#786a3c', '#8d7c48', '#a39058'], 7: ['#5a5662', '#6e6a74', '#8a858a'], 8: ['#8c6c40', '#a3804e', '#b99660'],
     },
     { // inverno
-      0: ['#1a3a5c', '#24507a', '#35668f'], 1: ['#3e7eaa', '#5896c0', '#9ccbe4'], 2: ['#3e7eaa', '#5896c0', '#9ccbe4'],
-      3: ['#bdb4ae', '#d4ccc8', '#e8e4e0'], 4: ['#bcc7d8', '#d6dee9', '#eef3f9'], 5: ['#aab6ca', '#c6d0de', '#e0e7f0'],
-      6: ['#b4bfd0', '#ccd5e2', '#e6ecf4'], 7: ['#7d8aa6', '#a3b0c6', '#dfe6f0'], 8: ['#c2cad8', '#dae0ea', '#f0f4f8'],
+      0: ['#1e3550', '#284a6a', '#365e80'], 1: ['#4a7e9c', '#6596b0', '#9cc2d4'], 2: ['#4a7e9c', '#6596b0', '#9cc2d4'],
+      3: ['#b2aaa4', '#c8c0ba', '#ddd8d2'], 4: ['#b4bccb', '#ccd3df', '#e6eaf1'], 5: ['#a3abbd', '#bcc4d2', '#d6dce6'],
+      6: ['#adb5c5', '#c4cbd8', '#dee3ec'], 7: ['#7a7f94', '#9da2b4', '#d8dce6'], 8: ['#bac0cc', '#d0d5de', '#e8ebf1'],
     },
   ];
-  // detalhes (tufos e flores) por estação
+  // detalhes por estação: tufo (escuro e a ponta clara), flores (cada canteiro é de uma cor só) e folhas no chão da mata
   A.DETAIL = [
-    { tuft: '#2f6e3e', flowers: ['#fee761', '#ffffff', '#f6757a', '#b9a2ff'] },
-    { tuft: '#3e6e2e', flowers: ['#fee761', '#ffffff'] },
-    { tuft: '#6a5a2a', flowers: ['#d77643'] },
-    { tuft: '#8b9bb4', flowers: [] },
+    { tuft: '#2f5430', tip: '#8fb35a', flowers: ['#f2e27a', '#f4efe2', '#e48a98', '#b7a0e0', '#e8a04a'], leaf: ['#5c7a3a', '#7a6a3a'] },
+    { tuft: '#344f2b', tip: '#9cab58', flowers: ['#f2e27a', '#f4efe2', '#e8a04a'], leaf: ['#6a6a36', '#7c5e34'] },
+    { tuft: '#574c2c', tip: '#b6a05c', flowers: ['#d98a3a', '#c8604a'], leaf: ['#b4642e', '#c99a3e', '#8e3f2c'] },
+    { tuft: '#8f9bb0', tip: '#ffffff', flowers: [], leaf: [] },
   ];
 
-  // ---------- árvores ----------
+  // ---------- copas em tufos ----------
+  // A copa é um monte de tufos redondos desenhados de trás (em cima) para a frente (embaixo). Cada tufo tem a luz
+  // no alto à esquerda, e o tufo de trás escurece onde o da frente o cobre: é o que separa as folhagens, como
+  // faria a mão. Tons: [contorno, sombra, meia-sombra, base, luz, brilho]
   const TREE_TONES = {
-    spring: ['#193c3e', '#265c42', '#3e8948', '#63c74d', '#9be070'],
-    ipe: ['#68386c', '#b55088', '#e0708e', '#f6a0b4', '#ffd6e0'],
-    summer: ['#193c3e', '#245a3a', '#377a3c', '#55a944', '#7fcf5a'],
-    autumn: ['#3e2731', '#a22633', '#be4a2f', '#d77643', '#f0a040'],
-    autumnY: ['#733e39', '#b86f50', '#d79b3e', '#feae34', '#fee761'],
+    spring: ['#1b2b2b', '#24443a', '#2f5d40', '#467d42', '#6fa04a', '#a9c766'],
+    summer: ['#1b2a2a', '#22413a', '#2c573d', '#40723e', '#64923f', '#9db558'],
+    ipe: ['#2b1a2c', '#55294a', '#863b66', '#b85686', '#e08aa9', '#f6c4d0'],
+    autumn: ['#2c1e24', '#55292a', '#86392c', '#b65e30', '#d68e3e', '#edc068'],
+    autumnY: ['#2f2420', '#5a3e26', '#8a662e', '#b89434', '#dcba4c', '#f1dc86'],
+    arau: ['#131f24', '#1b3333', '#25493c', '#346241', '#4f7f47', '#7fa45a'],
+    arauW: ['#202634', '#3a4458', '#59657c', '#8c98ae', '#c6cfdc', '#f2f5fa'],
+    bush: ['#1b2a2a', '#24443a', '#30603f', '#467d42', '#6b9a48', '#a2c062'],
+    bushA: ['#2c1e24', '#4f3a26', '#6e5a2e', '#8c7a3a', '#ae9a4c', '#cdbc72'],
+    bushW: ['#2a2430', '#4a3e44', '#6e6064', '#8e8080', '#b0a49e', '#d8d0c8'],
+    holy: ['#1b2b2b', '#2c573d', '#40723e', '#5e9a44', '#8cc25a', '#c8e27a'],
   };
-  function canopy(b, cx, cy, blobs, tones, seed) {
-    const W = b.w, H = b.h, mask = new Uint8Array(W * H);
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      for (const bl of blobs) {
-        if ((x + 0.5 - bl[0]) ** 2 + (y + 0.5 - bl[1]) ** 2 <= bl[2] * bl[2]) { mask[y * W + x] = 1; break; }
+  const BARK = ['#2a1d1f', '#4a3029', '#6e4a35', '#93683f'];
+  const LEAF_DITHER = (x, y) => (((x ^ y) & 1) ? 0.035 : -0.035);
+  function clumps(b, list, tones, seed) {
+    const W = b.w, H = b.h, own = new Int16Array(W * H).fill(-1);
+    const order = list.map((c, i) => i).sort((a, c) => list[a][1] - list[c][1] || a - c);
+    const rank = new Int16Array(list.length);
+    order.forEach((i, k) => { rank[i] = k; });
+    for (const i of order) {
+      const [cx, cy, r] = list[i];
+      for (let y = Math.floor(cy - r - 1); y <= cy + r + 1; y++) for (let x = Math.floor(cx - r - 1); x <= cx + r + 1; x++) {
+        if (x < 0 || y < 0 || x >= W || y >= H) continue;
+        const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
+        // a borda do tufo é falhada: folha, não círculo
+        if (d <= r - 0.6 || (d <= r + 0.2 && G.hash2(x, y, seed + i) < 0.4)) own[y * W + x] = i;
       }
     }
-    const m = (x, y) => (x >= 0 && y >= 0 && x < W && y < H ? mask[y * W + x] : 0);
-    const lx = cx - 4, ly = cy - 5;
+    const O = (x, y) => (x >= 0 && y >= 0 && x < W && y < H ? own[y * W + x] : -1);
+    let top = H, bot = 0;
+    for (const c of list) { top = Math.min(top, c[1] - c[2]); bot = Math.max(bot, c[1] + c[2]); }
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      if (!m(x, y)) continue;
-      const d = Math.hypot(x + 0.5 - lx, y + 0.5 - ly) / 12;
-      let t = d < 0.42 ? 4 : d < 0.72 ? 3 : d < 1.0 ? 2 : 1;
-      if (G.hash2(x, y, seed) < 0.2) t = Math.max(1, t - 1);
-      if (!m(x, y + 1) || !m(x + 1, y)) t = 0;
-      else if (!m(x, y - 1) || !m(x - 1, y)) t = Math.max(1, Math.min(t, 3));
+      const i = O(x, y);
+      if (i < 0) continue;
+      const [cx, cy, r] = list[i];
+      const lt = -((x + 0.5 - cx) * 0.55 + (y + 0.5 - cy) * 0.85) / r + LEAF_DITHER(x, y);
+      let t = lt > 0.78 ? 5 : lt > 0.32 ? 4 : lt > -0.38 ? 3 : 2;
+      // a copa toda: o alto pega mais sol, o de baixo fica na sombra dela mesma
+      const g = (cy - top) / Math.max(1, bot - top);
+      if (g > 0.72 && t > 2) t--;
+      if (g < 0.25 && t < 5 && lt > 0) t++;
+      const below = O(x, y + 1), right = O(x + 1, y);
+      if (below >= 0 && below !== i && rank[below] > rank[i]) t = 1;           // o tufo da frente cobre este
+      else if (right >= 0 && right !== i && rank[right] > rank[i] && t > 2) t = 2;
+      if (below < 0 || right < 0) t = (below < 0 && y > cy) ? 0 : Math.min(t, 1);   // contorno: só embaixo e à direita
+      if (O(x, y - 1) < 0 && O(x - 1, y) < 0 && t >= 3) t = 4;                    // a beirada de cima pega luz
       b.set(x, y, tones[t]);
     }
-    // tufos de folhas: pequenas meias-luas
-    const rng = new G.RNG(seed * 7 + 1);
-    for (let k = 0; k < 9; k++) {
-      const x = Math.floor(rng.range(cx - 7, cx + 7)), y = Math.floor(rng.range(cy - 6, cy + 5));
-      if (!m(x, y) || !m(x, y + 1) || !m(x - 1, y + 1) || !m(x + 1, y + 1) || !m(x, y + 2)) continue;
-      b.set(x - 1, y + 1, tones[1]); b.set(x, y + 1, tones[1]); b.set(x + 1, y + 1, tones[1]);
-      b.set(x, y, tones[Math.min(4, 3 + (y < cy ? 1 : 0))]);
-    }
-    return mask;
+    return own;
   }
+  // tronco de 3 px com a raiz abrindo, e dois galhos que somem na copa
+  function trunk(b, x, y0, y1, forks) {
+    for (const [ax, ay, bx2, by2] of forks || []) { line(b, ax, ay, bx2, by2, BARK[1]); line(b, ax + 1, ay, bx2 + 1, by2, BARK[2]); }
+    for (let y = y0; y <= y1; y++) { b.set(x - 1, y, BARK[3]); b.set(x, y, BARK[2]); b.set(x + 1, y, BARK[1]); b.set(x + 2, y, BARK[0]); }
+    b.set(x - 2, y1, BARK[2]); b.set(x - 2, y1 - 1, BARK[3]); b.set(x + 2, y1, BARK[1]); b.set(x + 3, y1, BARK[0]);
+    b.set(x - 3, y1, BARK[1]);
+    for (let xx = x - 3; xx <= x + 3; xx++) if (!b.get(xx, y1 + 1)) b.set(xx, y1 + 1, BARK[0]);
+    b.set(x, y0 + 3, BARK[1]); b.set(x, y0 + 6, BARK[3]);   // nós da casca
+  }
+  // as três árvores de folha larga: copa cheia, copa alta e copa aberta
+  const BROAD = [
+    [[7, 5, 3.6], [12, 3.8, 3.8], [16, 6, 3.4], [4, 9, 3.4], [10, 7.5, 4.2], [17.5, 10, 3.2], [7, 11.5, 3.8], [13, 10.5, 4], [4, 13.5, 3], [10, 14, 3.6], [15.5, 13.8, 3.4], [19, 13.2, 2.4]],
+    [[11, 3.2, 3.2], [8, 6, 3.4], [14, 6, 3.4], [11, 8.5, 3.8], [6, 10.5, 3.2], [16, 10.5, 3.2], [9, 12.5, 3.8], [13.5, 12.5, 3.6], [6, 15, 2.8], [11, 15.5, 3.2], [16, 15, 2.6]],
+    [[6, 7, 3.4], [11, 5.2, 3.6], [16, 7, 3.4], [2.8, 10.5, 2.8], [9, 9.5, 3.8], [14, 9.5, 3.8], [19, 10.5, 2.8], [5.5, 13, 3.2], [11, 13.2, 3.6], [16.5, 13, 3.2]],
+  ];
   function broadTree(v, season) {
     const b = new Buf(22, 26);
     const tx = 10;
-    for (let y = 13; y < 24; y++) { b.set(tx, y, P.wood); b.set(tx + 1, y, P.bark); }
-    b.set(tx - 1, 23, P.bark); b.set(tx + 2, 23, P.maroon); b.set(tx + 2, 22, P.bark);
     if (season === 3) {
+      // inverno: galhos nus, de 2 px no tronco e afinando; neve por cima de cada galho
+      const br = [[10, 16, 6, 9], [6, 9, 4, 6], [11, 15, 16, 9], [16, 9, 18, 6], [10, 13, 9, 5], [11, 12, 13, 4], [13, 4, 14, 2], [9, 5, 8, 3], [6, 9, 7, 5], [16, 9, 15, 5], [4, 6, 3, 4], [18, 6, 19, 4]];
       const pts = [];
-      const br = [[10, 16, 6, 9], [6, 9, 4, 6], [11, 15, 16, 9], [16, 9, 18, 6], [10, 13, 9, 5], [11, 12, 13, 4], [13, 4, 14, 2], [9, 5, 8, 3], [6, 9, 7, 5], [16, 9, 15, 5]];
-      for (const s of br) line(b, s[0], s[1], s[2], s[3], P.bark, pts);
-      for (const [x, y] of pts) {
-        if (!b.get(x, y - 1) && G.hash2(x, y, v + 50) < 0.75) b.set(x, y - 1, P.white);
-        if (G.hash2(x, y, v + 60) < 0.25) b.set(x + 1, y, P.maroon);
-      }
+      br.forEach((s, k) => { line(b, s[0], s[1], s[2], s[3], k < 3 ? BARK[2] : BARK[1], pts); if (k < 3) line(b, s[0] + 1, s[1], s[2] + 1, s[3], BARK[1]); });
+      for (const [x, y] of pts) if (!b.get(x, y - 1) && G.hash2(x, y, v + 50) < 0.7) b.set(x, y - 1, '#f2f5fa');
+      trunk(b, tx, 14, 23);
+      for (const x of [tx - 1, tx, tx + 1]) b.set(x, 14, '#f2f5fa');
       return b.canvas();
     }
-    const cx = 11 + (v === 1 ? -1 : v === 2 ? 1 : 0), cy = 9;
-    const blobs = [[cx, cy, 7.6], [cx - 5, cy + 2, 4.6], [cx + 5, cy + 2, 4.6], [cx - 2 + v, cy - 4, 4.4], [cx + 3 - v, cy - 3, 4]];
     let tones = TREE_TONES.summer;
     if (season === 0) tones = v === 1 ? TREE_TONES.ipe : TREE_TONES.spring;
     else if (season === 2) tones = v === 2 ? TREE_TONES.autumnY : TREE_TONES.autumn;
-    const mask = canopy(b, cx, cy, blobs, tones, 11 + v * 29 + season * 5);
-    const rng = new G.RNG(300 + v * 13 + season);
-    const inside = (x, y) => mask[y * b.w + x] && mask[(y + 1) * b.w + x] && mask[y * b.w + x + 1];
-    if (season === 0 && v !== 1) {
-      for (let k = 0; k < 14; k++) {
-        const x = rng.int(3, 18), y = rng.int(2, 14);
-        if (inside(x, y)) b.set(x, y, rng.chance(0.5) ? '#ffffff' : '#f6a0b4');
+    trunk(b, tx, 14, 23, [[tx, 16, tx - 4, 11], [tx + 1, 16, tx + 4, 12]]);
+    const own = clumps(b, BROAD[v].map(([x, y, r]) => [x, y + 1, r]), tones, 11 + v * 29 + season * 5);
+    const at = (x, y) => own[y * b.w + x] >= 0;
+    // flor e fruta só onde bate luz, em grupinhos
+    const deco = (n, seed, put) => {
+      const rng = new G.RNG(seed);
+      for (let k = 0, tries = 0; k < n && tries < 200; tries++) {
+        const x = rng.int(2, 19), y = rng.int(2, 15);
+        if (!at(x, y) || !at(x, y + 1) || !at(x + 1, y)) continue;
+        const c = b.get(x, y);
+        if (c !== tones[3] && c !== tones[4]) continue;
+        put(x, y); k++;
       }
-    }
-    if (season === 1 && v === 0) {
-      for (let k = 0; k < 8; k++) {
-        const x = rng.int(4, 17), y = rng.int(5, 14);
-        if (inside(x, y)) { b.set(x, y, P.ember); b.set(x, y - 1, P.gold); }
-      }
-    }
+    };
+    if (season === 0 && v !== 1) deco(9, 300 + v * 13, (x, y) => { b.set(x, y, '#f6eef0'); b.set(x + 1, y, '#e8b4c4'); });
+    if (season === 0 && v === 1) deco(6, 310, (x, y) => b.set(x, y, '#fff2c8'));
+    if (season === 1 && v === 0) deco(7, 320, (x, y) => { b.set(x, y, '#e07a2e'); b.set(x, y - 1, '#f2b84a'); b.set(x + 1, y, '#a8461e'); });
+    if (season === 2) deco(5, 330 + v, (x, y) => b.set(x, y, tones[5]));
     return b.canvas();
   }
+  // araucária: tronco reto e alto, galhos em andares que viram para cima nas pontas, a copa em taça
   function arauTree(v, season) {
     const W = 22, H = 32, b = new Buf(W, H);
-    const cx = 11;
-    for (let y = 9; y < 31; y++) { b.set(cx - 1, y, P.wood); b.set(cx, y, P.bark); }
-    b.set(cx - 2, 30, P.bark); b.set(cx + 1, 30, P.maroon);
-    // tocos de galhos
-    b.set(cx - 2, 18 + v, P.bark); b.set(cx + 1, 22 - v, P.bark);
-    const tones = ['#12302c', '#1f4d3a', '#2f6b40', '#4a9148', '#6fb45a'];
-    const widths = [5, 7.5, 9.5, 10.4, 10.4, 9.8, 8.6, 7];
-    const mask = new Uint8Array(W * H);
-    for (let r = 0; r < widths.length; r++) {
-      const y = 2 + r, hw = widths[r] - (v === 2 ? 0.6 : 0);
-      for (let x = 0; x < W; x++) if (Math.abs(x + 0.5 - cx) <= hw) mask[y * W + x] = 1;
-    }
-    // pontas voltadas para cima
-    const tips = [2 + v % 2, 5, 8, 14, 17, 19 - v % 2];
-    for (const tx of tips) { mask[1 * W + tx] = 1; mask[0 * W + tx] = tx % 2; }
-    // segunda camada
-    for (let r = 0; r < 3; r++) {
-      const y = 11 + r, hw = [5.5, 4.6, 3.2][r];
-      for (let x = 0; x < W; x++) if (Math.abs(x + 0.5 - cx) <= hw) mask[y * W + x] = 1;
-    }
-    const m = (x, y) => (x >= 0 && y >= 0 && x < W && y < H ? mask[y * W + x] : 0);
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      if (!m(x, y)) continue;
-      let t = y <= 3 ? 4 : y <= 5 ? 3 : y <= 8 ? 2 : y <= 11 ? 2 : 1;
-      if ((x + v) % 3 === 0 && y > 3) t = Math.max(1, t - 1);
-      if (!m(x, y + 1)) t = 0;
-      if (G.hash2(x, y, 77 + v) < 0.15) t = Math.max(1, t - 1);
-      b.set(x, y, tones[t]);
-    }
-    if (season === 3) {
-      for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) {
-        if (m(x, y) && !m(x, y - 1)) { b.set(x, y, P.white); if (m(x, y + 1) && G.hash2(x, y, 5) < 0.5) b.set(x, y + 1, P.silver); }
+    const cx = 11, tones = season === 3 ? TREE_TONES.arauW : TREE_TONES.arau;
+    for (let y = 6; y < 31; y++) { b.set(cx - 1, y, BARK[3]); b.set(cx, y, BARK[2]); b.set(cx + 1, y, BARK[1]); }
+    b.set(cx - 2, 30, BARK[2]); b.set(cx + 2, 30, BARK[0]); for (let x = cx - 2; x <= cx + 2; x++) b.set(x, 31, BARK[0]);
+    for (const y of [15 + v, 19, 23 - v, 26]) b.set(cx - 1, y, BARK[1]);
+    // andares em candelabro: cada andar é um feixe de galhos que sai do tronco e sobe até um pompom de folhas na
+    // ponta; entre um andar e outro aparece o céu. [altura do pompom, meia-largura, quantos pompons de cada lado]
+    const tiers = v === 1 ? [[4, 9.5, 2], [8.5, 6.5, 1], [12.5, 3.5, 1], [16, 0, 0]] : v === 2 ? [[5, 8.5, 2], [10, 5, 1], [13.5, 0, 0]] : [[4.5, 10, 2], [9, 6.5, 1], [13, 0, 0]];
+    const list = [];
+    tiers.forEach(([ty, hw, n], k) => {
+      const base = Math.round(ty) + 3 + k;
+      for (let j = -n; j <= n; j++) {
+        if (!hw && j) continue;
+        const x = cx + 0.5 + (n ? j / n : 0) * hw, y = ty + (n && Math.abs(j) < n ? 1 : 0);
+        if (hw) { line(b, cx, base, Math.round(x), Math.round(y) + 1, BARK[1]); line(b, cx, base + 1, Math.round(x), Math.round(y) + 2, BARK[0]); }
+        list.push([x, y, Math.abs(j) === n && n ? 2.6 : 2.3]);
+        if (Math.abs(j) === n && n) list.push([x - Math.sign(j) * 2.4, y + 0.6, 2]);
       }
+    });
+    clumps(b, list, tones, 77 + v);
+    if (season === 3) for (let x = 0; x < W; x++) for (let y = 1; y < 18; y++) {
+      const c = b.get(x, y);
+      if (c && c !== BARK[1] && !b.get(x, y - 1)) b.set(x, y, '#ffffff');
     }
     return b.canvas();
   }
 
   // ---------- arbusto (pitangueira) ----------
-  const BUSH_TONES = [
-    ['#193c3e', '#265c42', '#3e8948', '#63c74d'],
-    ['#193c3e', '#265c42', '#377a3c', '#55a944'],
-    ['#3e2731', '#6a4a2a', '#8a7a3a', '#b8a050'],
-    ['#3e2731', '#6a4a3a', '#8b6d5c', '#b89a80'],
-  ];
   // holy (Etapa 11): a árvore criada por Deus, sempre verde e de fruta dourada
+  const BUSH = [[4, 7, 3], [10, 7, 3], [7, 4, 3.2], [7, 7.5, 3.4], [3.6, 9, 2.4], [10.4, 9, 2.4]];
   function bush(fruit, season, holy) {
     const W = 14, H = 11, b = new Buf(W, H);
-    const blobs = [[7, 6.6, 5.2], [3.8, 7.4, 3.4], [10.2, 7.4, 3.4], [6.2, 3.8, 3.2], [8.8, 4.2, 3]];
-    const mask = new Uint8Array(W * H);
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) for (const bl of blobs) {
-      if ((x + 0.5 - bl[0]) ** 2 + (y + 0.5 - bl[1]) ** 2 <= bl[2] * bl[2]) { mask[y * W + x] = 1; break; }
-    }
-    const m = (x, y) => (x >= 0 && y >= 0 && x < W && y < H ? mask[y * W + x] : 0);
-    const tones = holy ? ['#265c42', '#3e8948', '#63c74d', '#9be070'] : BUSH_TONES[season];
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      if (!m(x, y)) continue;
-      const d = Math.hypot(x + 0.5 - 5, y + 0.5 - 2.5) / 8;
-      let t = d < 0.5 ? 3 : d < 0.85 ? 2 : 1;
-      if (G.hash2(x, y, 91) < 0.18) t = Math.max(1, t - 1);
-      if (!m(x, y + 1) || !m(x + 1, y)) t = 0;
-      b.set(x, y, tones[t]);
-    }
-    if (season === 3 && !holy) for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) if (m(x, y) && !m(x, y - 1)) b.set(x, y, P.white);
-    const spots = [[4, 5], [9, 4], [7, 8], [11, 7], [3, 8], [7, 3]];
+    const tones = holy ? TREE_TONES.holy : [TREE_TONES.bush, TREE_TONES.bush, TREE_TONES.bushA, TREE_TONES.bushW][season];
+    clumps(b, BUSH, tones, 91 + season);
+    if (season === 3 && !holy) for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) if (b.get(x, y) && !b.get(x, y - 1)) b.set(x, y, '#ffffff');
+    const spots = [[4, 6], [9, 5], [7, 8], [11, 8], [3, 9], [7, 3]];
     const n = holy ? Math.min(6, fruit + (fruit >= 3 ? 1 : 0)) : Math.min(6, fruit * 2);
     for (let i = 0; i < n; i++) {
       const [x, y] = spots[i];
-      if (holy) { b.set(x, y, P.gold); b.set(x - 1, y, P.orange); b.set(x, y - 1, P.yellow); }
-      else { b.set(x, y, P.red); b.set(x - 1, y, P.wine); b.set(x, y - 1, P.rose); }
+      if (holy) { b.set(x, y, '#f2b234'); b.set(x + 1, y, '#c8782a'); b.set(x, y - 1, '#ffe98a'); }
+      else { b.set(x, y, '#d8323c'); b.set(x + 1, y, '#8e1f2e'); b.set(x, y - 1, '#f5a0a0'); }
     }
     return b.canvas();
   }
   A.holyBush = (fruit) => bush(fruit, 0, true);
 
   // ---------- pedras ----------
+  // desenhadas à mão: face de cima clara, frente média, lado direito escuro, rachadura e musgo
+  const ROCK_TONES = { k: '#2b2733', D: '#4b4553', M: '#6d6672', t: '#938a8c', T: '#bdb2a6', H: '#ddd3c2', g: '#4f6a36', G: '#7c9a48' };
+  const ROCKS = [
+    [
+      ['..kkkk...', '.kHTTtk..', 'kTTtttMk.', 'kttMMMMDk', 'kMMMMDDDk', '.kDDDDDk.', '..kkkkk..'],
+      ['...kkk...', '..kTHTkk.', '.kTttMMMk', 'kTttMMMDk', 'kMMMDDDDk', '.kkDDDkk.', '...kkk...'],
+    ],
+    [
+      ['....kkkk....', '..kkTHHTkk..', '.kTTTtttTMk.', 'kTTttttMMMDk', 'ktttMMkMMDDk', 'kMMMMMkDDDDk', 'kMMMDDDDDDDk', '.kDDDDDDDDk.', '..kkkkkkkk..'],
+      ['...kkkk.....', '..kGgGGkkk..', '.kgGgTTttMk.', 'kTgtttttMMk.', 'kTttMMMMMDDk', 'ktttMkMMDDDk', 'kMMMMkDDDDDk', '.kMDDDDDDDk.', '..kkkkkkkk..'],
+    ],
+    [
+      ['.....kkkk.......', '...kkTHHTk.kkk..', '..kTTttttTkTHTk.', '.kTttttttMkttMk.', 'kTtttttMMMkMMMDk', 'kttttMMMMDDkMDDk',
+        'kMtMMMMMDDDkDDDk', 'kMMMMMMDDDDDkDDk', 'kMMMMDDDDDDDDDDk', '.kDMDDDDDDDDDDk.', '..kkDDDDDDDDkk..', '....kkkkkkkk....'],
+      ['......kkkkk.....', '....kkGgGGGkk...', '..kkTgGgggGTkk..', '.kTTTtggtttTMMk.', 'kTTtttttttMMMMDk', 'kTtttttMMMMMDDDk',
+        'ktttMMMkMMMDDDDk', 'kMMMMMMkkMDDDDDk', 'kMMMMMDDDkDDDDDk', '.kMDDDDDDDDDDDk.', '..kkDDDDDDDDkk..', '....kkkkkkkk....'],
+    ],
+  ];
   function rock(size, v, snow) {
-    const dims = [[9, 7], [12, 9], [16, 12]][size];
-    const W = dims[0], H = dims[1], b = new Buf(W, H);
-    const cx = W / 2, cy = H * 0.58, rx = W / 2 - 0.6, ry = H * 0.45;
-    const mask = new Uint8Array(W * H);
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      const nx = (x + 0.5 - cx) / rx, ny = (y + 0.5 - cy) / ry;
-      let r = nx * nx + ny * ny;
-      r += (G.hash2(Math.floor(Math.atan2(ny, nx) * 3), v, 13) - 0.5) * 0.25;
-      if (r <= 1 && y < H - 1) mask[y * W + x] = 1;
+    const b = fromRows(ROCKS[size][v], ROCK_TONES);
+    if (snow) for (let x = 0; x < b.w; x++) for (let y = 0; y < b.h - 2; y++) {
+      const c = b.get(x, y), up = b.get(x, y - 1);
+      if (c && c !== ROCK_TONES.k && (!up || up === ROCK_TONES.k)) { b.set(x, y, '#ffffff'); if (b.get(x, y + 1) !== ROCK_TONES.k && y < b.h * 0.45) b.set(x, y + 1, '#d6dce6'); }
     }
-    const m = (x, y) => (x >= 0 && y >= 0 && x < W && y < H ? mask[y * W + x] : 0);
-    const tones = ['#262b44', '#3a4466', '#5a6988', '#8b9bb4', '#c0cbdc'];
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      if (!m(x, y)) continue;
-      const d = Math.hypot(x + 0.5 - cx * 0.6, y + 0.5 - cy * 0.45) / (W * 0.75);
-      let t = d < 0.3 ? 4 : d < 0.62 ? 3 : d < 0.9 ? 2 : 1;
-      if (!m(x, y + 1) || !m(x + 1, y)) t = 0;
-      b.set(x, y, tones[t]);
-    }
-    // rachadura
-    if (size > 0) { const x0 = Math.floor(W * 0.55) + (v % 2); for (let k = 0; k < 3; k++) if (m(x0 + (k > 1 ? 1 : 0), 3 + k)) b.set(x0 + (k > 1 ? 1 : 0), 3 + k, tones[1]); }
-    if (snow) for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) if (m(x, y) && !m(x, y - 1)) { b.set(x, y, P.white); if (m(x, y + 1) && y < H * 0.4) b.set(x, y + 1, P.silver); }
     return b.canvas();
   }
 
@@ -932,13 +971,14 @@
   };
 
   // ---------- pessoas ----------
+  // 0.16: rosto com sombra do lado direito, cintura (o cinto escuro) e as mãos soltas embaixo, em vez do caixote
   const HEAD = {
-    FM: ['.kkkkkk.', 'khhhhhhk', 'khHhhhhk', 'khsssshk', 'ksessesk', '.kssssk.', 'kcccccck', 'scccccCs', 'scccccCs', 'kcccccCk', '.kCCCCk.'],
-    FF: ['.kkkkkk.', 'khhhhhhk', 'khHhhhhk', 'khsssshk', 'hsessesh', 'hhsssshh', 'hcccccch', 'scccccCs', 'scccccCs', 'kcccccCk', 'kCCCCCCk'],
-    BM: ['.kkkkkk.', 'khhhhhhk', 'khHhhhhk', 'khhhhhhk', 'khhhhhhk', '.khhhhk.', 'kcccccck', 'sCccccCs', 'sCccccCs', 'kCccccCk', '.kCCCCk.'],
-    BF: ['.kkkkkk.', 'khhhhhhk', 'khHhhhhk', 'khhhhhhk', 'hhhhhhhh', 'hhhhhhhh', 'hhhhhhhh', 'sChhhhCs', 'sCccccCs', 'kCccccCk', 'kCCCCCCk'],
-    SM: ['.kkkkk..', 'khhhhhk.', 'khHhhhhk', 'khhhsssk', 'khhssesk', '.khsssk.', '.kcccck.', '.kccsck.', '.kccsck.', '.kcccck.', '.kCCCCk.'],
-    SF: ['.kkkkk..', 'khhhhhk.', 'khHhhhhk', 'khhhsssk', 'hhhssesk', 'hhhsssk.', 'hhcccck.', '.hccsck.', '.kccsck.', '.kcccck.', 'kCCCCCk.'],
+    FM: ['.kkkkkk.', 'khhhhhhk', 'khHhhhhk', 'khsssSSk', 'ksesseSk', '.kssSSk.', 'kcccccCk', 'kcccccCk', 'kCCCCCCk', 'scccccCs', '.kcccCk.'],
+    FF: ['.kkkkkk.', 'khhhhhhk', 'khHhhhhk', 'hhsssShh', 'hsesseSh', 'hhssSShh', 'hkcccCkh', 'hcccccCh', '.CCCCCC.', 'scccccCs', 'kcccccCk'],
+    BM: ['.kkkkkk.', 'khhhhhhk', 'khHhhhhk', 'khhhhhhk', 'khhhhhhk', '.khhhhk.', 'kCccccCk', 'kCccccCk', 'kCCCCCCk', 'sCccccCs', '.kCCCCk.'],
+    BF: ['.kkkkkk.', 'khhhhhhk', 'khHhhhhk', 'hhhhhhhh', 'hhhhhhhh', 'hhhhhhhh', 'hhhhhhhh', 'hCccccCh', '.CCCCCC.', 'sCccccCs', 'kCccccCk'],
+    SM: ['.kkkkk..', 'khhhhhk.', 'khHhhhhk', 'khhhssSk', 'khhsseSk', '.khsSSk.', '.kcccCk.', '.kcccCk.', '.kCCCCk.', '.kcscCk.', '.kcccCk.'],
+    SF: ['.kkkkk..', 'khhhhhk.', 'khHhhhhk', 'hhhhssSk', 'hhhsseSk', 'hhhsSSk.', 'hhkccCk.', 'hhcccCk.', '.kCCCCk.', '.kcscCk.', '.kccccCk'],
   };
   const LEGS = {
     F: [['..l..l..', '..l..l..', '.ff..ff.'], ['..l..l..', '.ff..l..', '.....ff.'], ['..l..l..', '..l..ff.', '.ff.....']],
@@ -2072,6 +2112,11 @@
     return b.canvas();
   }
 
+  // 0.16: gente e bicho saem com o mesmo acabamento de luz das casas
+  for (const k of ['personSheet', 'kidSheet', 'capiSheet', 'capiDead', 'wolfSheet', 'beastSheet', 'beastDead', 'bundle', 'birdFly', 'jacareWater']) {
+    const f = A[k];
+    if (f) A[k] = function (...a) { return A.polishWith(() => f.apply(this, a)); };
+  }
   A.build = function () {
     const S = A.spr = {};
     S.broad = [0, 1, 2, 3].map((s) => [0, 1, 2].map((v) => broadTree(v, s)));
@@ -2080,6 +2125,7 @@
     S.holyBush = [0, 1, 2, 3, 4, 5].map((f) => bush(f, 0, true));   // Etapa 11
     S.rock = [0, 1, 2].map((sz) => [false, true].map((sn) => [0, 1].map((v) => rock(sz, v, sn))));
     S.stump = [stump(false), stump(true)];
+    polishOn = true;   // 0.16: daqui até os itens do estoque, o acabamento de luz
     S.grave = grave().canvas();
     S.fire = [0, 1, 2].map((f) => fireFrame(f, 1));
     S.fireOut = fireBase(false).canvas();
@@ -2107,6 +2153,7 @@
     for (const k of ['feijao', 'milho', 'abobora', 'mandioca', 'ovos', 'leite']) S.item[k] = item10(k);   // Etapa 10
     for (const k of ['carvao', 'minerio', 'prata', 'ouro', 'gemas', 'ferro', 'joias']) S.item[k] = item12(k);   // Etapa 12
     S.item.caca = S.item.carne; S.item.cria = S.item.ovos; S.item.racao = S.item.milho; S.item.cerca = S.item.madeira;
+    polishOn = false;
     // sombra
     const ellipse = (w, h, a) => {
       const [c, x] = mk(w, h);
