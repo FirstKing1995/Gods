@@ -50,6 +50,8 @@
     PAL.detail = A.DETAIL.map((d) => ({ tuft: pack(d.tuft), tip: pack(d.tip), flowers: d.flowers.map(pack), leaf: d.leaf.map(pack) }));
     PAL.pebble = [pack('#938a8c'), pack('#6d6672'), pack('#bdb2a6')];
     PAL.snowSpark = pack('#ffffff');
+    // Etapa 17: as cores do chão de cada região, por estação
+    PAL.reg = (A.REGION_TERRAIN || []).map((seas) => { const o = []; for (const rg in seas) { o[rg] = []; for (const t in seas[rg]) o[rg][t] = seas[rg][t].map(pack); } return o; });
   }
 
   // trama ordenada 4x4 (de -0.5 a 0.5) e os tufos de capim desenhados à mão (l = ponta clara, d = base escura)
@@ -93,7 +95,7 @@
     const img = x.createImageData(N, M), buf = new Uint32Array(img.data.buffer), pal = PAL[season], shade = shadeField(w);
     const tree = pal[T.FOREST][0], rock = PAL.pebble[0], bush = pal[T.FOREST][2];
     for (let ty = 0; ty < w.H; ty++) for (let tx = 0; tx < w.W; tx++) {
-      const i = ty * w.W + tx, t = w.tile[i], tones = pal[t];
+      const i = ty * w.W + tx, t = w.tile[i], rg = w.reg ? w.reg[i] : 0, rp = rg && PAL.reg[season] && PAL.reg[season][rg], tones = rp && rp[t] ? rp[t] : pal[t];   // Etapa 17: a cor da região
       let tone = 1;
       if (!IS_WATER[t]) { const d = shade[i]; if (d > 0.03) tone = 2; else if (d < -0.03) tone = 0; }
       else if (t === T.DEEP) tone = w.elev[i] < 0.2 ? 0 : w.elev[i] < 0.27 ? 1 : 2;
@@ -110,12 +112,39 @@
     ovKey = key; ovImg = c;
     return c;
   }
+  // Etapa 17: o mapa do mundo, um pixel por passo (mais, no mapa menor): só o que o povo já viu, com o chão de cada
+  // região; as obras, o povo, o centro e a vila de fora por cima
+  R.REGCOR = ['', '#dcc08c', '#386660', '#d6dae4', '#c8a66c', '#2c4a2f', '#5b6b3a'];
+  R.mapaMundo = function (S, cv) {
+    if (!PAL) buildPal();
+    const w = S.world, N = w.W, px = Math.max(1, Math.floor(384 / N)), season = S.ck.season, pal = PAL[season], seen = S.seen;
+    cv.width = N * px; cv.height = N * px;
+    const [tc, tx] = A.mk(N, N), img = tx.createImageData(N, N), buf = new Uint32Array(img.data.buffer), escuro = pack('#141218');
+    for (let i = 0; i < N * N; i++) {
+      if (seen && !seen[i]) { buf[i] = escuro; continue; }
+      const t = w.tile[i], rg = w.reg ? w.reg[i] : 0, rp = rg && PAL.reg[season] && PAL.reg[season][rg];
+      buf[i] = rp && rp[t] ? rp[t][1] : pal[t][1];
+    }
+    tx.putImageData(img, 0, 0);
+    const x = cv.getContext('2d');
+    x.imageSmoothingEnabled = false;
+    x.drawImage(tc, 0, 0, N * px, N * px);
+    x.fillStyle = '#e2cfa4';
+    for (const b of S.buildings) x.fillRect(b.x * px, b.y * px, Math.max(2, b.w * px), Math.max(2, b.h * px));
+    x.fillStyle = '#f2da72';
+    for (const p of S.people) if (p.alive && !p.fora && !p.carriedBy) x.fillRect(Math.floor(p.x) * px, Math.floor(p.y) * px, Math.max(1, px), Math.max(1, px));
+    x.strokeStyle = '#f2da72'; x.lineWidth = Math.max(1, px);
+    x.strokeRect((S.camp.x - 2) * px, (S.camp.y - 2) * px, 6 * px, 6 * px);
+    const v = S.soc && S.soc.vila;
+    if (v && !v.fim && v.x >= 0 && v.x < N) { x.fillStyle = '#c8423a'; x.fillRect((v.x - 1) * px, (v.y - 1) * px, 4 * px, 4 * px); }
+    return G.Regioes ? G.Regioes.mapaInfo(S) : { W: N, visto: 0, conhecidas: [], gen: 1 };
+  };
   function renderChunk(w, cx, cy, season) {
     if (!PAL) buildPal();
     const [c, x] = A.mk(CPX, CPX);
     const img = x.createImageData(CPX, CPX);
     const buf = new Uint32Array(img.data.buffer);
-    const pal = PAL[season], seed = w.seed, Wt = w.W, Ht = w.H;
+    const pal = PAL[season], seed = w.seed, Wt = w.W, Ht = w.H, REG = w.reg || null;
     const MG = 2, M = CPX + MG * 2;
     const types = new Uint8Array(M * M), E = new Float32Array(M * M), SH = new Float32Array(M * M);
     const shade = shadeField(w);
@@ -141,7 +170,12 @@
     for (let j = MG; j < M - MG; j++) {
       for (let i = MG; i < M - MG; i++) {
         const k = j * M + i, t = types[k], wx = ox0 + i, wy = oy0 + j;
-        const tones = pal[t];
+        let tones = pal[t];
+        if (REG) {   // Etapa 17: a região do pixel (a borda entre uma e outra é tremida, para não sair em quadrados)
+          const gx = Math.min(Wt - 1, Math.max(0, ((wx + (vnoise(wx, wy, 3, seed + 91) - 0.5) * 14) / TS) | 0)), gy = Math.min(Ht - 1, Math.max(0, ((wy + (vnoise(wy, wx, 3, seed + 93) - 0.5) * 14) / TS) | 0));
+          const rp = PAL.reg[season] && PAL.reg[season][REG[gy * Wt + gx]];
+          if (rp && rp[t]) tones = rp[t];
+        }
         const h = G.hash2(wx, wy, seed + 9);
         let col;
         if (IS_WATER[t]) {
@@ -965,11 +999,15 @@
         const arau = o.sp === 'arau', dx = tiny ? 0 : swayOf(o, now || 0);
         if (!tiny) blit(S.bigShadow, bx - 3 + (dx > 0 ? 1 : 0), by + 11);
         if (arau) blitTree(S.arau[season][o.v], bx - 3, by + 13 - 30, 8, dx);
+        else if (o.sp === 'nobre') blitTree(S.nobre[season][o.v % 3], bx - 3, by + 13 - 23, 6, dx);   // Etapa 17
+        else if (o.sp === 'mangue') blitTree(S.mangue[season][o.v % 2], bx - 2, by + 13 - 20, 8, dx);
         else blitTree(S.broad[season][o.v], bx - 3, by + 13 - 23, 6, dx);
         break;
       }
       case 'stump': blit(S.stump[snow ? 1 : 0], bx + 3, by + 7); break;
+      case 'junco': blit(S.junco[season][o.v % 2], bx + 3, by + 2); break;   // Etapa 17
       case 'bush':
+        if (o.sp === 'cacto') { blit(S.cacto[season][o.fruit > 0 ? 1 : 0], bx + 2, by + 3); break; }   // Etapa 17: o mandacaru
         if (o.holy) {
           // Etapa 11: a árvore de Deus, de fruta dourada (e um brilho de vez em quando)
           blit(S.holyBush[Math.min(5, o.fruit)], bx + 1, by + 4);
@@ -977,6 +1015,8 @@
         } else blit(S.bush[season][Math.min(3, o.fruit)], bx + 1, by + 4);
         break;
       case 'rock': {
+        if (o.sal) { blit(S.salina, bx + 1, by + 9); break; }   // Etapa 17: a salina e o veio de ouro
+        if (o.ouro) { const im = S.veio[o.v % 2][snow ? 1 : 0]; blit(im, bx + 8 - im.width / 2, by + 14 - im.height); break; }
         const sz = o.big ? (o.ch >= 3 ? 2 : 1) : 0;
         const img = S.rock[sz][snow ? 1 : 0][o.v % 2];
         blit(img, bx + 8 - img.width / 2, by + 14 - img.height);
@@ -1095,8 +1135,10 @@
       drawShop(S, S2, b, bx, by, ghost, lv, now);
     } else if (b.type === 'estatua') {
       // Etapa 11: a estátua (o nicho com a cor do milagre); consagrada, uma luz gira em volta da cabeça
-      const img = A.statue(lv, b.built ? b.milagre : null), top = by + 31 - img.height;
+      // Etapa 17: a grande estátua sobe num pedestal de pedra
+      const ped = lv >= 3 ? 7 : 0, img = A.statue(lv, b.built ? b.milagre : null), top = by + 31 - img.height - ped;
       blit(S2.bigShadow, bx + 6, by + 27, ghost ? 0.4 : undefined);
+      if (ped) { rect(bx + 3, by + 24, 26, 8, '#6d6672'); rect(bx + 3, by + 24, 26, 2, '#bdb2a6'); rect(bx + 3, by + 31, 26, 1, '#2b2733'); rect(bx + 5, by + 27, 22, 1, '#938a8c'); }
       blit(img, bx, top, ghost ? 0.45 : undefined);
       if (b.built && b.milagre) {
         const col = A.GEM[b.milagre] || '#fee761';

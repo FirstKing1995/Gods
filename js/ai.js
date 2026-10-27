@@ -27,7 +27,7 @@
   AI.SKILL_LABEL = { coleta: 'Coleta', pesca: 'Pesca', construcao: 'Construção', caca: 'Caça', oficio: 'Ofício', plantio: 'Plantio', criacao: 'Criação', mineracao: 'Mineração' };
   const RES_LABEL = { madeira: 'madeira', pedra: 'pedra', agua: 'água', frutas: 'frutas', peixe: 'peixe', carne: 'carne', couro: 'couro',
     argila: 'argila', defumado: 'defumado', seca: 'fruta seca', ferramentas: 'ferramentas', roupas: 'roupas',
-    tabuas: 'tábuas', fibra: 'fibra', mantas: 'mantas', redes: 'redes',
+    tabuas: 'tábuas', fibra: 'fibra', mantas: 'mantas', redes: 'redes', sal: 'sal', nobre: 'madeira nobre',
     feijao: 'feijão', milho: 'milho', abobora: 'abóbora', mandioca: 'mandioca', ovos: 'ovos', leite: 'leite',
     carvao: 'carvão', minerio: 'minério', prata: 'prata', ouro: 'ouro', gemas: 'pedras preciosas', ferro: 'ferramentas de ferro', joias: 'joias' };
   AI.RES_LABEL = RES_LABEL;
@@ -283,8 +283,9 @@
     } else if (c.k === 'agua') S.stock.agua = Math.min(Tech.waterCap(S), S.stock.agua + c.n);
     else S.stock[c.k] += c.n;
     if (c.fibra) { S.stock.fibra += c.fibra; S.stats.fibraGot = (S.stats.fibraGot || 0) + c.fibra; }   // embira da casca (Etapa 7) e lã (Etapa 10)
+    if (c.nobre || c.ouro) G.Regioes.trouxe(S, p, c);   // Etapa 17: madeira nobre e ouro do veio
     if (c.k === 'frutas' || c.k === 'peixe') { const got = S.stats.got || (S.stats.got = {}); got[c.k] = (got[c.k] || 0) + c.n; }   // missões do Ato 1
-    if (c.k !== 'obra' && c.k !== 'caca' && c.k !== 'cria') Sim.float(S, p.x, p.y - 0.6, '+' + c.n + ' ' + RES_LABEL[c.k] + (c.fibra ? ' +' + c.fibra + ' fibra' : ''));
+    if (c.k !== 'obra' && c.k !== 'caca' && c.k !== 'cria') Sim.float(S, p.x, p.y - 0.6, '+' + c.n + ' ' + RES_LABEL[c.k] + (c.fibra ? ' +' + c.fibra + ' fibra' : '') + (c.nobre ? ' +' + c.nobre + ' nobre' : '') + (c.ouro ? ' +1 ouro' : ''));
     // Etapa 15: o que rendeu (por hora, desde que a pessoa começou o trabalho) ensina o jeito
     const a = p.act;
     if (G.Gente && a && a.t0 !== undefined && c.k !== 'obra' && c.k !== 'cria') G.Gente.onYield(S, p, a.type, c.k === 'caca' ? (c.carne || 0) + (c.couro || 0) : c.n, (S.t - a.t0) / 60);
@@ -1382,12 +1383,15 @@
             a.obj.k = 'stump'; a.obj.regrow = 0; a.obj.res = 0;
             W.refreshBlock(w, a.obj.y * w.W + a.obj.x);
             p.carry = { k: 'madeira', n: C.TREE_WOOD, fibra: G.Obras ? G.Obras.embira(S) : 0 };
+            if (a.obj.sp === 'nobre') p.carry.nobre = C.NOBRE_WOOD;   // Etapa 17: o jequitibá da mata fechada
             S.events.push({ k: 'fell', x: a.obj.x, y: a.obj.y });
           } else if (kind === 'pedra') {
             if (!objOk(a.obj, kind)) return FAIL;
             if (a.t < C.MINE_MIN) return RUN;
             a.obj.ch--;
-            p.carry = { k: 'pedra', n: C.ROCK_STONE };
+            // Etapa 17: a salina dá sal; o veio da serra, pedra e às vezes ouro
+            p.carry = a.obj.sal ? { k: 'sal', n: C.SAL_N } : { k: 'pedra', n: C.ROCK_STONE };
+            if (a.obj.ouro && S.rng.next() < C.VEIO_OURO) p.carry.ouro = 1;
             if (a.obj.ch <= 0) W.removeObj(w, a.obj);
           } else if (kind === 'frutas') {
             const o = a.obj;

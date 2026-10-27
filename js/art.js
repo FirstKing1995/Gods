@@ -1255,6 +1255,14 @@
     anta: { w: 18, body: ['...kkkkkkkk.......', '..kFFFFFFFFkk.kk..', '.kFFFFFFFFFFFkWk..', 'kFFFFFFFFFFFFFFFk.', 'kFFFFFFFFFFFFFeFFk', 'kfFFFFFFFFFFFFFFFk', 'kffFFFFFFFFFFkfFFn', '.kffffffffffk..kk.'],
       legs: [['..kfk....kfk......', '..kfk....kfk......', '..kk.....kk.......'], ['..kfk....kfk......', '.kfk......kfk.....', '.kk........kk.....'], ['..kfk....kfk......', '...kfk..kfk.......', '...kk...kk........']],
       map: { k: '#141014', F: '#4c4648', f: '#343032', W: '#e0d8d0', e: '#b8a890', n: '#2a2428' }, alt: { F: '#565052' } },
+    // Etapa 17: o caranguejo do mangue e a cabra do sertão
+    caranguejo: { w: 11, body: ['.k.......k.', 'kRk.....kRk', '.kRk...kRk.', '..kRRRRRk..', '.kReRReRRk.', 'kRRRRRRRRRk', '.kffffffk..'],
+      legs: [['k.k.k.k.k..', '...........'], ['.k.k.k.k.k.', '...........'], ['k.k.k.k.k..', '.k.......k.']],
+      map: { k: '#3a1c1c', R: '#c4542e', f: '#8a3020', e: '#181425' }, alt: { R: '#b0602e' } },
+    cabra: { w: 14, body: ['..........kk..', '.........kHk.k', '.........kFFkH', '........kFFeFk', '........kFFFFn', '.kkkkkkkFFFk..', 'kWFFFFFFFFFk..', 'kFFFFFFFFFFk..', '.kfFFFFFFffk..'],
+      dead: ['.kkkkkkkkkk.k.', 'kWFFFFFFFFFkFk', 'kFFFFFFFFFFFFn', '.kfFFFFFFffkk.'],
+      legs: [['..kf....kf....', '..kf....kf....', '..kk....kk....'], ['..kf....kf....', '.kf......kf...', 'kk........kk..'], ['..kf....kf....', '...kf..kf.....', '....kk.kk.....']],
+      map: { k: '#2a2420', F: '#d8ccb4', f: '#a89a82', W: '#f4eee0', H: '#6e6050', e: '#181425', n: '#3a2c28' }, alt: { F: '#9a7a5a', f: '#6e563e' } },
     jacu: { w: 11, body: ['......kkk..', '.....kFFFk.', '.....kFeFGk', 'kk..kFFRRk.', 'kFk.kWFFRk.', '.kFkFFWFk..', '..kFFFFk...'],
       legs: [['....r.r....', '...rr.rr...'], ['...r...r...', '..rr...rr..'], ['....r.r....', '....rrrr...']],
       map: { k: '#141014', F: '#3e3034', f: '#2a2224', R: '#e43b44', W: '#cfc4bc', G: '#8b9bb4', e: '#e8d8a0', r: '#b04a4a' }, alt: { F: '#48383a' } },
@@ -1338,6 +1346,8 @@
 
   // ---------- ícones da interface (10 x 10) ----------
   const ICONS = {
+    mapa: [['..........', '.kkkkkkkk.', '.kggkbbbk.', '.kgggkbbk.', '.kgykggbk.', '.kgggggkk.', '.kbgggrgk.', '.kbbggggk.', '.kkkkkkkk.', '..........'], { k: P.ink2, g: P.leaf, b: P.sky, y: P.tan, r: P.red }],   // Etapa 17: o mapa do mundo
+    ponte: [['..........', '..........', 'kkkkkkkkkk', 'kssssssssk', 'kSSSSSSSSk', 'kkkkkkkkkk', 'ks.sk.sk.k', 'k...k..k.k', 'bbbbbbbbbb', '.b.b.b.b.b'], { k: P.ink2, s: P.silver, S: P.mist, b: P.sky }],   // Etapa 17
     // Etapa 16: as grandes obras e as instituições
     templo: [['....yy....', '...kkkk...', '..kssssk..', '.kkkkkkkk.', '.ks.ss.sk.', '.ks.ss.sk.', '.ks.ss.sk.', 'kkkkkkkkkk', 'kssssssssk', 'kkkkkkkkkk'],
       { k: P.ink2, s: P.silver, y: P.gold }],
@@ -2133,6 +2143,90 @@
     return b.canvas();
   }
 
+  // ---------- Etapa 17: o que só nasce em cada região ----------
+  // as cores do chão de cada região (primavera, verão e outono; no inverno, só a água turva muda). Por tipo de tile
+  const RT = {
+    1: { 3: ['#c8a874', '#dcc08c', '#ecd6a8'] },   // litoral: areia clara de praia
+    2: { 1: ['#2c5450', '#386660', '#56847a'], 2: ['#2c5450', '#386660', '#56847a'], 3: ['#58503a', '#685e44', '#7a6e50'], 4: ['#3c5838', '#48683e', '#5a7a48'] },   // mangue: lama e água escura
+    3: { 6: ['#5e6e52', '#70805a', '#86946a'], 7: ['#64606c', '#7c7a8a', '#d6dae4'] },   // serra alta: pedra fria com neve no alto
+    4: { 3: ['#c09660', '#d2aa72', '#e2c08c'], 4: ['#7c7840', '#928a4a', '#a89c5a'], 6: ['#88783f', '#9c8a4c', '#b09c5c'], 8: ['#9e7a46', '#b49058', '#c8a66c'] },   // sertão
+    5: { 4: ['#3c6232', '#4a6e37', '#5c8040'], 5: ['#223e2a', '#2c4a2f', '#385734'] },   // mata fechada
+    6: { 1: ['#3a5446', '#465f4e', '#627a62'], 2: ['#3a5446', '#465f4e', '#627a62'], 3: ['#6a5c3e', '#7a6a46', '#8e7c54'], 4: ['#4a5c32', '#586a38', '#6a7a42'], 5: ['#30442f', '#3a5034', '#475c3a'] },   // pântano
+  };
+  A.REGION_TERRAIN = [RT, RT, RT, { 2: { 1: RT[2][1], 2: RT[2][2] }, 6: { 1: RT[6][1], 2: RT[6][2] } }];
+  TREE_TONES.nobre = ['#17241f', '#1d3a2c', '#28503a', '#3a6a3c', '#5e8a40', '#a8b45a'];
+  TREE_TONES.mangue = ['#18282a', '#1f3a34', '#2a5040', '#3c6a46', '#5a864c', '#90a85e'];
+  // jequitibá: a copa maior e mais escura da mata fechada (a madeira nobre)
+  function nobreTree(v, season) {
+    if (season === 3) return broadTree(v, 3);
+    const b = new Buf(22, 26);
+    trunk(b, 10, 13, 23, [[10, 15, 5, 9], [11, 15, 16, 9]]);
+    const tones = season === 2 ? TREE_TONES.autumnY : TREE_TONES.nobre;
+    clumps(b, BROAD[(v + 1) % 3].map(([x, y, r]) => [x, y, r + 0.6]), tones, 140 + v * 13 + season);
+    return b.canvas();
+  }
+  // a árvore do mangue: copa baixa sobre raízes em arco, fincadas na lama
+  function mangueTree(v, season) {
+    const b = new Buf(20, 22), cx = 10;
+    for (const [x0, x1] of [[3, 8], [6, 9], [16, 11], [13, 11]]) {
+      line(b, x0, 21, Math.round((x0 + x1) / 2), 15, BARK[1]);
+      line(b, Math.round((x0 + x1) / 2), 15, x1, 13, BARK[2]);
+    }
+    for (let y = 10; y <= 15; y++) { b.set(cx - 1, y, BARK[3]); b.set(cx, y, BARK[2]); b.set(cx + 1, y, BARK[1]); }
+    const tones = season === 3 ? TREE_TONES.bushW : TREE_TONES.mangue;
+    clumps(b, [[6, 7, 3.4], [10, 5, 3.8], [14, 7, 3.4], [8, 10, 3], [12, 10, 3]].map(([x, y, r]) => [x + (v === 1 ? 1 : 0), y, r]), tones, 170 + v);
+    return b.canvas();
+  }
+  // mandacaru: colunas verdes com espinho claro; com fruta, um botão vermelho no alto
+  function cacto(fruit, season) {
+    const b = fromRows([
+      '.....kk.....',
+      '....kGgk....',
+      '.k..kGgk..k.',
+      'kGk.kGgk.kGk',
+      'kGgkkGgk.kGk',
+      'kGgGGGgk.kGk',
+      '.kgGGGgkkGgk',
+      '..kkkGgGGGgk',
+      '....kGgggkk.',
+      '....kGgk....',
+      '....kGgk....',
+      '...kkggkk...',
+    ], { k: '#1c2a24', G: season === 3 ? '#6e8a74' : '#5e8a4c', g: season === 3 ? '#4e6a58' : '#3e6a3a' });
+    for (const [x, y] of [[5, 3], [6, 6], [1, 4], [10, 5], [5, 9]]) b.set(x, y, '#d8e2b0');
+    if (fruit > 0) { b.set(5, 0, '#c8423a'); b.set(6, 0, '#8a2a2c'); }
+    return b.canvas();
+  }
+  // junco: um tufo de varas altas na beira da água, com a ponta marrom
+  function junco(v, season) {
+    const b = new Buf(10, 13), cor = season === 3 ? ['#8a8e7a', '#a8aa94'] : season === 2 ? ['#7a6a36', '#a08a46'] : ['#3e5a2c', '#5e7c3a'];
+    const xs = v === 1 ? [1, 3, 5, 7, 8] : [2, 3, 5, 6, 8];
+    xs.forEach((x, k) => {
+      const top = 1 + (k * 3) % 5;
+      for (let y = top; y <= 12; y++) b.set(x + (y < 5 && k % 2 ? 1 : 0), y, y < top + 3 ? cor[1] : cor[0]);
+      if (k % 2 === 0) { b.set(x, top, '#6e4a35'); b.set(x, top + 1, '#6e4a35'); }
+    });
+    return b.canvas();
+  }
+  // a salina: cristais brancos de sal empilhados na areia
+  function salina() {
+    return fromRows([
+      '.....kk.......',
+      '....kWwk..kk..',
+      '..kkWWwwkkWwk.',
+      '.kWWwWWwwWWwwk',
+      'kWwwWWwwwWwwSk',
+      '.kSSSSSSSSSSk.',
+    ], { k: '#8a8278', W: '#ffffff', w: '#e2e6ea', S: '#b8b4ae' }).canvas();
+  }
+  // o veio de ouro: a pedra grande da serra com riscos de ouro
+  function veio(v, snow) {
+    const b = fromRows(ROCKS[1][v], ROCK_TONES);
+    for (const [x, y] of [[3, 3], [4, 4], [6, 5], [7, 5], [8, 6], [5, 2]]) if (b.get(x, y) && b.get(x, y) !== ROCK_TONES.k) b.set(x, y, (x + y) % 2 ? '#f2da72' : '#eaaa3c');
+    if (snow) for (let x = 0; x < b.w; x++) { const y = [...Array(b.h).keys()].find((yy) => b.get(x, yy) && b.get(x, yy) !== ROCK_TONES.k); if (y !== undefined) b.set(x, y, '#ffffff'); }
+    return b.canvas();
+  }
+
   // ---------- Etapa 16: as grandes obras e as instituições ----------
   // parede de pedra em fiadas desencontradas (a da casa de pedra), com a quina escura
   function stoneWall(b, x0, y0, x1, y1, seed) {
@@ -2273,8 +2367,23 @@
     for (let x = 2; x < 64; x += 6) b.set(x, 5, '#9cc2d4');
     return b.canvas();
   }
+  // a ponte de pedra (32 x 32): o tabuleiro de lajes com a mureta dos dois lados, os arcos por baixo
+  function ponteSpr() {
+    const b = new Buf(32, 32);
+    stoneWall(b, 0, 4, 31, 7, 90);
+    for (let y = 8; y <= 21; y++) for (let x = 0; x <= 31; x++) {
+      const row = Math.floor((y - 8) / 3), off = row % 2 ? 2 : 0, junta = (y - 8) % 3 === 2 || (x + off) % 6 === 0;
+      b.set(x, y, junta ? STONE[2] : H7(Math.floor((x + off) / 6), row, 91) < 0.5 ? STONE[3] : '#a2aec4');
+    }
+    stoneWall(b, 0, 22, 31, 24, 92);
+    for (const ax of [5, 16, 27]) for (let y = 26; y <= 31; y++) for (let x = ax - 4; x <= ax + 4; x++) {
+      const r = Math.hypot(x + 0.5 - ax, y - 31);
+      if (r > 4.6) b.set(x, y, STONE[2]); else if (r > 3.6) b.set(x, y, STONE[1]);
+    }
+    return b.canvas();
+  }
   A.cidadeSprites = function () {
-    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto() };
+    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr() };
     for (const k of ['escola', 'biblioteca', 'hospital', 'guarda', 'brigada', 'mercado']) out[k] = [null, instituicao(k, 1), instituicao(k, 2), instituicao(k, 3)];
     return out;
   };
@@ -2291,6 +2400,13 @@
     S.bush = [0, 1, 2, 3].map((s) => [0, 1, 2, 3].map((f) => bush(f, s)));
     S.holyBush = [0, 1, 2, 3, 4, 5].map((f) => bush(f, 0, true));   // Etapa 11
     S.rock = [0, 1, 2].map((sz) => [false, true].map((sn) => [0, 1].map((v) => rock(sz, v, sn))));
+    // Etapa 17: o jequitibá, a árvore do mangue, o mandacaru, o junco, a salina e o veio de ouro
+    S.nobre = [0, 1, 2, 3].map((s) => [0, 1, 2].map((v) => nobreTree(v, s)));
+    S.mangue = [0, 1, 2, 3].map((s) => [0, 1].map((v) => mangueTree(v, s)));
+    S.cacto = [0, 1, 2, 3].map((s) => [0, 1].map((f) => cacto(f, s)));
+    S.junco = [0, 1, 2, 3].map((s) => [0, 1].map((v) => junco(v, s)));
+    S.salina = salina();
+    S.veio = [0, 1].map((v) => [false, true].map((sn) => veio(v, sn)));
     S.stump = [stump(false), stump(true)];
     polishOn = true;   // 0.16: daqui até os itens do estoque, o acabamento de luz
     S.grave = grave().canvas();

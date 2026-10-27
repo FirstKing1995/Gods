@@ -8,6 +8,10 @@
   const C = G.CFG, W = G.W;
   const F = G.Fauna = {};
   F.SPECIES = Object.keys(C.BICHOS);
+  // 0.18: o caranguejo e a cabra moram em regiões (mangue e sertão); no mundo de antes das regiões, não existem (e nem
+  // tentam nascer: a tentativa gastava o sorteio e mudava o resto do mundo)
+  const REGIAO_HAB = { mangue: 1, sertao: 1 };
+  const especies = (S) => (S.world && S.world.reg ? F.SPECIES : F.SPECIES.filter((sp) => !REGIAO_HAB[C.BICHOS[sp].hab]));
   F.spec = (e) => C.BICHOS[(e && e.sp) || 'capivara'];
 
   function rint(S, a, b) { return S.rng.int(a, b); }
@@ -44,6 +48,8 @@
       case 'mataAgua': return trees(w, x, y, 3) >= 2 && waterNear(w, x, y, 3);
       case 'campo': return (t === T.GRASS || t === T.DRY || t === T.SAND) && trees(w, x, y, 2) === 0 && !waterNear(w, x, y, 1);
       case 'lago': return W.waterAdj(w, i) >= 0 && W.waterCount8(w, i) >= 3;
+      case 'mangue': return !!w.reg && w.reg[i] === 2 && waterNear(w, x, y, 2);   // Etapa 17
+      case 'sertao': return !!w.reg && w.reg[i] === 4 && trees(w, x, y, 2) <= 1;
       case 'deus': return w.bgrid[i] < 0 && !G.Sim.isCamp(S, i) && trees(w, x, y, 1) <= 3;   // o bicho criado por Deus (Etapa 11): perto da aldeia
     }
     return false;
@@ -71,10 +77,10 @@
     }
     if (!f.made) {
       f.made = true; f.v9 = true;
-      for (const sp of F.SPECIES) for (let k = 0; k < C.BICHOS[sp].n; k++) newHerd(S, sp);
+      for (const sp of especies(S)) for (let k = 0; k < C.BICHOS[sp].n; k++) newHerd(S, sp);
       // 0.16: no mapa grande, mais bandos espalhados longe do acampamento (quem explora acha bicho, não um mundo vazio)
       const mais = (S.world.W * S.world.H) / (128 * 128) - 1;
-      if (mais > 0) for (const sp of F.SPECIES) {
+      if (mais > 0) for (const sp of especies(S)) {
         if (C.BICHOS[sp].hab === 'deus') continue;
         const extra = Math.floor(C.BICHOS[sp].n * mais * 0.35 + S.rng.next());
         for (let k = 0; k < extra; k++) newHerd(S, sp, 0, [C.FAUNA_DIST[1], C.FAUNA_DIST[1] + S.world.W * 0.35]);
@@ -82,7 +88,7 @@
     } else if (!f.v9) {
       // save de antes da Etapa 9: só havia capivaras; chegam os outros bichos
       f.v9 = true;
-      for (const sp of F.SPECIES) if (sp !== 'capivara') for (let k = 0; k < C.BICHOS[sp].n; k++) newHerd(S, sp);
+      for (const sp of especies(S)) if (sp !== 'capivara') for (let k = 0; k < C.BICHOS[sp].n; k++) newHerd(S, sp);
     }
   };
   // um lugar para o bando: o hábitat da espécie, longe o bastante do acampamento e dos outros bandos

@@ -240,7 +240,8 @@
 
   function tileTemp(S, i) {
     const t = S.world.tile[i];
-    return S.temp + (t === T.MOUNTAIN ? C.MOUNTAIN_COLD : t === T.HILL ? C.HILL_COLD : 0);
+    const rg = S.world.reg ? S.world.reg[i] : 0;   // Etapa 17: a serra alta é fria; o sertão, quente
+    return S.temp + (t === T.MOUNTAIN ? C.MOUNTAIN_COLD : t === T.HILL ? C.HILL_COLD : 0) + (rg === 3 ? C.SERRA_COLD : rg === 4 ? C.SERTAO_HEAT : 0);
   }
   // 0.14: as fogueiras acesas, uma vez por passo (antes, cada pessoa varria todas as obras: numa aldeia grande, a
   // lista das casas inteira, para cada um, a cada passo)
@@ -541,6 +542,7 @@
     const def = C.BUILD[type], w = S.world;
     // 0.16: nenhuma obra fica mais presa à distância do centro (o armazém virou uma boca do estoque onde estiver)
     if (def.env && G.Obras && !G.Obras.envOk(S, { x, y, w: def.w, h: def.h }, def.env)) return 'Pede ' + C.ENV[def.env].name;   // Etapa 12: a mina
+    if (def.ponte) return G.Regioes ? G.Regioes.ponteWhy(S, x, y) : 'Lugar ruim';   // Etapa 17: a ponte vai em cima da água
     for (let dy = 0; dy < def.h; dy++) for (let dx = 0; dx < def.w; dx++) {
       const tx = x + dx, ty = y + dy;
       if (tx < 1 || ty < 1 || tx >= w.W - 1 || ty >= w.H - 1) return 'Fora do mapa';
@@ -1018,8 +1020,11 @@
     const rm = C.ROT_SEASON[ck.season] * (G.Obras ? G.Obras.storeMult(S) : 1), Te = G.Tech;   // o armazém guarda melhor (Etapa 7)
     let lost = 0;
     lost += rot(S, 'frutas', C.ROT_FRUIT * rm * Te.rotMult(S, 'frutas'));
-    lost += rot(S, 'peixe', C.ROT_FISH * rm * Te.rotMult(S, 'peixe'));
-    lost += rot(S, 'carne', C.ROT_MEAT * rm * Te.rotMult(S, 'carne'));
+    // Etapa 17: com sal no estoque, a carne e o peixe salgados duram mais (vai 1 de sal por dia)
+    const sal = (S.stock.sal || 0) > 0 && ((S.stock.peixe || 0) + (S.stock.carne || 0)) > 0 ? C.SAL_ROT : 1;
+    if (sal < 1 && !S.resumido) S.stock.sal--;
+    lost += rot(S, 'peixe', C.ROT_FISH * rm * sal * Te.rotMult(S, 'peixe'));
+    lost += rot(S, 'carne', C.ROT_MEAT * rm * sal * Te.rotMult(S, 'carne'));
     lost += rot(S, 'defumado', C.ROT_DEFUMADO * rm);
     lost += rot(S, 'seca', C.ROT_SECA * rm);
     // Etapa 10: o que vem da roça dura (feijão e milho secos quase não estragam); ovo e leite, pouco
@@ -1054,6 +1059,7 @@
     if (G.Soc) G.Soc.daily(S);   // Etapa 14: a índole, o descontentamento, as penas, a vila de fora
     if (G.Gente) { if (S.resumido) G.Gente.resumo(S); else G.Gente.daily(S); }   // Etapa 15: tentativas, a estação de que gosta
     if (G.Cidade) G.Cidade.daily(S);   // Etapa 16: quem serve, a aula, a estante, a febre, a faísca, a feira
+    if (G.Regioes) G.Regioes.daily(S);   // Etapa 17: o sal que chegou
     if (G.Life) G.Life.daily(S);
   }
   function rot(S, k, rate) {
@@ -1102,6 +1108,7 @@
     if (G.Soc) G.Soc.hourly(S);   // Etapa 14: os crimes, o julgamento, o líder, as obras do povo
     if (G.Gente) G.Gente.hourly(S);   // Etapa 15: aprender vendo, o combinado, o que se pensa em voz alta
     if (G.Cidade) G.Cidade.hourly(S);   // Etapa 16: a febre, o fogo por acaso, o aqueduto
+    if (G.Regioes) G.Regioes.hourly(S);   // Etapa 17: a primeira vez em cada região, o mosquito
     if (G.Life) G.Life.hourly(S);
     checkGoals(S);
   }
@@ -1342,6 +1349,7 @@
     if (G.Soc) G.Soc.init(S);   // Etapa 14: índole, crimes, líder, quem foi embora
     if (G.Gente) G.Gente.init(S);   // Etapa 15: gostos, jeito, o saber nas pessoas
     if (G.Cidade) G.Cidade.init(S);   // Etapa 16: grandes obras e instituições
+    if (G.Regioes) G.Regioes.init(S);   // Etapa 17: as regiões
     fixGoals(S);
     if (!S.seen) {
       S.seen = new Uint8Array(S.world.W * S.world.H);
