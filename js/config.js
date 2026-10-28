@@ -3,7 +3,7 @@
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.18.0',
+    VERSION: '0.19.0',
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
     SAVE_KEY: 'genesis.save.v1',
@@ -43,6 +43,10 @@
     // nobre além da comum; a salina dá SAL_N de sal; o veio de ouro dá ouro em VEIO_OURO das vezes; com sal no estoque,
     // a carne e o peixe estragam SAL_ROT do normal (e vai 1 de sal por dia); no mangue e no pântano, o mosquito passa
     // a febre (MOSQUITO_H por hora de quem está ali; de noite, o dobro). SERTAO_ROCA: o quanto a roça rende no sertão
+    // Etapa 18: o mar. A pesca com canoa e com barco; a expedição (quantos vão, quantos dias fora, o perigo, a chance de
+    // achar terra, de haver povo nela, quantas terras há); a colônia (quantos vão, quanta comida levam)
+    CANOA_PESCA: 1.25, BARCO_PESCA: 1.45, MAR_TRIPULACAO: [3, 8], MAR_DIAS: [15, 30], MAR_PERIGO: 0.32, MAR_PERIGO_MIN: 0.08, MAR_ACHA: 0.8, MAR_POVO: 0.6, MAR_TERRAS: 4,
+    COLONIA_GENTE: 6, COLONIA_COMIDA: 60, COLONIA_MAX: 60,
     SERRA_COLD: -5, SERTAO_HEAT: 3, NOBRE_WOOD: 2, SAL_N: 3, VEIO_OURO: 0.3, SAL_ROT: 0.5, MOSQUITO_H: 0.0025, SERTAO_ROCA: 0.75,
     RAIN_CHANCE: [0.30, 0.15, 0.35, 0.30],
     RAIN_COLD: -2, SNOW_COLD: -3,
@@ -196,6 +200,13 @@
         desc: 'Do alto se vê longe: a névoa se abre em volta dela, o bicho que vem chegando é avisado antes e o malfeito da noite tem testemunha.' },
       aqueduto: { name: 'Aqueduto', a: 'o', key: '', w: 4, h: 2, cost: { pedra: 180, argila: 60, tabuas: 20 }, work: 33000, grande: true, need: 'ceramica', water: { h: 3 },
         desc: 'Arcos de pedra que trazem a água para dentro da aldeia: o estoque de água se enche sozinho, e ninguém precisa mais ir buscar.' },
+      // Etapa 18: os barcos, na beira d'água. extra: o que sai do estoque ao marcar (pano e ferro não são material de obra)
+      canoa: { name: 'Canoa', a: 'a', key: '', w: 1, h: 1, cost: { madeira: 10, fibra: 4 }, work: 360, need: 'corda', env: 'agua', boat: 'canoa',
+        desc: 'Um tronco escavado, amarrado com corda: no rio e no lago, a pesca rende 25% mais.' },
+      barco: { name: 'Barco', a: 'o', key: '', w: 2, h: 2, cost: { tabuas: 24, fibra: 8 }, extra: { mantas: 2 }, work: 900, need: 'corda', env: 'agua', boat: 'barco',
+        desc: 'Tábuas, vela de pano e remo: a pesca de mar rende 45% mais, e ele leva carga até a vila de fora uma vez por semana, mesmo sem mercado. Pede 2 mantas para a vela.' },
+      navio: { name: 'Navio', a: 'o', key: '', w: 3, h: 2, cost: { tabuas: 60, fibra: 12, madeira: 20 }, extra: { mantas: 6, ferro: 4 }, work: 3600, need: 'corda', env: 'mar', boat: 'navio',
+        desc: 'Casco alto, velas de pano e pregos de ferro: vai ao mar aberto. Daqui sai a expedição que acha outras terras. Pede água funda por perto, 6 mantas e 4 ferramentas de ferro.' },
       // Etapa 17: a ponte de pedra, em cima do rio ou da água rasa; pronta, a água do caminho vira chão de pedra
       ponte: { name: 'Ponte de pedra', a: 'a', key: '', w: 2, h: 2, cost: { pedra: 90, tabuas: 24 }, work: 12000, grande: true, ponte: true,
         desc: 'Arcos de pedra por cima do rio: atravessa-se a pé enxuto e ligeiro, e o bicho de criação também passa. Vai em cima da água, com terra dos dois lados.' },
@@ -252,6 +263,7 @@
     // o que cada ambiente pede, olhando em volta da obra
     ENV: {
       agua: { name: 'água a até 3 passos' },
+      mar: { name: 'água funda a até 2 passos' },   // Etapa 18: o navio
       mata: { name: 'mata por perto', forest: 14, trees: 5 },
       campo: { name: 'campo aberto em volta', open: 30 },
       serra: { name: 'colina, montanha ou pedras por perto', hill: 10, rocks: 3 },

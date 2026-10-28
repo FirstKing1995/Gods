@@ -1272,6 +1272,7 @@
   // Etapa 16: grandes obras e instituições. A grande obra em andamento sobe de baixo para cima até onde o trabalho
   // chegou, com o desenho inteiro apagadinho atrás e os andaimes por cima
   function drawCidade(S, S2, b, bx, by, ghost, lv) {
+    if (b.mar) return;   // Etapa 18: o navio está no mar
     const set = S2.cidade[b.type], img = Array.isArray(set) ? set[Math.max(1, Math.min(set.length - 1, lv))] : set;
     const base = by + b.h * TS, top = base - img.height, gr = C.BUILD[b.type].grande;
     blit(S2.bigShadow, bx + b.w * TS / 2 - 10, base - 5, ghost ? 0.4 : undefined);

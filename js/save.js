@@ -109,6 +109,7 @@
       gente: S.gente || null,   // Etapa 15: a média de cada trabalho, as tentativas, quem aprendeu com quem
       cidade: S.cidade || null,   // Etapa 16: o que está escrito, a febre, as primeiras vezes
       regioes: S.regioes || null,   // Etapa 17: as regiões que o povo já conhece
+      mar: S.mar || null,   // Etapa 18: a viagem, as terras achadas, as colônias
       povo: S.povo || null,   // 0.16: o nome e o título do lugar
     };
   };
@@ -163,6 +164,7 @@
       gente: d.gente || null,
       cidade: d.cidade || null,
       regioes: d.regioes || null,
+      mar: d.mar || null,
       povo: d.povo || null,
     };
     for (const p of S.people) {

@@ -334,21 +334,28 @@
   function feira(S) {
     const lv = Ci.nivel(S, 'mercado'), v = S.soc && S.soc.vila;
     if (!lv || !v || v.fim || S.ck.day % C.MERCADO_D[lv]) return;
-    const N = C.MERCADO_N[lv], st = S.stock;
+    Ci.troca(S, C.MERCADO_N[lv], '', lv >= 3 ? 1 : 0.4);
+  }
+  // uma troca com a vila de fora: o que mais sobra vira o que mais falta (quem: quem leva, quando não é o mercado)
+  Ci.troca = function (S, N, quem, laco) {
+    const v = S.soc && S.soc.vila, st = S.stock;
+    if (!v || v.fim) return false;
     const ks = TROCA.filter((k) => st[k] !== undefined);
-    if (ks.length < 2) return;
+    if (ks.length < 2) return false;
     const sobra = ks.slice().sort((a, b) => (st[b] || 0) - (st[a] || 0))[0];
     const falta = ks.filter((k) => k !== sobra).sort((a, b) => (st[a] || 0) - (st[b] || 0))[0];
-    if ((st[sobra] || 0) < N * 2 || (st[falta] || 0) >= st[sobra] / 2) return;
+    if ((st[sobra] || 0) < N * 2 || (st[falta] || 0) >= st[sobra] / 2) return false;
     const veio = Math.round(N * 0.8);
     st[sobra] -= N; st[falta] = (st[falta] || 0) + veio;
-    v.laco = Math.min(100, (v.laco || 0) + (lv >= 3 ? 1 : 0.4));
+    v.laco = Math.min(100, (v.laco || 0) + (laco || 0.4));
     S.stats.trocasMercado++;
     const nome = (k) => (G.AI && G.AI.LABEL && G.AI.LABEL[k]) || C.ITEM_NAMES && C.ITEM_NAMES[k] || k;
-    const txt = 'Na ' + Sim().def(Ci.feita(S, 'mercado')).name.toLowerCase() + ', ' + N + ' de ' + nome(sobra).toLowerCase() + ' viraram ' + veio + ' de ' + nome(falta).toLowerCase() + ', com gente ' + (v.art ? 'd' + v.art + ' ' : 'de ') + v.nome + '.';
+    const onde = quem ? 'Com ' + quem : 'Na ' + Sim().def(Ci.feita(S, 'mercado')).name.toLowerCase();
+    const txt = onde + ', ' + N + ' de ' + nome(sobra).toLowerCase() + ' viraram ' + veio + ' de ' + nome(falta).toLowerCase() + ', com gente ' + (v.art ? 'd' + v.art + ' ' : 'de ') + v.nome + '.';
     if (S.stats.trocasMercado === 1) chron(S, 'Primeira troca na banca: ' + txt.charAt(0).toLowerCase() + txt.slice(1));
     else if (!S.resumido) toast(S, txt, 'good');
-  }
+    return true;
+  };
 
   // ---------- o líder: marca a instituição que falta e sobe de nível a que não dá mais conta ----------
   Ci.FALTA = {

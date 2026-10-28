@@ -1426,6 +1426,7 @@
               if (S.ck.season === 3) ch *= C.FISH_WINTER;
               ch *= G.Narr.fishMult(S);   // seca e nevasca espantam, piracema enche o rio
               ch *= Tech.fishMult(S, p);   // anzol
+              if (G.Mar && S.mar) ch *= G.Mar.pescaMult(S);   // Etapa 18: a canoa e o barco
               if (S.rng.next() < ch) {
                 a.caught++;
                 p.carry = { k: 'peixe', n: a.caught };

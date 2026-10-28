@@ -9,7 +9,7 @@ const path = require('path');
 const fs = require('fs');
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 globalThis.G = {};
-for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'sociedade', 'gente', 'cidade', 'regioes', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
+for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'sociedade', 'gente', 'cidade', 'regioes', 'mar', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
 G.CFG.WORLD_GEN = 1;   // 0.18: estes testes foram montados nos mapas de antes das regiões (as regiões têm o teste delas)
 const { W, Sim, CFG: C, Family: F, God, Save, AI, Tech: T, Life: L, Obras: O, Narr: N } = G;
 const TT = G.T;
@@ -77,7 +77,7 @@ if (isMainThread) {
   // ===================== toda obra evolui =====================
   {
     const types = Object.keys(C.BUILD);
-    check('toda obra tem pelo menos uma melhoria (as grandes obras da Etapa 16 não têm níveis)', types.every((t) => C.BUILD[t].grande || (C.BUILD[t].up && C.BUILD[t].up.length >= 1)), types.join(', '));
+    check('toda obra tem pelo menos uma melhoria (as grandes obras e os barcos não têm níveis)', types.every((t) => C.BUILD[t].grande || C.BUILD[t].boat || (C.BUILD[t].up && C.BUILD[t].up.length >= 1)), types.join(', '));
     const f2 = Sim.defOf('fogueira', 2), f3 = Sim.defOf('fogueira', 3);
     check('fogueira de pedras: lenha dura mais, chuva quase não apaga, mais lugares no calor', f2.fire.burn > C.BUILD.fogueira.fire.burn && f2.fire.rain < 1 && f2.fire.seats === 6 && f2.fire.r === 6, JSON.stringify(f2.fire));
     check('fogueira do centro: histórias para 16, que ensinam mais, e festa que aproxima mais', f3.fire.listen === 16 && f3.fire.story > 1 && f3.fire.party > 1 && f3.max, JSON.stringify(f3.fire));

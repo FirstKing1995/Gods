@@ -65,6 +65,8 @@
   // Sai de S.people (não conta como vivo nem como morto) e fica em S.soc.fora, com alive = false e fora = quando saiu.
   // Family.person ainda acha pelo id: o parentesco de quem ficou não se perde (nunca um par entre parentes).
   let foraIdx = null;
+  So.sair = (S, p, why) => sair(S, p, why);   // Etapa 18: a tripulação e os colonos
+  So.voltar = (S, p, x, y) => voltar(S, p, x, y);
   So.away = function (S, id) {
     const s = S.soc;
     if (!s || !s.fora.length) return null;
