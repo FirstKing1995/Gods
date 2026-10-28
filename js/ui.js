@@ -139,6 +139,7 @@
   // ---------- montagem ----------
   UI.init = function (hooks) {
     UI.hooks = hooks;
+    $('#filho-opcoes').addEventListener('click', (e) => { const b = e.target.closest('[data-resp]'); if (!b || !S || !G.Avatar) return; G.Avatar.responder(S, +b.dataset.resp); $('#modal-filho').hidden = true; });   // Etapa 21
     // ícones estáticos
     document.querySelectorAll('#mobnav button').forEach((b) => {
       const n = { vontades: 'verao', construir: 'construir', deus: 'deus', povo: 'pessoa', cronica: 'cronica' }[b.dataset.open] || (b.id === 'btn-mapa' ? 'mapa' : '');
@@ -272,6 +273,9 @@
     $('#pessoa-list').addEventListener('click', () => UI.showList());
     $('#inspector').addEventListener('click', (e) => {
       const b = e.target.closest('[data-act]'); if (!b || !S) return;
+      if (b.dataset.act === 'av-possuir' && G.Avatar) { const r = G.Avatar.possuir(S, UI.sel.person); if (!r.ok) UI.toast('Agora não: ' + r.why + '.', 'warn'); else if (UI.hooks.follow) UI.hooks.follow(UI.sel.person); return; }   // Etapa 21
+      if (b.dataset.act === 'av-soltar' && G.Avatar) { G.Avatar.soltar(S); return; }
+      if (b.dataset.act === 'av-acao' && G.Avatar) { const r = G.Avatar.agir(S, b.dataset.k, +(b.dataset.pid || 0)); if (!r.ok) UI.toast('Agora não: ' + r.why + '.', 'warn'); return; }
       if (b.dataset.act === 'partir' && G.Mar) {   // Etapa 18: a expedição
         const r = G.Mar.partir(S, +$('#mar-n').value, +$('#mar-comida').value);
         if (!r.ok) UI.toast('Agora não: ' + r.why + '.', 'warn'); else UI.toast('O navio partiu com ' + r.gente.length + ' pessoas.', 'good');
@@ -875,7 +879,7 @@
         rito: ritoLine(p),
         reza: p.prayer ? `<p class="story">Reza: “${esc(p.prayer.text)}”</p>` : '',
         tracos: `<div class="chips">${indoleChips(p)}${p.traits.map((t) => `<span class="chip" title="${esc(Sim.TRAIT_DESC[t])}">${esc(t)}</span>`).join('')}${criadoChip(p)}</div>`,
-        soc: socLine(p),   // Etapa 14: a pena, o descontentamento, o que só Deus viu
+        soc: socLine(p) + avatarLine(p),   // Etapa 14: a pena, o descontentamento, o que só Deus viu; Etapa 21: o avatar
         povo: povoChips(p),   // Etapa 12: o povo da pessoa e os dons dela
         posses: p.alive ? gear(p) : '',
         barras: p.alive ? `<div class="needs">${needs}</div>` : '',
@@ -1497,6 +1501,24 @@
     return out.join('');
   }
   // a ficha de quem vive: a pena, o descontentamento, e o que só Deus viu (com o que dá para fazer)
+  // Etapa 21: possuir (ou, já possuído, o que só o avatar faz), e a marca do abençoado
+  function avatarLine(p) {
+    const Av = G.Avatar;
+    if (!Av || !S.avatar || !p.alive) return '';
+    let h = p.abencoado ? '<p class="small"><b>' + (p.sex === 'F' ? 'Abençoada' : 'Abençoado') + '</b>: ' + esc(Av.DONS[p.abencoado.dom]) + '.</p>' : '';
+    if (Av.ativoEm(S, p)) {
+      h += '<p class="small">Você está em ' + esc(p.name) + '. Toque no chão para andar; perto de alguém, escolha o que fazer. Custa ' + C.AVATAR_PODER_H + ' de Poder por hora.</p><div class="av-acoes">' +
+        Object.keys(Av.ACOES).map((k) => { const w = Av.acaoWhy(S, k, UI.sel.person !== p.id ? UI.sel.person : 0); return '<button type="button" class="btn btn-small" data-act="av-acao" data-k="' + k + '" title="' + esc(Av.ACOES[k].desc + (w ? ' (' + w + ')' : '')) + '"' + (w ? ' disabled' : '') + '>' + Av.ACOES[k].nome + '</button>'; }).join('') +
+        '<button type="button" class="btn btn-small" data-act="av-soltar">Sair</button></div>';
+    } else if (Av.ativo(S) && Av.quem(S)) {
+      const w = Av.acaoWhy(S, 'consolar', p.id);
+      h += w ? '' : '<div class="av-acoes">' + ['consolar', 'encorajar', 'pregar', 'ensinar'].map((k) => '<button type="button" class="btn btn-small" data-act="av-acao" data-k="' + k + '" data-pid="' + p.id + '">' + Av.ACOES[k].nome + '</button>').join('') + '</div>';
+    } else {
+      const w = Av.possuirWhy(S, p);
+      h += '<div class="av-acoes"><button type="button" class="btn btn-small btn-gold" data-act="av-possuir"' + (w ? ' disabled title="' + esc(w) + '"' : ' title="Andar entre o povo nos olhos dele"') + '>Possuir</button>' + (w ? '<span class="small muted">' + esc(w) + '</span>' : '') + '</div>';
+    }
+    return h;
+  }
   function socLine(p) {
     const Sc = So();
     if (!Sc || !S.soc || !p.alive || p.carriedBy) return '';
@@ -1876,6 +1898,15 @@
       else if (e.k === 'godLevel') { if (UI.hooks.godPending && !quiet) setTimeout(UI.hooks.godPending, 1400); }   // Etapa 11: o nome e o dom
       else if (e.k === 'godName' || e.k === 'dom' || e.k === 'fe100') { /* só som */ }
       else if (e.k === 'bite') { G.R.event(e); if (UI.hooks.alarm) UI.hooks.alarm(); }
+      else if (e.k === 'filho' && G.Avatar) {   // Etapa 21: a pergunta do abençoado
+        const pg = G.Avatar.pending(S);
+        if (pg) {
+          $('#filho-titulo').textContent = pg.nome + ' pergunta';
+          $('#filho-texto').textContent = '“' + pg.texto + '”';
+          $('#filho-opcoes').innerHTML = pg.opcoes.map((t, i) => '<button type="button" class="btn" data-resp="' + i + '">' + esc(t) + '</button>').join('');
+          $('#modal-filho').hidden = false;
+        }
+      }
       else if (e.k === 'thanks') UI.toast(e.text, e.kind === 'luto' ? 'prayer' : 'thanks');
       else if (e.k === 'oferenda') { UI.toast(e.text, 'thanks'); const ob = Sim.building(state, e.bid); if (ob) UI.float(ob.x + 1, ob.y, '+' + e.poder + ' Poder'); }   // Etapa 12
       else if (e.k === 'povo') { /* só som */ }

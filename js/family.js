@@ -90,6 +90,7 @@
     if (S.povos && S.povos.mixed && G.Povos) f *= G.Povos.xp(S, p);   // Etapa 12: o versátil aprende com os outros povos
     if (G.Cidade && S.cidade) f *= G.Cidade.xp(S, p);   // Etapa 16: a escola e o arquivo
     if (G.Eras && S.eras) f *= G.Eras.xp(S);   // as guildas dos anões
+    if (G.Avatar) f *= G.Avatar.xp(p);   // Etapa 21: o abençoado aprende depressa
     return f;
   };
   // 0.14: quem amamenta, calculado uma vez por passo (antes, cada pergunta varria o povo inteiro: com 300, era 90 mil
@@ -441,6 +442,7 @@
       for (const x of men) { r -= F.afeto(w, x); if (r <= 0) { m = x; break; } }
       if (S.rng.next() < C.CONCEIVE_NIGHT * (F.afeto(w, m) / 100) * (G.Deus && G.Deus.dom(S, 'ventre') ? C.DOM.ventreConceive : 1) * ((w.sangue || m.sangue) && G.Povos ? G.Povos.fert(w, m) : 1)) {
         w.preg = { t0: S.t, due: S.t + Math.round(C.PREGNANCY_Y * YEAR()), father: m.id, known: false };
+        if (G.Avatar && G.Avatar.marcaConcepcao(S, w, m)) w.preg.abencoado = 1;   // Etapa 21: o filho abençoado
       }
     }
   }
@@ -598,7 +600,7 @@
   function giveBirth(S, w) {
     const Sm = Sim();
     const dad = person(S, w.preg ? w.preg.father : 0);
-    const hard = w.labor.hard && !w.labor.helped;
+    const hard = w.labor.hard && !w.labor.helped, abenc = !!(w.preg && w.preg.abencoado);
     w.preg = null; w.labor = null;
     w.rest = S.t + C.DAY_MIN; w.needs.energia = Math.max(10, w.needs.energia - 25);
     if (hard) G.God.ignorePrayers(S, ['parto'], w.id);
@@ -610,6 +612,7 @@
     const sex = S.rng.chance(0.5) ? 'F' : 'M';
     const baby = F.makeBaby(S, w, dad, sex, F.pickName(S, sex, w, dad));
     if (G.Povos) G.Povos.inherit(S, baby, w, dad);   // Etapa 12: o povo, o sangue e os dons
+    if (abenc && G.Avatar) G.Avatar.nasceu(S, baby);   // Etapa 21
     // o bebê mais velho passa para o colo do pai
     if (dad && dad.alive) for (const b of S.people) if (b.alive && b.carriedBy === w.id && !F.carrying(S, dad)) b.carriedBy = dad.id;
     S.people.push(baby);

@@ -111,6 +111,7 @@
       regioes: S.regioes || null,   // Etapa 17: as regiões que o povo já conhece
       mar: S.mar || null,   // Etapa 18: a viagem, as terras achadas, as colônias
       eras: S.eras || null,   // Etapas 19 e 20: a idade, o rumo, a magia
+      avatar: S.avatar || null,   // Etapa 21: quem está possuído, as horas de cada um, a pergunta
       povo: S.povo || null,   // 0.16: o nome e o título do lugar
     };
   };
@@ -167,6 +168,7 @@
       regioes: d.regioes || null,
       mar: d.mar || null,
       eras: d.eras || null,
+      avatar: d.avatar || null,
       povo: d.povo || null,
     };
     for (const p of S.people) {

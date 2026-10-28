@@ -926,6 +926,8 @@
       if (corpo) { UI.select(corpo.id, 0); return; }
     }
     if (best) { UI.select(best.id, 0); tapped(best, sx, sy, now); return; }
+    // Etapa 21: com o avatar, o toque no chão leva o corpo até lá
+    if (G.Avatar && G.Avatar.ativo(S) && button !== 2) { G.Avatar.mover(S, Math.floor(w.x / TS), Math.floor(w.y / TS)); return; }
     // lobo ou viajante no mapa
     if (S.narr) {
       let ent = null, ed = 1e9;
