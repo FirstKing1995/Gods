@@ -272,7 +272,7 @@
     if (p.carriedBy) { const c = G.Family.carrierOf(S, p); if (c && c.alive) return (c.tempHere !== undefined ? c.tempHere : 16) + 3; }
     const fh = fireHeat(S, p.x, p.y) * (p.sleeping && !p.inTent && p.fireShare !== undefined ? p.fireShare : 1);
     let t0 = tileTemp(S, Math.floor(p.y) * w.W + Math.floor(p.x)) + Math.max(fh, G.God.heatAt(S, p.x, p.y));
-    if (p.inTent) { const b = Sim.building(S, p.inTent); if (b && b.built) t0 += Sim.def(b).heat || 0; }
+    if (p.inTent) { const b = Sim.building(S, p.inTent); if (b && b.built) t0 += (Sim.def(b).heat || 0) + (G.Eras ? G.Eras.calorCasa(S) : 0); }   // as runas do conselho
     if (p.sleeping && p.manta) t0 += C.MANTA_HEAT;   // Etapa 7: manta tecida
     return t0;
   }
@@ -1063,6 +1063,7 @@
     if (G.Cidade) G.Cidade.daily(S);   // Etapa 16: quem serve, a aula, a estante, a febre, a faísca, a feira
     if (G.Regioes) G.Regioes.daily(S);   // Etapa 17: o sal que chegou
     if (G.Mar) G.Mar.daily(S);   // Etapa 18: a volta da expedição, a carga do barco, as colônias
+    if (G.Eras) G.Eras.daily(S);   // Etapas 19 e 20: a idade, o rumo, a magia, o desafio de cada idade
     if (G.Life) G.Life.daily(S);
   }
   function rot(S, k, rate) {
@@ -1216,6 +1217,7 @@
     if (d.crime) p.cause = 'crime';   // Etapa 14: morto por outra pessoa
     if ((d.doenca || 0) > 0 && p.needs.saude <= 0 && d.doenca >= Math.max(d.frio, d.fome, d.sede)) p.cause = 'doenca';   // Etapa 16: a febre
     if (G.Cidade) G.Cidade.onDeath(S, p);
+    if (G.Eras) G.Eras.onDeath(S, p);   // a sucessão nos reinos
     S.stats.lastDeathAt = S.t;   // o Narrador dá um respiro depois de uma perda
     if (G.Narr) G.Narr.onDeath(S);
     G.AI.abort(S, p);
@@ -1354,6 +1356,7 @@
     if (G.Cidade) G.Cidade.init(S);   // Etapa 16: grandes obras e instituições
     if (G.Regioes) G.Regioes.init(S);   // Etapa 17: as regiões
     if (G.Mar) G.Mar.init(S);   // Etapa 18: os barcos e as outras terras
+    if (G.Eras) G.Eras.init(S);   // Etapas 19 e 20: as Eras
     fixGoals(S);
     if (!S.seen) {
       S.seen = new Uint8Array(S.world.W * S.world.H);

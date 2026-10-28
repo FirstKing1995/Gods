@@ -1,3 +1,28 @@
+# Gods · Etapas 19 e 20 (Eras) · versão 0.20
+
+## O que mudou na 0.20
+
+**Dois eixos.** A escala (acampamento, aldeia, vila, cidade, reino) já vinha da 0.16. Agora há também a **idade**, o que o povo sabe fazer. Ela aparece no painel do Povo, com o que falta para a próxima.
+
+| Idade | Pede (descoberta, gente, obra-marco) | O desafio que ela traz |
+|---|---|---|
+| Pedra lascada | (o começo) | |
+| Pedra polida e campo | cerâmica e roça, 12 pessoas, o forno | a praga de lagarta, que come metade da roça |
+| Bronze | mineração, 25 pessoas, a mina ou a estátua | a guerra: a vila de fora que não gosta de nós ataca de noite e leva comida (a muralha segura) |
+| Ferro | metalurgia, 45 pessoas, a ferraria ou a escola | a fome da cidade grande, quando a cidade cresce mais que a roça |
+| Reinos | a escrita, 80 pessoas, o templo ou a muralha | a briga pela sucessão quando morre quem governa |
+
+**O rumo da sociedade** se firma na Pedra Polida e vem do povo que é maioria (pode mudar, no máximo uma vez por ano, quando o povo muda):
+- **Humanos: reino de leis escritas.** O malfeito cai 15%, e cada troca (mercado, barco) rende 30% mais.
+- **Elfos: conselho das mais velhas.** Quem fala por todos é mulher (o matriarcado). E a **magia no lugar da máquina**: o conselho aprende as runas (a pedra das casas aquece, +4 °C), as ervas (a febre pesa 40% menos) e os círculos (a roça rende 20% mais), e passa de idade com elas, sem precisar de mineração nem de metalurgia. Uma sociedade pode viver sem metal nenhum.
+- **Anões: guildas de ofício.** Todos aprendem 15% mais depressa.
+- **Povo-fera: clãs e campeões.** A caçada é a lei: a caça rende 25% mais carne.
+- **Aldeia bem misturada: assembleia.** Todos falam na roda: o descontentamento cresce 25% menos.
+
+As idades seguintes (revolução industrial, tecnologia, IA e espaço) ficam para depois, como o GDD diz, quando o jogo aguentar cidades grandes.
+
+---
+
 # Gods · Etapa 18 (Barcos e outras terras) · versão 0.19
 
 ## O que mudou na 0.19
@@ -654,9 +679,8 @@ Fontes: Pixelify Sans e Crimson Pro (Google Fonts) e os dígitos do Jersey 10 (T
 
 ## Próximas etapas
 
-A 0.19 fechou a etapa 18 (Barcos e outras terras). A 0.18 fechou a etapa 17 (Mundo grande), com a ponte de pedra e a grande estátua que tinham ficado da 16. A 0.17 fechou a etapa 16 (Grandes obras e instituições). A 0.15 fechou a etapa 15 (Gente viva), o último dos pedidos urgentes de 12 de outubro: gostos, pensamentos, conversas de verdade, descobertas por tentativa e o saber que passa de mão em mão. A 0.14 tinha fechado a etapa 14 (Sociedade), com a correção da IA que a abria, os três pedidos de 5 de outubro (gente ruim e castigo pela gravidade, obras por conta própria, quem vai embora e funda outra vila) e os outros pedidos urgentes de 12 de outubro (o povo constrói o que precisa sem você marcar, o 1x mais calmo, a aldeia de 300 pessoas sem travar, a Crônica sem excesso de romance e a tela de início sem os nomes). O resto segue nesta ordem (o detalhe de cada etapa está no documento de design):
+A 0.20 fechou as etapas 19 e 20 (Eras). A 0.19 fechou a etapa 18 (Barcos e outras terras). A 0.18 fechou a etapa 17 (Mundo grande), com a ponte de pedra e a grande estátua que tinham ficado da 16. A 0.17 fechou a etapa 16 (Grandes obras e instituições). A 0.15 fechou a etapa 15 (Gente viva), o último dos pedidos urgentes de 12 de outubro: gostos, pensamentos, conversas de verdade, descobertas por tentativa e o saber que passa de mão em mão. A 0.14 tinha fechado a etapa 14 (Sociedade), com a correção da IA que a abria, os três pedidos de 5 de outubro (gente ruim e castigo pela gravidade, obras por conta própria, quem vai embora e funda outra vila) e os outros pedidos urgentes de 12 de outubro (o povo constrói o que precisa sem você marcar, o 1x mais calmo, a aldeia de 300 pessoas sem travar, a Crônica sem excesso de romance e a tela de início sem os nomes). O resto segue nesta ordem (o detalhe de cada etapa está no documento de design):
 
-- **19 e 20 · Eras**: das cavernas e da pedra ao bronze, ao ferro e à monarquia; o povo dominante dá o rumo (matriarcado, guildas, clãs, magia no lugar da máquina) e cada era traz o seu desafio (praga, guerra, pobreza, natalidade).
 - **21 · Avatar**: possuir um cidadão e ver pelos olhos dele; o filho abençoado, que fala direto com você.
 - **22 · Outros jogadores**: visitar o mundo de outro deus, ajudar ou sabotar, com limite e com aviso.
 - **Depois**: revolução industrial, tecnologia, IA e espaço.

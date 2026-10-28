@@ -110,6 +110,7 @@
       cidade: S.cidade || null,   // Etapa 16: o que está escrito, a febre, as primeiras vezes
       regioes: S.regioes || null,   // Etapa 17: as regiões que o povo já conhece
       mar: S.mar || null,   // Etapa 18: a viagem, as terras achadas, as colônias
+      eras: S.eras || null,   // Etapas 19 e 20: a idade, o rumo, a magia
       povo: S.povo || null,   // 0.16: o nome e o título do lugar
     };
   };
@@ -165,6 +166,7 @@
       cidade: d.cidade || null,
       regioes: d.regioes || null,
       mar: d.mar || null,
+      eras: d.eras || null,
       povo: d.povo || null,
     };
     for (const p of S.people) {

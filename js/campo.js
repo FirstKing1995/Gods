@@ -226,7 +226,7 @@
   K.yieldOf = function (S, b) {
     const f = farmOf(b), d = C.ROCA[f.k];
     if (!d) return 0;
-    const mult = (Sim().def(b).farm || { mult: 1 }).mult * (G.Regioes ? G.Regioes.rocaMult(S, b) : 1);   // Etapa 17: a seca do sertão
+    const mult = (Sim().def(b).farm || { mult: 1 }).mult * (G.Regioes ? G.Regioes.rocaMult(S, b) : 1) * (G.Eras ? G.Eras.rocaMult(S) : 1);   // e os círculos do conselho   // Etapa 17: a seca do sertão
     const terra = G.Deus && G.Deus.dom(S, 'terra') ? C.DOM.terraRoca : 1;   // Etapa 11: Mão na Terra
     return Math.max(0, Math.round(d.yield * mult * (f.bonus || 1) * terra * (1 - Math.min(0.95, f.lost || 0))));
   };

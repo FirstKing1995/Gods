@@ -269,6 +269,7 @@
     }
     if (c.k === 'obra') { for (const m of C.MATERIALS) S.stock[m] += c[m] || 0; }
     else if (c.k === 'caca') {
+      if (G.Eras && S.eras) c.carne = Math.round(c.carne * G.Eras.cacaMult(S));   // os clãs: a caçada é a lei
       S.stock.carne += c.carne; S.stock.couro += c.couro;
       Sim.float(S, p.x, p.y - 0.6, '+' + c.carne + ' carne' + (c.couro ? ' +' + c.couro + ' couro' : ''));
     } else if (c.k === 'cria') {
