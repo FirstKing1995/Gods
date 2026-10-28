@@ -360,6 +360,7 @@
     if (!s || cloudBusy) return;
     cloudBusy = true; lastCloud = performance.now();
     const res = await Net.call('salvar', { token: s.token, dados: txt, resumo: Save.summary(S) });
+    if (res.ok) recadosChegaram(s);   // Etapa 22: o que outros deuses mandaram
     cloudBusy = false;
     const el = $('#save-status');
     if (res.ok) {
@@ -1034,6 +1035,57 @@
       (t.colonia ? '<br><span class="small">Colônia ' + t.colonia.nome + ': ' + t.colonia.n + (t.colonia.n === 1 ? ' pessoa' : ' pessoas') + '.</span>' : '<br>' + (t.why ? '<span class="small muted">Fundar colônia: ' + t.why + '.</span>' : '<button type="button" class="btn btn-small btn-gold" data-fundar="' + t.id + '">Fundar colônia (' + C.COLONIA_GENTE + ' pessoas, ' + C.COLONIA_COMIDA + ' de comida)</button>')) + '</li>').join('') + '</ul>' : '';
     $('#modal-mapa').hidden = false;
   }
+  // ---------- Etapa 22: outros deuses ----------
+  // os recados que chegaram: aplicados no mundo aberto (o servidor marca como entregues)
+  async function recadosChegaram(s) {
+    if (!S || !G.Visita || !s) return;
+    const res = await Net.call('recados', { token: s.token });
+    if (!res.ok || !res.lista || !res.lista.length) return;
+    for (const r of res.lista) G.Visita.aplicar(S, r);
+    UI.toast(res.lista.length === 1 ? 'Um deus de longe mexeu no seu mundo. Veja a Crônica.' : res.lista.length + ' recados de deuses de longe chegaram. Veja a Crônica.', 'warn');
+  }
+  let visitado = null;
+  async function abrirDeuses() {
+    if (!S) return;
+    const s = session();
+    $('#modal-mapa').hidden = true;
+    $('#modal-deuses').hidden = false;
+    const ab = (S.visita && S.visita.abertura) || 'ajuda';
+    $('#deuses-abertura').innerHTML = '<span class="small">Seu mundo:</span>' + Object.keys(G.Visita.ABERTURA).map((k) => '<button type="button" class="btn btn-small' + (k === ab ? ' btn-gold' : '') + '" data-abertura="' + k + '" title="' + G.Visita.ABERTURA[k] + '">' + { fechado: 'Fechado', ajuda: 'Só ajuda', aberto: 'Aberto' }[k] + '</button>').join('');
+    if (!Net.enabled() || !s) { $('#deuses-corpo').innerHTML = '<p class="small muted">Para visitar outros mundos, entre com a sua conta na tela de início.</p>'; return; }
+    $('#deuses-corpo').innerHTML = '<p class="small muted">Carregando…</p>';
+    const res = await Net.call('ranking', {});
+    const lista = res.ok ? (res.lista || []).filter((r) => r.id && r.nome !== s.nome) : [];
+    if (!res.ok) { $('#deuses-corpo').innerHTML = '<p class="small muted">' + (res.erro || 'O servidor não respondeu.') + '</p>'; return; }
+    if (lista.length && !lista[0].abertura) { $('#deuses-corpo').innerHTML = '<p class="small muted">O servidor ainda é de antes da visita (0.22): copie o novo apps-script/Code.gs na planilha e rode setup() de novo.</p>'; return; }
+    $('#deuses-corpo').innerHTML = lista.length ? '<ul class="mapa-legenda">' + lista.map((r) => '<li><button type="button" class="btn btn-small" data-visitar="' + r.id + '"' + (r.abertura === 'fechado' ? ' disabled' : '') + '>' + r.nome + ' · ' + r.vivos + ' vivos' + (r.abertura === 'fechado' ? ' · fechado' : r.abertura === 'aberto' ? ' · aberto' : '') + '</button></li>').join('') + '</ul>' : '<p class="small muted">Ainda não há outros deuses com o mundo salvo na nuvem.</p>';
+  }
+  async function visitar(id) {
+    const s = session();
+    $('#deuses-corpo').innerHTML = '<p class="small muted">Abrindo o mundo…</p>';
+    const res = await Net.call('visitar', { token: s.token, alvo: id });
+    if (!res.ok) { $('#deuses-corpo').innerHTML = '<p class="small muted">' + (res.erro || 'Não deu para abrir.') + '</p>'; return; }
+    let Sv;
+    try { Sv = Save.deserialize(JSON.parse(res.dados)); } catch (e) { $('#deuses-corpo').innerHTML = '<p class="small muted">Esse mundo é de uma versão que não abre aqui.</p>'; return; }
+    S.stats.visitas = (S.stats.visitas || 0) + 1;
+    visitado = { id, nome: res.nome, abertura: res.abertura };
+    const r = G.Visita.resumoDe(Sv), cv = document.createElement('canvas');
+    R.mapaMundo(Sv, cv);
+    $('#deuses-corpo').innerHTML = '<h3>O mundo de ' + res.nome + '</h3><p class="small">' + r.deus + ' · ano ' + r.ano + ', ' + r.estacao + ' · ' + r.vivos + ' vivos' + (r.lugar ? ' · ' + r.lugar : '') + (r.idade ? ' · ' + r.idade : '') + '</p>' +
+      '<div class="mapa-wrap" id="deuses-mapa"></div><h3>A Crônica</h3><ul class="mapa-terras-cron small">' + r.cronica.map((t) => '<li>' + t.replace(/</g, '&lt;') + '</li>').join('') + '</ul>' +
+      '<h3>Mandar</h3><div class="av-acoes">' + Object.keys(G.Visita.ATOS).map((k) => { const w = G.Visita.atoWhy(S, k, visitado), A = G.Visita.ATOS[k]; return '<button type="button" class="btn btn-small' + (A.ajuda ? '' : ' danger') + '" data-ato="' + k + '" title="' + A.desc + ' (' + A.custo + ' de Poder)' + (w ? ' · ' + w : '') + '"' + (w ? ' disabled' : '') + '>' + A.nome + '</button>'; }).join('') + '</div>';
+    cv.id = 'mapa-cv-visita'; cv.style.width = '100%'; cv.style.imageRendering = 'pixelated';
+    $('#deuses-mapa').appendChild(cv);
+  }
+  async function mandar(k) {
+    const s = session(), why = G.Visita.atoWhy(S, k, visitado);
+    if (why) { UI.toast('Agora não: ' + why + '.', 'warn'); return; }
+    const res = await Net.call('recado', { token: s.token, alvo: visitado.id, tipo: k });
+    if (!res.ok) { UI.toast(res.erro || 'Não deu para mandar.', 'warn'); return; }
+    G.Visita.pagar(S, k);
+    Sim.chron(S, 'Você mandou ' + G.Visita.ATOS[k].nome.toLowerCase() + ' para o mundo de ' + visitado.nome + '.');
+    UI.toast('Recado mandado. Chega quando ' + visitado.nome + ' abrir o jogo.', 'good');
+  }
   function onKey(e) {
     // quem digita num campo (ou escolhe numa lista) não aperta atalho; nem quem usa um atalho do navegador (Ctrl+R...)
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
@@ -1242,6 +1294,14 @@
     $('#btn-mundos-close').addEventListener('click', () => { $('#modal-mundos').hidden = true; });
     $('#btn-mapa').addEventListener('click', () => abrirMapa());   // Etapa 17
     $('#btn-mapa-close').addEventListener('click', () => { $('#modal-mapa').hidden = true; });
+    $('#btn-deuses').addEventListener('click', () => abrirDeuses());   // Etapa 22
+    $('#btn-deuses-close').addEventListener('click', () => { $('#modal-deuses').hidden = true; visitado = null; });
+    $('#modal-deuses').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-abertura],[data-visitar],[data-ato]'); if (!b || !S) return;
+      if (b.dataset.abertura) { G.Visita.setAbertura(S, b.dataset.abertura); abrirDeuses(); }
+      else if (b.dataset.visitar) visitar(b.dataset.visitar);
+      else if (b.dataset.ato) mandar(b.dataset.ato);
+    });
     $('#mapa-terras').addEventListener('click', (e) => {   // Etapa 18: fundar a colônia
       const b = e.target.closest('[data-fundar]'); if (!b || !S) return;
       const r = G.Mar.fundar(S, +b.dataset.fundar);

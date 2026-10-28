@@ -70,6 +70,40 @@ ok(!r.ok && /desconhecida/.test(r.erro), 'ação desconhecida responde erro');
   g.ctx.LockService.getScriptLock = was;
 }
 // o cliente (js/net.js): tenta de novo o que pode se repetir, não repete o cadastro, e o tempo limite vira aviso claro
+
+// ---------- 0.22: a visita a outros mundos ----------
+{
+  const A = g.post({ action: 'cadastrar', nome: 'Visitante', email: 'a@visita.com', senha: 'segredo1' }).token;
+  const B = g.post({ action: 'cadastrar', nome: 'Visitado', email: 'b@visita.com', senha: 'segredo1' }).token;
+  const mundo = JSON.stringify({ v: 1, game: 'genesis', t: 99, people: [] });
+  g.post({ action: 'salvar', token: B, dados: mundo, resumo: { anos: 2, vivos: 9, abertura: 'ajuda' } });
+  const lista = g.post({ action: 'ranking' }).lista, b = lista.find((x) => x.nome === 'Visitado');
+  ok(!!b && !!b.id && b.abertura === 'ajuda', 'o ranking traz o id e a abertura de cada mundo');
+  let v = g.post({ action: 'visitar', token: A, alvo: b.id });
+  ok(v.ok && JSON.parse(v.dados).t === 99 && v.nome === 'Visitado', 'visitar abre o mundo salvo do outro');
+  v = g.post({ action: 'recado', token: A, alvo: b.id, tipo: 'praga' });
+  ok(!v.ok && /só aceita ajuda/.test(v.erro), 'mundo "só ajuda" não recebe sabotagem');
+  v = g.post({ action: 'recado', token: A, alvo: b.id, tipo: 'comida' });
+  ok(v.ok, 'manda ajuda');
+  v = g.post({ action: 'recado', token: A, alvo: b.id, tipo: 'explodir' });
+  ok(!v.ok, 'ato que não existe é recusado');
+  let rc = g.post({ action: 'recados', token: B });
+  ok(rc.ok && rc.lista.length === 1 && rc.lista[0].tipo === 'comida' && rc.lista[0].deNome === 'Visitante', 'quem recebeu vê o recado e quem mandou');
+  rc = g.post({ action: 'recados', token: B });
+  ok(rc.ok && rc.lista.length === 0, 'o recado é entregue uma vez só');
+  g.post({ action: 'salvar', token: B, dados: mundo, resumo: { anos: 2, vivos: 9, abertura: 'aberto' } });
+  v = g.post({ action: 'recado', token: A, alvo: b.id, tipo: 'boato' });
+  ok(v.ok, 'mundo aberto recebe sabotagem');
+  g.post({ action: 'recado', token: A, alvo: b.id, tipo: 'material' });   // o terceiro do dia
+  v = g.post({ action: 'recado', token: A, alvo: b.id, tipo: 'comida' });
+  ok(!v.ok && /recados hoje/.test(v.erro), 'teto de recados por dia (3)');
+  g.post({ action: 'salvar', token: B, dados: mundo, resumo: { anos: 2, vivos: 9, abertura: 'fechado' } });
+  v = g.post({ action: 'visitar', token: A, alvo: b.id });
+  ok(!v.ok && /fechado/.test(v.erro), 'mundo fechado não se visita');
+  v = g.post({ action: 'recado', token: B, alvo: g.post({ action: 'ranking' }).lista.find((x) => x.nome === 'Visitado').id, tipo: 'comida' });
+  ok(!v.ok, 'ninguém manda recado para o próprio mundo');
+}
+
 async function cliente() {
   const vm = require('vm'), fs = require('fs'), path = require('path');
   let calls = [], plan = [];

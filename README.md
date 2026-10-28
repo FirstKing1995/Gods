@@ -1,3 +1,33 @@
+# Gods · Etapa 22 (Outros jogadores) · versão 0.22
+
+## O que mudou na 0.22
+
+**Outros deuses.** No mapa do mundo (tecla M), o botão **Outros deuses** (pede estar com a conta). Ali:
+- **A abertura do seu mundo**: Fechado (ninguém visita), Só ajuda (o padrão: visitam e só podem ajudar) ou Aberto (visitam, ajudam e podem sabotar). Vai junto com o save na nuvem.
+- **A lista dos outros deuses** com o mundo salvo na nuvem. **Visitar** abre o mundo do outro como ele foi salvo pela última vez: o mapa inteiro (com as regiões, as obras e o povo), o ano, quantos vivem, a idade e a Crônica.
+- **Mandar**, pago com o seu Poder:
+
+| Ajuda | Custo | O que faz |
+|---|---|---|
+| Comida | 30 | 40 de peixe no estoque dele |
+| Material | 30 | 30 de madeira e 20 de pedra |
+| Bênção | 60 | a fé de todo o povo dele sobe 5 |
+| Milagre | 150 | todos os doentes e feridos de lá saram |
+
+| Sabotagem (só em mundo aberto) | Custo | O que faz |
+|---|---|---|
+| Praga | 120 | a roça dele perde um terço do que está crescendo |
+| Seca curta | 150 | metade da água do estoque some |
+| Boato | 100 | a fé de todo o povo cai 5 |
+
+**Os limites.** Cada deus manda até 3 recados por dia, e cada mundo sofre no máximo 2 sabotagens por dia. A sabotagem nunca mata ninguém nem destrói obra. A fé alta do povo (média 80 ou mais) segura qualquer sabotagem, e a estátua ou o templo seguram metade delas. Ninguém perde um mundo enquanto está fora.
+
+**O recado.** Tudo passa pelo servidor que já existe (a planilha e o Apps Script), sem tempo real. O recado fica guardado e é aplicado quando o dono abre o jogo (junto com o save na nuvem); a Crônica dele conta quem mandou o quê, e ele pode responder visitando de volta.
+
+**Para funcionar, o servidor precisa da versão nova.** Copie o arquivo `apps-script/Code.gs` (desta pasta, no seu computador) para o Apps Script da planilha, rode `setup()` uma vez (ele cria a aba "recados") e faça **Implantar > Gerenciar implantações > Editar > Nova versão**, mantendo a mesma URL. Enquanto o servidor for o antigo, a janela Outros deuses avisa isso e o resto do jogo segue normal.
+
+---
+
 # Gods · Etapa 21 (Avatar) · versão 0.21
 
 ## O que mudou na 0.21
@@ -704,7 +734,6 @@ Fontes: Pixelify Sans e Crimson Pro (Google Fonts) e os dígitos do Jersey 10 (T
 
 ## Próximas etapas
 
-A 0.21 fechou a etapa 21 (Avatar). A 0.20 fechou as etapas 19 e 20 (Eras). A 0.19 fechou a etapa 18 (Barcos e outras terras). A 0.18 fechou a etapa 17 (Mundo grande), com a ponte de pedra e a grande estátua que tinham ficado da 16. A 0.17 fechou a etapa 16 (Grandes obras e instituições). A 0.15 fechou a etapa 15 (Gente viva), o último dos pedidos urgentes de 12 de outubro: gostos, pensamentos, conversas de verdade, descobertas por tentativa e o saber que passa de mão em mão. A 0.14 tinha fechado a etapa 14 (Sociedade), com a correção da IA que a abria, os três pedidos de 5 de outubro (gente ruim e castigo pela gravidade, obras por conta própria, quem vai embora e funda outra vila) e os outros pedidos urgentes de 12 de outubro (o povo constrói o que precisa sem você marcar, o 1x mais calmo, a aldeia de 300 pessoas sem travar, a Crônica sem excesso de romance e a tela de início sem os nomes). O resto segue nesta ordem (o detalhe de cada etapa está no documento de design):
+A 0.22 fechou a etapa 22 (Outros jogadores), a última do roteiro. A 0.21 fechou a etapa 21 (Avatar). A 0.20 fechou as etapas 19 e 20 (Eras). A 0.19 fechou a etapa 18 (Barcos e outras terras). A 0.18 fechou a etapa 17 (Mundo grande), com a ponte de pedra e a grande estátua que tinham ficado da 16. A 0.17 fechou a etapa 16 (Grandes obras e instituições). A 0.15 fechou a etapa 15 (Gente viva), o último dos pedidos urgentes de 12 de outubro: gostos, pensamentos, conversas de verdade, descobertas por tentativa e o saber que passa de mão em mão. A 0.14 tinha fechado a etapa 14 (Sociedade), com a correção da IA que a abria, os três pedidos de 5 de outubro (gente ruim e castigo pela gravidade, obras por conta própria, quem vai embora e funda outra vila) e os outros pedidos urgentes de 12 de outubro (o povo constrói o que precisa sem você marcar, o 1x mais calmo, a aldeia de 300 pessoas sem travar, a Crônica sem excesso de romance e a tela de início sem os nomes). O resto segue nesta ordem (o detalhe de cada etapa está no documento de design):
 
-- **22 · Outros jogadores**: visitar o mundo de outro deus, ajudar ou sabotar, com limite e com aviso.
 - **Depois**: revolução industrial, tecnologia, IA e espaço.

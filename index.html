@@ -50,7 +50,7 @@
     <div class="mapa-wrap"><canvas id="mapa-cv"></canvas></div>
     <ul id="mapa-legenda" class="mapa-legenda"></ul>
     <div id="mapa-terras" class="mapa-terras"></div>
-    <div class="modal-actions"><button type="button" id="btn-mapa-close" class="btn">Fechar</button></div>
+    <div class="modal-actions"><button type="button" id="btn-deuses" class="btn">Outros deuses</button><button type="button" id="btn-mapa-close" class="btn">Fechar</button></div>
   </div>
 </div>
 <div id="modal-filho" class="modal" hidden>
@@ -58,6 +58,15 @@
     <h2 id="filho-titulo">Uma pergunta</h2>
     <p id="filho-texto" class="story"></p>
     <div id="filho-opcoes" class="modal-actions filho-opcoes"></div>
+  </div>
+</div>
+<div id="modal-deuses" class="modal" hidden>
+  <div class="panel modal-card mapa-card">
+    <h2>Outros deuses</h2>
+    <p class="small muted">Visite o mundo de outro jogador como ele foi salvo pela última vez. Ajudar e sabotar custam o seu Poder, têm teto por dia e nunca matam ninguém. O recado chega quando o dono abrir o jogo.</p>
+    <div id="deuses-abertura" class="av-acoes"></div>
+    <div id="deuses-corpo"></div>
+    <div class="modal-actions"><button type="button" id="btn-deuses-close" class="btn">Fechar</button></div>
   </div>
 </div>
 <div id="modal-mundos" class="modal" hidden>
@@ -431,6 +440,7 @@
 <script src="js/mar.js"></script>
 <script src="js/eras.js"></script>
 <script src="js/avatar.js"></script>
+<script src="js/visita.js"></script>
 <script src="js/save.js"></script>
 <script src="js/offline.js"></script>
 <script src="js/net.js"></script>
