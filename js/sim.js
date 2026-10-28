@@ -877,7 +877,7 @@
       if (p.inTent) { const b = Sim.building(S, p.inTent); rate = (b && Sim.def(b).sleep) || C.SLEEP_TENT_H; }
       if (p.rede) rate *= C.REDE_SLEEP;   // Etapa 7: rede tecida
       n.energia += rate * h;
-    } else n.energia -= C.ENERGY_H * h * mm.energia;
+    } else n.energia -= C.ENERGY_H * h * mm.energia * (p.act && p.act.type === 'dormir' && p.act.stage === 'go' ? C.DORME_CAMINHO : 1);   // 0.22.1: o caminho da cama cansa menos (na vila grande a casa fica longe)
     if (baby) { /* no colo, sempre acompanhado */ }
     else if (p.act && p.act.type === 'conversar' && p.act.chat && p.act.chat.on) n.social += C.CHAT_SOCIAL_H * h;
     else if (p.act && p.act.type === 'brincar' && p.act.stage === 'play') n.social += C.CHAT_SOCIAL_H * 0.5 * h;

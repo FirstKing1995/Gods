@@ -119,7 +119,10 @@ body[data-placing] #view { cursor: crosshair; }
 .mundo-info strong { font-size: 15px; color: var(--gold-hi); overflow-wrap: anywhere; }
 .mundo-acts { display: flex; gap: 6px; flex: none; }
 /* Etapa 17: o mapa do mundo */
-.mapa-card { max-width: min(560px, 94vw); }
+.mapa-card { max-width: min(560px, 94vw); max-height: calc(100dvh - 2 * var(--gut)); overflow-y: auto; overscroll-behavior: contain; }
+#modal-deuses .modal-actions { position: sticky; bottom: -20px; margin: 12px -20px -20px; padding: 10px 20px 20px; background: var(--panel); }   /* 0.22.1: o Fechar sempre à vista */
+#deuses-mapa { max-height: 34vh; }
+#deuses-corpo .mapa-terras-cron { max-height: 30vh; overflow-y: auto; }
 .mapa-wrap { overflow: auto; max-height: 62vh; border: 1px solid var(--line, #3a4466); border-radius: 6px; background: #141218; }
 #mapa-cv { display: block; width: 100%; image-rendering: pixelated; }
 .mapa-legenda { display: flex; flex-wrap: wrap; gap: 6px 14px; list-style: none; padding: 0; margin: 10px 0 0; font-size: 13px; }

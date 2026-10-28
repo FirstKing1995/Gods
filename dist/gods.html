@@ -140,7 +140,10 @@ body[data-placing] #view { cursor: crosshair; }
 .mundo-info strong { font-size: 15px; color: var(--gold-hi); overflow-wrap: anywhere; }
 .mundo-acts { display: flex; gap: 6px; flex: none; }
 /* Etapa 17: o mapa do mundo */
-.mapa-card { max-width: min(560px, 94vw); }
+.mapa-card { max-width: min(560px, 94vw); max-height: calc(100dvh - 2 * var(--gut)); overflow-y: auto; overscroll-behavior: contain; }
+#modal-deuses .modal-actions { position: sticky; bottom: -20px; margin: 12px -20px -20px; padding: 10px 20px 20px; background: var(--panel); }   /* 0.22.1: o Fechar sempre à vista */
+#deuses-mapa { max-height: 34vh; }
+#deuses-corpo .mapa-terras-cron { max-height: 30vh; overflow-y: auto; }
 .mapa-wrap { overflow: auto; max-height: 62vh; border: 1px solid var(--line, #3a4466); border-radius: 6px; background: #141218; }
 #mapa-cv { display: block; width: 100%; image-rendering: pixelated; }
 .mapa-legenda { display: flex; flex-wrap: wrap; gap: 6px 14px; list-style: none; padding: 0; margin: 10px 0 0; font-size: 13px; }
@@ -1302,7 +1305,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.22.0',
+    VERSION: '0.22.1',
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
     SAVE_KEY: 'genesis.save.v1',
@@ -1378,6 +1381,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     // carne, peixe ou frutas nas costas come da carga, cru, até CARGA_ATE. Com a energia em zero e a cama a mais de
     // DORME_LONGE passos, deita no caminho
     CARGA_FOME: 25, CARGA_LONGE: 12, CARGA_ATE: 60, DORME_LONGE: 10,
+    DORME_CAMINHO: 0.35,   // 0.22.1: indo para a cama, gasta só 35% da energia de andar
+    DORME_AVISO_MIN: 360,   // 0.22.1: um aviso de quem dormiu no caminho a cada 6 horas; os outros entram na conta do próximo
     // e, a mais de ARBUSTO_LONGE passos de casa com comida no estoque, o arbusto só serve se fica ARBUSTO_VOLTA passos mais
     // perto de casa que a pessoa (o caminho da fruta é o de volta)
     ARBUSTO_LONGE: 20, ARBUSTO_VOLTA: 3,
@@ -3364,7 +3369,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       if (p.inTent) { const b = Sim.building(S, p.inTent); rate = (b && Sim.def(b).sleep) || C.SLEEP_TENT_H; }
       if (p.rede) rate *= C.REDE_SLEEP;   // Etapa 7: rede tecida
       n.energia += rate * h;
-    } else n.energia -= C.ENERGY_H * h * mm.energia;
+    } else n.energia -= C.ENERGY_H * h * mm.energia * (p.act && p.act.type === 'dormir' && p.act.stage === 'go' ? C.DORME_CAMINHO : 1);   // 0.22.1: o caminho da cama cansa menos (na vila grande a casa fica longe)
     if (baby) { /* no colo, sempre acompanhado */ }
     else if (p.act && p.act.type === 'conversar' && p.act.chat && p.act.chat.on) n.social += C.CHAT_SOCIAL_H * h;
     else if (p.act && p.act.type === 'brincar' && p.act.stage === 'play') n.social += C.CHAT_SOCIAL_H * 0.5 * h;
@@ -8926,6 +8931,19 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (G.Gente) G.Gente.comeu(S, p, k);   // Etapa 15
   }
 
+  // 0.22.1: com centenas de pessoas, um aviso por pessoa enchia a tela; agora sai um a cada DORME_AVISO_MIN, somando os outros
+  let sonoAviso = { S: null, t: -1e9, n: 0 };
+  function avisoSono(S, p, txt) {
+    const novo = !p.faintAt || S.t - p.faintAt > C.DAY_MIN;
+    p.faintAt = S.t;
+    if (!novo) return;
+    if (sonoAviso.S !== S) sonoAviso = { S, t: -1e9, n: 0 };
+    if (S.t - sonoAviso.t < C.DORME_AVISO_MIN) { sonoAviso.n++; return; }
+    const mais = sonoAviso.n;
+    sonoAviso.t = S.t; sonoAviso.n = 0;
+    Sim.toast(S, p.name + txt + (mais ? ' Antes disso, mais ' + (mais === 1 ? 'uma pessoa' : mais + ' pessoas') + ' dormiram onde estavam.' : ''), 'warn');
+  }
+
   ACT.dormir = {
     start(S, p, a) {
       const w = S.world, fires = litFires(S), auras = S.god ? S.god.auras : [];
@@ -8971,8 +8989,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
           if (!(p.needs.energia <= 0 && p.path.length - p.pathI > C.DORME_LONGE) || (a.byFire && feltCold(S, p) < 30)) return RUN;
           p.path = null; a.tent = 0; a.byFire = false; a.faint = true;
           unguest(S, p);
-          if (!p.faintAt || S.t - p.faintAt > C.DAY_MIN) Sim.toast(S, p.name + ' não aguentou chegar em casa e dormiu no caminho.', 'warn');
-          p.faintAt = S.t;
+          avisoSono(S, p, ' não aguentou chegar em casa e dormiu no caminho.');
         }
         a.stage = 'sleep'; a.t = 0; p.sleeping = true; p.dir = 0;
         if (a.tent && !p.stuck) { const b = Sim.building(S, a.tent); if (b && b.built) enterTent(S, p, b); }
@@ -10749,8 +10766,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   AI.forceSleepHere = function (S, p) {
     p.act = { type: 'dormir', stage: 'sleep', t: 0, score: 99, faint: true };
     p.sleeping = true; p.path = null;
-    if (!p.faintAt || S.t - p.faintAt > C.DAY_MIN) Sim.toast(S, p.name + ' desmaiou de cansaço.', 'warn');
-    p.faintAt = S.t;
+    avisoSono(S, p, ' desmaiou de cansaço.');
   };
   AI.startGreve = function (S, p) {
     const a = { type: 'greve', stage: 'go', t: 0, score: 99 };

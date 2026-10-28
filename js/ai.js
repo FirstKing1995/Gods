@@ -671,6 +671,19 @@
     if (G.Gente) G.Gente.comeu(S, p, k);   // Etapa 15
   }
 
+  // 0.22.1: com centenas de pessoas, um aviso por pessoa enchia a tela; agora sai um a cada DORME_AVISO_MIN, somando os outros
+  let sonoAviso = { S: null, t: -1e9, n: 0 };
+  function avisoSono(S, p, txt) {
+    const novo = !p.faintAt || S.t - p.faintAt > C.DAY_MIN;
+    p.faintAt = S.t;
+    if (!novo) return;
+    if (sonoAviso.S !== S) sonoAviso = { S, t: -1e9, n: 0 };
+    if (S.t - sonoAviso.t < C.DORME_AVISO_MIN) { sonoAviso.n++; return; }
+    const mais = sonoAviso.n;
+    sonoAviso.t = S.t; sonoAviso.n = 0;
+    Sim.toast(S, p.name + txt + (mais ? ' Antes disso, mais ' + (mais === 1 ? 'uma pessoa' : mais + ' pessoas') + ' dormiram onde estavam.' : ''), 'warn');
+  }
+
   ACT.dormir = {
     start(S, p, a) {
       const w = S.world, fires = litFires(S), auras = S.god ? S.god.auras : [];
@@ -716,8 +729,7 @@
           if (!(p.needs.energia <= 0 && p.path.length - p.pathI > C.DORME_LONGE) || (a.byFire && feltCold(S, p) < 30)) return RUN;
           p.path = null; a.tent = 0; a.byFire = false; a.faint = true;
           unguest(S, p);
-          if (!p.faintAt || S.t - p.faintAt > C.DAY_MIN) Sim.toast(S, p.name + ' não aguentou chegar em casa e dormiu no caminho.', 'warn');
-          p.faintAt = S.t;
+          avisoSono(S, p, ' não aguentou chegar em casa e dormiu no caminho.');
         }
         a.stage = 'sleep'; a.t = 0; p.sleeping = true; p.dir = 0;
         if (a.tent && !p.stuck) { const b = Sim.building(S, a.tent); if (b && b.built) enterTent(S, p, b); }
@@ -2494,8 +2506,7 @@
   AI.forceSleepHere = function (S, p) {
     p.act = { type: 'dormir', stage: 'sleep', t: 0, score: 99, faint: true };
     p.sleeping = true; p.path = null;
-    if (!p.faintAt || S.t - p.faintAt > C.DAY_MIN) Sim.toast(S, p.name + ' desmaiou de cansaço.', 'warn');
-    p.faintAt = S.t;
+    avisoSono(S, p, ' desmaiou de cansaço.');
   };
   AI.startGreve = function (S, p) {
     const a = { type: 'greve', stage: 'go', t: 0, score: 99 };
