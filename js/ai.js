@@ -983,6 +983,21 @@
       return RUN;
     },
   };
+  // Etapa 21: o avatar. Vai até onde você tocou e espera ali a próxima ordem
+  ACT.avatar = {
+    start(S, p, a) {
+      const d = p.avDest;
+      if (d) { delete p.avDest; const path = W.findPath(S.world, tileOf(S, p), d.y * S.world.W + d.x, 600); if (path) { setPath(p, path); a.stage = 'go'; return true; } }
+      a.stage = 'espera';
+      return true;
+    },
+    run(S, p, a) {
+      if (!G.Avatar || !G.Avatar.ativoEm(S, p)) return DONE;
+      if (a.stage === 'go') { if (moving(p)) return RUN; a.stage = 'espera'; }
+      if (p.avDest || S.ctx.night) return DONE;   // de noite a ordem acaba, e o corpo vai dormir
+      return RUN;
+    },
+  };
   // reza da manhã: vai até a estátua, reza um pouco e segue o dia
   ACT.rezar = {
     start(S, p, a) {
@@ -2282,6 +2297,9 @@
   }
 
   function scoreList(S, p) {
+    // Etapa 21: o corpo possuído faz o que você manda (as urgências do corpo ainda passam na frente, em urgentNeed)
+    // de noite, o corpo dorme como qualquer corpo (é aí que o filho abençoado pode ser concebido, com o par de sempre)
+    if (G.Avatar && G.Avatar.ativoEm(S, p) && !S.ctx.night) return [{ type: 'avatar', score: 999 }];
     const n = p.needs, ctx = S.ctx, out = [];
     const add = (type, s, extra) => {
       if (!(s > 0)) return;
@@ -2562,6 +2580,7 @@
         return sm ? (st === 'tell' ? 'Pregando a palavra de ' + G.Deus.call(S) + ' ao pé do fogo' : 'Indo pregar ao pé do fogo') : st === 'tell' ? 'Contando uma história ao pé do fogo' : 'Indo contar uma história'; }
       case 'ouvir': { const t = person(S, a.teller), sm = S.life && S.life.story && S.life.story.id === a.st && S.life.story.sermon;
         return sm ? (st === 'listen' ? 'Ouvindo a pregação de ' + (t ? t.name : '…') : 'Indo ouvir a pregação') : st === 'listen' ? 'Ouvindo a história de ' + (t ? t.name : '…') : 'Indo ouvir uma história'; }
+      case 'avatar': return st === 'go' ? 'Andando nos passos de Deus' : 'Tomado por Deus, esperando';
       case 'servir': { const ob = a.b ? Sim.building(S, a.b) : null; return st === 'work' && ob ? G.Cidade.fazendo(ob) : 'Indo para o posto'; }
       case 'rezar': return st === 'pray' ? 'Rezando ao pé da estátua de ' + G.Deus.call(S) : 'Indo rezar na estátua';
       case 'curar': { const t = person(S, a.q); return st === 'heal' ? 'Curando ' + (t ? t.name : '…') + ' com as mãos' : 'Indo curar ' + (t ? t.name : '…'); }

@@ -1,3 +1,28 @@
+# Gods · Etapa 21 (Avatar) · versão 0.21
+
+## O que mudou na 0.21
+
+**Possuir um cidadão.** Na ficha de um adulto com fé 80 ou mais, o botão **Possuir**. A câmera passa a segui-lo e o toque no chão leva o corpo dele até lá; ele espera ali a próxima ordem, em vez de voltar ao trabalho. As urgências do corpo (fome, sede, frio) ainda passam na frente, e de noite o corpo dorme como qualquer um, junto do par que já tinha. Custa 6 de Poder por hora e cansa um pouco a pessoa; quando o Poder acaba ou o corpo corre perigo (fome, sede ou saúde baixa), você sai. Ela lembra daquilo como um sonho.
+
+**O que só o avatar faz** (perto de alguém, a até 3 passos; cada ação custa 5 de Poder e só se repete depois de uma hora):
+- **Consolar**: o descontentamento de quem ouve cai, e o laço entre os dois cresce.
+- **Encorajar**: a pessoa ganha ânimo.
+- **Pregar**: a fé de quem ouve sobe.
+- **Ensinar na mão**: quem aprende pega o jeito das técnicas que o avatar sabe, e um pouco de cada ofício.
+- **Apartar briga**: quem planejava um malfeito ali perto desiste.
+- **Puxar a reza**: todos a até 6 passos rezam juntos, e a fé sobe.
+
+**O risco.** Quem fica tomado tempo demais assusta quem vê: o povo passa a temer os tomados, e o descontentamento de quem está perto sobe.
+
+**O filho abençoado.** O filho concebido enquanto o pai ou a mãe estava possuído (sempre com o par que a pessoa já tinha; o avatar não escolhe ninguém, e nada disso é descrito) nasce com uma marca de luz na testa: fé inteira, aprende 50% mais depressa e tem um dom só dele:
+- **profeta**: perto dele, a fé de todos sobe devagar;
+- **curador**: perto dele, quem está ferido ou doente sara;
+- **líder nato**: aos 20 anos, o povo passa a ouvi-lo.
+
+A partir dos 8 anos, de mês em mês, o abençoado faz uma pergunta direto a você, numa janela, e você responde escolhendo. A resposta entra na Crônica e muda a fé dele e da aldeia.
+
+---
+
 # Gods · Etapas 19 e 20 (Eras) · versão 0.20
 
 ## O que mudou na 0.20
@@ -679,8 +704,7 @@ Fontes: Pixelify Sans e Crimson Pro (Google Fonts) e os dígitos do Jersey 10 (T
 
 ## Próximas etapas
 
-A 0.20 fechou as etapas 19 e 20 (Eras). A 0.19 fechou a etapa 18 (Barcos e outras terras). A 0.18 fechou a etapa 17 (Mundo grande), com a ponte de pedra e a grande estátua que tinham ficado da 16. A 0.17 fechou a etapa 16 (Grandes obras e instituições). A 0.15 fechou a etapa 15 (Gente viva), o último dos pedidos urgentes de 12 de outubro: gostos, pensamentos, conversas de verdade, descobertas por tentativa e o saber que passa de mão em mão. A 0.14 tinha fechado a etapa 14 (Sociedade), com a correção da IA que a abria, os três pedidos de 5 de outubro (gente ruim e castigo pela gravidade, obras por conta própria, quem vai embora e funda outra vila) e os outros pedidos urgentes de 12 de outubro (o povo constrói o que precisa sem você marcar, o 1x mais calmo, a aldeia de 300 pessoas sem travar, a Crônica sem excesso de romance e a tela de início sem os nomes). O resto segue nesta ordem (o detalhe de cada etapa está no documento de design):
+A 0.21 fechou a etapa 21 (Avatar). A 0.20 fechou as etapas 19 e 20 (Eras). A 0.19 fechou a etapa 18 (Barcos e outras terras). A 0.18 fechou a etapa 17 (Mundo grande), com a ponte de pedra e a grande estátua que tinham ficado da 16. A 0.17 fechou a etapa 16 (Grandes obras e instituições). A 0.15 fechou a etapa 15 (Gente viva), o último dos pedidos urgentes de 12 de outubro: gostos, pensamentos, conversas de verdade, descobertas por tentativa e o saber que passa de mão em mão. A 0.14 tinha fechado a etapa 14 (Sociedade), com a correção da IA que a abria, os três pedidos de 5 de outubro (gente ruim e castigo pela gravidade, obras por conta própria, quem vai embora e funda outra vila) e os outros pedidos urgentes de 12 de outubro (o povo constrói o que precisa sem você marcar, o 1x mais calmo, a aldeia de 300 pessoas sem travar, a Crônica sem excesso de romance e a tela de início sem os nomes). O resto segue nesta ordem (o detalhe de cada etapa está no documento de design):
 
-- **21 · Avatar**: possuir um cidadão e ver pelos olhos dele; o filho abençoado, que fala direto com você.
 - **22 · Outros jogadores**: visitar o mundo de outro deus, ajudar ou sabotar, com limite e com aviso.
 - **Depois**: revolução industrial, tecnologia, IA e espaço.

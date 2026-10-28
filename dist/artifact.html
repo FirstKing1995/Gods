@@ -143,6 +143,8 @@ body[data-placing] #view { cursor: crosshair; }
 .mapa-terras h3 { margin: 12px 0 4px; font-size: 15px; }
 .mapa-terras ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
 .mapa-terras li { font-size: 13px; line-height: 1.45; }
+.filho-opcoes { flex-direction: column; align-items: stretch; }
+.av-acoes { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
 .mar-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0; }
 
 .btn.danger { background: var(--blood); color: #fff; box-shadow: inset 0 0 0 2px #f6757a, inset 0 -4px 0 #a22633; }
@@ -801,6 +803,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     <div class="modal-actions"><button type="button" id="btn-mapa-close" class="btn">Fechar</button></div>
   </div>
 </div>
+<div id="modal-filho" class="modal" hidden>
+  <div class="panel modal-card">
+    <h2 id="filho-titulo">Uma pergunta</h2>
+    <p id="filho-texto" class="story"></p>
+    <div id="filho-opcoes" class="modal-actions filho-opcoes"></div>
+  </div>
+</div>
 <div id="modal-mundos" class="modal" hidden>
   <div class="panel modal-card mundos-card">
     <h2>Seus mundos</h2>
@@ -1275,7 +1284,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.20.0',
+    VERSION: '0.21.0',
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
     SAVE_KEY: 'genesis.save.v1',
@@ -1320,6 +1329,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     CANOA_PESCA: 1.25, BARCO_PESCA: 1.45, MAR_TRIPULACAO: [3, 8], MAR_DIAS: [15, 30], MAR_PERIGO: 0.32, MAR_PERIGO_MIN: 0.08, MAR_ACHA: 0.8, MAR_POVO: 0.6, MAR_TERRAS: 4,
     COLONIA_GENTE: 6, COLONIA_COMIDA: 60, COLONIA_MAX: 60,
     // Etapas 19 e 20: as Eras. RUNAS_HEAT: o calor da runa nas casas (a magia do conselho); ERA_PRAGA e ERA_GUERRA: por ano
+    // Etapa 21: o Avatar. Fé mínima de quem se possui, Poder por hora e por ação, o cansaço por hora, as horas até o povo
+    // temer o tomado, e de quantos em quantos dias o abençoado pergunta
+    AVATAR_FE: 80, AVATAR_PODER_H: 6, AVATAR_ACAO: 5, AVATAR_CANSA: 1, AVATAR_ABUSO_H: 24, AVATAR_PERGUNTA_D: 30,
     RUNAS_HEAT: 4, ERA_PRAGA: 0.6, ERA_GUERRA: 0.5,
     SERRA_COLD: -5, SERTAO_HEAT: 3, NOBRE_WOOD: 2, SAL_N: 3, VEIO_OURO: 0.3, SAL_ROT: 0.5, MOSQUITO_H: 0.0025, SERTAO_ROCA: 0.75,
     RAIN_CHANCE: [0.30, 0.15, 0.35, 0.30],
@@ -2629,6 +2641,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     escolhido: { t: 'Foi escolhido por Deus', tf: 'Foi escolhida por Deus', v: 15, d: 10 * 1440 },
     ouviuSermao: { t: 'Ouviu a pregação ao pé do fogo', v: 5, d: 1440 },
     rezou: { t: 'Rezou ao pé da estátua', v: 3, d: 1440 },
+    tomado: { t: 'Sonhou que andava pelos olhos de Deus', v: 6, d: 3 * 1440 },   // Etapa 21
   };
   Sim.MEM = MEM; Sim.TRAIT_DESC = TRAIT_DESC;
 
@@ -3521,6 +3534,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (G.Regioes) G.Regioes.daily(S);   // Etapa 17: o sal que chegou
     if (G.Mar) G.Mar.daily(S);   // Etapa 18: a volta da expedição, a carga do barco, as colônias
     if (G.Eras) G.Eras.daily(S);   // Etapas 19 e 20: a idade, o rumo, a magia, o desafio de cada idade
+    if (G.Avatar) G.Avatar.daily(S);   // Etapa 21: o abençoado (a pergunta, o líder nato)
     if (G.Life) G.Life.daily(S);
   }
   function rot(S, k, rate) {
@@ -3570,6 +3584,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (G.Gente) G.Gente.hourly(S);   // Etapa 15: aprender vendo, o combinado, o que se pensa em voz alta
     if (G.Cidade) G.Cidade.hourly(S);   // Etapa 16: a febre, o fogo por acaso, o aqueduto
     if (G.Regioes) G.Regioes.hourly(S);   // Etapa 17: a primeira vez em cada região, o mosquito
+    if (G.Avatar) G.Avatar.hourly(S);   // Etapa 21: o custo do avatar, o medo dos tomados, o dom do abençoado
     if (G.Life) G.Life.hourly(S);
     checkGoals(S);
   }
@@ -3814,6 +3829,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (G.Regioes) G.Regioes.init(S);   // Etapa 17: as regiões
     if (G.Mar) G.Mar.init(S);   // Etapa 18: os barcos e as outras terras
     if (G.Eras) G.Eras.init(S);   // Etapas 19 e 20: as Eras
+    if (G.Avatar) G.Avatar.init(S);   // Etapa 21: o Avatar
     fixGoals(S);
     if (!S.seen) {
       S.seen = new Uint8Array(S.world.W * S.world.H);
@@ -3922,6 +3938,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (S.povos && S.povos.mixed && G.Povos) f *= G.Povos.xp(S, p);   // Etapa 12: o versátil aprende com os outros povos
     if (G.Cidade && S.cidade) f *= G.Cidade.xp(S, p);   // Etapa 16: a escola e o arquivo
     if (G.Eras && S.eras) f *= G.Eras.xp(S);   // as guildas dos anões
+    if (G.Avatar) f *= G.Avatar.xp(p);   // Etapa 21: o abençoado aprende depressa
     return f;
   };
   // 0.14: quem amamenta, calculado uma vez por passo (antes, cada pergunta varria o povo inteiro: com 300, era 90 mil
@@ -4273,6 +4290,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       for (const x of men) { r -= F.afeto(w, x); if (r <= 0) { m = x; break; } }
       if (S.rng.next() < C.CONCEIVE_NIGHT * (F.afeto(w, m) / 100) * (G.Deus && G.Deus.dom(S, 'ventre') ? C.DOM.ventreConceive : 1) * ((w.sangue || m.sangue) && G.Povos ? G.Povos.fert(w, m) : 1)) {
         w.preg = { t0: S.t, due: S.t + Math.round(C.PREGNANCY_Y * YEAR()), father: m.id, known: false };
+        if (G.Avatar && G.Avatar.marcaConcepcao(S, w, m)) w.preg.abencoado = 1;   // Etapa 21: o filho abençoado
       }
     }
   }
@@ -4430,7 +4448,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   function giveBirth(S, w) {
     const Sm = Sim();
     const dad = person(S, w.preg ? w.preg.father : 0);
-    const hard = w.labor.hard && !w.labor.helped;
+    const hard = w.labor.hard && !w.labor.helped, abenc = !!(w.preg && w.preg.abencoado);
     w.preg = null; w.labor = null;
     w.rest = S.t + C.DAY_MIN; w.needs.energia = Math.max(10, w.needs.energia - 25);
     if (hard) G.God.ignorePrayers(S, ['parto'], w.id);
@@ -4442,6 +4460,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const sex = S.rng.chance(0.5) ? 'F' : 'M';
     const baby = F.makeBaby(S, w, dad, sex, F.pickName(S, sex, w, dad));
     if (G.Povos) G.Povos.inherit(S, baby, w, dad);   // Etapa 12: o povo, o sangue e os dons
+    if (abenc && G.Avatar) G.Avatar.nasceu(S, baby);   // Etapa 21
     // o bebê mais velho passa para o colo do pai
     if (dad && dad.alive) for (const b of S.people) if (b.alive && b.carriedBy === w.id && !F.carrying(S, dad)) b.carriedBy = dad.id;
     S.people.push(baby);
@@ -9200,6 +9219,21 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       return RUN;
     },
   };
+  // Etapa 21: o avatar. Vai até onde você tocou e espera ali a próxima ordem
+  ACT.avatar = {
+    start(S, p, a) {
+      const d = p.avDest;
+      if (d) { delete p.avDest; const path = W.findPath(S.world, tileOf(S, p), d.y * S.world.W + d.x, 600); if (path) { setPath(p, path); a.stage = 'go'; return true; } }
+      a.stage = 'espera';
+      return true;
+    },
+    run(S, p, a) {
+      if (!G.Avatar || !G.Avatar.ativoEm(S, p)) return DONE;
+      if (a.stage === 'go') { if (moving(p)) return RUN; a.stage = 'espera'; }
+      if (p.avDest || S.ctx.night) return DONE;   // de noite a ordem acaba, e o corpo vai dormir
+      return RUN;
+    },
+  };
   // reza da manhã: vai até a estátua, reza um pouco e segue o dia
   ACT.rezar = {
     start(S, p, a) {
@@ -10499,6 +10533,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   }
 
   function scoreList(S, p) {
+    // Etapa 21: o corpo possuído faz o que você manda (as urgências do corpo ainda passam na frente, em urgentNeed)
+    // de noite, o corpo dorme como qualquer corpo (é aí que o filho abençoado pode ser concebido, com o par de sempre)
+    if (G.Avatar && G.Avatar.ativoEm(S, p) && !S.ctx.night) return [{ type: 'avatar', score: 999 }];
     const n = p.needs, ctx = S.ctx, out = [];
     const add = (type, s, extra) => {
       if (!(s > 0)) return;
@@ -10779,6 +10816,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         return sm ? (st === 'tell' ? 'Pregando a palavra de ' + G.Deus.call(S) + ' ao pé do fogo' : 'Indo pregar ao pé do fogo') : st === 'tell' ? 'Contando uma história ao pé do fogo' : 'Indo contar uma história'; }
       case 'ouvir': { const t = person(S, a.teller), sm = S.life && S.life.story && S.life.story.id === a.st && S.life.story.sermon;
         return sm ? (st === 'listen' ? 'Ouvindo a pregação de ' + (t ? t.name : '…') : 'Indo ouvir a pregação') : st === 'listen' ? 'Ouvindo a história de ' + (t ? t.name : '…') : 'Indo ouvir uma história'; }
+      case 'avatar': return st === 'go' ? 'Andando nos passos de Deus' : 'Tomado por Deus, esperando';
       case 'servir': { const ob = a.b ? Sim.building(S, a.b) : null; return st === 'work' && ob ? G.Cidade.fazendo(ob) : 'Indo para o posto'; }
       case 'rezar': return st === 'pray' ? 'Rezando ao pé da estátua de ' + G.Deus.call(S) : 'Indo rezar na estátua';
       case 'curar': { const t = person(S, a.q); return st === 'heal' ? 'Curando ' + (t ? t.name : '…') + ' com as mãos' : 'Indo curar ' + (t ? t.name : '…'); }
@@ -18808,6 +18846,224 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   };
 })(globalThis.G = globalThis.G || {});
 
+/* ---- js/avatar.js ---- */
+/* Gods · Etapa 21 (0.21): o Avatar. Você possui um adulto de fé alta e anda como ele: o toque no mapa leva o corpo
+   dele até lá, e só o avatar fala com alguém escolhendo a frase, ensina um ofício na mão, aparta uma briga e puxa a
+   reza. Custa Poder por hora e cansa o corpo; quando você sai, ele lembra daquilo como um sonho. Abusar assusta: o
+   povo passa a temer os tomados. O filho gerado enquanto o pai ou a mãe estava possuído (sempre com o par que a
+   pessoa já tinha) nasce abençoado: fé inteira, aprende depressa, tem um dom só dele (profeta, curador ou líder nato)
+   e, de tempos em tempos, faz uma pergunta direto a você. Possuir não passa por cima da vontade de ninguém: a pessoa
+   precisa ter fé alta, e nada além disso é descrito. Sem DOM. */
+(function (G) {
+  'use strict';
+  const C = G.CFG;
+  const Av = G.Avatar = {};
+  const Sim = () => G.Sim, Fam = () => G.Family, God = () => G.God;
+  const here = (p) => p && p.alive && !p.fora && !p.carriedBy;
+
+  Av.init = function (S) {
+    const a = S.avatar || (S.avatar = {});
+    a.pid = a.pid || 0;
+    a.horas = a.horas || {};
+    a.cool = a.cool || {};
+    a.pergunta = a.pergunta || null;
+    a.first = a.first || {};
+    const st = S.stats;
+    for (const k of ['possessoes', 'horasAvatar', 'abencoados', 'acoesAvatar', 'perguntas']) st[k] = st[k] || 0;
+  };
+  Av.ativo = (S) => !!(S.avatar && S.avatar.pid);
+  Av.ativoEm = (S, p) => !!(S.avatar && p && S.avatar.pid === p.id);
+  Av.quem = (S) => (Av.ativo(S) ? Fam().person(S, S.avatar.pid) : null);
+
+  // ---------- possuir e soltar ----------
+  Av.possuirWhy = function (S, p) {
+    if (!S.avatar) Av.init(S);
+    if (!here(p)) return 'só quem está na aldeia';
+    if (Fam().age(S, p) < 18) return 'só um adulto';
+    if ((p.fe || 0) < C.AVATAR_FE) return 'pede fé de ' + C.AVATAR_FE + ' ou mais';
+    if (p.sleeping || p.labor) return 'agora não: ' + (p.labor ? 'está em trabalho de parto' : 'está dormindo');
+    if (Av.ativo(S)) return 'você já está em alguém';
+    if ((S.god.poder || 0) < C.AVATAR_PODER_H * 2) return 'pede ' + C.AVATAR_PODER_H * 2 + ' de Poder';
+    return '';
+  };
+  Av.possuir = function (S, pid) {
+    const p = Fam().person(S, pid), why = Av.possuirWhy(S, p);
+    if (why) return { ok: false, why };
+    S.avatar.pid = p.id; S.avatar.desde = S.t;
+    p.tomado = S.t;
+    G.AI.abort(S, p); p.nextEval = S.t;
+    S.stats.possessoes++;
+    if (!S.avatar.first.possuir) { S.avatar.first.possuir = S.t; Sim().chron(S, 'Pela primeira vez, Deus andou entre o povo nos olhos de ' + p.name + '.'); }
+    return { ok: true };
+  };
+  Av.soltar = function (S, why) {
+    const p = Av.quem(S);
+    S.avatar.pid = 0;
+    if (!p) return;
+    delete p.tomado; delete p.avDest;
+    if (p.alive) { G.AI.abort(S, p); p.nextEval = S.t; Sim().addMem(S, p, 'tomado'); }
+    if (why && !S.safe) S.events.push({ k: 'toast', text: why, tone: 'warn' });
+  };
+  // o toque no mapa: o corpo vai até lá
+  Av.mover = function (S, x, y) {
+    const p = Av.quem(S);
+    if (!p) return false;
+    p.avDest = { x, y };
+    G.AI.abort(S, p); p.nextEval = S.t;
+    return true;
+  };
+
+  // ---------- o que só o avatar faz ----------
+  // perto: quem está a até 3 passos (o alvo escolhido, se houver)
+  function alvo(S, p, pid, r) {
+    const q = pid ? Fam().person(S, pid) : null;
+    if (q && here(q) && q !== p && Math.hypot(q.x - p.x, q.y - p.y) <= (r || 3)) return q;
+    let best = null, bd = r || 3;
+    for (const o of S.people) { if (!here(o) || o === p) continue; const d = Math.hypot(o.x - p.x, o.y - p.y); if (d <= bd) { bd = d; best = o; } }
+    return best;
+  }
+  Av.ACOES = {
+    consolar: { nome: 'Consolar', desc: 'Fala de perto com quem está triste: o descontentamento cai e o laço entre os dois cresce.' },
+    encorajar: { nome: 'Encorajar', desc: 'Uma palavra de força: a pessoa ganha ânimo para o trabalho.' },
+    pregar: { nome: 'Pregar', desc: 'Fala de Deus, de perto: a fé da pessoa sobe.' },
+    ensinar: { nome: 'Ensinar na mão', desc: 'Mostra o ofício pegando junto: a pessoa aprende o jeito das técnicas que o avatar sabe, e um pouco de cada ofício.' },
+    apartar: { nome: 'Apartar briga', desc: 'Entra no meio: quem planejava um malfeito ali perto desiste, e a raiva esfria.' },
+    rezar: { nome: 'Puxar a reza', desc: 'Puxa a reza em voz alta: todos a até 6 passos rezam juntos, e a fé sobe.' },
+  };
+  Av.acaoWhy = function (S, k, pid) {
+    const p = Av.quem(S);
+    if (!p) return 'você não está em ninguém';
+    if ((S.avatar.cool[k] || 0) > S.t) return 'de novo só daqui a pouco';
+    if ((S.god.poder || 0) < C.AVATAR_ACAO) return 'pede ' + C.AVATAR_ACAO + ' de Poder';
+    if (k === 'apartar') return S.people.some((q) => here(q) && q.plano && Math.hypot(q.x - p.x, q.y - p.y) <= 6) ? '' : 'ninguém por perto planeja malfeito';
+    if (k === 'rezar') return '';
+    return alvo(S, p, pid) ? '' : 'chegue perto de alguém (até 3 passos)';
+  };
+  Av.agir = function (S, k, pid) {
+    const why = Av.acaoWhy(S, k, pid);
+    if (why) return { ok: false, why };
+    const p = Av.quem(S), q = alvo(S, p, pid), So = G.Soc;
+    S.god.poder -= C.AVATAR_ACAO;
+    S.avatar.cool[k] = S.t + 60;
+    S.stats.acoesAvatar++;
+    let txt = '';
+    if (k === 'consolar') { if (So) q.desc = Math.max(0, (q.desc || 0) - 15); q.needs.social = Math.min(100, q.needs.social + 20); q.rel[p.id] = (q.rel[p.id] || 0) + 3; p.rel[q.id] = (p.rel[q.id] || 0) + 3; txt = p.name + ' consolou ' + q.name + '.'; }
+    else if (k === 'encorajar') { q.needs.energia = Math.min(100, q.needs.energia + 15); q.animo = S.t + 8 * 60; txt = p.name + ' encorajou ' + q.name + '.'; }
+    else if (k === 'pregar') { God().faith(S, q, 12); txt = p.name + ' falou de Deus para ' + q.name + '.'; }
+    else if (k === 'ensinar') {
+      const Ge = G.Gente;
+      if (Ge) for (const id of Ge.TECNICAS) if (Ge.dom(S, p, id) >= C.DOM_MESTRE) Ge.aprende(S, q, id, 0.25, p);
+      for (const sk in p.skills) if ((p.skills[sk] || 0) > (q.skills[sk] || 0)) q.skills[sk] += ((p.skills[sk] || 0) - (q.skills[sk] || 0)) * 0.2;
+      txt = p.name + ' ensinou ' + q.name + ' pegando junto.';
+    } else if (k === 'apartar') {
+      const n = [];
+      for (const o of S.people) if (here(o) && o.plano && Math.hypot(o.x - p.x, o.y - p.y) <= 6) { delete o.plano; if (o.raiva) o.raiva = {}; n.push(o); }
+      txt = p.name + ' entrou no meio e apartou: ' + Sim().listNames(n) + ' desisti' + (n.length > 1 ? 'ram.' : 'u.');
+    } else if (k === 'rezar') {
+      const n = S.people.filter((o) => here(o) && o !== p && Math.hypot(o.x - p.x, o.y - p.y) <= 6);
+      for (const o of n) God().faith(S, o, 8);
+      God().faith(S, p, 4);
+      txt = p.name + ' puxou a reza' + (n.length ? ', e ' + n.length + (n.length > 1 ? ' rezaram junto.' : ' rezou junto.') : ', sozinho.');
+    }
+    if (!S.safe) S.events.push({ k: 'toast', text: txt, tone: 'good' });
+    return { ok: true, txt };
+  };
+
+  // ---------- de hora em hora: o custo, o cansaço e o medo dos tomados ----------
+  Av.hourly = function (S) {
+    if (!S.avatar) Av.init(S);
+    const p = Av.quem(S);
+    if (Av.ativo(S) && !here(p)) { Av.soltar(S); return; }
+    if (p) {
+      S.god.poder -= C.AVATAR_PODER_H;
+      p.needs.energia = Math.max(0, p.needs.energia - C.AVATAR_CANSA);
+      const h = S.avatar.horas[p.id] = (S.avatar.horas[p.id] || 0) + 1;
+      S.stats.horasAvatar++;
+      if (S.god.poder < C.AVATAR_PODER_H) Av.soltar(S, 'O Poder acabou: você saiu de ' + p.name + '.');
+      // o corpo dorme sozinho de noite; só a fome, a sede e a saúde em perigo tiram você dele
+      else if (p.needs.fome < 12 || p.needs.sede < 12 || p.needs.saude < 30) Av.soltar(S, 'O corpo de ' + p.name + ' precisa de cuidado: você saiu dele.');
+      // quem vê o tomado tempo demais começa a temer
+      else if (h > C.AVATAR_ABUSO_H && G.Soc) {
+        for (const o of S.people) if (here(o) && o !== p && Math.hypot(o.x - p.x, o.y - p.y) <= 6) G.Soc.addDesc(S, o, 0.6, 'humor');
+        if (!S.avatar.first.medo) { S.avatar.first.medo = S.t; Sim().chron(S, 'O povo começou a temer os tomados: ' + p.name + ' anda com um olhar que não é dele.'); }
+      }
+    }
+    // o filho abençoado: o dom dele
+    for (const q of S.people) {
+      if (!here(q) || !q.abencoado || Fam().age(S, q) < 12) continue;
+      const dom = q.abencoado.dom;
+      if (dom === 'curador') for (const o of S.people) { if (here(o) && o !== q && Math.hypot(o.x - q.x, o.y - q.y) <= 6 && o.needs.saude < 90) o.needs.saude = Math.min(100, o.needs.saude + 1); }
+      else if (dom === 'profeta') for (const o of S.people) { if (here(o) && o !== q && Math.hypot(o.x - q.x, o.y - q.y) <= 8) God().faith(S, o, 0.05); }
+    }
+  };
+
+  // ---------- o filho abençoado ----------
+  // a concepção enquanto o pai ou a mãe está possuído (sempre com o par que a pessoa já tinha: quem faz o par é a
+  // família, de sempre; o avatar não escolhe ninguém)
+  Av.marcaConcepcao = (S, mae, pai) => Av.ativo(S) && (S.avatar.pid === mae.id || (pai && S.avatar.pid === pai.id));
+  const DONS = { profeta: 'profeta: perto dele, a fé de todos sobe devagar', curador: 'curador: perto dele, quem está ferido ou doente sara', lider: 'líder nato: quando crescer, o povo vai ouvi-lo' };
+  Av.DONS = DONS;
+  Av.nasceu = function (S, baby) {
+    const ks = Object.keys(DONS), dom = ks[Math.floor(G.hash2(baby.id, 3, S.seed) * ks.length)];
+    baby.abencoado = { dom, t: S.t };
+    baby.fe = 100;
+    S.stats.abencoados++;
+    Sim().chron(S, baby.name + ' nasceu com uma marca de luz na testa: ' + (baby.sex === 'F' ? 'é a filha abençoada' : 'é o filho abençoado') + ', ' + DONS[dom] + '.');
+  };
+  // o líder nato: adulto, o povo passa a ouvi-lo (uma vez)
+  function liderNato(S) {
+    if (!G.Soc || !S.soc) return;
+    for (const q of S.people) {
+      if (!here(q) || !q.abencoado || q.abencoado.dom !== 'lider' || q.abencoado.lider || Fam().age(S, q) < 20) continue;
+      q.abencoado.lider = S.t;
+      S.soc.lider = q.id; S.soc.liderT = S.t;
+      Sim().chron(S, 'O povo passou a ouvir ' + q.name + ', ' + (q.sex === 'F' ? 'a abençoada' : 'o abençoado') + ': fala, e todos param para ouvir.');
+    }
+  }
+  // a pergunta do abençoado, direto para você (uma a cada AVATAR_PERGUNTA_D dias, a partir dos 8 anos)
+  const PERGUNTAS = [
+    { t: 'Por que a gente morre?', r: [['Para dar lugar a quem nasce.', 3, 2], ['Nem eu sei tudo.', 1, 6]] },
+    { t: 'Você está sempre olhando?', r: [['Sempre.', 4, 1], ['Quando vocês me chamam.', 2, 3]] },
+    { t: 'Posso pedir pelos outros, e não por mim?', r: [['Pode, e é o que mais escuto.', 3, 4], ['Peça pelo que precisar.', 1, 2]] },
+    { t: 'O que tem do outro lado do mar?', r: [['Mais gente como vocês.', 2, 3], ['Vão ver com os próprios olhos.', 1, 5]] },
+  ];
+  function pergunta(S) {
+    if (S.avatar.pergunta || S.safe || S.resumido) return;
+    const q = S.people.find((o) => here(o) && o.abencoado && Fam().age(S, o) >= 8 && S.t - (o.abencoado.perg || o.abencoado.t) >= C.AVATAR_PERGUNTA_D * C.DAY_MIN);
+    if (!q) return;
+    const k = (S.stats.perguntas || 0) % PERGUNTAS.length;
+    S.avatar.pergunta = { pid: q.id, k, t: S.t };
+    q.abencoado.perg = S.t;
+    S.events.push({ k: 'filho', pid: q.id });
+  }
+  Av.pending = (S) => {
+    const pg = S.avatar && S.avatar.pergunta;
+    if (!pg) return null;
+    const q = Fam().person(S, pg.pid), P = PERGUNTAS[pg.k];
+    return q ? { nome: q.name, texto: P.t, opcoes: P.r.map((x) => x[0]) } : null;
+  };
+  // a resposta: a fé da aldeia (e a do abençoado) sobe; a resposta franca o faz pensar, e a fé dele sobe mais
+  Av.responder = function (S, i) {
+    const pg = S.avatar.pergunta;
+    if (!pg) return false;
+    const q = Fam().person(S, pg.pid), R = PERGUNTAS[pg.k].r[i] || PERGUNTAS[pg.k].r[0];
+    S.avatar.pergunta = null;
+    S.stats.perguntas++;
+    if (!q) return false;
+    for (const o of S.people) if (here(o)) God().faith(S, o, R[1]);
+    God().faith(S, q, R[2]);
+    Sim().chron(S, q.name + ' perguntou a ' + (G.Deus ? G.Deus.call(S) : 'Deus') + ': “' + PERGUNTAS[pg.k].t + '” E ouviu: “' + R[0] + '”');
+    return true;
+  };
+  Av.daily = function (S) {
+    if (!S.avatar) Av.init(S);
+    liderNato(S);
+    pergunta(S);
+  };
+  // o abençoado aprende mais depressa
+  Av.xp = (p) => (p.abencoado ? 1.5 : 1);
+})(globalThis.G = globalThis.G || {});
+
 /* ---- js/save.js ---- */
 /* Gods · save: seed + o que mudou. O mundo é regerado pela seed ao carregar. */
 (function (G) {
@@ -18922,6 +19178,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       regioes: S.regioes || null,   // Etapa 17: as regiões que o povo já conhece
       mar: S.mar || null,   // Etapa 18: a viagem, as terras achadas, as colônias
       eras: S.eras || null,   // Etapas 19 e 20: a idade, o rumo, a magia
+      avatar: S.avatar || null,   // Etapa 21: quem está possuído, as horas de cada um, a pergunta
       povo: S.povo || null,   // 0.16: o nome e o título do lugar
     };
   };
@@ -18978,6 +19235,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       regioes: d.regioes || null,
       mar: d.mar || null,
       eras: d.eras || null,
+      avatar: d.avatar || null,
       povo: d.povo || null,
     };
     for (const p of S.people) {
@@ -24888,6 +25146,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // ---------- montagem ----------
   UI.init = function (hooks) {
     UI.hooks = hooks;
+    $('#filho-opcoes').addEventListener('click', (e) => { const b = e.target.closest('[data-resp]'); if (!b || !S || !G.Avatar) return; G.Avatar.responder(S, +b.dataset.resp); $('#modal-filho').hidden = true; });   // Etapa 21
     // ícones estáticos
     document.querySelectorAll('#mobnav button').forEach((b) => {
       const n = { vontades: 'verao', construir: 'construir', deus: 'deus', povo: 'pessoa', cronica: 'cronica' }[b.dataset.open] || (b.id === 'btn-mapa' ? 'mapa' : '');
@@ -25021,6 +25280,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     $('#pessoa-list').addEventListener('click', () => UI.showList());
     $('#inspector').addEventListener('click', (e) => {
       const b = e.target.closest('[data-act]'); if (!b || !S) return;
+      if (b.dataset.act === 'av-possuir' && G.Avatar) { const r = G.Avatar.possuir(S, UI.sel.person); if (!r.ok) UI.toast('Agora não: ' + r.why + '.', 'warn'); else if (UI.hooks.follow) UI.hooks.follow(UI.sel.person); return; }   // Etapa 21
+      if (b.dataset.act === 'av-soltar' && G.Avatar) { G.Avatar.soltar(S); return; }
+      if (b.dataset.act === 'av-acao' && G.Avatar) { const r = G.Avatar.agir(S, b.dataset.k, +(b.dataset.pid || 0)); if (!r.ok) UI.toast('Agora não: ' + r.why + '.', 'warn'); return; }
       if (b.dataset.act === 'partir' && G.Mar) {   // Etapa 18: a expedição
         const r = G.Mar.partir(S, +$('#mar-n').value, +$('#mar-comida').value);
         if (!r.ok) UI.toast('Agora não: ' + r.why + '.', 'warn'); else UI.toast('O navio partiu com ' + r.gente.length + ' pessoas.', 'good');
@@ -25624,7 +25886,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         rito: ritoLine(p),
         reza: p.prayer ? `<p class="story">Reza: “${esc(p.prayer.text)}”</p>` : '',
         tracos: `<div class="chips">${indoleChips(p)}${p.traits.map((t) => `<span class="chip" title="${esc(Sim.TRAIT_DESC[t])}">${esc(t)}</span>`).join('')}${criadoChip(p)}</div>`,
-        soc: socLine(p),   // Etapa 14: a pena, o descontentamento, o que só Deus viu
+        soc: socLine(p) + avatarLine(p),   // Etapa 14: a pena, o descontentamento, o que só Deus viu; Etapa 21: o avatar
         povo: povoChips(p),   // Etapa 12: o povo da pessoa e os dons dela
         posses: p.alive ? gear(p) : '',
         barras: p.alive ? `<div class="needs">${needs}</div>` : '',
@@ -26246,6 +26508,24 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     return out.join('');
   }
   // a ficha de quem vive: a pena, o descontentamento, e o que só Deus viu (com o que dá para fazer)
+  // Etapa 21: possuir (ou, já possuído, o que só o avatar faz), e a marca do abençoado
+  function avatarLine(p) {
+    const Av = G.Avatar;
+    if (!Av || !S.avatar || !p.alive) return '';
+    let h = p.abencoado ? '<p class="small"><b>' + (p.sex === 'F' ? 'Abençoada' : 'Abençoado') + '</b>: ' + esc(Av.DONS[p.abencoado.dom]) + '.</p>' : '';
+    if (Av.ativoEm(S, p)) {
+      h += '<p class="small">Você está em ' + esc(p.name) + '. Toque no chão para andar; perto de alguém, escolha o que fazer. Custa ' + C.AVATAR_PODER_H + ' de Poder por hora.</p><div class="av-acoes">' +
+        Object.keys(Av.ACOES).map((k) => { const w = Av.acaoWhy(S, k, UI.sel.person !== p.id ? UI.sel.person : 0); return '<button type="button" class="btn btn-small" data-act="av-acao" data-k="' + k + '" title="' + esc(Av.ACOES[k].desc + (w ? ' (' + w + ')' : '')) + '"' + (w ? ' disabled' : '') + '>' + Av.ACOES[k].nome + '</button>'; }).join('') +
+        '<button type="button" class="btn btn-small" data-act="av-soltar">Sair</button></div>';
+    } else if (Av.ativo(S) && Av.quem(S)) {
+      const w = Av.acaoWhy(S, 'consolar', p.id);
+      h += w ? '' : '<div class="av-acoes">' + ['consolar', 'encorajar', 'pregar', 'ensinar'].map((k) => '<button type="button" class="btn btn-small" data-act="av-acao" data-k="' + k + '" data-pid="' + p.id + '">' + Av.ACOES[k].nome + '</button>').join('') + '</div>';
+    } else {
+      const w = Av.possuirWhy(S, p);
+      h += '<div class="av-acoes"><button type="button" class="btn btn-small btn-gold" data-act="av-possuir"' + (w ? ' disabled title="' + esc(w) + '"' : ' title="Andar entre o povo nos olhos dele"') + '>Possuir</button>' + (w ? '<span class="small muted">' + esc(w) + '</span>' : '') + '</div>';
+    }
+    return h;
+  }
   function socLine(p) {
     const Sc = So();
     if (!Sc || !S.soc || !p.alive || p.carriedBy) return '';
@@ -26625,6 +26905,15 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       else if (e.k === 'godLevel') { if (UI.hooks.godPending && !quiet) setTimeout(UI.hooks.godPending, 1400); }   // Etapa 11: o nome e o dom
       else if (e.k === 'godName' || e.k === 'dom' || e.k === 'fe100') { /* só som */ }
       else if (e.k === 'bite') { G.R.event(e); if (UI.hooks.alarm) UI.hooks.alarm(); }
+      else if (e.k === 'filho' && G.Avatar) {   // Etapa 21: a pergunta do abençoado
+        const pg = G.Avatar.pending(S);
+        if (pg) {
+          $('#filho-titulo').textContent = pg.nome + ' pergunta';
+          $('#filho-texto').textContent = '“' + pg.texto + '”';
+          $('#filho-opcoes').innerHTML = pg.opcoes.map((t, i) => '<button type="button" class="btn" data-resp="' + i + '">' + esc(t) + '</button>').join('');
+          $('#modal-filho').hidden = false;
+        }
+      }
       else if (e.k === 'thanks') UI.toast(e.text, e.kind === 'luto' ? 'prayer' : 'thanks');
       else if (e.k === 'oferenda') { UI.toast(e.text, 'thanks'); const ob = Sim.building(state, e.bid); if (ob) UI.float(ob.x + 1, ob.y, '+' + e.poder + ' Poder'); }   // Etapa 12
       else if (e.k === 'povo') { /* só som */ }
@@ -28132,6 +28421,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       if (corpo) { UI.select(corpo.id, 0); return; }
     }
     if (best) { UI.select(best.id, 0); tapped(best, sx, sy, now); return; }
+    // Etapa 21: com o avatar, o toque no chão leva o corpo até lá
+    if (G.Avatar && G.Avatar.ativo(S) && button !== 2) { G.Avatar.mover(S, Math.floor(w.x / TS), Math.floor(w.y / TS)); return; }
     // lobo ou viajante no mapa
     if (S.narr) {
       let ent = null, ed = 1e9;

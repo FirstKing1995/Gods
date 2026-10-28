@@ -172,6 +172,7 @@
     escolhido: { t: 'Foi escolhido por Deus', tf: 'Foi escolhida por Deus', v: 15, d: 10 * 1440 },
     ouviuSermao: { t: 'Ouviu a pregação ao pé do fogo', v: 5, d: 1440 },
     rezou: { t: 'Rezou ao pé da estátua', v: 3, d: 1440 },
+    tomado: { t: 'Sonhou que andava pelos olhos de Deus', v: 6, d: 3 * 1440 },   // Etapa 21
   };
   Sim.MEM = MEM; Sim.TRAIT_DESC = TRAIT_DESC;
 
@@ -1064,6 +1065,7 @@
     if (G.Regioes) G.Regioes.daily(S);   // Etapa 17: o sal que chegou
     if (G.Mar) G.Mar.daily(S);   // Etapa 18: a volta da expedição, a carga do barco, as colônias
     if (G.Eras) G.Eras.daily(S);   // Etapas 19 e 20: a idade, o rumo, a magia, o desafio de cada idade
+    if (G.Avatar) G.Avatar.daily(S);   // Etapa 21: o abençoado (a pergunta, o líder nato)
     if (G.Life) G.Life.daily(S);
   }
   function rot(S, k, rate) {
@@ -1113,6 +1115,7 @@
     if (G.Gente) G.Gente.hourly(S);   // Etapa 15: aprender vendo, o combinado, o que se pensa em voz alta
     if (G.Cidade) G.Cidade.hourly(S);   // Etapa 16: a febre, o fogo por acaso, o aqueduto
     if (G.Regioes) G.Regioes.hourly(S);   // Etapa 17: a primeira vez em cada região, o mosquito
+    if (G.Avatar) G.Avatar.hourly(S);   // Etapa 21: o custo do avatar, o medo dos tomados, o dom do abençoado
     if (G.Life) G.Life.hourly(S);
     checkGoals(S);
   }
@@ -1357,6 +1360,7 @@
     if (G.Regioes) G.Regioes.init(S);   // Etapa 17: as regiões
     if (G.Mar) G.Mar.init(S);   // Etapa 18: os barcos e as outras terras
     if (G.Eras) G.Eras.init(S);   // Etapas 19 e 20: as Eras
+    if (G.Avatar) G.Avatar.init(S);   // Etapa 21: o Avatar
     fixGoals(S);
     if (!S.seen) {
       S.seen = new Uint8Array(S.world.W * S.world.H);

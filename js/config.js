@@ -3,7 +3,7 @@
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.20.0',
+    VERSION: '0.21.0',
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
     SAVE_KEY: 'genesis.save.v1',
@@ -48,6 +48,9 @@
     CANOA_PESCA: 1.25, BARCO_PESCA: 1.45, MAR_TRIPULACAO: [3, 8], MAR_DIAS: [15, 30], MAR_PERIGO: 0.32, MAR_PERIGO_MIN: 0.08, MAR_ACHA: 0.8, MAR_POVO: 0.6, MAR_TERRAS: 4,
     COLONIA_GENTE: 6, COLONIA_COMIDA: 60, COLONIA_MAX: 60,
     // Etapas 19 e 20: as Eras. RUNAS_HEAT: o calor da runa nas casas (a magia do conselho); ERA_PRAGA e ERA_GUERRA: por ano
+    // Etapa 21: o Avatar. Fé mínima de quem se possui, Poder por hora e por ação, o cansaço por hora, as horas até o povo
+    // temer o tomado, e de quantos em quantos dias o abençoado pergunta
+    AVATAR_FE: 80, AVATAR_PODER_H: 6, AVATAR_ACAO: 5, AVATAR_CANSA: 1, AVATAR_ABUSO_H: 24, AVATAR_PERGUNTA_D: 30,
     RUNAS_HEAT: 4, ERA_PRAGA: 0.6, ERA_GUERRA: 0.5,
     SERRA_COLD: -5, SERTAO_HEAT: 3, NOBRE_WOOD: 2, SAL_N: 3, VEIO_OURO: 0.3, SAL_ROT: 0.5, MOSQUITO_H: 0.0025, SERTAO_ROCA: 0.75,
     RAIN_CHANCE: [0.30, 0.15, 0.35, 0.30],
