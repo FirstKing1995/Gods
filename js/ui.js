@@ -697,6 +697,11 @@
     if (G.Obras && G.Obras.povoacao) {
       const v = G.Obras.povoacao(S);
       setText($('#vila-label'), v.label);
+      if (G.Eras && S.eras) {   // as Eras: a idade, o rumo e o que falta para a próxima
+        const ei = G.Eras.info(S), el = $('#era-label');
+        setText(el, ei.idade + (ei.ordem ? ' · ' + ei.ordem : '') + (ei.magia.length ? ' · magia: ' + ei.magia.join(', ').toLowerCase() : '') + (ei.prox ? ' · para a ' + ei.prox + ', ' + (ei.falta || 'só esperar') : ''));
+        el.title = ei.ordemDesc || '';
+      }
       setText($('#vila-next'), v.prox ? '· ' + v.prox.t.toLowerCase() + ' com ' + v.prox.n + ' pessoas' : '');
       setText($('#btn-vila-nome'), v.nome ? 'Trocar o nome' : 'Dar nome');
     }

@@ -89,6 +89,7 @@
     if (G.Deus && G.Deus.saber(S, 'escrita')) f *= C.ESCRITA_XP;   // a escrita (Etapa 11): todos aprendem mais rápido
     if (S.povos && S.povos.mixed && G.Povos) f *= G.Povos.xp(S, p);   // Etapa 12: o versátil aprende com os outros povos
     if (G.Cidade && S.cidade) f *= G.Cidade.xp(S, p);   // Etapa 16: a escola e o arquivo
+    if (G.Eras && S.eras) f *= G.Eras.xp(S);   // as guildas dos anões
     return f;
   };
   // 0.14: quem amamenta, calculado uma vez por passo (antes, cada pergunta varria o povo inteiro: com 300, era 90 mil

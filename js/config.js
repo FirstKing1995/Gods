@@ -3,7 +3,7 @@
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.19.0',
+    VERSION: '0.20.0',
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
     SAVE_KEY: 'genesis.save.v1',
@@ -47,6 +47,8 @@
     // achar terra, de haver povo nela, quantas terras há); a colônia (quantos vão, quanta comida levam)
     CANOA_PESCA: 1.25, BARCO_PESCA: 1.45, MAR_TRIPULACAO: [3, 8], MAR_DIAS: [15, 30], MAR_PERIGO: 0.32, MAR_PERIGO_MIN: 0.08, MAR_ACHA: 0.8, MAR_POVO: 0.6, MAR_TERRAS: 4,
     COLONIA_GENTE: 6, COLONIA_COMIDA: 60, COLONIA_MAX: 60,
+    // Etapas 19 e 20: as Eras. RUNAS_HEAT: o calor da runa nas casas (a magia do conselho); ERA_PRAGA e ERA_GUERRA: por ano
+    RUNAS_HEAT: 4, ERA_PRAGA: 0.6, ERA_GUERRA: 0.5,
     SERRA_COLD: -5, SERTAO_HEAT: 3, NOBRE_WOOD: 2, SAL_N: 3, VEIO_OURO: 0.3, SAL_ROT: 0.5, MOSQUITO_H: 0.0025, SERTAO_ROCA: 0.75,
     RAIN_CHANCE: [0.30, 0.15, 0.35, 0.30],
     RAIN_COLD: -2, SNOW_COLD: -3,

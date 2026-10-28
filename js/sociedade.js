@@ -316,7 +316,7 @@
   // (não gasta o da simulação): numa aldeia de gente boa, nada muda
   function tentar(S) {
     if (!podeCrime(S)) return;
-    if (G.Cidade && S.cidade) { const cm = G.Cidade.crimeMult(S); if (cm < 1 && S.rng.next() > cm) return; }   // Etapa 16: a guarda segura o malfeito (sem guarda, não gasta o sorteio)
+    if (G.Cidade && S.cidade) { const cm = G.Cidade.crimeMult(S) * (G.Eras ? G.Eras.crimeMult(S) : 1); if (cm < 1 && S.rng.next() > cm) return; }   // Etapa 16: a guarda segura o malfeito (sem guarda, não gasta o sorteio)
     const s = S.soc, h = hourOf(S), hi = Math.floor(S.t / 60);
     if (h < 6) return;
     const work = h >= 8 && h < 17, st = S.stock;
@@ -1086,7 +1086,7 @@
     r += I.g * 0.15 + I.f * 0.1 - (c.ficha || 0) * 12 + (c.escolhido ? 10 : 0) + (v === c ? 5 : 0);
     return Math.max(0, r);
   }
-  So.candidatos = (S) => S.people.filter((p) => here(p) && age(S, p) >= 20 && !p.exilio && !p.pena && !p.labor && p.id !== S.soc.vetado && !(S.soc.diss && S.soc.diss.ids.indexOf(p.id) >= 0));
+  So.candidatos = (S) => (G.Eras ? G.Eras.candidatos : (s, l) => l)(S, S.people.filter((p) => here(p) && age(S, p) >= 20 && !p.exilio && !p.pena && !p.labor && p.id !== S.soc.vetado && !(S.soc.diss && S.soc.diss.ids.indexOf(p.id) >= 0)));   // as Eras: no conselho, só mulher
   function placar(S) {
     const vs = adults(S, 16);
     return So.candidatos(S).map((c) => { const t = {}; return { p: c, t, r: vs.reduce((a, v) => a + respeito(S, v, c, t), 0) }; }).sort((a, b) => b.r - a.r || a.p.id - b.p.id);
@@ -1406,6 +1406,7 @@
   So.DESC = { cama: 'falta casa', fome: 'passaram fome', frio: 'passaram frio', humor: 'a vida aqui anda ruim', povo: 'os povos não se entendem', injustica: 'viram injustiça', lider: 'não confiam em quem manda', medo: 'têm medo de Deus' };
   function addDesc(S, p, d, why) {
     if (!p || !here(p) || age(S, p) < 16) return;
+    if (d > 0 && G.Eras) d *= G.Eras.descMult(S);   // a assembleia
     p.desc = U.clamp((p.desc || 0) + d, 0, 100);
     if (d > 0 && why) { const w = p.descWhy || (p.descWhy = {}); w[why] = +((w[why] || 0) + d).toFixed(1); }
   }

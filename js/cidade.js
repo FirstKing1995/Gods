@@ -287,7 +287,7 @@
           continue;
         }
         const a = age(S, p), fraco = a < 6 || Fam().bodyAge(S, p) >= C.OLD_HEAVY_AGE;
-        const dmg = C.PESTE_H * C.HOSP_CURA[hl] * (fraco ? 1.6 : 1);
+        const dmg = C.PESTE_H * C.HOSP_CURA[hl] * (fraco ? 1.6 : 1) * (G.Eras ? G.Eras.febreMult(S) : 1);   // as ervas do conselho
         p.needs.saude -= dmg;
         p.dmg.doenca = (p.dmg.doenca || 0) + dmg;
         if (p.needs.saude <= 0) Sim().die(S, p);
@@ -338,6 +338,7 @@
   }
   // uma troca com a vila de fora: o que mais sobra vira o que mais falta (quem: quem leva, quando não é o mercado)
   Ci.troca = function (S, N, quem, laco) {
+    if (G.Eras) N = Math.round(N * G.Eras.trocaMult(S));   // o reino de leis escritas é comerciante
     const v = S.soc && S.soc.vila, st = S.stock;
     if (!v || v.fim) return false;
     const ks = TROCA.filter((k) => st[k] !== undefined);
