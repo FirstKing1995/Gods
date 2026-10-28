@@ -147,6 +147,10 @@ body[data-placing] #view { cursor: crosshair; }
 .mapa-legenda li { display: flex; align-items: center; gap: 6px; }
 .mapa-legenda i { width: 12px; height: 12px; border-radius: 2px; display: inline-block; border: 1px solid rgba(0,0,0,.4); }
 .mapa-legenda .nao { opacity: .45; }
+.mapa-terras h3 { margin: 12px 0 4px; font-size: 15px; }
+.mapa-terras ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.mapa-terras li { font-size: 13px; line-height: 1.45; }
+.mar-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0; }
 
 .btn.danger { background: var(--blood); color: #fff; box-shadow: inset 0 0 0 2px #f6757a, inset 0 -4px 0 #a22633; }
 @media (max-width: 520px) { .mundo-row { flex-direction: column; align-items: stretch; } .mundo-acts .btn { flex: 1; } }
@@ -802,6 +806,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     <p id="mapa-info" class="small muted"></p>
     <div class="mapa-wrap"><canvas id="mapa-cv"></canvas></div>
     <ul id="mapa-legenda" class="mapa-legenda"></ul>
+    <div id="mapa-terras" class="mapa-terras"></div>
     <div class="modal-actions"><button type="button" id="btn-mapa-close" class="btn">Fechar</button></div>
   </div>
 </div>
@@ -1278,7 +1283,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.18.0',
+    VERSION: '0.19.0',
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
     SAVE_KEY: 'genesis.save.v1',
@@ -1318,6 +1323,10 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     // nobre além da comum; a salina dá SAL_N de sal; o veio de ouro dá ouro em VEIO_OURO das vezes; com sal no estoque,
     // a carne e o peixe estragam SAL_ROT do normal (e vai 1 de sal por dia); no mangue e no pântano, o mosquito passa
     // a febre (MOSQUITO_H por hora de quem está ali; de noite, o dobro). SERTAO_ROCA: o quanto a roça rende no sertão
+    // Etapa 18: o mar. A pesca com canoa e com barco; a expedição (quantos vão, quantos dias fora, o perigo, a chance de
+    // achar terra, de haver povo nela, quantas terras há); a colônia (quantos vão, quanta comida levam)
+    CANOA_PESCA: 1.25, BARCO_PESCA: 1.45, MAR_TRIPULACAO: [3, 8], MAR_DIAS: [15, 30], MAR_PERIGO: 0.32, MAR_PERIGO_MIN: 0.08, MAR_ACHA: 0.8, MAR_POVO: 0.6, MAR_TERRAS: 4,
+    COLONIA_GENTE: 6, COLONIA_COMIDA: 60, COLONIA_MAX: 60,
     SERRA_COLD: -5, SERTAO_HEAT: 3, NOBRE_WOOD: 2, SAL_N: 3, VEIO_OURO: 0.3, SAL_ROT: 0.5, MOSQUITO_H: 0.0025, SERTAO_ROCA: 0.75,
     RAIN_CHANCE: [0.30, 0.15, 0.35, 0.30],
     RAIN_COLD: -2, SNOW_COLD: -3,
@@ -1471,6 +1480,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         desc: 'Do alto se vê longe: a névoa se abre em volta dela, o bicho que vem chegando é avisado antes e o malfeito da noite tem testemunha.' },
       aqueduto: { name: 'Aqueduto', a: 'o', key: '', w: 4, h: 2, cost: { pedra: 180, argila: 60, tabuas: 20 }, work: 33000, grande: true, need: 'ceramica', water: { h: 3 },
         desc: 'Arcos de pedra que trazem a água para dentro da aldeia: o estoque de água se enche sozinho, e ninguém precisa mais ir buscar.' },
+      // Etapa 18: os barcos, na beira d'água. extra: o que sai do estoque ao marcar (pano e ferro não são material de obra)
+      canoa: { name: 'Canoa', a: 'a', key: '', w: 1, h: 1, cost: { madeira: 10, fibra: 4 }, work: 360, need: 'corda', env: 'agua', boat: 'canoa',
+        desc: 'Um tronco escavado, amarrado com corda: no rio e no lago, a pesca rende 25% mais.' },
+      barco: { name: 'Barco', a: 'o', key: '', w: 2, h: 2, cost: { tabuas: 24, fibra: 8 }, extra: { mantas: 2 }, work: 900, need: 'corda', env: 'agua', boat: 'barco',
+        desc: 'Tábuas, vela de pano e remo: a pesca de mar rende 45% mais, e ele leva carga até a vila de fora uma vez por semana, mesmo sem mercado. Pede 2 mantas para a vela.' },
+      navio: { name: 'Navio', a: 'o', key: '', w: 3, h: 2, cost: { tabuas: 60, fibra: 12, madeira: 20 }, extra: { mantas: 6, ferro: 4 }, work: 3600, need: 'corda', env: 'mar', boat: 'navio',
+        desc: 'Casco alto, velas de pano e pregos de ferro: vai ao mar aberto. Daqui sai a expedição que acha outras terras. Pede água funda por perto, 6 mantas e 4 ferramentas de ferro.' },
       // Etapa 17: a ponte de pedra, em cima do rio ou da água rasa; pronta, a água do caminho vira chão de pedra
       ponte: { name: 'Ponte de pedra', a: 'a', key: '', w: 2, h: 2, cost: { pedra: 90, tabuas: 24 }, work: 12000, grande: true, ponte: true,
         desc: 'Arcos de pedra por cima do rio: atravessa-se a pé enxuto e ligeiro, e o bicho de criação também passa. Vai em cima da água, com terra dos dois lados.' },
@@ -1527,6 +1543,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     // o que cada ambiente pede, olhando em volta da obra
     ENV: {
       agua: { name: 'água a até 3 passos' },
+      mar: { name: 'água funda a até 2 passos' },   // Etapa 18: o navio
       mata: { name: 'mata por perto', forest: 14, trees: 5 },
       campo: { name: 'campo aberto em volta', open: 30 },
       serra: { name: 'colina, montanha ou pedras por perto', hill: 10, rocks: 3 },
@@ -2988,7 +3005,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const def = C.BUILD[type], w = S.world;
     // 0.16: nenhuma obra fica mais presa à distância do centro (o armazém virou uma boca do estoque onde estiver)
     if (def.env && G.Obras && !G.Obras.envOk(S, { x, y, w: def.w, h: def.h }, def.env)) return 'Pede ' + C.ENV[def.env].name;   // Etapa 12: a mina
-    if (def.ponte) return G.Regioes ? G.Regioes.ponteWhy(S, x, y) : 'Lugar ruim';   // Etapa 17: a ponte vai em cima da água
+    if (def.ponte) return G.Regioes ? G.Regioes.ponteWhy(S, x, y) : 'Lugar ruim';
+    if (def.extra) for (const k in def.extra) if ((S.stock[k] || 0) < def.extra[k]) return 'Pede ' + def.extra[k] + ' de ' + ((G.AI && G.AI.RES_LABEL[k]) || k) + ' no estoque';   // Etapa 18   // Etapa 17: a ponte vai em cima da água
     for (let dy = 0; dy < def.h; dy++) for (let dx = 0; dx < def.w; dx++) {
       const tx = x + dx, ty = y + dy;
       if (tx < 1 || ty < 1 || tx >= w.W - 1 || ty >= w.H - 1) return 'Fora do mapa';
@@ -3037,6 +3055,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   Sim.placeBlueprint = function (S, type, x, y) {
     if (Sim.canPlace(S, type, x, y)) return null;
     const def = C.BUILD[type], w = S.world;
+    if (def.extra) for (const k in def.extra) S.stock[k] -= def.extra[k];   // Etapa 18: a vela e os pregos saem do estoque ao marcar
     const b = { id: S.nextBid++, type, lv: 1, kind: null, x, y, w: def.w, h: def.h, built: false, progress: 0,
       have: {}, fuel: 0, beds: [], up: null, t0: S.t };
     for (const k of C.MATERIALS) b.have[k] = 0;
@@ -3506,6 +3525,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (G.Gente) { if (S.resumido) G.Gente.resumo(S); else G.Gente.daily(S); }   // Etapa 15: tentativas, a estação de que gosta
     if (G.Cidade) G.Cidade.daily(S);   // Etapa 16: quem serve, a aula, a estante, a febre, a faísca, a feira
     if (G.Regioes) G.Regioes.daily(S);   // Etapa 17: o sal que chegou
+    if (G.Mar) G.Mar.daily(S);   // Etapa 18: a volta da expedição, a carga do barco, as colônias
     if (G.Life) G.Life.daily(S);
   }
   function rot(S, k, rate) {
@@ -3796,6 +3816,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (G.Gente) G.Gente.init(S);   // Etapa 15: gostos, jeito, o saber nas pessoas
     if (G.Cidade) G.Cidade.init(S);   // Etapa 16: grandes obras e instituições
     if (G.Regioes) G.Regioes.init(S);   // Etapa 17: as regiões
+    if (G.Mar) G.Mar.init(S);   // Etapa 18: os barcos e as outras terras
     fixGoals(S);
     if (!S.seen) {
       S.seen = new Uint8Array(S.world.W * S.world.H);
@@ -6154,7 +6175,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   O.envOf = function (S, b) {
     const w = S.world, T = TT(), W = w.W;
     const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
-    let water = false, forest = 0, open = 0, hill = 0, trees = 0, rocks = 0;
+    let water = false, mar = false, forest = 0, open = 0, hill = 0, trees = 0, rocks = 0;
     for (let y = Math.floor(cy - 5); y <= Math.ceil(cy + 5); y++) for (let x = Math.floor(cx - 5); x <= Math.ceil(cx + 5); x++) {
       if (x < 0 || y < 0 || x >= W || y >= w.H) continue;
       const i = y * W + x, t = w.tile[i], d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
@@ -6162,6 +6183,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       if (G.IS_WATER[t]) {
         const dx = Math.max(b.x - x, 0, x - (b.x + b.w - 1)), dy = Math.max(b.y - y, 0, y - (b.y + b.h - 1));
         if (Math.max(dx, dy) <= 3) water = true;
+        if (t === T.DEEP && Math.max(dx, dy) <= 2) mar = true;   // Etapa 18: o navio
       }
       if (d <= 4.5) {
         if (t === T.FOREST) forest++;
@@ -6176,7 +6198,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     }
     const E = C.ENV;
     return {
-      agua: water,
+      agua: water, mar,
       mata: forest >= E.mata.forest || trees >= E.mata.trees,
       campo: open >= E.campo.open,
       serra: hill >= E.serra.hill || rocks >= E.serra.rocks,
@@ -9623,6 +9645,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
               if (S.ck.season === 3) ch *= C.FISH_WINTER;
               ch *= G.Narr.fishMult(S);   // seca e nevasca espantam, piracema enche o rio
               ch *= Tech.fishMult(S, p);   // anzol
+              if (G.Mar && S.mar) ch *= G.Mar.pescaMult(S);   // Etapa 18: a canoa e o barco
               if (S.rng.next() < ch) {
                 a.caught++;
                 p.carry = { k: 'peixe', n: a.caught };
@@ -15074,6 +15097,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // Sai de S.people (não conta como vivo nem como morto) e fica em S.soc.fora, com alive = false e fora = quando saiu.
   // Family.person ainda acha pelo id: o parentesco de quem ficou não se perde (nunca um par entre parentes).
   let foraIdx = null;
+  So.sair = (S, p, why) => sair(S, p, why);   // Etapa 18: a tripulação e os colonos
+  So.voltar = (S, p, x, y) => voltar(S, p, x, y);
   So.away = function (S, id) {
     const s = S.soc;
     if (!s || !s.fora.length) return null;
@@ -18132,21 +18157,28 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   function feira(S) {
     const lv = Ci.nivel(S, 'mercado'), v = S.soc && S.soc.vila;
     if (!lv || !v || v.fim || S.ck.day % C.MERCADO_D[lv]) return;
-    const N = C.MERCADO_N[lv], st = S.stock;
+    Ci.troca(S, C.MERCADO_N[lv], '', lv >= 3 ? 1 : 0.4);
+  }
+  // uma troca com a vila de fora: o que mais sobra vira o que mais falta (quem: quem leva, quando não é o mercado)
+  Ci.troca = function (S, N, quem, laco) {
+    const v = S.soc && S.soc.vila, st = S.stock;
+    if (!v || v.fim) return false;
     const ks = TROCA.filter((k) => st[k] !== undefined);
-    if (ks.length < 2) return;
+    if (ks.length < 2) return false;
     const sobra = ks.slice().sort((a, b) => (st[b] || 0) - (st[a] || 0))[0];
     const falta = ks.filter((k) => k !== sobra).sort((a, b) => (st[a] || 0) - (st[b] || 0))[0];
-    if ((st[sobra] || 0) < N * 2 || (st[falta] || 0) >= st[sobra] / 2) return;
+    if ((st[sobra] || 0) < N * 2 || (st[falta] || 0) >= st[sobra] / 2) return false;
     const veio = Math.round(N * 0.8);
     st[sobra] -= N; st[falta] = (st[falta] || 0) + veio;
-    v.laco = Math.min(100, (v.laco || 0) + (lv >= 3 ? 1 : 0.4));
+    v.laco = Math.min(100, (v.laco || 0) + (laco || 0.4));
     S.stats.trocasMercado++;
     const nome = (k) => (G.AI && G.AI.LABEL && G.AI.LABEL[k]) || C.ITEM_NAMES && C.ITEM_NAMES[k] || k;
-    const txt = 'Na ' + Sim().def(Ci.feita(S, 'mercado')).name.toLowerCase() + ', ' + N + ' de ' + nome(sobra).toLowerCase() + ' viraram ' + veio + ' de ' + nome(falta).toLowerCase() + ', com gente ' + (v.art ? 'd' + v.art + ' ' : 'de ') + v.nome + '.';
+    const onde = quem ? 'Com ' + quem : 'Na ' + Sim().def(Ci.feita(S, 'mercado')).name.toLowerCase();
+    const txt = onde + ', ' + N + ' de ' + nome(sobra).toLowerCase() + ' viraram ' + veio + ' de ' + nome(falta).toLowerCase() + ', com gente ' + (v.art ? 'd' + v.art + ' ' : 'de ') + v.nome + '.';
     if (S.stats.trocasMercado === 1) chron(S, 'Primeira troca na banca: ' + txt.charAt(0).toLowerCase() + txt.slice(1));
     else if (!S.resumido) toast(S, txt, 'good');
-  }
+    return true;
+  };
 
   // ---------- o líder: marca a instituição que falta e sobe de nível a que não dá mais conta ----------
   Ci.FALTA = {
@@ -18381,6 +18413,221 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   };
 })(globalThis.G = globalThis.G || {});
 
+/* ---- js/mar.js ---- */
+/* Gods · Etapa 18 (0.19): barcos e outras terras. A canoa pesca melhor no rio e no lago; o barco pesca no mar e leva
+   carga até a vila de fora; o navio vai ao mar aberto. Com o navio, você manda uma expedição (quantos vão e quanta
+   comida levam): ela sai pela beira do mapa e volta em uma ou duas estações com o que achou, ou não volta. A terra
+   achada nasce da semente do mundo, com outra mistura de regiões e, às vezes, um povo do mar que só se conhece
+   chegando lá. Numa terra achada dá para fundar colônia, que vive resumida: os navios trazem notícia e carga.
+   Uma terra por vez na tela: a colônia não se joga, é acompanhada pelo mapa do mundo. Sem DOM. */
+(function (G) {
+  'use strict';
+  const C = G.CFG;
+  const M = G.Mar = {};
+  const Sim = () => G.Sim, Fam = () => G.Family, So = () => G.Soc;
+  const DAY = () => C.DAY_MIN;
+  const here = (p) => p.alive && !p.fora && !p.carriedBy;
+
+  M.init = function (S) {
+    const m = S.mar || (S.mar = {});
+    m.viagem = m.viagem || null;
+    m.terras = m.terras || [];
+    m.colonias = m.colonias || [];
+    m.first = m.first || {};
+    const st = S.stats;
+    for (const k of ['viagens', 'naufragios', 'terras', 'colonias', 'cargas', 'perdidosMar']) st[k] = st[k] || 0;
+  };
+  const navios = (S) => S.buildings.filter((b) => b.type === 'navio' && b.built);
+  const tem = (S, k) => S.buildings.some((b) => b.type === k && b.built);
+  M.navioLivre = (S) => navios(S).find((b) => !b.mar) || null;
+
+  // ---------- a pesca e a carga ----------
+  // a canoa pesca mais no rio e no lago; o barco, mais ainda (pesca de mar)
+  M.pescaMult = (S) => (tem(S, 'barco') ? C.BARCO_PESCA : tem(S, 'canoa') ? C.CANOA_PESCA : 1);
+  // o barco leva carga até a vila de fora: uma troca por semana, mesmo sem mercado
+  function cargaBarco(S) {
+    const v = S.soc && S.soc.vila;
+    if (!v || v.fim || !tem(S, 'barco') || S.ck.day % 7 || !G.Cidade || G.Cidade.nivel(S, 'mercado')) return;
+    if (G.Cidade.troca(S, C.MERCADO_N[1], 'o barco')) S.stats.cargas++;
+  }
+
+  // ---------- a expedição ----------
+  // quem pode ir: adulto de 18 a 50, com saúde, sem bebê no colo e sem cargo de líder; os que mais pescam primeiro
+  M.marujos = function (S) {
+    const L = S.soc ? S.soc.lider : 0;
+    return S.people.filter((p) => here(p) && Fam().age(S, p) >= 18 && Fam().bodyAge(S, p) <= 50 && p.needs.saude >= 60 && p.id !== L && !p.labor && !p.preg &&
+      !S.people.some((b) => b.carriedBy === p.id)).sort((a, b) => (b.skills.pesca || 0) - (a.skills.pesca || 0) || a.id - b.id);
+  };
+  const COMIDA = ['peixe', 'carne', 'defumado', 'seca', 'frutas', 'milho', 'feijao', 'mandioca', 'abobora'];
+  const comidaTem = (S) => COMIDA.reduce((s, k) => s + (S.stock[k] || 0), 0);
+  function tiraComida(S, n) {
+    for (const k of ['defumado', 'seca', 'peixe', 'carne', 'milho', 'feijao', 'mandioca', 'abobora', 'frutas']) {
+      const t = Math.min(n, S.stock[k] || 0);
+      S.stock[k] -= t; n -= t;
+      if (n <= 0) break;
+    }
+  }
+  M.partirWhy = function (S, n, comida) {
+    if (!M.navioLivre(S)) return 'precisa de um navio pronto no porto';
+    if (S.mar.viagem) return 'o navio já está no mar';
+    if (n < C.MAR_TRIPULACAO[0] || n > C.MAR_TRIPULACAO[1]) return 'vão de ' + C.MAR_TRIPULACAO[0] + ' a ' + C.MAR_TRIPULACAO[1];
+    if (M.marujos(S).length < n) return 'não há ' + n + ' adultos com saúde para ir';
+    if (comidaTem(S) < comida) return 'não há ' + comida + ' de comida no estoque';
+    if (S.people.filter((p) => p.alive && !p.fora).length - n < 4) return 'a aldeia ficaria vazia demais';
+    return '';
+  };
+  // sair: a tripulação deixa a aldeia (como quem vai para fora: o parentesco fica) e o navio some do porto
+  function embarca(S, gente, why) {
+    for (const p of gente) { So().sair(S, p, why); p.away.vila = 0; p.away.mar = 1; }
+  }
+  M.partir = function (S, n, comida) {
+    const why = M.partirWhy(S, n, comida);
+    if (why) return { ok: false, why };
+    const nav = M.navioLivre(S), gente = M.marujos(S).slice(0, n);
+    tiraComida(S, comida);
+    embarca(S, gente, 'mar');
+    nav.mar = 1;
+    const dias = C.MAR_DIAS[0] + S.rng.next() * (C.MAR_DIAS[1] - C.MAR_DIAS[0]);
+    S.mar.viagem = { t0: S.t, volta: S.t + dias * DAY(), ids: gente.map((p) => p.id), comida, nav: nav.id };
+    S.stats.viagens++;
+    Sim().chron(S, Sim().listNames(gente) + ' embarcaram no navio com ' + comida + ' de comida e saíram pela beira do mundo. Voltam em uma ou duas estações, se voltarem.');
+    return { ok: true, gente };
+  };
+  // o perigo da viagem: menos com mais gente e mais comida (até um ponto)
+  M.perigo = (v) => Math.max(C.MAR_PERIGO_MIN, C.MAR_PERIGO - 0.02 * v.ids.length - Math.min(0.1, v.comida / 600));
+
+  // ---------- a terra nova ----------
+  const TERRAS = ['Ilha do Sol Poente', 'Terra das Três Pedras', 'Costa Vermelha', 'Ilha Comprida', 'Terra dos Ventos', 'Baía Funda'];
+  const POVOS = [
+    { nome: 'os Marajuçu', jeito: 'pescadores de rede longa, que vivem em casas sobre a água' },
+    { nome: 'os Abaréu', jeito: 'navegantes que leem as estrelas e não plantam nada' },
+    { nome: 'os Iporã', jeito: 'guerreiros de canoa, desconfiados de quem chega pelo mar' },
+    { nome: 'os Corujé', jeito: 'artesãos do barro e da concha, que trocam tudo por sal' },
+  ];
+  function terraNova(S) {
+    const k = S.mar.terras.length, seed = ((S.seed >>> 0) ^ Math.imul(k + 1, 0x9e3779b1)) >>> 0;
+    // a mistura de regiões vem de um mundo pequeno gerado da semente (o mesmo jeito do mundo de cá)
+    const w = G.W.generate(seed, 96, 2), conta = new Array(7).fill(0);
+    let terra = 0;
+    for (let i = 0; i < w.tile.length; i++) if (!G.IS_WATER[w.tile[i]]) { conta[w.reg[i]]++; terra++; }
+    const mistura = conta.map((n, r) => [r, n / Math.max(1, terra)]).filter((x) => x[0] && x[1] >= 0.08).sort((a, b) => b[1] - a[1]).map((x) => G.RNAME[x[0]]);
+    const h = G.hash2(k, 7, S.seed);
+    const t = { id: k, nome: TERRAS[(k + Math.floor(G.hash2(3, 5, S.seed) * TERRAS.length)) % TERRAS.length], seed, mistura, t: S.t, povo: h < C.MAR_POVO ? Object.assign({ laco: 0 }, POVOS[Math.floor(G.hash2(k, 9, S.seed) * POVOS.length)]) : null };
+    S.mar.terras.push(t);
+    S.stats.terras++;
+    return t;
+  }
+  // o que a viagem traz: o que a terra achada tem de bom
+  function carga(S, t, n) {
+    const out = {};
+    const mapa = { 'Mata fechada': 'nobre', 'Litoral': 'sal', 'Serra alta': 'ouro', 'Mangue': 'peixe', 'Sertão': 'couro', 'Pântano': 'fibra', 'Campo': 'frutas' };
+    for (const r of t.mistura.slice(0, 2)) { const k = mapa[r]; if (k) out[k] = (out[k] || 0) + (k === 'ouro' ? 2 : 6) + n; }
+    for (const k in out) S.stock[k] = (S.stock[k] || 0) + out[k];
+    return Object.keys(out).map((k) => out[k] + ' de ' + (G.AI && G.AI.RES_LABEL && G.AI.RES_LABEL[k] || k)).join(', ');
+  }
+  // a volta: tudo bem, alguns perdidos no mar, ou o navio que não volta
+  function chegada(S) {
+    const v = S.mar.viagem, nav = Sim().building(S, v.nav);
+    S.mar.viagem = null;
+    const gente = v.ids.map((id) => So().away(S, id)).filter((p) => p && !p.morto);
+    const r = S.rng.next(), pg = M.perigo(v);
+    if (r < pg * 0.35) {
+      // o navio não voltou
+      for (const p of gente) { p.morto = S.t; p.cause = 'mar'; }
+      if (nav) Sim().removeBuilding(S, nav);
+      S.stats.naufragios++; S.stats.perdidosMar += gente.length;
+      Sim().chron(S, 'O navio não voltou. ' + Sim().listNames(gente) + ' ficaram no mar.');
+      for (const q of S.people) if (q.alive) Sim().addMem(S, q, 'parenteFoi');
+      return { ok: false, perdido: true };
+    }
+    const perdidos = r < pg ? gente.slice(0, 1 + Math.floor(S.rng.next() * Math.min(2, gente.length - 1))) : [];
+    for (const p of perdidos) { p.morto = S.t; p.cause = 'mar'; }
+    S.stats.perdidosMar += perdidos.length;
+    const volta = gente.filter((p) => perdidos.indexOf(p) < 0);
+    const cx = S.camp.x + 1.5, cy = S.camp.y + 2.5;
+    volta.forEach((p, k) => So().voltar(S, p, cx + (k % 3), cy + Math.floor(k / 3)));
+    if (nav) nav.mar = 0;
+    let txt = 'O navio voltou' + (perdidos.length ? ', sem ' + Sim().listNames(perdidos) + ', que o mar levou' : ' com todos') + '.';
+    const nova = S.mar.terras.length < C.MAR_TERRAS && S.rng.next() < C.MAR_ACHA;
+    const t = nova ? terraNova(S) : S.mar.terras.length ? S.mar.terras[Math.floor(S.rng.next() * S.mar.terras.length)] : null;
+    if (t) {
+      if (nova) txt += ' Acharam terra além do mar: ' + t.nome + ' (' + t.mistura.join(', ').toLowerCase() + ').' + (t.povo ? ' Lá vivem ' + t.povo.nome + ', ' + t.povo.jeito + '.' : ' Ninguém vive lá.');
+      else txt += ' Voltaram a ' + t.nome + '.';
+      const c = carga(S, t, volta.length);
+      if (c) txt += ' Trouxeram ' + c + '.';
+      if (t.povo) t.povo.laco = Math.min(100, t.povo.laco + (t.povo.nome === 'os Iporã' ? -3 : 6));
+    } else txt += ' Não acharam terra nenhuma, só mar.';
+    Sim().chron(S, txt);
+    return { ok: true, terra: t, nova, perdidos: perdidos.length };
+  }
+  M.chegada = chegada;   // para os testes
+
+  // ---------- a colônia ----------
+  M.fundarWhy = function (S, id) {
+    const t = S.mar.terras[id];
+    if (!t) return 'essa terra não foi achada';
+    if (S.mar.colonias.some((c) => c.terra === id && !c.fim)) return 'já há uma colônia lá';
+    if (!M.navioLivre(S) || S.mar.viagem) return 'precisa do navio no porto';
+    if (M.marujos(S).length < C.COLONIA_GENTE) return 'precisa de ' + C.COLONIA_GENTE + ' adultos com saúde para ir';
+    if (comidaTem(S) < C.COLONIA_COMIDA) return 'precisa de ' + C.COLONIA_COMIDA + ' de comida para levar';
+    if (S.people.filter((p) => p.alive && !p.fora).length - C.COLONIA_GENTE < 6) return 'a aldeia ficaria vazia demais';
+    return '';
+  };
+  M.fundar = function (S, id) {
+    const why = M.fundarWhy(S, id);
+    if (why) return { ok: false, why };
+    const t = S.mar.terras[id], gente = M.marujos(S).slice(0, C.COLONIA_GENTE);
+    tiraComida(S, C.COLONIA_COMIDA);
+    embarca(S, gente, 'colonia');
+    const c = { id: S.mar.colonias.length, terra: id, nome: 'Nova ' + t.nome.split(' ').slice(-1)[0], ids: gente.map((p) => p.id), n: gente.length, t0: S.t, bem: 60, prox: S.t + C.SEASON_DAYS * DAY(), fim: 0 };
+    S.mar.colonias.push(c);
+    S.stats.colonias++;
+    Sim().chron(S, Sim().listNames(gente) + ' partiram no navio para fundar ' + c.nome + ', em ' + t.nome + '.' + (t.povo ? ' Vão viver perto d' + t.povo.nome + '.' : ''));
+    return { ok: true, c };
+  };
+  // a colônia vive resumida: cresce com fartura, sofre no inverno, e a cada estação o navio traz notícia e carga
+  function coloniaDia(S, c) {
+    const t = S.mar.terras[c.terra], h = (k) => G.hash2(S.ck.day * 7 + k, c.id, 5150);
+    c.bem = Math.max(0, Math.min(100, c.bem + (S.ck.season === 3 ? -0.4 : 0.3) + (t.povo ? t.povo.laco / 400 : 0) + (h(1) - 0.5)));
+    // nasce gente com fartura, até o que a terra sustenta (a colônia é pequena: COLONIA_MAX); morre gente todo ano
+    if (c.bem > 45 && c.n >= 2 && h(2) < (c.n / 2) * C.VILA_NASC / C.YEAR_DAYS * Math.max(0, 1 - c.n / C.COLONIA_MAX)) c.n++;
+    if (h(3) < c.n * (c.bem < 20 ? 0.08 : 0.015) / C.YEAR_DAYS && c.n > 0) c.n--;
+    if (c.n <= 0) { c.fim = S.t; Sim().chron(S, 'Em ' + c.nome + ' não mora mais ninguém.'); return; }
+    if (S.t < c.prox) return;
+    c.prox = S.t + C.SEASON_DAYS * DAY();
+    if (!navios(S).length) return;   // sem navio, ninguém vai e ninguém traz
+    const vem = Math.round(4 + c.n * (c.bem / 100) * 2), k = t.mistura[0] === 'Mata fechada' ? 'nobre' : t.mistura[0] === 'Litoral' ? 'sal' : 'peixe';
+    S.stock[k] = (S.stock[k] || 0) + vem;
+    S.stats.cargas++;
+    const novas = c.bem > 70 ? 'vão bem, e mandam dizer que a terra é boa' : c.bem > 35 ? 'seguem firmes' : 'passam aperto e pedem ajuda';
+    const povo = t.povo ? (t.povo.laco > 30 ? ' Com ' + t.povo.nome + ' vivem em paz e trocam.' : t.povo.laco < -10 ? ' ' + t.povo.nome.charAt(0).toUpperCase() + t.povo.nome.slice(1) + ' não querem eles por perto.' : '') : '';
+    if (t.povo) t.povo.laco = Math.max(-100, Math.min(100, t.povo.laco + (h(4) - 0.4) * 6));
+    Sim().chron(S, 'O navio voltou de ' + c.nome + ' (' + c.n + (c.n === 1 ? ' pessoa' : ' pessoas') + '): ' + novas + '.' + povo + ' Trouxe ' + vem + ' de ' + ((G.AI && G.AI.RES_LABEL[k]) || k) + '.');
+  }
+
+  // ---------- o relógio ----------
+  M.daily = function (S) {
+    if (!S.mar) M.init(S);
+    const v = S.mar.viagem;
+    if (v && S.t >= v.volta) chegada(S);
+    cargaBarco(S);
+    for (const c of S.mar.colonias) if (!c.fim) coloniaDia(S, c);
+    // o primeiro barco de cada tipo
+    for (const k of ['canoa', 'barco', 'navio']) if (!S.mar.first[k] && tem(S, k)) {
+      S.mar.first[k] = S.t;
+      Sim().chron(S, { canoa: 'A primeira canoa foi para a água: no rio e no lago, a pesca rende mais.', barco: 'O primeiro barco saiu pela costa: a pesca de mar rende mais, e ele leva carga até a vila de fora.', navio: 'O navio está pronto no porto. O mar aberto espera uma expedição.' }[k]);
+    }
+  };
+  // para o mapa do mundo e a ficha do navio
+  M.info = function (S) {
+    const m = S.mar || {};
+    return {
+      viagem: m.viagem ? { dias: Math.max(0, Math.ceil((m.viagem.volta - S.t) / DAY())), n: m.viagem.ids.length } : null,
+      terras: (m.terras || []).map((t) => ({ id: t.id, nome: t.nome, mistura: t.mistura, povo: t.povo ? t.povo.nome + ', ' + t.povo.jeito : '', colonia: (m.colonias || []).find((c) => c.terra === t.id && !c.fim) || null, why: M.fundarWhy(S, t.id) })),
+    };
+  };
+})(globalThis.G = globalThis.G || {});
+
 /* ---- js/save.js ---- */
 /* Gods · save: seed + o que mudou. O mundo é regerado pela seed ao carregar. */
 (function (G) {
@@ -18493,6 +18740,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       gente: S.gente || null,   // Etapa 15: a média de cada trabalho, as tentativas, quem aprendeu com quem
       cidade: S.cidade || null,   // Etapa 16: o que está escrito, a febre, as primeiras vezes
       regioes: S.regioes || null,   // Etapa 17: as regiões que o povo já conhece
+      mar: S.mar || null,   // Etapa 18: a viagem, as terras achadas, as colônias
       povo: S.povo || null,   // 0.16: o nome e o título do lugar
     };
   };
@@ -18547,6 +18795,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       gente: d.gente || null,
       cidade: d.cidade || null,
       regioes: d.regioes || null,
+      mar: d.mar || null,
       povo: d.povo || null,
     };
     for (const p of S.people) {
@@ -20390,6 +20639,10 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 
   // ---------- ícones da interface (10 x 10) ----------
   const ICONS = {
+    // Etapa 18: os barcos
+    canoa: [['..........', '..........', '..........', '...k......', '..k.k.....', 'kkkkkkkkkk', 'kwwwwwwwwk', '.kwwwwwwk.', '..kkkkkk..', 'bbbbbbbbbb'], { k: P.bark, w: P.wood, b: P.sky }],
+    barco: [['....k.....', '...kWk....', '...kWWk...', '..kWWWWk..', '..kWWWWWk.', '....k.....', 'kkkkkkkkkk', '.kwwwwwwk.', '..kkkkkk..', 'bbbbbbbbbb'], { k: P.bark, w: P.wood, W: P.parch, b: P.sky }],
+    navio: [['..k...k...', '.kWk.kWk..', '.kWk.kWWk.', 'kWWWkWWWk.', 'kWWWkWWWWk', '..k...k...', 'kkkkkkkkkk', 'kwkwkwkwwk', '.kkkkkkkk.', 'bbbbbbbbbb'], { k: P.bark, w: P.wood, W: P.parch, b: P.sky }],
     mapa: [['..........', '.kkkkkkkk.', '.kggkbbbk.', '.kgggkbbk.', '.kgykggbk.', '.kgggggkk.', '.kbgggrgk.', '.kbbggggk.', '.kkkkkkkk.', '..........'], { k: P.ink2, g: P.leaf, b: P.sky, y: P.tan, r: P.red }],   // Etapa 17: o mapa do mundo
     ponte: [['..........', '..........', 'kkkkkkkkkk', 'kssssssssk', 'kSSSSSSSSk', 'kkkkkkkkkk', 'ks.sk.sk.k', 'k...k..k.k', 'bbbbbbbbbb', '.b.b.b.b.b'], { k: P.ink2, s: P.silver, S: P.mist, b: P.sky }],   // Etapa 17
     // Etapa 16: as grandes obras e as instituições
@@ -21426,8 +21679,33 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     }
     return b.canvas();
   }
+  // Etapa 18: os barcos. A canoa (16 x 12), o barco com vela (32 x 32) e o navio de dois mastros (48 x 44)
+  function casco(b, x0, x1, y0, y1) {
+    for (let y = y0; y <= y1; y++) {
+      const enc = Math.round((y - y0) / Math.max(1, y1 - y0) * 2);
+      for (let x = x0 + enc; x <= x1 - enc; x++) b.set(x, y, y === y0 ? PLANK[4] : y === y1 ? PLANK[0] : (x === x0 + enc || x === x1 - enc) ? PLANK[0] : (y - y0) % 2 ? PLANK[2] : PLANK[3]);
+    }
+  }
+  function vela(b, mx, y0, y1, w, cor) {
+    line(b, mx, y0 - 2, mx, y1 + 2, PLANK[0]);
+    for (let y = y0; y <= y1; y++) {
+      const hw = Math.round(w * (0.55 + 0.45 * (y - y0) / Math.max(1, y1 - y0)));
+      for (let x = mx - hw; x <= mx + hw; x++) if (x !== mx) b.set(x, y, x === mx - hw || x === mx + hw || y === y1 ? cor[0] : (x + y) % 5 === 0 ? cor[1] : cor[2]);
+    }
+  }
+  function canoaSpr() { const b = new Buf(16, 12); casco(b, 1, 14, 5, 9); b.set(7, 4, PLANK[1]); line(b, 4, 2, 11, 7, PLANK[1]); rect7(b, 10, 6, 12, 7, PLANK[4]); return b.canvas(); }
+  function barcoSpr() { const b = new Buf(32, 32); casco(b, 2, 29, 22, 28); vela(b, 15, 4, 19, 9, ['#a89a82', '#d8ccb4', '#ead4aa']); return b.canvas(); }
+  function navioSpr() {
+    const b = new Buf(48, 44);
+    casco(b, 1, 46, 30, 40);
+    for (let x = 8; x <= 40; x += 6) b.set(x, 34, P.ink);   // as escotilhas
+    vela(b, 15, 6, 26, 9, ['#a89a82', '#d8ccb4', '#ead4aa']);
+    vela(b, 32, 2, 26, 11, ['#a89a82', '#d8ccb4', '#ead4aa']);
+    rect7(b, 33, 0, 37, 2, '#c8423a');   // a bandeira
+    return b.canvas();
+  }
   A.cidadeSprites = function () {
-    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr() };
+    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr() };
     for (const k of ['escola', 'biblioteca', 'hospital', 'guarda', 'brigada', 'mercado']) out[k] = [null, instituicao(k, 1), instituicao(k, 2), instituicao(k, 3)];
     return out;
   };
@@ -22791,6 +23069,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // Etapa 16: grandes obras e instituições. A grande obra em andamento sobe de baixo para cima até onde o trabalho
   // chegou, com o desenho inteiro apagadinho atrás e os andaimes por cima
   function drawCidade(S, S2, b, bx, by, ghost, lv) {
+    if (b.mar) return;   // Etapa 18: o navio está no mar
     const set = S2.cidade[b.type], img = Array.isArray(set) ? set[Math.max(1, Math.min(set.length - 1, lv))] : set;
     const base = by + b.h * TS, top = base - img.height, gr = C.BUILD[b.type].grande;
     blit(S2.bigShadow, bx + b.w * TS / 2 - 10, base - 5, ghost ? 0.4 : undefined);
@@ -24455,7 +24734,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       ['marcenaria', 'marcenaria'], ['tecelagem', 'tecelagem'], ['roca', 'roca'], ['curral', 'curral'], ['mina', 'mina'], ['ferraria', 'ferraria'], ['estatua', 'estatua'], ['cemiterio', 'cemiterio'],
       // Etapa 16: as instituições e as grandes obras (aparecem quando a sociedade pede)
       ['guarda', 'guarda'], ['brigada', 'brigada'], ['hospital', 'hospital'], ['escola', 'escola'], ['biblioteca', 'biblioteca'], ['mercado', 'mercado'],
-      ['torre', 'torre'], ['templo', 'templo'], ['muralha', 'muralha'], ['aqueduto', 'aqueduto'], ['ponte', 'ponte']];
+      ['torre', 'torre'], ['templo', 'templo'], ['muralha', 'muralha'], ['aqueduto', 'aqueduto'], ['ponte', 'ponte'],
+      // Etapa 18: os barcos
+      ['canoa', 'canoa'], ['barco', 'barco'], ['navio', 'navio']];
     const SHORT = { barraca: 'Barraca', forno: 'Forno' };   // nome curto no botão (o painel fica em duas fileiras)
     $('#builds').innerHTML = builds.map(([t, icn]) => {
       const d = C.BUILD[t];
@@ -24558,6 +24839,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     $('#pessoa-list').addEventListener('click', () => UI.showList());
     $('#inspector').addEventListener('click', (e) => {
       const b = e.target.closest('[data-act]'); if (!b || !S) return;
+      if (b.dataset.act === 'partir' && G.Mar) {   // Etapa 18: a expedição
+        const r = G.Mar.partir(S, +$('#mar-n').value, +$('#mar-comida').value);
+        if (!r.ok) UI.toast('Agora não: ' + r.why + '.', 'warn'); else UI.toast('O navio partiu com ' + r.gente.length + ' pessoas.', 'good');
+        return;
+      }
       if (b.dataset.act === 'rename') {
         const kid = S.people.find((q) => q.id === UI.sel.person);
         if (kid) UI.birth(kid, null, true);
@@ -25251,7 +25537,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       </div>`;
     }
     const st = el.querySelector('#bstatus'); if (st) st.textContent = buildingStatus(b, d, job);
-    const ex = el.querySelector('#bextra'); if (ex) setHTML(ex, b.built ? (b.type === 'estatua' ? estatuaHTML(b) : b.type === 'cemiterio' ? cemHTML() : campoHTML(b)) : '');
+    const ex = el.querySelector('#bextra'); if (ex) setHTML(ex, b.built ? (b.type === 'estatua' ? estatuaHTML(b) : b.type === 'cemiterio' ? cemHTML() : b.type === 'navio' ? marHTML(b) : campoHTML(b)) : '');
   }
   function costText(cost) {
     const parts = Object.keys(cost || {}).map((k) => cost[k] + ' de ' + (MAT_WORD[k] || k));
@@ -25642,6 +25928,19 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       (esp ? ' ' + (esp === 1 ? 'Uma pessoa espera' : esp + ' pessoas esperam') + ' o velório e o enterro.' : '') +
       (m.fin.on ? ' Hoje é o dia dos mortos: o povo está aqui, com uma luz em cada cova.' : ' Dia dos mortos: ' + (fe === 0 ? 'hoje, à tarde.' : fe === 1 ? 'amanhã, à tarde.' : 'daqui a ' + fe + ' dias, no último dia do outono.')) +
       (d.mem && d.mem.vale > 1 ? ' Com a cerca e o portal, a visita consola metade a mais.' : '');
+  }
+  // Etapa 18: a ficha do navio. No porto: quantos vão e quanta comida levam, e o botão de partir; no mar: quando volta
+  function marHTML(b) {
+    const Mr = G.Mar;
+    if (!Mr || !S.mar) return '';
+    const inf = Mr.info(S);
+    if (inf.viagem) return sec('No mar', '<p class="small">' + inf.viagem.n + ' foram na expedição. Voltam em cerca de ' + inf.viagem.dias + (inf.viagem.dias === 1 ? ' dia' : ' dias') + ', se voltarem.</p>');
+    const opts = (a, b2, sel) => Array.from({ length: b2 - a + 1 }, (_, k) => a + k).map((n) => '<option value="' + n + '"' + (n === sel ? ' selected' : '') + '>' + n + '</option>').join('');
+    const comidas = [30, 60, 90, 120].map((n) => '<option value="' + n + '"' + (n === 60 ? ' selected' : '') + '>' + n + '</option>').join('');
+    return sec('Expedição', '<p class="small muted">Sai pela beira do mundo e volta em uma ou duas estações com o que achou, ou não volta. Mais gente e mais comida, menos perigo. Vão os adultos que mais pescam.</p>' +
+      '<div class="mar-form"><label>Vão <select id="mar-n">' + opts(C.MAR_TRIPULACAO[0], C.MAR_TRIPULACAO[1], 5) + '</select></label> <label>Comida <select id="mar-comida">' + comidas + '</select></label>' +
+      ' <button type="button" class="btn btn-small btn-gold" data-act="partir">Partir</button></div>' +
+      (inf.terras.length ? '<p class="small muted">Terras já achadas: ' + inf.terras.map((t) => esc(t.nome)).join(', ') + '. Veja no mapa do mundo (tecla M).</p>' : ''));
   }
   function cemHTML() {
     const list = covas();
@@ -27746,6 +28045,10 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const leg = $('#mapa-legenda');
     leg.innerHTML = info.gen < 2 ? '' : G.RNAME.slice(1).map((n, k) => '<li class="' + (info.conhecidas.indexOf(n) >= 0 ? '' : 'nao') + '"><i style="background:' + G.R.REGCOR[k + 1] + '"></i>' + n + '</li>').join('') +
       '<li><i style="background:#f2da72"></i>o povo</li><li><i style="background:#e2cfa4"></i>obras</li>' + (S.soc && S.soc.vila && !S.soc.vila.fim ? '<li><i style="background:#c8423a"></i>' + S.soc.vila.nome + '</li>' : '');
+    // Etapa 18: as terras além do mar, com a colônia (ou o botão de fundar)
+    const ter = G.Mar && S.mar ? G.Mar.info(S).terras : [];
+    $('#mapa-terras').innerHTML = ter.length ? '<h3>Terras além do mar</h3><ul>' + ter.map((t) => '<li><b>' + t.nome + '</b> · ' + t.mistura.join(', ').toLowerCase() + (t.povo ? '<br><span class="small muted">Lá vivem ' + t.povo + '.</span>' : '') +
+      (t.colonia ? '<br><span class="small">Colônia ' + t.colonia.nome + ': ' + t.colonia.n + (t.colonia.n === 1 ? ' pessoa' : ' pessoas') + '.</span>' : '<br>' + (t.why ? '<span class="small muted">Fundar colônia: ' + t.why + '.</span>' : '<button type="button" class="btn btn-small btn-gold" data-fundar="' + t.id + '">Fundar colônia (' + C.COLONIA_GENTE + ' pessoas, ' + C.COLONIA_COMIDA + ' de comida)</button>')) + '</li>').join('') + '</ul>' : '';
     $('#modal-mapa').hidden = false;
   }
   function onKey(e) {
@@ -27956,6 +28259,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     $('#btn-mundos-close').addEventListener('click', () => { $('#modal-mundos').hidden = true; });
     $('#btn-mapa').addEventListener('click', () => abrirMapa());   // Etapa 17
     $('#btn-mapa-close').addEventListener('click', () => { $('#modal-mapa').hidden = true; });
+    $('#mapa-terras').addEventListener('click', (e) => {   // Etapa 18: fundar a colônia
+      const b = e.target.closest('[data-fundar]'); if (!b || !S) return;
+      const r = G.Mar.fundar(S, +b.dataset.fundar);
+      UI.toast(r.ok ? 'O navio partiu para fundar ' + r.c.nome + '.' : 'Agora não: ' + r.why + '.', r.ok ? 'good' : 'warn');
+      abrirMapa();
+    });
     $('#btn-mundos-new').addEventListener('click', () => { $('#modal-mundos').hidden = true; setMode('site'); newSiteWorld(); });
 
     const hot = window.claude && window.claude.hot;

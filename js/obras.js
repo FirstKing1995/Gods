@@ -79,7 +79,7 @@
   O.envOf = function (S, b) {
     const w = S.world, T = TT(), W = w.W;
     const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
-    let water = false, forest = 0, open = 0, hill = 0, trees = 0, rocks = 0;
+    let water = false, mar = false, forest = 0, open = 0, hill = 0, trees = 0, rocks = 0;
     for (let y = Math.floor(cy - 5); y <= Math.ceil(cy + 5); y++) for (let x = Math.floor(cx - 5); x <= Math.ceil(cx + 5); x++) {
       if (x < 0 || y < 0 || x >= W || y >= w.H) continue;
       const i = y * W + x, t = w.tile[i], d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
@@ -87,6 +87,7 @@
       if (G.IS_WATER[t]) {
         const dx = Math.max(b.x - x, 0, x - (b.x + b.w - 1)), dy = Math.max(b.y - y, 0, y - (b.y + b.h - 1));
         if (Math.max(dx, dy) <= 3) water = true;
+        if (t === T.DEEP && Math.max(dx, dy) <= 2) mar = true;   // Etapa 18: o navio
       }
       if (d <= 4.5) {
         if (t === T.FOREST) forest++;
@@ -101,7 +102,7 @@
     }
     const E = C.ENV;
     return {
-      agua: water,
+      agua: water, mar,
       mata: forest >= E.mata.forest || trees >= E.mata.trees,
       campo: open >= E.campo.open,
       serra: hill >= E.serra.hill || rocks >= E.serra.rocks,

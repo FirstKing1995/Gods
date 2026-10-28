@@ -167,7 +167,9 @@
       ['marcenaria', 'marcenaria'], ['tecelagem', 'tecelagem'], ['roca', 'roca'], ['curral', 'curral'], ['mina', 'mina'], ['ferraria', 'ferraria'], ['estatua', 'estatua'], ['cemiterio', 'cemiterio'],
       // Etapa 16: as instituições e as grandes obras (aparecem quando a sociedade pede)
       ['guarda', 'guarda'], ['brigada', 'brigada'], ['hospital', 'hospital'], ['escola', 'escola'], ['biblioteca', 'biblioteca'], ['mercado', 'mercado'],
-      ['torre', 'torre'], ['templo', 'templo'], ['muralha', 'muralha'], ['aqueduto', 'aqueduto'], ['ponte', 'ponte']];
+      ['torre', 'torre'], ['templo', 'templo'], ['muralha', 'muralha'], ['aqueduto', 'aqueduto'], ['ponte', 'ponte'],
+      // Etapa 18: os barcos
+      ['canoa', 'canoa'], ['barco', 'barco'], ['navio', 'navio']];
     const SHORT = { barraca: 'Barraca', forno: 'Forno' };   // nome curto no botão (o painel fica em duas fileiras)
     $('#builds').innerHTML = builds.map(([t, icn]) => {
       const d = C.BUILD[t];
@@ -270,6 +272,11 @@
     $('#pessoa-list').addEventListener('click', () => UI.showList());
     $('#inspector').addEventListener('click', (e) => {
       const b = e.target.closest('[data-act]'); if (!b || !S) return;
+      if (b.dataset.act === 'partir' && G.Mar) {   // Etapa 18: a expedição
+        const r = G.Mar.partir(S, +$('#mar-n').value, +$('#mar-comida').value);
+        if (!r.ok) UI.toast('Agora não: ' + r.why + '.', 'warn'); else UI.toast('O navio partiu com ' + r.gente.length + ' pessoas.', 'good');
+        return;
+      }
       if (b.dataset.act === 'rename') {
         const kid = S.people.find((q) => q.id === UI.sel.person);
         if (kid) UI.birth(kid, null, true);
@@ -963,7 +970,7 @@
       </div>`;
     }
     const st = el.querySelector('#bstatus'); if (st) st.textContent = buildingStatus(b, d, job);
-    const ex = el.querySelector('#bextra'); if (ex) setHTML(ex, b.built ? (b.type === 'estatua' ? estatuaHTML(b) : b.type === 'cemiterio' ? cemHTML() : campoHTML(b)) : '');
+    const ex = el.querySelector('#bextra'); if (ex) setHTML(ex, b.built ? (b.type === 'estatua' ? estatuaHTML(b) : b.type === 'cemiterio' ? cemHTML() : b.type === 'navio' ? marHTML(b) : campoHTML(b)) : '');
   }
   function costText(cost) {
     const parts = Object.keys(cost || {}).map((k) => cost[k] + ' de ' + (MAT_WORD[k] || k));
@@ -1354,6 +1361,19 @@
       (esp ? ' ' + (esp === 1 ? 'Uma pessoa espera' : esp + ' pessoas esperam') + ' o velório e o enterro.' : '') +
       (m.fin.on ? ' Hoje é o dia dos mortos: o povo está aqui, com uma luz em cada cova.' : ' Dia dos mortos: ' + (fe === 0 ? 'hoje, à tarde.' : fe === 1 ? 'amanhã, à tarde.' : 'daqui a ' + fe + ' dias, no último dia do outono.')) +
       (d.mem && d.mem.vale > 1 ? ' Com a cerca e o portal, a visita consola metade a mais.' : '');
+  }
+  // Etapa 18: a ficha do navio. No porto: quantos vão e quanta comida levam, e o botão de partir; no mar: quando volta
+  function marHTML(b) {
+    const Mr = G.Mar;
+    if (!Mr || !S.mar) return '';
+    const inf = Mr.info(S);
+    if (inf.viagem) return sec('No mar', '<p class="small">' + inf.viagem.n + ' foram na expedição. Voltam em cerca de ' + inf.viagem.dias + (inf.viagem.dias === 1 ? ' dia' : ' dias') + ', se voltarem.</p>');
+    const opts = (a, b2, sel) => Array.from({ length: b2 - a + 1 }, (_, k) => a + k).map((n) => '<option value="' + n + '"' + (n === sel ? ' selected' : '') + '>' + n + '</option>').join('');
+    const comidas = [30, 60, 90, 120].map((n) => '<option value="' + n + '"' + (n === 60 ? ' selected' : '') + '>' + n + '</option>').join('');
+    return sec('Expedição', '<p class="small muted">Sai pela beira do mundo e volta em uma ou duas estações com o que achou, ou não volta. Mais gente e mais comida, menos perigo. Vão os adultos que mais pescam.</p>' +
+      '<div class="mar-form"><label>Vão <select id="mar-n">' + opts(C.MAR_TRIPULACAO[0], C.MAR_TRIPULACAO[1], 5) + '</select></label> <label>Comida <select id="mar-comida">' + comidas + '</select></label>' +
+      ' <button type="button" class="btn btn-small btn-gold" data-act="partir">Partir</button></div>' +
+      (inf.terras.length ? '<p class="small muted">Terras já achadas: ' + inf.terras.map((t) => esc(t.nome)).join(', ') + '. Veja no mapa do mundo (tecla M).</p>' : ''));
   }
   function cemHTML() {
     const list = covas();

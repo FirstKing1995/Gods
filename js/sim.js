@@ -542,7 +542,8 @@
     const def = C.BUILD[type], w = S.world;
     // 0.16: nenhuma obra fica mais presa à distância do centro (o armazém virou uma boca do estoque onde estiver)
     if (def.env && G.Obras && !G.Obras.envOk(S, { x, y, w: def.w, h: def.h }, def.env)) return 'Pede ' + C.ENV[def.env].name;   // Etapa 12: a mina
-    if (def.ponte) return G.Regioes ? G.Regioes.ponteWhy(S, x, y) : 'Lugar ruim';   // Etapa 17: a ponte vai em cima da água
+    if (def.ponte) return G.Regioes ? G.Regioes.ponteWhy(S, x, y) : 'Lugar ruim';
+    if (def.extra) for (const k in def.extra) if ((S.stock[k] || 0) < def.extra[k]) return 'Pede ' + def.extra[k] + ' de ' + ((G.AI && G.AI.RES_LABEL[k]) || k) + ' no estoque';   // Etapa 18   // Etapa 17: a ponte vai em cima da água
     for (let dy = 0; dy < def.h; dy++) for (let dx = 0; dx < def.w; dx++) {
       const tx = x + dx, ty = y + dy;
       if (tx < 1 || ty < 1 || tx >= w.W - 1 || ty >= w.H - 1) return 'Fora do mapa';
@@ -591,6 +592,7 @@
   Sim.placeBlueprint = function (S, type, x, y) {
     if (Sim.canPlace(S, type, x, y)) return null;
     const def = C.BUILD[type], w = S.world;
+    if (def.extra) for (const k in def.extra) S.stock[k] -= def.extra[k];   // Etapa 18: a vela e os pregos saem do estoque ao marcar
     const b = { id: S.nextBid++, type, lv: 1, kind: null, x, y, w: def.w, h: def.h, built: false, progress: 0,
       have: {}, fuel: 0, beds: [], up: null, t0: S.t };
     for (const k of C.MATERIALS) b.have[k] = 0;
@@ -1060,6 +1062,7 @@
     if (G.Gente) { if (S.resumido) G.Gente.resumo(S); else G.Gente.daily(S); }   // Etapa 15: tentativas, a estação de que gosta
     if (G.Cidade) G.Cidade.daily(S);   // Etapa 16: quem serve, a aula, a estante, a febre, a faísca, a feira
     if (G.Regioes) G.Regioes.daily(S);   // Etapa 17: o sal que chegou
+    if (G.Mar) G.Mar.daily(S);   // Etapa 18: a volta da expedição, a carga do barco, as colônias
     if (G.Life) G.Life.daily(S);
   }
   function rot(S, k, rate) {
@@ -1350,6 +1353,7 @@
     if (G.Gente) G.Gente.init(S);   // Etapa 15: gostos, jeito, o saber nas pessoas
     if (G.Cidade) G.Cidade.init(S);   // Etapa 16: grandes obras e instituições
     if (G.Regioes) G.Regioes.init(S);   // Etapa 17: as regiões
+    if (G.Mar) G.Mar.init(S);   // Etapa 18: os barcos e as outras terras
     fixGoals(S);
     if (!S.seen) {
       S.seen = new Uint8Array(S.world.W * S.world.H);

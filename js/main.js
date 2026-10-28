@@ -1026,6 +1026,10 @@
     const leg = $('#mapa-legenda');
     leg.innerHTML = info.gen < 2 ? '' : G.RNAME.slice(1).map((n, k) => '<li class="' + (info.conhecidas.indexOf(n) >= 0 ? '' : 'nao') + '"><i style="background:' + G.R.REGCOR[k + 1] + '"></i>' + n + '</li>').join('') +
       '<li><i style="background:#f2da72"></i>o povo</li><li><i style="background:#e2cfa4"></i>obras</li>' + (S.soc && S.soc.vila && !S.soc.vila.fim ? '<li><i style="background:#c8423a"></i>' + S.soc.vila.nome + '</li>' : '');
+    // Etapa 18: as terras além do mar, com a colônia (ou o botão de fundar)
+    const ter = G.Mar && S.mar ? G.Mar.info(S).terras : [];
+    $('#mapa-terras').innerHTML = ter.length ? '<h3>Terras além do mar</h3><ul>' + ter.map((t) => '<li><b>' + t.nome + '</b> · ' + t.mistura.join(', ').toLowerCase() + (t.povo ? '<br><span class="small muted">Lá vivem ' + t.povo + '.</span>' : '') +
+      (t.colonia ? '<br><span class="small">Colônia ' + t.colonia.nome + ': ' + t.colonia.n + (t.colonia.n === 1 ? ' pessoa' : ' pessoas') + '.</span>' : '<br>' + (t.why ? '<span class="small muted">Fundar colônia: ' + t.why + '.</span>' : '<button type="button" class="btn btn-small btn-gold" data-fundar="' + t.id + '">Fundar colônia (' + C.COLONIA_GENTE + ' pessoas, ' + C.COLONIA_COMIDA + ' de comida)</button>')) + '</li>').join('') + '</ul>' : '';
     $('#modal-mapa').hidden = false;
   }
   function onKey(e) {
@@ -1236,6 +1240,12 @@
     $('#btn-mundos-close').addEventListener('click', () => { $('#modal-mundos').hidden = true; });
     $('#btn-mapa').addEventListener('click', () => abrirMapa());   // Etapa 17
     $('#btn-mapa-close').addEventListener('click', () => { $('#modal-mapa').hidden = true; });
+    $('#mapa-terras').addEventListener('click', (e) => {   // Etapa 18: fundar a colônia
+      const b = e.target.closest('[data-fundar]'); if (!b || !S) return;
+      const r = G.Mar.fundar(S, +b.dataset.fundar);
+      UI.toast(r.ok ? 'O navio partiu para fundar ' + r.c.nome + '.' : 'Agora não: ' + r.why + '.', r.ok ? 'good' : 'warn');
+      abrirMapa();
+    });
     $('#btn-mundos-new').addEventListener('click', () => { $('#modal-mundos').hidden = true; setMode('site'); newSiteWorld(); });
 
     const hot = window.claude && window.claude.hot;

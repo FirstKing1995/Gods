@@ -1346,6 +1346,10 @@
 
   // ---------- ícones da interface (10 x 10) ----------
   const ICONS = {
+    // Etapa 18: os barcos
+    canoa: [['..........', '..........', '..........', '...k......', '..k.k.....', 'kkkkkkkkkk', 'kwwwwwwwwk', '.kwwwwwwk.', '..kkkkkk..', 'bbbbbbbbbb'], { k: P.bark, w: P.wood, b: P.sky }],
+    barco: [['....k.....', '...kWk....', '...kWWk...', '..kWWWWk..', '..kWWWWWk.', '....k.....', 'kkkkkkkkkk', '.kwwwwwwk.', '..kkkkkk..', 'bbbbbbbbbb'], { k: P.bark, w: P.wood, W: P.parch, b: P.sky }],
+    navio: [['..k...k...', '.kWk.kWk..', '.kWk.kWWk.', 'kWWWkWWWk.', 'kWWWkWWWWk', '..k...k...', 'kkkkkkkkkk', 'kwkwkwkwwk', '.kkkkkkkk.', 'bbbbbbbbbb'], { k: P.bark, w: P.wood, W: P.parch, b: P.sky }],
     mapa: [['..........', '.kkkkkkkk.', '.kggkbbbk.', '.kgggkbbk.', '.kgykggbk.', '.kgggggkk.', '.kbgggrgk.', '.kbbggggk.', '.kkkkkkkk.', '..........'], { k: P.ink2, g: P.leaf, b: P.sky, y: P.tan, r: P.red }],   // Etapa 17: o mapa do mundo
     ponte: [['..........', '..........', 'kkkkkkkkkk', 'kssssssssk', 'kSSSSSSSSk', 'kkkkkkkkkk', 'ks.sk.sk.k', 'k...k..k.k', 'bbbbbbbbbb', '.b.b.b.b.b'], { k: P.ink2, s: P.silver, S: P.mist, b: P.sky }],   // Etapa 17
     // Etapa 16: as grandes obras e as instituições
@@ -2382,8 +2386,33 @@
     }
     return b.canvas();
   }
+  // Etapa 18: os barcos. A canoa (16 x 12), o barco com vela (32 x 32) e o navio de dois mastros (48 x 44)
+  function casco(b, x0, x1, y0, y1) {
+    for (let y = y0; y <= y1; y++) {
+      const enc = Math.round((y - y0) / Math.max(1, y1 - y0) * 2);
+      for (let x = x0 + enc; x <= x1 - enc; x++) b.set(x, y, y === y0 ? PLANK[4] : y === y1 ? PLANK[0] : (x === x0 + enc || x === x1 - enc) ? PLANK[0] : (y - y0) % 2 ? PLANK[2] : PLANK[3]);
+    }
+  }
+  function vela(b, mx, y0, y1, w, cor) {
+    line(b, mx, y0 - 2, mx, y1 + 2, PLANK[0]);
+    for (let y = y0; y <= y1; y++) {
+      const hw = Math.round(w * (0.55 + 0.45 * (y - y0) / Math.max(1, y1 - y0)));
+      for (let x = mx - hw; x <= mx + hw; x++) if (x !== mx) b.set(x, y, x === mx - hw || x === mx + hw || y === y1 ? cor[0] : (x + y) % 5 === 0 ? cor[1] : cor[2]);
+    }
+  }
+  function canoaSpr() { const b = new Buf(16, 12); casco(b, 1, 14, 5, 9); b.set(7, 4, PLANK[1]); line(b, 4, 2, 11, 7, PLANK[1]); rect7(b, 10, 6, 12, 7, PLANK[4]); return b.canvas(); }
+  function barcoSpr() { const b = new Buf(32, 32); casco(b, 2, 29, 22, 28); vela(b, 15, 4, 19, 9, ['#a89a82', '#d8ccb4', '#ead4aa']); return b.canvas(); }
+  function navioSpr() {
+    const b = new Buf(48, 44);
+    casco(b, 1, 46, 30, 40);
+    for (let x = 8; x <= 40; x += 6) b.set(x, 34, P.ink);   // as escotilhas
+    vela(b, 15, 6, 26, 9, ['#a89a82', '#d8ccb4', '#ead4aa']);
+    vela(b, 32, 2, 26, 11, ['#a89a82', '#d8ccb4', '#ead4aa']);
+    rect7(b, 33, 0, 37, 2, '#c8423a');   // a bandeira
+    return b.canvas();
+  }
   A.cidadeSprites = function () {
-    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr() };
+    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr() };
     for (const k of ['escola', 'biblioteca', 'hospital', 'guarda', 'brigada', 'mercado']) out[k] = [null, instituicao(k, 1), instituicao(k, 2), instituicao(k, 3)];
     return out;
   };

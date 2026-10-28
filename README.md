@@ -1,3 +1,22 @@
+# Gods · Etapa 18 (Barcos e outras terras) · versão 0.19
+
+## O que mudou na 0.19
+
+**Três barcos**, que se constroem na beira d'água e pedem a corda:
+- **Canoa** (madeira e fibra): no rio e no lago, a pesca rende 25% mais.
+- **Barco** (tábuas, fibra e 2 mantas para a vela): a pesca de mar rende 45% mais, e ele leva carga até a vila de fora uma vez por semana, mesmo sem mercado.
+- **Navio** (tábuas, fibra, madeira, 6 mantas e 4 ferramentas de ferro; pede água funda por perto): vai ao mar aberto. As mantas e o ferro saem do estoque quando você marca a obra.
+
+**Expedição.** Na ficha do navio, você escolhe quantos vão (de 3 a 8) e quanta comida levam, e manda partir. Vão os adultos que mais pescam. O navio sai pela beira do mundo e volta em uma ou duas estações. Mais gente e mais comida, menos perigo, mas o perigo nunca some: às vezes o mar leva um ou dois, e às vezes o navio não volta.
+
+**Terra nova.** A expedição pode achar terra além do mar (até quatro). Cada terra nasce da semente do mundo, com outra mistura de regiões, e a viagem traz o que ela tem de bom: madeira nobre, sal, ouro, peixe, couro. Muitas vezes há lá um **povo do mar**, que só se conhece chegando: pescadores de rede longa, navegantes que leem as estrelas, guerreiros de canoa desconfiados, artesãos que trocam tudo por sal.
+
+**Colônia.** No mapa do mundo (tecla M), cada terra achada aparece com as suas regiões e o seu povo, e com o botão de fundar colônia: vão 6 pessoas e 60 de comida no navio. A colônia vive resumida (cresce com fartura, sofre no inverno, se dá bem ou mal com o povo do mar), e a cada estação o navio volta de lá com notícia e carga. Sem navio, ninguém vai e ninguém traz.
+
+**Uma terra por vez na tela.** A colônia não se joga: ela é acompanhada pelo mapa do mundo e pela Crônica. O GDD falava da câmera trocando de terra; jogar duas terras ao mesmo tempo pesaria demais no celular, então fica para quando o jogo aguentar.
+
+---
+
 # Gods · Etapa 17 (Mundo grande) · versão 0.18
 
 ## O que mudou na 0.18
@@ -635,9 +654,8 @@ Fontes: Pixelify Sans e Crimson Pro (Google Fonts) e os dígitos do Jersey 10 (T
 
 ## Próximas etapas
 
-A 0.18 fechou a etapa 17 (Mundo grande), com a ponte de pedra e a grande estátua que tinham ficado da 16. A 0.17 fechou a etapa 16 (Grandes obras e instituições). A 0.15 fechou a etapa 15 (Gente viva), o último dos pedidos urgentes de 12 de outubro: gostos, pensamentos, conversas de verdade, descobertas por tentativa e o saber que passa de mão em mão. A 0.14 tinha fechado a etapa 14 (Sociedade), com a correção da IA que a abria, os três pedidos de 5 de outubro (gente ruim e castigo pela gravidade, obras por conta própria, quem vai embora e funda outra vila) e os outros pedidos urgentes de 12 de outubro (o povo constrói o que precisa sem você marcar, o 1x mais calmo, a aldeia de 300 pessoas sem travar, a Crônica sem excesso de romance e a tela de início sem os nomes). O resto segue nesta ordem (o detalhe de cada etapa está no documento de design):
+A 0.19 fechou a etapa 18 (Barcos e outras terras). A 0.18 fechou a etapa 17 (Mundo grande), com a ponte de pedra e a grande estátua que tinham ficado da 16. A 0.17 fechou a etapa 16 (Grandes obras e instituições). A 0.15 fechou a etapa 15 (Gente viva), o último dos pedidos urgentes de 12 de outubro: gostos, pensamentos, conversas de verdade, descobertas por tentativa e o saber que passa de mão em mão. A 0.14 tinha fechado a etapa 14 (Sociedade), com a correção da IA que a abria, os três pedidos de 5 de outubro (gente ruim e castigo pela gravidade, obras por conta própria, quem vai embora e funda outra vila) e os outros pedidos urgentes de 12 de outubro (o povo constrói o que precisa sem você marcar, o 1x mais calmo, a aldeia de 300 pessoas sem travar, a Crônica sem excesso de romance e a tela de início sem os nomes). O resto segue nesta ordem (o detalhe de cada etapa está no documento de design):
 
-- **18 · Barcos e outras terras**: canoa, barco, navio; a expedição que acha uma terra nova e funda colônia.
 - **19 e 20 · Eras**: das cavernas e da pedra ao bronze, ao ferro e à monarquia; o povo dominante dá o rumo (matriarcado, guildas, clãs, magia no lugar da máquina) e cada era traz o seu desafio (praga, guerra, pobreza, natalidade).
 - **21 · Avatar**: possuir um cidadão e ver pelos olhos dele; o filho abençoado, que fala direto com você.
 - **22 · Outros jogadores**: visitar o mundo de outro deus, ajudar ou sabotar, com limite e com aviso.
