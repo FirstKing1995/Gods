@@ -3,7 +3,7 @@
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.22.0',
+    VERSION: '0.22.1',
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
     SAVE_KEY: 'genesis.save.v1',
@@ -79,6 +79,8 @@
     // carne, peixe ou frutas nas costas come da carga, cru, até CARGA_ATE. Com a energia em zero e a cama a mais de
     // DORME_LONGE passos, deita no caminho
     CARGA_FOME: 25, CARGA_LONGE: 12, CARGA_ATE: 60, DORME_LONGE: 10,
+    DORME_CAMINHO: 0.35,   // 0.22.1: indo para a cama, gasta só 35% da energia de andar
+    DORME_AVISO_MIN: 360,   // 0.22.1: um aviso de quem dormiu no caminho a cada 6 horas; os outros entram na conta do próximo
     // e, a mais de ARBUSTO_LONGE passos de casa com comida no estoque, o arbusto só serve se fica ARBUSTO_VOLTA passos mais
     // perto de casa que a pessoa (o caminho da fruta é o de volta)
     ARBUSTO_LONGE: 20, ARBUSTO_VOLTA: 3,
