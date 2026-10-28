@@ -1361,6 +1361,7 @@
     if (G.Mar) G.Mar.init(S);   // Etapa 18: os barcos e as outras terras
     if (G.Eras) G.Eras.init(S);   // Etapas 19 e 20: as Eras
     if (G.Avatar) G.Avatar.init(S);   // Etapa 21: o Avatar
+    if (G.Visita) G.Visita.init(S);   // Etapa 22: outros jogadores
     fixGoals(S);
     if (!S.seen) {
       S.seen = new Uint8Array(S.world.W * S.world.H);

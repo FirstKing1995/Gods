@@ -6,7 +6,7 @@
 // 2) 20 anos em três mundos gigantes (a regra do GDD), com o jogador de sempre
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 globalThis.G = globalThis.G || {};
-for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'sociedade', 'gente', 'cidade', 'regioes', 'mar', 'eras', 'avatar', 'save', 'offline']) require('../js/' + f + '.js');
+for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'sociedade', 'gente', 'cidade', 'regioes', 'mar', 'eras', 'avatar', 'visita', 'save', 'offline']) require('../js/' + f + '.js');
 const { W, Sim, CFG: C, Family: F, God, Save, Tech: T, Life: L, Campo: K, Deus: D, Povos: Pv, Minas: Mi, Soc: So, Cidade: Ci, Regioes: Rg, Fauna: Fa } = G;
 const DAYM = 1440, REG = G.REG;
 let ok = 0, bad = 0;

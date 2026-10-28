@@ -112,6 +112,7 @@
       mar: S.mar || null,   // Etapa 18: a viagem, as terras achadas, as colônias
       eras: S.eras || null,   // Etapas 19 e 20: a idade, o rumo, a magia
       avatar: S.avatar || null,   // Etapa 21: quem está possuído, as horas de cada um, a pergunta
+      visita: S.visita || null,   // Etapa 22: a abertura do mundo e os recados já aplicados
       povo: S.povo || null,   // 0.16: o nome e o título do lugar
     };
   };
@@ -169,6 +170,7 @@
       mar: d.mar || null,
       eras: d.eras || null,
       avatar: d.avatar || null,
+      visita: d.visita || null,
       povo: d.povo || null,
     };
     for (const p of S.people) {
@@ -241,6 +243,7 @@
       ano: ck.year, estacao: C.SEASONS[ck.season], dia: ck.dos, anos: Math.floor((S.t - C.START_HOUR * 60) / (C.DAY_MIN * C.YEAR_DAYS)),
       vivos: alive.length, nomes: alive.map((p) => p.name).slice(0, 4).join(', '), local: S.siteLabel, fim: !!S.over,
       desc: G.Tech ? G.Tech.count(S) : 0, aldeia: !!(S.stats && S.stats.eraEnd),
+      abertura: (S.visita && S.visita.abertura) || 'ajuda',   // Etapa 22: quem pode visitar
     };
   };
   // um mundo pelo id (sem id: o aberto; sem mundo aberto: o mais recente)
