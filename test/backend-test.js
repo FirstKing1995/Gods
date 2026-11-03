@@ -104,6 +104,40 @@ ok(!r.ok && /desconhecida/.test(r.erro), 'ação desconhecida responde erro');
   ok(!v.ok, 'ninguém manda recado para o próprio mundo');
 }
 
+// ---------- 0.24: a voz das pessoas (Groq) ----------
+{
+  const T = g.post({ action: 'cadastrar', nome: 'Falante', email: 'f@voz.com', senha: 'segredo1' }).token;
+  const pede = (msg, extra) => g.post(Object.assign({ action: 'falar', token: T, msg, pessoa: { nome: 'Iara', quem: 'mulher de 25 anos' }, contexto: 'Fé 80. Mãe de Tainá.' }, extra || {}));
+  let v = pede('Olá, Iara.');
+  ok(!v.ok && v.semVoz, 'sem a chave GROQ_API_KEY, a voz avisa que não está ligada');
+  g.gas._props.set('GROQ_API_KEY', 'gsk_teste');
+  v = pede('Olá, Iara.');
+  const f = g.gas._fetches[g.gas._fetches.length - 1], corpo = JSON.parse(f.o.payload);
+  ok(v.ok && v.texto === 'Estou aqui, Deus.', 'responde e limpa a fala (sem ação entre asteriscos nem aspas): ' + JSON.stringify(v.texto));
+  ok(f.o.headers.Authorization === 'Bearer gsk_teste' && corpo.model === 'llama-3.3-70b-versatile', 'chama o Groq com a chave das propriedades e o modelo melhor');
+  ok(/Iara/.test(corpo.messages[0].content) && /Mãe de Tainá/.test(corpo.messages[0].content) && corpo.messages[corpo.messages.length - 1].content === 'Olá, Iara.', 'a pessoa, os fatos e a fala do jogador vão no pedido');
+  v = pede('E agora?', { hist: [{ r: 'u', t: 'Olá' }, { r: 'p', t: 'Oi, Deus.' }] });
+  const m2 = JSON.parse(g.gas._fetches[g.gas._fetches.length - 1].o.payload).messages;
+  ok(m2.length === 4 && m2[1].role === 'user' && m2[2].role === 'assistant', 'as últimas falas da conversa vão junto, com quem disse cada uma');
+  ok(!pede('   ').ok, 'fala vazia é recusada');
+  ok(!g.post({ action: 'falar', msg: 'oi' }).ok, 'sem conta, não fala');
+  // o modelo melhor esgotado: cai para a reserva
+  const g2 = makeGas({ fetch: (url, o) => (JSON.parse(o.payload).model === 'llama-3.3-70b-versatile' ? { code: 429, body: {} } : { code: 200, body: { choices: [{ message: { content: 'Reserva.' } }] } }) });
+  g2.ctx.setup(); g2.gas._props.set('GROQ_API_KEY', 'k');
+  const T2 = g2.post({ action: 'cadastrar', nome: 'Reserva', email: 'r@voz.com', senha: 'segredo1' }).token;
+  v = g2.post({ action: 'falar', token: T2, msg: 'oi', pessoa: {}, contexto: '' });
+  ok(v.ok && v.texto === 'Reserva.', 'cota do modelo melhor acabou: responde com o modelo reserva');
+  const g3 = makeGas({ fetch: () => ({ code: 401, body: {} }) });
+  g3.ctx.setup(); g3.gas._props.set('GROQ_API_KEY', 'k');
+  const T3 = g3.post({ action: 'cadastrar', nome: 'Sem chave', email: 's@voz.com', senha: 'segredo1' }).token;
+  v = g3.post({ action: 'falar', token: T3, msg: 'oi', pessoa: {}, contexto: '' });
+  ok(!v.ok && /chave/.test(v.erro), 'chave recusada pelo Groq vira aviso claro');
+  // teto por conta
+  let ultima = null;
+  for (let i = 0; i < 40; i++) ultima = pede('fala ' + i);
+  ok(!ultima.ok && ultima.cota, 'teto de falas por conta a cada dia');
+}
+
 async function cliente() {
   const vm = require('vm'), fs = require('fs'), path = require('path');
   let calls = [], plan = [];

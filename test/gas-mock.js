@@ -36,7 +36,7 @@ function makeGas(opts) {
     this.getId = () => this.id; this.setContent = (c) => { this.content = c; }; this.setTrashed = (t) => { this.trashed = t; };
     this.getBlob = () => ({ getDataAsString: () => this.content }); }
   const folder = { getId: () => 'pasta1', createFile: (n, c) => { const f = new File(n, c); files.set(f.id, f); return f; } };
-  const props = new Map(), cache = new Map();
+  const props = new Map(), cache = new Map(), fetches = [];
   const gas = {
     SpreadsheetApp: { getActiveSpreadsheet: () => ss },
     DriveApp: {
@@ -45,6 +45,7 @@ function makeGas(opts) {
     },
     PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => (props.has(k) ? props.get(k) : null), setProperty: (k, v) => props.set(k, v) }) },
     CacheService: { getScriptCache: () => ({ get: (k) => (cache.has(k) ? cache.get(k) : null), put: (k, v) => cache.set(k, v), remove: (k) => cache.delete(k) }) },
+    UrlFetchApp: { fetch: (url, o) => { fetches.push({ url, o }); const f = opts.fetch || (() => ({ code: 200, body: { choices: [{ message: { content: '*olha para o céu* "Estou aqui, Deus."' } }] } })); const r = f(url, o, fetches.length); return { getResponseCode: () => r.code, getContentText: () => JSON.stringify(r.body || {}) }; } },
     LockService: { getScriptLock: () => ({ waitLock: () => {}, releaseLock: () => {} }) },
     Utilities: {
       getUuid: () => crypto.randomUUID(),
@@ -54,7 +55,7 @@ function makeGas(opts) {
     },
     ContentService: { createTextOutput: (t) => ({ t, setMimeType() { return this; }, getContent() { return this.t; } }), MimeType: { JSON: 'json' } },
     MimeType: { PLAIN_TEXT: 'text/plain' },
-    _files: files, _sheets: sheets, _cache: cache,
+    _files: files, _sheets: sheets, _cache: cache, _fetches: fetches, _props: props,
   };
   const code = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'Code.gs'), 'utf8');
   const FakeDate = opts.now ? { now: opts.now } : Date;
