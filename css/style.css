@@ -760,3 +760,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 .voz-form input { flex: 1 1 auto; min-width: 0; min-height: 44px; font: inherit; font-size: 16px; padding: 6px 10px; background: var(--night); color: var(--text); border: 2px solid var(--edge); }
 #modal-voz .modal-actions { align-items: center; }
 #modal-voz .modal-actions .small { flex: 1 1 auto; }
+
+/* 0.25: a IA nos momentos importantes */
+.chron li.lenda { padding: 10px 12px; background: rgba(254, 174, 52, 0.08); border-left: 3px solid var(--gold); }
+.chron .what.ia { font-size: 16px; color: #d9c7a3; }
+#choice-ia-box { display: grid; gap: 6px; justify-items: start; }
+#choice-ia-txt:empty { display: none; }

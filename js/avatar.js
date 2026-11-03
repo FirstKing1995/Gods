@@ -191,7 +191,7 @@
     const pg = S.avatar && S.avatar.pergunta;
     if (!pg) return null;
     const q = Fam().person(S, pg.pid), P = PERGUNTAS[pg.k];
-    return q ? { nome: q.name, texto: P.t, opcoes: P.r.map((x) => x[0]) } : null;
+    return q ? { nome: q.name, texto: pg.ia || P.t, opcoes: P.r.map((x) => x[0]) } : null;   // 0.25: pg.ia, nas palavras dele (IA)
   };
   // a resposta: a fé da aldeia (e a do abençoado) sobe; a resposta franca o faz pensar, e a fé dele sobe mais
   Av.responder = function (S, i) {
@@ -203,7 +203,7 @@
     if (!q) return false;
     for (const o of S.people) if (here(o)) God().faith(S, o, R[1]);
     God().faith(S, q, R[2]);
-    Sim().chron(S, q.name + ' perguntou a ' + (G.Deus ? G.Deus.call(S) : 'Deus') + ': “' + PERGUNTAS[pg.k].t + '” E ouviu: “' + R[0] + '”');
+    Sim().chron(S, q.name + ' perguntou a ' + (G.Deus ? G.Deus.call(S) : 'Deus') + ': “' + (pg.ia || PERGUNTAS[pg.k].t) + '” E ouviu: “' + R[0] + '”');
     return true;
   };
   Av.daily = function (S) {
