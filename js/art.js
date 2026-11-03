@@ -89,24 +89,25 @@
 
   // ---------- terreno: cores por estação ----------
   // 0.16: paleta própria, terrosa e com a sombra puxando para o azul e a luz para o amarelo (sem o verde de néon)
+  // 0.23: a natureza puxa para o oliva vivo e a areia quente (inspirado no pacote Cozy, da Ishtar Pixels, CC0)
   // tipos: 0 funda, 1 rasa, 2 rio, 3 areia, 4 campo, 5 floresta, 6 colina, 7 montanha, 8 campo seco
   // cada tom: [escuro, base, claro]
-  const AGUA = { 0: ['#1c3651', '#22466a', '#2b587e'], 1: ['#2e6c86', '#3a8299', '#5fa6b4'], 2: ['#2e6c86', '#3a8299', '#5fa6b4'] };
+  const AGUA = { 0: ['#3e5c58', '#4a6c64', '#5a7c70'], 1: ['#6a8466', '#7c9470', '#9aae88'], 2: ['#6a8466', '#7c9470', '#9aae88'] };
   A.TERRAIN = [
     { // primavera
       ...AGUA,
-      3: ['#b48f5c', '#cba870', '#dfc492'], 4: ['#47703a', '#5a8641', '#739a4b'], 5: ['#2f4e33', '#3b5d38', '#4a6d3e'],
-      6: ['#5b7a40', '#6d8a47', '#86a055'], 7: ['#5a5662', '#6e6a74', '#8a858a'], 8: ['#7d7e40', '#94934b', '#ada85c'],
+      3: ['#cf8e36', '#e3a548', '#efbf6c'], 4: ['#5c6c1e', '#748222', '#96a42c'], 5: ['#424e18', '#53611c', '#677822'],
+      6: ['#6e7a20', '#879426', '#a2ae32'], 7: ['#5a5662', '#6e6a74', '#8a858a'], 8: ['#968a2a', '#ac9e34', '#c2b448'],
     },
     { // verão
       ...AGUA,
-      3: ['#b8925c', '#cfab72', '#e2c896'], 4: ['#4f6f34', '#62803b', '#7a9445'], 5: ['#33502f', '#3f5e33', '#4d6c39'],
-      6: ['#6b7c3e', '#80904a', '#98a25a'], 7: ['#5a5662', '#6e6a74', '#8a858a'], 8: ['#92824a', '#a99658', '#c0ac6a'],
+      3: ['#d29038', '#ebaa46', '#f2c26a'], 4: ['#6c6818', '#817b1a', '#a4a51e'], 5: ['#4c4a16', '#5e5c18', '#74721c'],
+      6: ['#7c7a1c', '#928e22', '#acaa2a'], 7: ['#5a5662', '#6e6a74', '#8a858a'], 8: ['#a48a2c', '#ba9e38', '#cdb24c'],
     },
     { // outono
       ...AGUA,
-      3: ['#ad8858', '#c4a06a', '#d8bc8c'], 4: ['#6c6836', '#827a40', '#9a8e4e'], 5: ['#4c4230', '#5c4f34', '#6f5e3c'],
-      6: ['#786a3c', '#8d7c48', '#a39058'], 7: ['#5a5662', '#6e6a74', '#8a858a'], 8: ['#8c6c40', '#a3804e', '#b99660'],
+      3: ['#c88836', '#dea046', '#ebba68'], 4: ['#7a5e1c', '#93721f', '#ad8a2c'], 5: ['#5e4318', '#73531c', '#8a6522'],
+      6: ['#86681e', '#9c7e26', '#b49432'], 7: ['#5a5662', '#6e6a74', '#8a858a'], 8: ['#a4702c', '#ba8638', '#cc9c4a'],
     },
     { // inverno
       0: ['#1e3550', '#284a6a', '#365e80'], 1: ['#4a7e9c', '#6596b0', '#9cc2d4'], 2: ['#4a7e9c', '#6596b0', '#9cc2d4'],
@@ -116,9 +117,9 @@
   ];
   // detalhes por estação: tufo (escuro e a ponta clara), flores (cada canteiro é de uma cor só) e folhas no chão da mata
   A.DETAIL = [
-    { tuft: '#2f5430', tip: '#8fb35a', flowers: ['#f2e27a', '#f4efe2', '#e48a98', '#b7a0e0', '#e8a04a'], leaf: ['#5c7a3a', '#7a6a3a'] },
-    { tuft: '#344f2b', tip: '#9cab58', flowers: ['#f2e27a', '#f4efe2', '#e8a04a'], leaf: ['#6a6a36', '#7c5e34'] },
-    { tuft: '#574c2c', tip: '#b6a05c', flowers: ['#d98a3a', '#c8604a'], leaf: ['#b4642e', '#c99a3e', '#8e3f2c'] },
+    { tuft: '#4e5418', tip: '#b2b830', flowers: ['#f2e27a', '#f4efe2', '#e48a98', '#b7a0e0', '#e8a04a'], leaf: ['#5c7a3a', '#7a6a3a'] },
+    { tuft: '#5a5216', tip: '#b4b02a', flowers: ['#f2e27a', '#f4efe2', '#e8a04a'], leaf: ['#6a6a36', '#7c5e34'] },
+    { tuft: '#6e4e1a', tip: '#cc9e3a', flowers: ['#d98a3a', '#c8604a'], leaf: ['#b4642e', '#c99a3e', '#8e3f2c'] },
     { tuft: '#8f9bb0', tip: '#ffffff', flowers: [], leaf: [] },
   ];
 
@@ -2150,11 +2151,11 @@
   // ---------- Etapa 17: o que só nasce em cada região ----------
   // as cores do chão de cada região (primavera, verão e outono; no inverno, só a água turva muda). Por tipo de tile
   const RT = {
-    1: { 3: ['#c8a874', '#dcc08c', '#ecd6a8'] },   // litoral: areia clara de praia
+    1: { 3: ['#dca552', '#eebc66', '#f6d28a'] },   // litoral: areia clara de praia
     2: { 1: ['#2c5450', '#386660', '#56847a'], 2: ['#2c5450', '#386660', '#56847a'], 3: ['#58503a', '#685e44', '#7a6e50'], 4: ['#3c5838', '#48683e', '#5a7a48'] },   // mangue: lama e água escura
     3: { 6: ['#5e6e52', '#70805a', '#86946a'], 7: ['#64606c', '#7c7a8a', '#d6dae4'] },   // serra alta: pedra fria com neve no alto
     4: { 3: ['#c09660', '#d2aa72', '#e2c08c'], 4: ['#7c7840', '#928a4a', '#a89c5a'], 6: ['#88783f', '#9c8a4c', '#b09c5c'], 8: ['#9e7a46', '#b49058', '#c8a66c'] },   // sertão
-    5: { 4: ['#3c6232', '#4a6e37', '#5c8040'], 5: ['#223e2a', '#2c4a2f', '#385734'] },   // mata fechada
+    5: { 4: ['#545a18', '#686e1c', '#7e8622'], 5: ['#363c14', '#444a17', '#545c1b'] },   // mata fechada
     6: { 1: ['#3a5446', '#465f4e', '#627a62'], 2: ['#3a5446', '#465f4e', '#627a62'], 3: ['#6a5c3e', '#7a6a46', '#8e7c54'], 4: ['#4a5c32', '#586a38', '#6a7a42'], 5: ['#30442f', '#3a5034', '#475c3a'] },   // pântano
   };
   A.REGION_TERRAIN = [RT, RT, RT, { 2: { 1: RT[2][1], 2: RT[2][2] }, 6: { 1: RT[6][1], 2: RT[6][2] } }];
@@ -2477,6 +2478,18 @@
       }
       return c;
     };
+    // 0.23: as peças do pacote Cozy entram como variação (carregam logo depois; até lá, só a arte de sempre)
+    S.cozy = null;
+    if (G.Pacote && typeof Image !== 'undefined') {
+      const ks = Object.keys(G.Pacote), ims = {};
+      let n = 0;
+      const pronto = () => {
+        if (++n < ks.length || ks.some((q) => !ims[q])) return;
+        S.cozy = { arv: [[ims.c119, ims.c118, ims.c116], [ims.c119, ims.c116, ims.c119], [ims.c116, ims.c117, ims.c118]],
+          pedra: ['c120', 'c121', 'c122', 'c123', 'c124', 'c125', 'c126', 'c127'].map((q) => ims[q]) };
+      };
+      for (const q of ks) { const im = new Image(); im.onload = () => { ims[q] = im; pronto(); }; im.onerror = pronto; im.src = G.Pacote[q]; }
+    }
     S.shadow = ellipse(10, 4, 0.3);
     S.bigShadow = ellipse(20, 6, 0.26);
     S.midShadow = ellipse(15, 5, 0.28);   // bichos grandes (Etapa 9)
