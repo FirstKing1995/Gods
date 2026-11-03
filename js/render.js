@@ -1001,6 +1001,7 @@
         if (arau) blitTree(S.arau[season][o.v], bx - 3, by + 13 - 30, 8, dx);
         else if (o.sp === 'nobre') blitTree(S.nobre[season][o.v % 3], bx - 3, by + 13 - 23, 6, dx);   // Etapa 17
         else if (o.sp === 'mangue') blitTree(S.mangue[season][o.v % 2], bx - 2, by + 13 - 20, 8, dx);
+        else if (S.cozy && season < 3 && o.id % 5 === 2) { const im = S.cozy.arv[season][((o.id / 5) | 0) % 3]; blit(im, bx + 8 - im.width / 2, by + 16 - im.height); }   // 0.23: uma em cada cinco é do pacote Cozy
         else blitTree(S.broad[season][o.v], bx - 3, by + 13 - 23, 6, dx);
         break;
       }
@@ -1017,6 +1018,7 @@
       case 'rock': {
         if (o.sal) { blit(S.salina, bx + 1, by + 9); break; }   // Etapa 17: a salina e o veio de ouro
         if (o.ouro) { const im = S.veio[o.v % 2][snow ? 1 : 0]; blit(im, bx + 8 - im.width / 2, by + 14 - im.height); break; }
+        if (S.cozy && !snow && !o.big && o.id % 3 === 1) { const im = S.cozy.pedra[((o.id / 3) | 0) % 8]; blit(im, bx + 8 - im.width / 2, by + 14 - im.height); break; }   // 0.23
         const sz = o.big ? (o.ch >= 3 ? 2 : 1) : 0;
         const img = S.rock[sz][snow ? 1 : 0][o.v % 2];
         blit(img, bx + 8 - img.width / 2, by + 14 - img.height);

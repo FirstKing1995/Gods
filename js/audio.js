@@ -40,6 +40,7 @@
     if (!pref.on) ctx.suspend().catch(() => {});
     started = true;
     startAmbient();
+    carregaGravado();
     loop();
   };
   function build(c) {
@@ -477,6 +478,24 @@
     s.connect(fl); fl.connect(g); g.connect(bus.amb); s.start();
     return { s, fl, g };
   }
+  // 0.23: o ambiente gravado (Freesound, CC0; ver CREDITOS.md): pássaros, brisa, riacho, grilos, fogueira e chuva,
+  // em laços de 60 s. Enquanto não carrega (ou se não carregar), fica o sintetizado de sempre
+  const GRAV = ['dia', 'brisa', 'rio', 'noite', 'fogo', 'chuva'];
+  const grav = {};
+  function carregaGravado() {
+    if (typeof fetch !== 'function' || location.protocol === 'file:') return;
+    for (const k of GRAV) {
+      fetch('som/amb/' + k + '.mp3').then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+        .then((b) => new Promise((ok, no) => ctx.decodeAudioData(b, ok, no)))
+        .then((buf) => {
+          const s = ctx.createBufferSource(), g = ctx.createGain();
+          s.buffer = buf; s.loop = true; g.gain.value = 0;
+          s.connect(g); g.connect(bus.amb); s.start(0, Math.random() * buf.duration);
+          grav[k] = g;
+        }).catch(() => { /* fica o sintetizado */ });
+    }
+  }
+  const gravOk = () => GRAV.every((k) => grav[k]);
   function startAmbient() {
     amb = { wind: loopNoise('lowpass', 500, 0.6), rain: loopNoise('bandpass', 1500, 0.5), river: loopNoise('bandpass', 520, 0.6), fire: loopNoise('lowpass', 260, 0.7), gust: loopNoise('bandpass', 1400, 8) };
     // vento que respira: um LFO lento no filtro
@@ -509,24 +528,26 @@
     }
     const night = hour >= 19.5 || hour < 5, dawn = hour >= 5 && hour < 8;
     const a = st ? around(st) : { water: 0.2, fire: 99 };
-    ramp(amb.wind.g.gain, (blizzard ? 0.5 : season === 3 ? 0.2 : storm ? 0.3 : 0.07) + (night ? 0.02 : 0));
+    const gv = gravOk();
+    ramp(amb.wind.g.gain, gv ? (blizzard ? 0.5 : storm ? 0.3 : season === 3 ? 0.1 : 0) : (blizzard ? 0.5 : season === 3 ? 0.2 : storm ? 0.3 : 0.07) + (night ? 0.02 : 0));
     ramp(amb.gust.g.gain, blizzard ? 0.1 : storm ? 0.05 : season === 3 ? 0.02 : 0);
-    ramp(amb.rain.g.gain, precip === 'chuva' ? (storm ? 0.42 : 0.26) : precip === 'neve' ? 0.05 : 0, 1.2);
-    ramp(amb.river.g.gain, Math.min(0.28, a.water * 0.5) * near * (season === 3 ? 0.6 : 1));
+    ramp(amb.rain.g.gain, precip === 'chuva' ? (gv ? (storm ? 0.2 : 0) : storm ? 0.42 : 0.26) : precip === 'neve' && !gv ? 0.05 : 0, 1.2);
+    ramp(amb.river.g.gain, gv ? 0 : Math.min(0.28, a.water * 0.5) * near * (season === 3 ? 0.6 : 1));
     const fireG = a.fire < 12 ? (1 - a.fire / 12) * 0.22 * near : 0;
-    ramp(amb.fire.g.gain, fireG, 0.4);
+    ramp(amb.fire.g.gain, gv ? 0 : fireG, 0.4);
+    if (gv) gravado(hour, season, precip, a, near);
     const busy = voices > 40;
     // estalos do fogo
-    if (fireG > 0.02 && t > nextCrack && !busy) { nextCrack = t + 0.05 + Math.random() * 0.35; crackle(t, bus.amb, fireG * 2.2); }
+    if (!gv && fireG > 0.02 && t > nextCrack && !busy) { nextCrack = t + 0.05 + Math.random() * 0.35; crackle(t, bus.amb, fireG * 2.2); }
     // pássaros de dia (menos no inverno, nada na chuva); coro no amanhecer
-    if (!night && !precip && season !== 3 && t > nextChirp && !busy) {
+    if (!gv && !night && !precip && season !== 3 && t > nextChirp && !busy) {
       nextChirp = t + (dawn ? 0.4 : 1.2) + Math.random() * (dawn ? 1.2 : 3.5);
       const f = 2200 + Math.random() * 2600, n = 1 + Math.floor(Math.random() * 4), pan = Math.random() * 1.4 - 0.7;
       const o = out(bus.amb, pan, 0.2);
       for (let i = 0; i < n; i++) tone('sine', f, t + i * 0.11, 0.005, 0.07, 0.035, o, f * (0.8 + Math.random() * 0.5));
     }
     // grilos de noite (não no inverno)
-    if (night && season !== 3 && !precip && t > nextCricket && !busy) {
+    if (!gv && night && season !== 3 && !precip && t > nextCricket && !busy) {
       nextCricket = t + 0.35 + Math.random() * 0.5;
       const f = 4200 + Math.random() * 500, o = out(bus.amb, Math.random() * 1.2 - 0.6);
       for (let i = 0; i < 3; i++) tone('sine', f, t + i * 0.045, 0.003, 0.025, 0.012, o);
@@ -547,6 +568,21 @@
     if (st && t > nextWork && speed > 0) { nextWork = t + 0.18; workSounds(st); }
     // Etapa 10: a bicharada do curral (o galo canta de madrugada)
     if (st && st.campo && st.campo.bichos.length && t > nextFarm && speed > 0 && !busy) farmSounds(st, t, dawn);
+  }
+  // as camadas gravadas cruzam conforme a hora, a chuva e o que está perto da câmera (água e fogo)
+  function gravado(hour, season, precip, a, near) {
+    const inv = season === 3, chuva = precip === 'chuva';
+    const noite = hour >= 19.5 || hour < 4.8 ? 1 : hour >= 18.5 ? hour - 18.5 : hour < 5.8 ? 5.8 - hour : 0;
+    const aurora = hour >= 5 && hour < 8 ? 1.3 : 1;
+    const alvo = {
+      dia: (1 - noite) * (inv ? 0.2 : 0.75) * aurora * (chuva ? 0.15 : 1),
+      brisa: 0.3 + (inv ? 0.25 : 0) + (precip ? 0.12 : 0),
+      rio: Math.min(1, a.water * 1.6) * 0.95 * near,
+      noite: noite * (inv ? 0.12 : 0.7) * (chuva ? 0.2 : 1),
+      fogo: a.fire < 14 ? (1 - a.fire / 14) * 1.0 * near : 0,
+      chuva: chuva ? 0.95 : precip === 'neve' ? 0.1 : 0,
+    };
+    for (const k of GRAV) ramp(grav[k].gain, alvo[k], 1.5);
   }
   const WORK_SFX = { madeira: ['machado', 0.75], pedra: ['pedra', 0.6], construir: ['martelo', 0.55], oficio: ['lasca', 0.9], argila: ['cavar', 1.1], agua: ['agua', 1.6], frutas: ['colher', 1.1], pesca: ['agua', 4.5], conservar: ['colher', 1.5],
     caminho: ['cavar', 0.9], tabuas: ['serra', 0.9], tecido: ['tear', 0.8], cerca: ['martelo', 0.7], plant: ['enxada', 0.9], weed: ['enxada', 0.7], harvest: ['colher', 1],
@@ -634,6 +670,37 @@
     }
     return notes;
   }
+  // 0.23: nas horas calmas, faixas gravadas (cynicmusic, CC0) com silêncio entre elas; festa, perigo, história e
+  // flauta seguem gerados, porque acompanham o momento
+  const FAIXAS = ['another-august', 'november-snow', 'happy-lullaby', 'town-theme'];
+  const CALMO = { dia: 1, tarde: 1, noite: 1, inverno: 1 };
+  let faixa = null;
+  function faixaTick(t, calmo) {
+    if (!faixa) {
+      if (location.protocol === 'file:' || typeof Audio !== 'function') return false;
+      const el = new Audio();
+      el.preload = 'none';
+      let g;
+      try { const src = ctx.createMediaElementSource(el); g = ctx.createGain(); g.gain.value = 0; src.connect(g); g.connect(bus.music); } catch (e) { faixa = { falhou: 9 }; return false; }
+      faixa = { el, g, i: Math.floor(Math.random() * FAIXAS.length), pausaAte: performance.now() + 6000, parar: 0, falhou: 0 };
+      el.addEventListener('ended', () => { faixa.pausaAte = performance.now() + 25000 + Math.random() * 45000; });
+      el.addEventListener('error', () => { faixa.falhou++; faixa.pausaAte = performance.now() + 5000; });
+    }
+    const f = faixa;
+    if (f.falhou > 2) return false;
+    const agora = performance.now(), escuro = S && G.R ? G.R.darkness(S.ck.hour) > 0.4 : false;
+    f.g.gain.setTargetAtTime(calmo ? (escuro ? 0.65 : 0.85) : 0, t, calmo ? 1.5 : 0.4);
+    if (!calmo) {
+      if (!f.el.paused) { if (!f.parar) f.parar = agora + 1500; else if (agora > f.parar) { f.el.pause(); f.parar = 0; } }
+      return false;
+    }
+    f.parar = 0;
+    if (f.el.paused && agora > f.pausaAte) {
+      if (f.el.src && !f.el.ended && f.el.currentTime > 0) f.el.play().catch(() => {});
+      else { f.i = (f.i + 1 + Math.floor(Math.random() * (FAIXAS.length - 1))) % FAIXAS.length; f.el.src = 'som/musica/' + FAIXAS[f.i] + '.mp3'; f.el.play().catch(() => {}); }
+    }
+    return true;
+  }
   function musicTick() {
     const t = T();
     mus.want = wantMood(S);
@@ -646,6 +713,7 @@
     }
     const m = MOODS[mus.mood];
     if (!mus.gain) { mus.gain = ctx.createGain(); mus.gain.connect(bus.music); mus.gain.gain.value = 0; }
+    if (faixaTick(t, !!CALMO[mus.mood])) { mus.gain.gain.setTargetAtTime(0, t, 0.5); droneOff(); return; }
     mus.gain.gain.setTargetAtTime(m.vol, t, 1.2);
     if (t < mus.restUntil) { droneOff(); return; }
     if (m.drone) droneOn(m); else droneOff();

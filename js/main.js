@@ -1153,6 +1153,7 @@
     const dt = lastT ? Math.min(0.25, (now - lastT) / 1000) : 0;
     lastT = now;
     if (G.Audio) G.Audio.frame(S && (mode === 'game' || mode === 'over') && !holdSim ? S : null, mode, mode === 'game' ? speed : 1);
+    if (G.Clima) G.Clima.frame(S && mode === 'game' ? S : null);   // 0.23: o tom do ar e a luz
     if (mode === 'title') {
       R.cam.x += demoDir.x * 7 * dt; R.cam.y += demoDir.y * 7 * dt;
       if (demo && (R.cam.x < 30 * TS || R.cam.x > (demo.W - 30) * TS)) demoDir.x *= -1;
@@ -1208,6 +1209,7 @@
   // ---------- início ----------
   function boot(data) {
     A.build();
+    if (G.Clima) G.Clima.init();
     R.init($('#view'));
     if (G.Audio) G.Audio.init();
     UI.init({

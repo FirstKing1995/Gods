@@ -1305,7 +1305,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.22.2',
+    VERSION: '0.23.0',
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
     SAVE_KEY: 'genesis.save.v1',
@@ -19857,6 +19857,26 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   };
 })(globalThis.G = globalThis.G || {});
 
+/* ---- js/pacote.js ---- */
+/* Gods � pe�as do pacote Cozy (Ishtar Pixels, CC0: https://ishtarpixels.itch.io/cozy-pack-asset), embutidas.
+   0.23: entram como varia��o no meio da arte feita por c�digo (�rvores redondas e pinheirinhos, pedras). */
+(function (G) {
+  G.Pacote = {
+    c116: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAA8FJREFUWIWdl89qI0cQxn89koxjooO9kgVeQQTCgoB88mIIPuQeMAs55g1yMvhBBDrkEPIUYmEPuZuAkU8WBGQEXtAuyLJ3IeO1ldXIncOkpJqenrGTAsFMq6q+r/509bQhR47aNe/6y3qB9+OF1WvtvZIZXMyXa9uVwHx+b9kqBQDczR65vI744+4m4cvkge+2ilwOI+sDOD4pJ/S7nTCx1u2EXv9vBpNsAjri8gsIb7Hi1AUAaDeLAAxGUeq92wnZbRWNBADIe4JE4EYMWMCGt9hXrwtLxd9+2XSDSYkQgThDl8PIHp+UkZ8mk8iATrdE2W4WGYwiTkf3HDY3EmsSaR4BLWLX7YRsbwfm+voRiMthfOBipJ36QGv1KgCT8TSTjNj9+vtfHDY3pDeW5TD/1j0VucteHNXqVSbj6RJcRNaEjNj4fMGqSQMc8UWswTUJF1zr+Ox9JQog3mKSGm3Qbhap1aveVOsM6GfRETvtS+R0dA/E88Sc/PjS23zawAVw05/1nybsK0m3ExK44NrA5ygLPCsTri+3mRNvvvrr9OeBa9G6k/E0vwd2W8VE/X2K/wVcSLtb0/XZ7YR8+03RBJfDKNGEmu1gFKUc+fZ81n+T8XTpR/vudkLaeyXz57so2YQaPGvaPZWJLILap0zFnVpgzFG7ZrMOGXf75fWDW3efvWRCtmG/t4jnwOnofvnTis+N2ieujQsuYn76voacfIfNjcRefaoMWZG6ov3JAdfvLahumdUolhPPB+7bFe4ozut6dxsKFkCgz31fGdyGHIyixHiWDNTq1cyDR6df/L96XWD60drUYSTG7th0M/CcNR1AVjkTPQCr9AhTnS6XpAvkE9eP3gHVLWOC8HalnAXui0AGjB40mpzo5wU0/WhXHyRuBtxI85rqOTpuRvq9BYAxR+0amzuGTx+shbg5hIh8D+rvQhdAZ8QFcn0oYDZ3jPn0wa4+SmH1Ka6/hvu9BccnZS+JLBHdbifE9VV+gZGyvxlM0vcCnQ2Am6sFlUYBX5NmPetItUjU+l6Qurnoy8nfny3zB8vsLiakifR7i8znm6sF283APC7SF6/cm5Er331dobQO8xn2h72vAHh78UClUVhmRmcJ4KC8xtuLB0rrmPmM1F3QFf90UDKfYSuNAvutIufDiEqjwEF5DfZWOmeNLxyU19iPb1achQVurhb2qQBBXc1ckegBft5PN99+q7gEPCivcRZ+4XwYJfRL67Gf/0UAVtEDnA8jzsJkpEIE4jJoEpVGgfmM1F3QlX8A+QSqYn8aNdoAAAAASUVORK5CYII=',
+    c117: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAA85JREFUWIWdV8Fu20YQfbsULZuOJOcg2WJlCLIhFDIC9BIIzSGX2ED/pKde+gEFCuQv+i1RLjkESO4RgsQ2DBuyLR0a2TERmiG3B2Wo4XBJNRlAMLnenffe7OzsUKHEnj/ZtY5vuQ4+RbHhY/76mpp8uU/HWlVXTcMIf70+L4OAKgNvVV1Mw8jYAA6bjcz80WyeGRvN5lb/klBmAlfsaY0gSQw5lQAAMNjeAQCMr69y76PZnKJQGhUtFQMwAEyQJGaw6aUT/3j0sxSTMyICLCI0DSNz2GyAfpxMJgI83KRysL2D8fUVJkEE33MzY6S0jAA3WjeazVGrOOr2awxgsR3KBk6LuFMb6INniwh9fhkUkqF1o9Nz+J5LuZFuhwaQU04ObGoJlP4WjXHl4+sr+J6LwfZObjs0hNkU0zMH4qo/vwxyJGzrbVuk/nz8Ex7V1jH5cp+LAndIgFKlNDmPEyUCkyDC+C7AlusovVHROXDOlDuUym3gNM8GTsJ8z8Vhs4FPUWz0hoJVuY3Eqgjw/9mUSwwAqPAX2/5zNavCz8H5urIc0I7Wio6GjfH3ghNpuVXSJ1VKHScJ/PW1lIQ8htLRqhyQ7+SH+x7N5vDX19Q0jFBx9DIJbUdHOl+VA5JEUUEbzeam5jhKx+zCkcWHZzQHt0XBRpCv50VpEkQYbHq4jWOjgcW5pB9nK4G/x+QaXgO4qb9/3YWjYAabXlouy+o/d15WdGzg/IIb3wXwtFZpKaYbzwZuOxWyFJdlvcwDwgIATeoBWLdBXkjj6ytrbjx45uVAuQ/pf7DpIUgSk7uMaLEsyTIC/2eMCyjazkwOAMvwEFMeLklSAtlM+kkj/C0HKg7rCovAbaW0CFDO9z03Db3vuek7AARJku0HOHAZuAypfJeJzP3ljuHzJ7uoOQ5u40Wfz7eCWPO+UKosiohcy0MPADXHUbdxvGxKgWUrzrvh8V2Aw2bDSqLIaO5oNof05WmtgiQB8K0p5QtlNDKKLUla9ExgzTVXze6XrTip5t8FuS8X+Tn2MfHw1jQMAHS6dfz+73kKQKT48z8Pd3FxdoNhJVD7JnvNk2puhZ9mAHAwHKJadRCGsXl6tPgwefXiPTrdOi7ObtDp1gEg89zrt/HqxXtUq44Kwxjv3rwpg8h2RDYLw9h0unXs77VwfDJFp1tHr99Gr9/OzOv129jfawEATruXuDi7MasEApa2nIzUA8DRb7/k/r+/10oBe/02Tj9c4vhkmplfrTo4GA5/jACwVA8AxydTnH64zCglIsBiGziJTreOMMwns7T/ABzooxfDiK49AAAAAElFTkSuQmCC',
+    c118: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAsVJREFUWIXlVj1v2lAUPQ41pJSvAQyNQLS0VUSUKlOQGLIAUn5Dt06d+hcy8asqYRaGSNmqVkGoaVIUlADOgAGhEIu+DuRaD9fPHwR16V38fP38zvE5910/4H8Pad0X6+Xcyv3J6fW/IUDACTmAkbFgj2NpZCzWIrLlF1wJyQDARsaCVVNxVFNxIsKUkPyXMhsjQODDucGqqTgAoJjOoJjOAACqqTiGc8M3iWd+2BI4AUcq4SX4IG4SUTWdwYe1vizgg8AB4PBDYd1lsOVFrno5h4QcAAComo72oI9pc2Y+nzZnaA/6UDUdwLJAvdrgaoHVe5KagCn4vKrpTAnJUr2cc90VnmrACh6phDFtzkwbaHyIgknKay34rgHe+02EIwGr98Dya/mvJ1KU91sLQons9j3gXvFEgki/jUWli/FEWAuOu0DUdJwiUgmb8z7v7+JiPGFO8z3VADUdktprkBJrE9jZDkrkJx8iEpQnFVRNx8520HEn2BIg/2/uH0wLqMgIwJqjPN23B31UU3Hc3D84/h+ECpD/1PmcgkCtV1XTzZ+U6F3XRkQKEIliOrPylaIc/65TCBVQQvKK/1TZ7UFfqAhPiELVdCghWVgHtgROTq8xnBtmEZIN1m3I3/Pg1IyoCIdzQ9gHHBsRAOZFRqd4VFESNqInrb6BcCXA14FdT3jqfLddICXkAP1aEQo+l2hstYbA+Dn8aVkI4MaQbyDffkfwnUVZNh/DUa+zMq+V3UWvO8a+NJHeb03NvNuBxPPhca9UoiHL5mO2c3rdsbnm+dmZp3U9FeFeqYRXhSQAMAB4/e6l+YzGXI4llShP2DFcFSDwX5d37OOnI/y8HK48f1NQzByNW40OkkpUuhtOXJXwdCbkwa9+3KLXHSObj6F2fLCSu8rfonZ8ANSAVqOz2TMhD/QiIku97hiNL18BwDbnNf4ANnicXNNuS94AAAAASUVORK5CYII=',
+    c119: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAsJJREFUWIXlV91qGkEYPROtof60/mwRhFSJEBqJF4It9RUC4k0h0NfoVR4i79Dr0hsJ+AoJreCFwYSAxTYghLrR1rhS6zq9MN92VndmVxty03OT2dnZPSfnfPPNCvzvYOs+WN5L2q6Pz64fRgARRxLAUAe/G7Ohvp6QjVXJYykGAHyogxcrPhQrPhLCYym25My9CSDyfpfzYsUHAMjm/Mjm/ACAYsWHfpevLMK/iloiJ+JCJgQAaFemlpB61eRYIdqVIhBB5ADwZv/puq/xJqC8l0QkMR/XqybarSkanZF1v9EZod2aol41AcwL1GsMrlYtZk9WO6HdmloiYynG+l3uuis81cAieSETQqMzsmKgcSEDyxmvtbByDYjZ3weUCil7ajgHh5tSIfSfL9QCG+rq5iQV4LTvAfeKp4IE5rWw9WKDXV3MpCKUEciajgqFTMhad3C4iauLGVet91QD1HSo+LyCnFhbgJZmjPIUIRNB8+RCvWpCSzNlnTnedNv74vYTr2mukAnhY+0HAPeeIHWAyKnzqUBCFv/Wq6Z1SMmeda0qKkISkc35bVtONic+q4LUgVjKnj/F0G5NpY6IgggUgYzH0YHjs2uUkaQitOzL5vw2cvFaJBebkZZmrPdVfiYoGxEA7sVGFe6EsLUa0UPAVYBYB0494V/Xu0VgO4yePAP7+X0+XoyGyMQ1bl/LpbDm7YOEYAxmMAac7+cf49NwYlv3KhJArTlGMMpYMPrXWNVJWApr7n2AXlAKa0uETjAGHMbAxMltz+3VADwWYSms4eXzRwDm1u6GgtY9GgtzfCceWBIsg2sERP7522/+/m0UzS/27PPbpjVH46NTHTvxALu8mSidKIU1bw6I5OcjA0enOs5HhkVIcx+av5DfNvHudQKXNxPldwDB8w8TIqo1x9iK+1itObbicJrzgpPbHv4AsimOnCyitM8AAAAASUVORK5CYII=',
+    c120: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAWNJREFUOI11kjFuwjAUhj8HgjpEtEhGwIIakYGFA+QAqFygGyun6tqtF6DiAM3O0iFVEAugRkJCGRARdYfg4CTwpEhxnPf5//9nwaV8R9J3G6yjk8KoTs8Wu00KwFcSU666uVhHJzWdycIP72+xAui7DUEkK5C6Pr3Ts9EnmaWBF5Ao71v6ZbdJ1XQmGQzbFYhhB98pKhRaAaDkc43JuFWB/Hz/ahUAwrRRyABgvtjDYo/Xte8qKVjwHYn9cHsz3FYzMRRfFaTHTH65WasogZQ5kYqFeyq8rs1k3AKyiWiIpeV7Xbvi22x+eXXz79OZZB2dVN9tYGn53si5C4JsEoNhO5+QhuT3YL7Y442cHKRhuZplwudHlIN0Cd+RCsAMcTJuES6Tig0z2CA48vhUEzmgDLlVJiQIjgDCwrjf8eqcPzr1ch66udm0BFxvogAKVjLpySWThHCbEm5T4tUZgMPhD4B/4BydMT/klHwAAAAASUVORK5CYII=',
+    c121: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAUtJREFUOI2NkrFuwjAQhn8bQkGKKtUyarogEB5YsicPUKkPwcpTsXbjCfIE9c7CEEQ3UoHoEolUluouOLETI/WXrCTnu8/3X0xwUxpy+PRRnr1xI2qKJ7MBAGh7MUbvgo2IdbperprkfFtCygqMUXK5/N7tpJ+GHMEQUJW7IeIQACBlpZ9fApIe3U4MkAKAqqD5tIf5YtyBLFccX0flWJvMBrW1vl2w3506kP3uBACw7b2vz5oxSlJwF5BvS/i+7e72uxOSZAgpKw2AOAAfxCjbHCDisAZJWTUzqIsL5Tx9cGPJqNtBoSCiwAsVUeB0SB4fugAn+Vb89vrUscinPZw/fzQdjQgAQERBvdo27D8j4hAiDmsovV61TpJhfXFsmHnPNgfMF2MHZDrpN6eVDsQkGDvZ5uBz28wgLxTy4tsZYHsm7ZgDaG/8N/4HAaKbBMSnPHYAAAAASUVORK5CYII=',
+    c122: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAWxJREFUOI11k81qwkAUhb/EgG0XWkVEQVAjQnGjq9m5E3yAvoArH6qrvkAfQMjOnau6KRUxKggRKy26aS2V6UJnmCR6YCCZn2/uOTexOKshBBU3x8LfSgwVimlrHewAeBuNiMoxXxb+Vvb67dCG56ehBKi4OQtEDOKo2wvFNOomUwp4BlnRdVs9rIOd7PXbtNxsDGLYoSHEZQCANxjz6n/ScrOhoSpZB7tQPtpCFOIB1XrxaiWhChpCkEwmLi7Op8HFedOGA3A4HGWpnIodVlVEQNLsSMzCtSqq9SKdbhM4dURB7Jvjn94Q9W0efuw86Plev83C38qKm8P+STiyVE5Rc/NXQUCoOyZEt9EbjKm5eQ1SMKWZv+HFe9cgJashhAQwQ+x0m8z8TcyGGezQm3CfubM0IAq5JBMy9CYAlp38+NLf92q510OlHs1DHU5nbi0AJ3H4hdNPErKiSleZzKcB82nAarkHYPf1DcA/vPKg0iV7ZDMAAAAASUVORK5CYII=',
+    c123: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAVVJREFUOI2Nks1qg0AUhY9GKrSYQpChQiBxJASyaVbu3Al9jazyUF31BXwDd+6yclUUiaFQsEgR2tKChTBZNGNm/IEeGAbvnfvNPddRcNbKddGn592uN86l8uI5NQGAicskxiCYSxFuZ5ut1yT2eYkoTGESQ3kvvwY70VauC10foa6PUsKhBPCBKEzZnXWroNUJB6oAUNdHNp2NsaaTDmSz9fBWfEjW5tRsrGliQZxXHUicVwAA0d7TY8RMYigr15UB+7xE37fYXZxX8PwlojBlABQJ0AfhCsIEDiUNKEJ6mQHXISukvQ/OLXGp7UOHrIC9sAah+7xsutT1EToWRAgv8h/uOxanszFeXz6Zen1zBQCwF1az2jbEP+NQAoeSBqr+fP8yz1/+PZyzRJC9sBCECdZ0IoF4J5p4mwjhB7idIEz63F5mcMiKzgDbM2nHJEA78d/4CSWUnkkfSsIvAAAAAElFTkSuQmCC',
+    c124: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAYZJREFUOI11ksFKw0AURc+UWKlkU7FUK0IlIXTRfoC4FKmbuutXlH6N+BXudKOIS79AF6Uk1I2iFIxItGir4yK+cZrYC4FhMu+8e+eNAthx1yiuKDa2lnn7mGosefWSen2dkiRfvMTffLxpPt//jihZdJpVAN3rB3Y9x0fDFOS7KgoTzm6f5v47UlzbLPFwPyErAR4fDbXdUFSQxcP9RPf6AfUgyJ4xqm2WxOl8BLHvry/R7m7nIHfDoR1H2TGcbJeLkxEwwm+5C53MReg0q5SKuWgAhDfJv/t2DAdg8qm1v76UKxYXGZD2fFd1gLPbp3yERS78lku7WwHSiQikIPb9lpvLbRfvHe6a/V4/IAoT7fkuBbHvNSoLQZBOoh78jVkg5h1cnIzwGhUDEpgoGoy5Or02IJHqNKsawL7EdnebaDDOxbAv9vwyprxaVAaQhfwnG3J+GQMoh/Q1aoDwcWoOH+yX8RoVosF4boxSvFp21HM8M2M0EHEhRXIn4U2Sfr9NnuMZAD+hWqfkXD2aeAAAAABJRU5ErkJggg==',
+    c125: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAWJJREFUOI2Vkb1qwzAUhY/SuCWNOmQwMm2HFAnjIX6KEprFY58i5GlKXyRdAiZjniAdgrAhS0tCBi9OQxNadShyJNuB9oLQz736dM4Vub91ceYQXLQJ/hOfW4WvgwIBgKjHwAVFmuTKLPKYQ1brA15e1ydBTb1Ik1wNR36RSBcbTOJMecwhEdhJSDPqMbTOCXZ763HwwMUAwCTO1PVNi0RgVl4DGwCw2yslPAdd369AhiMf7287BaAYXFBEPWZbAICllBXIUkoAgGnv+UkW1ixAutigbm+qW0qJQb+DSZwpAMQC1EF0TMcz8MA9KoyzYw90JPPcmuvg2pKOioJknkOEtBYqQmopdK4uqwCzWF9+eLyrWBSeg2T1oRq0/etChLQYZRvmz/DABQ/cAtrIt99q0O+AB25RZIJESDEdz9D1fQuklTTN10yILtB2puNZndtjD5J5XmlguSflMwtQTvz1/AdkEKQy/ZTHFQAAAABJRU5ErkJggg==',
+    c126: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAZ9JREFUOI11k81KI0EUhb9qmyE6s0h0EklIFukiYZiVLt0IgSYvIHkAl9nnMdy7nAcY8gAODcK8wOguGJIsIgmaQaNoflQoF3KL6o45UNBU9f36nHur1cG37zz8DNjc8ikV08yWLwZHWu+qh8c5T08L7v4/M5+9Mp+92XMlD/VGCGBazZpbz8npOQBVnVVXvQl/fkexc1+KS4U0w9GUpAR4cnpu3A+KPHkYjqam1ayxX0ytQESlQlqcrgIA2lGHf9cL9oup2BInw9E01h8bIQlpAzrIrXUSc1BvhKQ2v3x62OvffrrvxvAAFvMXU67kV4rFRa9/68JMVWctZCXCOhc6yHEU/gA+JlLVWUUjxEuZN/tCMrdbfHxYsPutZo2r3sRUdRZvoXxTruTZC7bXgoDYdFyIHWM76rAXbFuQwEQX/Tt+/R1ZkMgHGHTHlCt52lEHwGZ1o+ggZyNd9CE6u2Qns6VUvRHay5GcRFIC0UGO6OwSQHkbkxt7vwfdsV3S9WQ/pDiT+aoAfLVcwsdPYlwXYld6Indh0B0DcH//DMA7bFOvSqaYJG8AAAAASUVORK5CYII=',
+    c127: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAWpJREFUOI2VkkFOwkAUhv82BYssME0oweCCaSDuKDs3LkhqOYDpIdhzDPcuOYAnwJCY9ALAVtO6kNRYEqKLSgXjuLBTZ1qM+pJJM/Pe++b/31Q6OTuFUpCxXy7gP/EabfG+/YAEALZjoW1UcestKV+k1ypS+PSC66vJj6AUAIAOB700MfNXmIznv0IU27GgloqI1xshYRIN6HcwGc/p0eGBlFySBgPKABCvN7TZqqPbUHOQ4aCHh+CZAkhX26gy1VD4hukizkGmixgAwNu7uLyheq0i2Y4lAmb+CoCW2QO8uukihpVYAyAJAL4pGyM3gEm0BKSBjVTmizw/FL674MwSi5wCzw9hEH0n1CC6oFAtFfMAvpg1n1vHOYvNVh33d49ULpf3AAAG0dOVtcG/jEk0mERLoXIUvVGr3/n6cZLgQQbRMXIDdBuqAGJKFP42HsIKmJ2RG+xy+z0Dzw9zA8zOJHsmALKJv55/AnJUpM50TkQkAAAAAElFTkSuQmCC',
+  };
+})(globalThis.G = globalThis.G || {});
+
 /* ---- js/art.js ---- */
 /* Gods · arte em pixel gerada por código. Nenhum arquivo de imagem: tudo nasce aqui. */
 (function (G) {
@@ -19949,24 +19969,25 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 
   // ---------- terreno: cores por estação ----------
   // 0.16: paleta própria, terrosa e com a sombra puxando para o azul e a luz para o amarelo (sem o verde de néon)
+  // 0.23: a natureza puxa para o oliva vivo e a areia quente (inspirado no pacote Cozy, da Ishtar Pixels, CC0)
   // tipos: 0 funda, 1 rasa, 2 rio, 3 areia, 4 campo, 5 floresta, 6 colina, 7 montanha, 8 campo seco
   // cada tom: [escuro, base, claro]
-  const AGUA = { 0: ['#1c3651', '#22466a', '#2b587e'], 1: ['#2e6c86', '#3a8299', '#5fa6b4'], 2: ['#2e6c86', '#3a8299', '#5fa6b4'] };
+  const AGUA = { 0: ['#3e5c58', '#4a6c64', '#5a7c70'], 1: ['#6a8466', '#7c9470', '#9aae88'], 2: ['#6a8466', '#7c9470', '#9aae88'] };
   A.TERRAIN = [
     { // primavera
       ...AGUA,
-      3: ['#b48f5c', '#cba870', '#dfc492'], 4: ['#47703a', '#5a8641', '#739a4b'], 5: ['#2f4e33', '#3b5d38', '#4a6d3e'],
-      6: ['#5b7a40', '#6d8a47', '#86a055'], 7: ['#5a5662', '#6e6a74', '#8a858a'], 8: ['#7d7e40', '#94934b', '#ada85c'],
+      3: ['#cf8e36', '#e3a548', '#efbf6c'], 4: ['#5c6c1e', '#748222', '#96a42c'], 5: ['#424e18', '#53611c', '#677822'],
+      6: ['#6e7a20', '#879426', '#a2ae32'], 7: ['#5a5662', '#6e6a74', '#8a858a'], 8: ['#968a2a', '#ac9e34', '#c2b448'],
     },
     { // verão
       ...AGUA,
-      3: ['#b8925c', '#cfab72', '#e2c896'], 4: ['#4f6f34', '#62803b', '#7a9445'], 5: ['#33502f', '#3f5e33', '#4d6c39'],
-      6: ['#6b7c3e', '#80904a', '#98a25a'], 7: ['#5a5662', '#6e6a74', '#8a858a'], 8: ['#92824a', '#a99658', '#c0ac6a'],
+      3: ['#d29038', '#ebaa46', '#f2c26a'], 4: ['#6c6818', '#817b1a', '#a4a51e'], 5: ['#4c4a16', '#5e5c18', '#74721c'],
+      6: ['#7c7a1c', '#928e22', '#acaa2a'], 7: ['#5a5662', '#6e6a74', '#8a858a'], 8: ['#a48a2c', '#ba9e38', '#cdb24c'],
     },
     { // outono
       ...AGUA,
-      3: ['#ad8858', '#c4a06a', '#d8bc8c'], 4: ['#6c6836', '#827a40', '#9a8e4e'], 5: ['#4c4230', '#5c4f34', '#6f5e3c'],
-      6: ['#786a3c', '#8d7c48', '#a39058'], 7: ['#5a5662', '#6e6a74', '#8a858a'], 8: ['#8c6c40', '#a3804e', '#b99660'],
+      3: ['#c88836', '#dea046', '#ebba68'], 4: ['#7a5e1c', '#93721f', '#ad8a2c'], 5: ['#5e4318', '#73531c', '#8a6522'],
+      6: ['#86681e', '#9c7e26', '#b49432'], 7: ['#5a5662', '#6e6a74', '#8a858a'], 8: ['#a4702c', '#ba8638', '#cc9c4a'],
     },
     { // inverno
       0: ['#1e3550', '#284a6a', '#365e80'], 1: ['#4a7e9c', '#6596b0', '#9cc2d4'], 2: ['#4a7e9c', '#6596b0', '#9cc2d4'],
@@ -19976,9 +19997,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   ];
   // detalhes por estação: tufo (escuro e a ponta clara), flores (cada canteiro é de uma cor só) e folhas no chão da mata
   A.DETAIL = [
-    { tuft: '#2f5430', tip: '#8fb35a', flowers: ['#f2e27a', '#f4efe2', '#e48a98', '#b7a0e0', '#e8a04a'], leaf: ['#5c7a3a', '#7a6a3a'] },
-    { tuft: '#344f2b', tip: '#9cab58', flowers: ['#f2e27a', '#f4efe2', '#e8a04a'], leaf: ['#6a6a36', '#7c5e34'] },
-    { tuft: '#574c2c', tip: '#b6a05c', flowers: ['#d98a3a', '#c8604a'], leaf: ['#b4642e', '#c99a3e', '#8e3f2c'] },
+    { tuft: '#4e5418', tip: '#b2b830', flowers: ['#f2e27a', '#f4efe2', '#e48a98', '#b7a0e0', '#e8a04a'], leaf: ['#5c7a3a', '#7a6a3a'] },
+    { tuft: '#5a5216', tip: '#b4b02a', flowers: ['#f2e27a', '#f4efe2', '#e8a04a'], leaf: ['#6a6a36', '#7c5e34'] },
+    { tuft: '#6e4e1a', tip: '#cc9e3a', flowers: ['#d98a3a', '#c8604a'], leaf: ['#b4642e', '#c99a3e', '#8e3f2c'] },
     { tuft: '#8f9bb0', tip: '#ffffff', flowers: [], leaf: [] },
   ];
 
@@ -22010,11 +22031,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // ---------- Etapa 17: o que só nasce em cada região ----------
   // as cores do chão de cada região (primavera, verão e outono; no inverno, só a água turva muda). Por tipo de tile
   const RT = {
-    1: { 3: ['#c8a874', '#dcc08c', '#ecd6a8'] },   // litoral: areia clara de praia
+    1: { 3: ['#dca552', '#eebc66', '#f6d28a'] },   // litoral: areia clara de praia
     2: { 1: ['#2c5450', '#386660', '#56847a'], 2: ['#2c5450', '#386660', '#56847a'], 3: ['#58503a', '#685e44', '#7a6e50'], 4: ['#3c5838', '#48683e', '#5a7a48'] },   // mangue: lama e água escura
     3: { 6: ['#5e6e52', '#70805a', '#86946a'], 7: ['#64606c', '#7c7a8a', '#d6dae4'] },   // serra alta: pedra fria com neve no alto
     4: { 3: ['#c09660', '#d2aa72', '#e2c08c'], 4: ['#7c7840', '#928a4a', '#a89c5a'], 6: ['#88783f', '#9c8a4c', '#b09c5c'], 8: ['#9e7a46', '#b49058', '#c8a66c'] },   // sertão
-    5: { 4: ['#3c6232', '#4a6e37', '#5c8040'], 5: ['#223e2a', '#2c4a2f', '#385734'] },   // mata fechada
+    5: { 4: ['#545a18', '#686e1c', '#7e8622'], 5: ['#363c14', '#444a17', '#545c1b'] },   // mata fechada
     6: { 1: ['#3a5446', '#465f4e', '#627a62'], 2: ['#3a5446', '#465f4e', '#627a62'], 3: ['#6a5c3e', '#7a6a46', '#8e7c54'], 4: ['#4a5c32', '#586a38', '#6a7a42'], 5: ['#30442f', '#3a5034', '#475c3a'] },   // pântano
   };
   A.REGION_TERRAIN = [RT, RT, RT, { 2: { 1: RT[2][1], 2: RT[2][2] }, 6: { 1: RT[6][1], 2: RT[6][2] } }];
@@ -22337,6 +22358,18 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       }
       return c;
     };
+    // 0.23: as peças do pacote Cozy entram como variação (carregam logo depois; até lá, só a arte de sempre)
+    S.cozy = null;
+    if (G.Pacote && typeof Image !== 'undefined') {
+      const ks = Object.keys(G.Pacote), ims = {};
+      let n = 0;
+      const pronto = () => {
+        if (++n < ks.length || ks.some((q) => !ims[q])) return;
+        S.cozy = { arv: [[ims.c119, ims.c118, ims.c116], [ims.c119, ims.c116, ims.c119], [ims.c116, ims.c117, ims.c118]],
+          pedra: ['c120', 'c121', 'c122', 'c123', 'c124', 'c125', 'c126', 'c127'].map((q) => ims[q]) };
+      };
+      for (const q of ks) { const im = new Image(); im.onload = () => { ims[q] = im; pronto(); }; im.onerror = pronto; im.src = G.Pacote[q]; }
+    }
     S.shadow = ellipse(10, 4, 0.3);
     S.bigShadow = ellipse(20, 6, 0.26);
     S.midShadow = ellipse(15, 5, 0.28);   // bichos grandes (Etapa 9)
@@ -23365,6 +23398,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         if (arau) blitTree(S.arau[season][o.v], bx - 3, by + 13 - 30, 8, dx);
         else if (o.sp === 'nobre') blitTree(S.nobre[season][o.v % 3], bx - 3, by + 13 - 23, 6, dx);   // Etapa 17
         else if (o.sp === 'mangue') blitTree(S.mangue[season][o.v % 2], bx - 2, by + 13 - 20, 8, dx);
+        else if (S.cozy && season < 3 && o.id % 5 === 2) { const im = S.cozy.arv[season][((o.id / 5) | 0) % 3]; blit(im, bx + 8 - im.width / 2, by + 16 - im.height); }   // 0.23: uma em cada cinco é do pacote Cozy
         else blitTree(S.broad[season][o.v], bx - 3, by + 13 - 23, 6, dx);
         break;
       }
@@ -23381,6 +23415,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       case 'rock': {
         if (o.sal) { blit(S.salina, bx + 1, by + 9); break; }   // Etapa 17: a salina e o veio de ouro
         if (o.ouro) { const im = S.veio[o.v % 2][snow ? 1 : 0]; blit(im, bx + 8 - im.width / 2, by + 14 - im.height); break; }
+        if (S.cozy && !snow && !o.big && o.id % 3 === 1) { const im = S.cozy.pedra[((o.id / 3) | 0) % 8]; blit(im, bx + 8 - im.width / 2, by + 14 - im.height); break; }   // 0.23
         const sz = o.big ? (o.ch >= 3 ? 2 : 1) : 0;
         const img = S.rock[sz][snow ? 1 : 0][o.v % 2];
         blit(img, bx + 8 - img.width / 2, by + 14 - img.height);
@@ -24352,6 +24387,106 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   }
 })(globalThis.G = globalThis.G || {});
 
+/* ---- js/clima.js ---- */
+/* Gods · clima (0.23, do laboratório de estilo). Duas camadas por cima do mundo, sem tocar no desenho dele:
+   - o tom do ar (mistura soft-light): manhã fresca, meio-dia claro, fim de tarde dourado, noite azul; e a vinheta
+   - a luz (mistura screen): o brilho quente do fogo e das casas no escuro, vaga-lumes de noite, pólen de dia
+   Só aparece em jogo; com "reduzir movimento" do aparelho, fica o tom e a luz, sem os bichinhos voando. */
+(function (G) {
+  'use strict';
+  const Cl = G.Clima = {};
+  let grade = null, fx = null, gx = null, fxx = null, S = null, ligado = false;
+  const motes = [], flies = [];
+  const calmo = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  Cl.init = function () {
+    const view = document.getElementById('view');
+    if (!view || grade) return;
+    const mk = (blend) => {
+      const c = document.createElement('canvas');
+      c.setAttribute('aria-hidden', 'true');
+      c.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;mix-blend-mode:' + blend;
+      view.after(c);
+      return c;
+    };
+    fx = mk('screen'); grade = mk('soft-light');
+    gx = grade.getContext('2d'); fxx = fx.getContext('2d');
+    requestAnimationFrame(quadro);
+  };
+  // o jogo avisa o estado a cada quadro (null fora do jogo)
+  Cl.frame = function (state) { S = state; };
+
+  const lerp = (a, b, t) => a + (b - a) * t;
+  // a cor do ar por hora: [r, g, b, força]
+  const TOM = [[0, [40, 70, 150, 0.55]], [5, [60, 80, 160, 0.5]], [6.5, [255, 170, 140, 0.35]], [9, [255, 236, 200, 0.18]], [15, [255, 226, 180, 0.2]],
+    [17.5, [255, 160, 80, 0.45]], [19, [200, 110, 140, 0.45]], [20.5, [40, 70, 150, 0.55]], [24, [40, 70, 150, 0.55]]];
+  function tom(h) {
+    for (let i = 0; i < TOM.length - 1; i++) {
+      const [h0, a] = TOM[i], [h1, b] = TOM[i + 1];
+      if (h >= h0 && h <= h1) { const t = (h - h0) / (h1 - h0); return a.map((v, k) => lerp(v, b[k], t)); }
+    }
+    return TOM[0][1];
+  }
+
+  function quadro(now) {
+    requestAnimationFrame(quadro);
+    const st = S, W = innerWidth, H = innerHeight;
+    if (!st) { if (ligado) { gx.clearRect(0, 0, grade.width, grade.height); fxx.clearRect(0, 0, fx.width, fx.height); ligado = false; } return; }
+    ligado = true;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    for (const c of [grade, fx]) if (c.width !== Math.round(W * dpr) || c.height !== Math.round(H * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+    gx.setTransform(dpr, 0, 0, dpr, 0, 0); fxx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    gx.clearRect(0, 0, W, H); fxx.clearRect(0, 0, W, H);
+    const h = st.ck.hour, dark = G.R.darkness(h), inverno = st.ck.season === 3;
+    // 1) o tom do ar e a vinheta
+    const [r, g, b, a] = tom(h);
+    gx.fillStyle = 'rgba(' + (r | 0) + ',' + (g | 0) + ',' + (b | 0) + ',' + (a * (st.precip ? 0.5 : 1)).toFixed(3) + ')';
+    gx.fillRect(0, 0, W, H);
+    const vg = gx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(10,8,30,' + (0.35 + dark * 0.3).toFixed(2) + ')');
+    gx.fillStyle = vg; gx.fillRect(0, 0, W, H);
+    // 2) o brilho quente do fogo e das casas (as casas só bem de noite), que cresce com o escuro
+    const sc = G.R.scale(), TS = G.CFG.TILE;
+    if (dark > 0.05) {
+      for (const bd of st.buildings) {
+        if (!bd.built) continue;
+        const fogo = bd.type === 'fogueira' && bd.fuel > 0;
+        const casa = !fogo && bd.type === 'barraca' && dark > 0.3;
+        if (!fogo && !casa) continue;
+        const p = G.R.toScreen((bd.x + (fogo ? 0.5 : 1)) * TS, (bd.y + (fogo ? 0.4 : 0.8)) * TS);
+        const rad = TS * sc * (fogo ? 5 : 1.6) * (1 + Math.sin(now / 120 + bd.id) * (fogo ? 0.04 : 0.01));
+        if (p.x < -rad || p.y < -rad || p.x > W + rad || p.y > H + rad) continue;
+        const gr = fxx.createRadialGradient(p.x, p.y, 0, p.x, p.y, rad);
+        const al = (fogo ? 0.55 : 0.22) * Math.min(1, dark * 1.6);
+        gr.addColorStop(0, 'rgba(255,170,80,' + al.toFixed(3) + ')'); gr.addColorStop(0.5, 'rgba(255,120,40,' + (al * 0.35).toFixed(3) + ')'); gr.addColorStop(1, 'rgba(255,90,20,0)');
+        fxx.fillStyle = gr; fxx.fillRect(p.x - rad, p.y - rad, rad * 2, rad * 2);
+      }
+    }
+    if (calmo) return;
+    // 3) vaga-lumes de noite (menos no inverno e na chuva) e pólen de dia
+    const px = Math.max(1.5, sc * 0.9);
+    if (dark > 0.35 && !inverno && !st.precip) while (flies.length < 26) flies.push({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - 0.5) * 12, vy: (Math.random() - 0.5) * 8, ph: Math.random() * 6, life: 4 + Math.random() * 6 });
+    for (let i = flies.length - 1; i >= 0; i--) {
+      const f = flies[i];
+      f.life -= 1 / 60; f.ph += 0.05; f.x += (f.vx + Math.sin(f.ph) * 8) / 60; f.y += (f.vy + Math.cos(f.ph * 0.7) * 6) / 60;
+      if (f.life <= 0 || dark < 0.3) { flies.splice(i, 1); continue; }
+      const on = Math.max(0, Math.sin(f.ph * 1.6)) * Math.min(1, f.life);
+      if (on < 0.05) continue;
+      const gr = fxx.createRadialGradient(f.x, f.y, 0, f.x, f.y, px * 5);
+      gr.addColorStop(0, 'rgba(230,255,140,' + (0.9 * on).toFixed(3) + ')'); gr.addColorStop(1, 'rgba(180,255,90,0)');
+      fxx.fillStyle = gr; fxx.fillRect(f.x - px * 5, f.y - px * 5, px * 10, px * 10);
+    }
+    if (dark < 0.2 && !st.precip) while (motes.length < 18) motes.push({ x: Math.random() * W, y: Math.random() * H, vx: 4 + Math.random() * 6, vy: -2 - Math.random() * 3, ph: Math.random() * 6, life: 6 + Math.random() * 8 });
+    for (let i = motes.length - 1; i >= 0; i--) {
+      const m = motes[i];
+      m.life -= 1 / 60; m.ph += 0.03; m.x += (m.vx + Math.sin(m.ph) * 5) / 60; m.y += m.vy / 60;
+      if (m.life <= 0 || dark > 0.25) { motes.splice(i, 1); continue; }
+      fxx.fillStyle = 'rgba(255,240,200,' + (0.35 * Math.min(1, m.life / 2)).toFixed(3) + ')';
+      fxx.fillRect(m.x, m.y, px, px);
+    }
+  }
+})(globalThis.G = globalThis.G || {});
+
 /* ---- js/audio.js ---- */
 /* Gods · som (Etapa 6). Tudo nasce aqui mesmo, com Web Audio: nenhum arquivo de áudio.
    Três trilhas com volume próprio (música, ambiente, efeitos) e uma chave geral, guardadas neste aparelho.
@@ -24395,6 +24530,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (!pref.on) ctx.suspend().catch(() => {});
     started = true;
     startAmbient();
+    carregaGravado();
     loop();
   };
   function build(c) {
@@ -24832,6 +24968,24 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     s.connect(fl); fl.connect(g); g.connect(bus.amb); s.start();
     return { s, fl, g };
   }
+  // 0.23: o ambiente gravado (Freesound, CC0; ver CREDITOS.md): pássaros, brisa, riacho, grilos, fogueira e chuva,
+  // em laços de 60 s. Enquanto não carrega (ou se não carregar), fica o sintetizado de sempre
+  const GRAV = ['dia', 'brisa', 'rio', 'noite', 'fogo', 'chuva'];
+  const grav = {};
+  function carregaGravado() {
+    if (typeof fetch !== 'function' || location.protocol === 'file:') return;
+    for (const k of GRAV) {
+      fetch('som/amb/' + k + '.mp3').then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+        .then((b) => new Promise((ok, no) => ctx.decodeAudioData(b, ok, no)))
+        .then((buf) => {
+          const s = ctx.createBufferSource(), g = ctx.createGain();
+          s.buffer = buf; s.loop = true; g.gain.value = 0;
+          s.connect(g); g.connect(bus.amb); s.start(0, Math.random() * buf.duration);
+          grav[k] = g;
+        }).catch(() => { /* fica o sintetizado */ });
+    }
+  }
+  const gravOk = () => GRAV.every((k) => grav[k]);
   function startAmbient() {
     amb = { wind: loopNoise('lowpass', 500, 0.6), rain: loopNoise('bandpass', 1500, 0.5), river: loopNoise('bandpass', 520, 0.6), fire: loopNoise('lowpass', 260, 0.7), gust: loopNoise('bandpass', 1400, 8) };
     // vento que respira: um LFO lento no filtro
@@ -24864,24 +25018,26 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     }
     const night = hour >= 19.5 || hour < 5, dawn = hour >= 5 && hour < 8;
     const a = st ? around(st) : { water: 0.2, fire: 99 };
-    ramp(amb.wind.g.gain, (blizzard ? 0.5 : season === 3 ? 0.2 : storm ? 0.3 : 0.07) + (night ? 0.02 : 0));
+    const gv = gravOk();
+    ramp(amb.wind.g.gain, gv ? (blizzard ? 0.5 : storm ? 0.3 : season === 3 ? 0.1 : 0) : (blizzard ? 0.5 : season === 3 ? 0.2 : storm ? 0.3 : 0.07) + (night ? 0.02 : 0));
     ramp(amb.gust.g.gain, blizzard ? 0.1 : storm ? 0.05 : season === 3 ? 0.02 : 0);
-    ramp(amb.rain.g.gain, precip === 'chuva' ? (storm ? 0.42 : 0.26) : precip === 'neve' ? 0.05 : 0, 1.2);
-    ramp(amb.river.g.gain, Math.min(0.28, a.water * 0.5) * near * (season === 3 ? 0.6 : 1));
+    ramp(amb.rain.g.gain, precip === 'chuva' ? (gv ? (storm ? 0.2 : 0) : storm ? 0.42 : 0.26) : precip === 'neve' && !gv ? 0.05 : 0, 1.2);
+    ramp(amb.river.g.gain, gv ? 0 : Math.min(0.28, a.water * 0.5) * near * (season === 3 ? 0.6 : 1));
     const fireG = a.fire < 12 ? (1 - a.fire / 12) * 0.22 * near : 0;
-    ramp(amb.fire.g.gain, fireG, 0.4);
+    ramp(amb.fire.g.gain, gv ? 0 : fireG, 0.4);
+    if (gv) gravado(hour, season, precip, a, near);
     const busy = voices > 40;
     // estalos do fogo
-    if (fireG > 0.02 && t > nextCrack && !busy) { nextCrack = t + 0.05 + Math.random() * 0.35; crackle(t, bus.amb, fireG * 2.2); }
+    if (!gv && fireG > 0.02 && t > nextCrack && !busy) { nextCrack = t + 0.05 + Math.random() * 0.35; crackle(t, bus.amb, fireG * 2.2); }
     // pássaros de dia (menos no inverno, nada na chuva); coro no amanhecer
-    if (!night && !precip && season !== 3 && t > nextChirp && !busy) {
+    if (!gv && !night && !precip && season !== 3 && t > nextChirp && !busy) {
       nextChirp = t + (dawn ? 0.4 : 1.2) + Math.random() * (dawn ? 1.2 : 3.5);
       const f = 2200 + Math.random() * 2600, n = 1 + Math.floor(Math.random() * 4), pan = Math.random() * 1.4 - 0.7;
       const o = out(bus.amb, pan, 0.2);
       for (let i = 0; i < n; i++) tone('sine', f, t + i * 0.11, 0.005, 0.07, 0.035, o, f * (0.8 + Math.random() * 0.5));
     }
     // grilos de noite (não no inverno)
-    if (night && season !== 3 && !precip && t > nextCricket && !busy) {
+    if (!gv && night && season !== 3 && !precip && t > nextCricket && !busy) {
       nextCricket = t + 0.35 + Math.random() * 0.5;
       const f = 4200 + Math.random() * 500, o = out(bus.amb, Math.random() * 1.2 - 0.6);
       for (let i = 0; i < 3; i++) tone('sine', f, t + i * 0.045, 0.003, 0.025, 0.012, o);
@@ -24902,6 +25058,21 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (st && t > nextWork && speed > 0) { nextWork = t + 0.18; workSounds(st); }
     // Etapa 10: a bicharada do curral (o galo canta de madrugada)
     if (st && st.campo && st.campo.bichos.length && t > nextFarm && speed > 0 && !busy) farmSounds(st, t, dawn);
+  }
+  // as camadas gravadas cruzam conforme a hora, a chuva e o que está perto da câmera (água e fogo)
+  function gravado(hour, season, precip, a, near) {
+    const inv = season === 3, chuva = precip === 'chuva';
+    const noite = hour >= 19.5 || hour < 4.8 ? 1 : hour >= 18.5 ? hour - 18.5 : hour < 5.8 ? 5.8 - hour : 0;
+    const aurora = hour >= 5 && hour < 8 ? 1.3 : 1;
+    const alvo = {
+      dia: (1 - noite) * (inv ? 0.2 : 0.75) * aurora * (chuva ? 0.15 : 1),
+      brisa: 0.3 + (inv ? 0.25 : 0) + (precip ? 0.12 : 0),
+      rio: Math.min(1, a.water * 1.6) * 0.95 * near,
+      noite: noite * (inv ? 0.12 : 0.7) * (chuva ? 0.2 : 1),
+      fogo: a.fire < 14 ? (1 - a.fire / 14) * 1.0 * near : 0,
+      chuva: chuva ? 0.95 : precip === 'neve' ? 0.1 : 0,
+    };
+    for (const k of GRAV) ramp(grav[k].gain, alvo[k], 1.5);
   }
   const WORK_SFX = { madeira: ['machado', 0.75], pedra: ['pedra', 0.6], construir: ['martelo', 0.55], oficio: ['lasca', 0.9], argila: ['cavar', 1.1], agua: ['agua', 1.6], frutas: ['colher', 1.1], pesca: ['agua', 4.5], conservar: ['colher', 1.5],
     caminho: ['cavar', 0.9], tabuas: ['serra', 0.9], tecido: ['tear', 0.8], cerca: ['martelo', 0.7], plant: ['enxada', 0.9], weed: ['enxada', 0.7], harvest: ['colher', 1],
@@ -24989,6 +25160,37 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     }
     return notes;
   }
+  // 0.23: nas horas calmas, faixas gravadas (cynicmusic, CC0) com silêncio entre elas; festa, perigo, história e
+  // flauta seguem gerados, porque acompanham o momento
+  const FAIXAS = ['another-august', 'november-snow', 'happy-lullaby', 'town-theme'];
+  const CALMO = { dia: 1, tarde: 1, noite: 1, inverno: 1 };
+  let faixa = null;
+  function faixaTick(t, calmo) {
+    if (!faixa) {
+      if (location.protocol === 'file:' || typeof Audio !== 'function') return false;
+      const el = new Audio();
+      el.preload = 'none';
+      let g;
+      try { const src = ctx.createMediaElementSource(el); g = ctx.createGain(); g.gain.value = 0; src.connect(g); g.connect(bus.music); } catch (e) { faixa = { falhou: 9 }; return false; }
+      faixa = { el, g, i: Math.floor(Math.random() * FAIXAS.length), pausaAte: performance.now() + 6000, parar: 0, falhou: 0 };
+      el.addEventListener('ended', () => { faixa.pausaAte = performance.now() + 25000 + Math.random() * 45000; });
+      el.addEventListener('error', () => { faixa.falhou++; faixa.pausaAte = performance.now() + 5000; });
+    }
+    const f = faixa;
+    if (f.falhou > 2) return false;
+    const agora = performance.now(), escuro = S && G.R ? G.R.darkness(S.ck.hour) > 0.4 : false;
+    f.g.gain.setTargetAtTime(calmo ? (escuro ? 0.65 : 0.85) : 0, t, calmo ? 1.5 : 0.4);
+    if (!calmo) {
+      if (!f.el.paused) { if (!f.parar) f.parar = agora + 1500; else if (agora > f.parar) { f.el.pause(); f.parar = 0; } }
+      return false;
+    }
+    f.parar = 0;
+    if (f.el.paused && agora > f.pausaAte) {
+      if (f.el.src && !f.el.ended && f.el.currentTime > 0) f.el.play().catch(() => {});
+      else { f.i = (f.i + 1 + Math.floor(Math.random() * (FAIXAS.length - 1))) % FAIXAS.length; f.el.src = 'som/musica/' + FAIXAS[f.i] + '.mp3'; f.el.play().catch(() => {}); }
+    }
+    return true;
+  }
   function musicTick() {
     const t = T();
     mus.want = wantMood(S);
@@ -25001,6 +25203,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     }
     const m = MOODS[mus.mood];
     if (!mus.gain) { mus.gain = ctx.createGain(); mus.gain.connect(bus.music); mus.gain.gain.value = 0; }
+    if (faixaTick(t, !!CALMO[mus.mood])) { mus.gain.gain.setTargetAtTime(0, t, 0.5); droneOff(); return; }
     mus.gain.gain.setTargetAtTime(m.vol, t, 1.2);
     if (t < mus.restUntil) { droneOff(); return; }
     if (m.drone) droneOn(m); else droneOff();
@@ -28775,6 +28978,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const dt = lastT ? Math.min(0.25, (now - lastT) / 1000) : 0;
     lastT = now;
     if (G.Audio) G.Audio.frame(S && (mode === 'game' || mode === 'over') && !holdSim ? S : null, mode, mode === 'game' ? speed : 1);
+    if (G.Clima) G.Clima.frame(S && mode === 'game' ? S : null);   // 0.23: o tom do ar e a luz
     if (mode === 'title') {
       R.cam.x += demoDir.x * 7 * dt; R.cam.y += demoDir.y * 7 * dt;
       if (demo && (R.cam.x < 30 * TS || R.cam.x > (demo.W - 30) * TS)) demoDir.x *= -1;
@@ -28830,6 +29034,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // ---------- início ----------
   function boot(data) {
     A.build();
+    if (G.Clima) G.Clima.init();
     R.init($('#view'));
     if (G.Audio) G.Audio.init();
     UI.init({
