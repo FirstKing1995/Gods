@@ -6,7 +6,17 @@ const path = require('path');
 const { makeGas } = require('./gas-mock');
 const root = path.join(__dirname, '..');
 let shift = 0;
-const g = makeGas({ now: () => Date.now() + shift });
+// 0.25: a IA de mentira responde no formato de cada tipo (para ver as telas sem gastar a cota do Groq)
+const IA_TESTE = (url, o) => {
+  const sys = JSON.parse(o.payload).messages[0].content;
+  const t = /"Nome: fala"/.test(sys) ? 'Iara: Você viu o rio hoje?\nAruã: Vi. Está mais cheio que ontem.\nIara: Então amanhã a pesca rende.'
+    : /"Nome: " e o nome que o povo/.test(sys) ? 'Nome: Fio-de-Embira\nCeci torceu a fibra até os dedos arderem, e o fio aguentou o peso de uma criança.'
+    : /"Nome: ". Depois/.test(sys) ? 'Nome: Casa do Primeiro Fogo\nFoi ali que o povo dormiu pela primeira vez sem medo da noite.'
+    : /"Título: "/.test(sys) ? 'Título: Quando a Pedra Aprendeu a Cortar\nContam os velhos que, no começo, a pedra era surda. Até que um homem bateu nela com paciência, e ela respondeu com um gume.'
+    : 'Estou aqui, Deus. A noite foi fria, mas o fogo segurou.';
+  return { code: 200, body: { choices: [{ message: { content: t } }] } };
+};
+const g = makeGas({ now: () => Date.now() + shift, fetch: IA_TESTE });
 g.ctx.setup();
 g.gas._props.set('GROQ_API_KEY', 'teste-local');   // 0.24: a voz responde com a fala de teste do gas-mock
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.png': 'image/png' };

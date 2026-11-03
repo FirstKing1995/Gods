@@ -112,6 +112,7 @@
       mar: S.mar || null,   // Etapa 18: a viagem, as terras achadas, as colônias
       eras: S.eras || null,   // Etapas 19 e 20: a idade, o rumo, a magia
       avatar: S.avatar || null,   // Etapa 21: quem está possuído, as horas de cada um, a pergunta
+      ia: S.ia || null,   // 0.25: o que a IA já escreveu (nomes, histórias das obras) e o que já viu
       visita: S.visita || null,   // Etapa 22: a abertura do mundo e os recados já aplicados
       povo: S.povo || null,   // 0.16: o nome e o título do lugar
     };
@@ -170,6 +171,7 @@
       mar: d.mar || null,
       eras: d.eras || null,
       avatar: d.avatar || null,
+      ia: d.ia || null,
       visita: d.visita || null,
       povo: d.povo || null,
     };

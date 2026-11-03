@@ -273,6 +273,7 @@
     $('#pessoa-list').addEventListener('click', () => UI.showList());
     $('#inspector').addEventListener('click', (e) => {
       const b = e.target.closest('[data-act]'); if (!b || !S) return;
+      if (b.dataset.act === 'ia-conversa' && G.Ia) { G.Ia.conversa(S, S.people.find((q) => q.id === UI.sel.person)); return; }   // 0.25
       if (b.dataset.act === 'voz' && G.Voz) { G.Voz.abrir(S, S.people.find((q) => q.id === UI.sel.person)); return; }   // 0.24
       if (b.dataset.act === 'av-possuir' && G.Avatar) { const r = G.Avatar.possuir(S, UI.sel.person); if (!r.ok) UI.toast('Agora não: ' + r.why + '.', 'warn'); else if (UI.hooks.follow) UI.hooks.follow(UI.sel.person); return; }   // Etapa 21
       if (b.dataset.act === 'av-soltar' && G.Avatar) { G.Avatar.soltar(S); return; }
@@ -789,7 +790,7 @@
     const html = pr.map((p) => {
       const h = Math.max(0, Math.ceil((p.prayer.until - S.t) / 60));
       const help = G.God.MIRACLES[G.God.PRAYER_HELP[p.prayer.kind]].name;
-      return `<li><button data-pid="${p.id}"><span class="q">“${esc(p.prayer.text)}”</span><span class="meta">${esc(p.name)} · faltam ${h} h · atenda com ${help}</span></button></li>`;
+      return `<li><button data-pid="${p.id}"><span class="q">“${esc(p.prayer.ia || p.prayer.text)}”</span><span class="meta">${esc(p.name)} · faltam ${h} h · atenda com ${help}</span></button></li>`;
     }).join('');
     setHTML($('#prayers'), html);
     const bd = $('#badge-deus');
@@ -878,7 +879,7 @@
         estado: state ? `<p class="small preg">${esc(state)}</p>` : '',
         deus: godLine,
         rito: ritoLine(p),
-        reza: p.prayer ? `<p class="story">Reza: “${esc(p.prayer.text)}”</p>` : '',
+        reza: p.prayer ? `<p class="story">Reza: “${esc(p.prayer.ia || p.prayer.text)}”</p>` : '',
         voz: G.Voz && G.Voz.pode(S, p) ? '<div class="chips"><button type="button" class="btn btn-small btn-gold" data-act="voz" title="Falar com esta pessoa">Conversar</button></div>' : '',   // 0.24
         tracos: `<div class="chips">${indoleChips(p)}${p.traits.map((t) => `<span class="chip" title="${esc(Sim.TRAIT_DESC[t])}">${esc(t)}</span>`).join('')}${criadoChip(p)}</div>`,
         soc: socLine(p) + avatarLine(p),   // Etapa 14: a pena, o descontentamento, o que só Deus viu; Etapa 21: o avatar
@@ -891,7 +892,7 @@
         jeito: jeitoHTML(p),   // Etapa 15: os gostos, o jeito que aprendeu, as técnicas que domina
         lembrancas: mems ? sec('Lembranças', `<ul class="mems">${mems}</ul>`) : '',
         contos: contosPessoa(p),
-        conversa: talk,
+        conversa: talk + (G.Ia && G.Ia.podeConversa(S, p) ? '<div class="chips"><button type="button" class="btn btn-small" data-act="ia-conversa">Ouvir a conversa inteira</button></div>' : ''),   // 0.25
       };
       let box = el.firstElementChild;
       if (!box) { el.innerHTML = '<div class="insp"></div>'; box = el.firstElementChild; }
@@ -957,7 +958,8 @@
     const opts = Sim.upgrades(S, b);
     // 0.12: a obra pode estar sendo desmontada, mudando de lugar, sendo erguida de novo, ou ser só o lugar reservado
     const mov = b.site ? 's' : b.demol ? (b.demol.site ? 'm' : 'd') : b.re ? 'r' : '';
-    const sig = b.id + ':' + (d.lv || 1) + (d.kind || '') + (b.built ? 1 : 0) + mov + (b.up ? 'u' + b.up.lv + (b.up.kind || '') : '') + '|' + opts.map((o) => (o.kind || '') + (o.why ? 0 : 1)).join(',');
+    const nomeIa = S.ia && S.ia.obras && S.ia.obras[b.id];   // 0.25: o nome que o povo deu e a história
+    const sig = (nomeIa ? 'n' : '') + b.id + ':' + (d.lv || 1) + (d.kind || '') + (b.built ? 1 : 0) + mov + (b.up ? 'u' + b.up.lv + (b.up.kind || '') : '') + '|' + opts.map((o) => (o.kind || '') + (o.why ? 0 : 1)).join(',');
     if (lastInsp !== sig) {
       lastInsp = sig;
       $('#obra-title').textContent = d.name;
@@ -971,6 +973,7 @@
         !b.built ? btn('remove', 'Cancelar obra') :
         (Sim.canMove(S, b) ? btn('move', 'Mudar de lugar', 'mover') : '') + btn('demolish', 'Demolir', 'demolir');
       el.innerHTML = `<div class="insp">
+        ${nomeIa ? '<p class="story"><b>' + esc(nomeIa.nome) + '.</b> ' + esc(nomeIa.hist) + '</p>' : ''}
         ${lv}
         <p class="small muted">${esc(d.desc)}</p>
         <p class="small" id="bstatus"></p>
@@ -1947,7 +1950,9 @@
   };
   function addChron(c, toast) {
     const li = document.createElement('li');
-    li.innerHTML = `<span class="when">${esc(Sim.dateText(c.t))}</span><span class="what">${esc(c.text)}</span>`;
+    if (c.lenda || c.mito) li.className = 'lenda';   // 0.25: as lendas e os mitos que a IA escreveu
+    li.innerHTML = `<span class="when">${esc(Sim.dateText(c.t))}${c.lenda ? ' · lenda' : c.mito ? ' · mito' : ''}</span>` + (c.titulo ? `<span class="what"><b>${esc(c.titulo)}</b></span>` : '') + `<span class="what">${esc(c.text)}</span>` +
+      (c.ia ? `<span class="what ia">${c.iaNome ? '<b>' + esc(c.iaNome) + '.</b> ' : ''}${esc(c.ia)}</span>` : '');
     const list = $('#chron');
     list.insertBefore(li, list.firstChild);
     if (toast) UI.toast(c.text, 'chron');

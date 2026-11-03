@@ -138,6 +138,24 @@ ok(!r.ok && /desconhecida/.test(r.erro), 'ação desconhecida responde erro');
   ok(!ultima.ok && ultima.cota, 'teto de falas por conta a cada dia');
 }
 
+// ---------- 0.25: a IA nos momentos importantes ----------
+{
+  const T = g.post({ action: 'cadastrar', nome: 'Narrador', email: 'n@ia.com', senha: 'segredo1' }).token;
+  let v = g.post({ action: 'narrar', token: T, tipo: 'descoberta', fatos: 'Ceci torceu fibra de embira: o povo inventou a corda.' });
+  const corpo = JSON.parse(g.gas._fetches[g.gas._fetches.length - 1].o.payload);
+  ok(v.ok && v.texto === 'Estou aqui, Deus.' && /Nome:/.test(corpo.messages[0].content) && /Ceci torceu/.test(corpo.messages[1].content), 'narrar: o tipo traz o pedido certo e os fatos vão junto (sem asteriscos na volta)');
+  ok(corpo.max_tokens === 220, 'cada tipo tem o tamanho dele');
+  ok(!g.post({ action: 'narrar', token: T, tipo: 'explodir', fatos: 'x' }).ok, 'narrar: tipo que não existe é recusado');
+  ok(!g.post({ action: 'narrar', token: T, tipo: 'lenda', fatos: '  ' }).ok, 'narrar: sem fatos, não pede');
+  ok(!g.post({ action: 'narrar', tipo: 'lenda', fatos: 'x' }).ok, 'narrar: sem conta, não pede');
+  // o balde do que o jogo pede sozinho é separado do balde das falas do jogador
+  let ultima = null;
+  for (let i = 0; i < 25; i++) ultima = g.post({ action: 'narrar', token: T, tipo: 'obra', fatos: 'obra ' + i });
+  ok(!ultima.ok && ultima.cota, 'narrar: teto do que o jogo pede sozinho (20 por dia)');
+  v = g.post({ action: 'narrar', token: T, tipo: 'conversa', fatos: 'Iara e Aruã.' });
+  ok(v.ok, 'o que o jogador pede (conversa, decisão) usa o outro balde e continua');
+}
+
 async function cliente() {
   const vm = require('vm'), fs = require('fs'), path = require('path');
   let calls = [], plan = [];
