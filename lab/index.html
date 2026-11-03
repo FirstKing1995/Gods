@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Gods</title>
+<meta name="description" content="Um casal. Um lugar. Todas as eras. Simulador de sobrevivência em pixel art em que você é Deus.">
+<meta name="theme-color" content="#181425">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400;1,600&family=Pixelify+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="css/digits.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-mode="title">
+<!--BODY-->
+<canvas id="view" aria-label="Mundo do jogo"></canvas>
+<div id="fx" aria-hidden="true"></div>
+
+<!-- título -->
+<section id="scr-title" class="screen">
+  <div class="title-card">
+    <h1 class="wordmark">Gods</h1>
+    <p class="pitch">Um casal. Um lugar. Todas as eras.</p>
+    <p class="title-lede">Você escolhe onde eles chegam. O resto, eles aprendem: o fogo, a casa, o luto, a fé em você.</p>
+    <div class="title-actions">
+      <p id="acct-line" class="small acct-line" hidden></p>
+      <button id="btn-continue" class="btn btn-gold" hidden>Continuar</button>
+      <p id="continue-info" class="small muted" hidden></p>
+      <button id="btn-new" class="btn">Novo mundo</button>
+      <button id="btn-mundos" class="btn btn-small" hidden>Seus mundos</button>
+      <div id="acct-actions" class="acct-actions" hidden>
+        <button id="btn-login" class="btn btn-small">Entrar</button>
+        <button id="btn-signup" class="btn btn-small">Criar conta</button>
+      </div>
+      <div class="acct-actions">
+        <button id="btn-ranking" class="btn btn-small" hidden>Ranking</button>
+        <button id="btn-logout" class="btn btn-small" hidden>Sair da conta</button>
+      </div>
+    </div>
+    <p class="small muted title-foot">Você é Deus. Eles vão precisar de você.</p>
+  </div>
+</section>
+
+<!-- 0.16: os mundos guardados neste aparelho -->
+<div id="modal-mapa" class="modal" hidden>
+  <div class="panel modal-card mapa-card">
+    <h2>O mundo</h2>
+    <p id="mapa-info" class="small muted"></p>
+    <div class="mapa-wrap"><canvas id="mapa-cv"></canvas></div>
+    <ul id="mapa-legenda" class="mapa-legenda"></ul>
+    <div id="mapa-terras" class="mapa-terras"></div>
+    <div class="modal-actions"><button type="button" id="btn-deuses" class="btn">Outros deuses</button><button type="button" id="btn-mapa-close" class="btn">Fechar</button></div>
+  </div>
+</div>
+<div id="modal-filho" class="modal" hidden>
+  <div class="panel modal-card">
+    <h2 id="filho-titulo">Uma pergunta</h2>
+    <p id="filho-texto" class="story"></p>
+    <div id="filho-opcoes" class="modal-actions filho-opcoes"></div>
+  </div>
+</div>
+<div id="modal-deuses" class="modal" hidden>
+  <div class="panel modal-card mapa-card">
+    <h2>Outros deuses</h2>
+    <p class="small muted">Visite o mundo de outro jogador como ele foi salvo pela última vez. Ajudar e sabotar custam o seu Poder, têm teto por dia e nunca matam ninguém. O recado chega quando o dono abrir o jogo.</p>
+    <div id="deuses-abertura" class="av-acoes"></div>
+    <div id="deuses-corpo"></div>
+    <div class="modal-actions"><button type="button" id="btn-deuses-close" class="btn">Fechar</button></div>
+  </div>
+</div>
+<div id="modal-mundos" class="modal" hidden>
+  <div class="panel modal-card mundos-card">
+    <h2>Seus mundos</h2>
+    <p class="small muted">Cada mundo segue guardado neste aparelho. Começar outro não apaga nenhum.</p>
+    <ul id="mundos-list" class="mundos-list"></ul>
+    <div class="modal-actions">
+      <button type="button" id="btn-mundos-close" class="btn">Fechar</button>
+      <button type="button" id="btn-mundos-new" class="btn btn-gold">Novo mundo</button>
+    </div>
+  </div>
+</div>
+
+<!-- escolha do local -->
+<section id="scr-site" class="screen" hidden>
+  <header class="site-bar panel">
+    <div>
+      <h2>Escolha onde o casal vai morar</h2>
+      <p class="small muted">Toque no mapa. Água perto, árvores, pedras e pitangueiras ajudam no primeiro inverno.</p>
+    </div>
+    <div class="site-bar-actions">
+      <div id="size-opts" class="seg-group" role="group" aria-label="Tamanho do mundo"></div>
+      <span id="seed-label" class="small muted"></span>
+      <button id="btn-reroll" class="btn btn-small">Outro mundo</button>
+    </div>
+  </header>
+  <aside id="site-card" class="panel site-card">
+    <h3 id="site-title">Nenhum lugar escolhido</h3>
+    <dl id="site-stats" class="site-stats"></dl>
+    <p id="site-reason" class="small warn" hidden></p>
+    <button id="btn-start" class="btn btn-gold" disabled>Começar aqui</button>
+  </aside>
+</section>
+
+<!-- nomes do casal -->
+<div id="modal-names" class="modal" hidden>
+  <form id="form-names" class="panel modal-card">
+    <h2>Quem vai chegar?</h2>
+    <p class="story">Dois viajantes, sem nada além das mãos e de uma cesta com frutas.</p>
+    <label for="name-f">Ela</label>
+    <div class="name-row"><input id="name-f" maxlength="14" autocomplete="off" required><button type="button" class="btn btn-small" data-roll="F">Sortear</button></div>
+    <label for="name-m">Ele</label>
+    <div class="name-row"><input id="name-m" maxlength="14" autocomplete="off" required><button type="button" class="btn btn-small" data-roll="M">Sortear</button></div>
+    <fieldset class="narr-pick">
+      <legend>Narrador: quem conta esta história</legend>
+      <div id="narr-opts" class="narr-opts" role="radiogroup" aria-label="Narrador"></div>
+    </fieldset>
+    <div class="modal-actions">
+      <button type="button" id="btn-names-back" class="btn">Voltar</button>
+      <button type="submit" class="btn btn-gold">Enviar o casal</button>
+    </div>
+  </form>
+</div>
+
+<!-- conta -->
+<div id="modal-acct" class="modal" hidden>
+  <form id="form-acct" class="panel modal-card" novalidate>
+    <h2 id="acct-title">Entrar</h2>
+    <p class="story">A conta guarda o seu mundo na nuvem. Dá para continuar de outro aparelho.</p>
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" data-tab="entrar" class="on">Entrar</button>
+      <button type="button" role="tab" data-tab="criar">Criar conta</button>
+    </div>
+    <label for="acct-nome" class="only-criar">Nome</label>
+    <input id="acct-nome" class="only-criar" maxlength="24" autocomplete="nickname">
+    <label for="acct-email">E-mail</label>
+    <input id="acct-email" type="email" autocomplete="email">
+    <label for="acct-senha">Senha</label>
+    <input id="acct-senha" type="password" autocomplete="current-password">
+    <p id="acct-erro" class="small warn" hidden></p>
+    <div class="modal-actions">
+      <button type="button" id="acct-cancel" class="btn">Voltar</button>
+      <button type="submit" id="acct-submit" class="btn btn-gold">Entrar</button>
+    </div>
+  </form>
+</div>
+
+<!-- ranking -->
+<div id="modal-rank" class="modal" hidden>
+  <div class="panel modal-card">
+    <h2>Ranking dos povos</h2>
+    <p class="small muted">Os mundos que atravessaram mais anos.</p>
+    <ol id="rank-list" class="rank"></ol>
+    <div class="modal-actions"><span></span><button id="rank-close" class="btn">Fechar</button></div>
+  </div>
+</div>
+
+<!-- tempo fora -->
+<div id="modal-away" class="modal" hidden>
+  <div class="panel modal-card away-card">
+    <h2 id="away-title">Enquanto você esteve fora…</h2>
+    <p id="away-lead" class="story"></p>
+    <div id="away-bar" class="bar poder" hidden><i></i></div>
+    <dl id="away-stats" class="site-stats"></dl>
+    <ol id="away-chron" class="chron"></ol>
+    <div class="modal-actions"><span></span><button id="away-now" type="button" class="btn" hidden>Entrar agora</button><button id="away-ok" class="btn btn-gold">Voltar ao meu povo</button></div>
+  </div>
+</div>
+
+<!-- nascimento: Deus dá o nome -->
+<div id="modal-birth" class="modal" hidden>
+  <form id="form-birth" class="panel modal-card birth-card">
+    <img id="birth-ico" class="ico ico-lg" alt="">
+    <h2 id="birth-title">Nasceu uma criança!</h2>
+    <p id="birth-lead" class="story"></p>
+    <label for="birth-name">Nome</label>
+    <div class="name-row"><input id="birth-name" maxlength="14" autocomplete="off" required><button type="button" class="btn btn-small" id="birth-roll">Sortear</button></div>
+    <div class="modal-actions"><span class="small muted">O jogo fica pausado até você decidir.</span><button type="submit" class="btn btn-gold">Dar o nome</button></div>
+  </form>
+</div>
+
+<!-- viajantes pedem abrigo: acolher ou mandar seguir -->
+<div id="modal-choice" class="modal" hidden>
+  <div class="panel modal-card choice-card" role="dialog" aria-labelledby="choice-title">
+    <img id="choice-ico" class="ico ico-lg" alt="">
+    <h2 id="choice-title">Alguém pede abrigo</h2>
+    <p id="choice-lead" class="story"></p>
+    <ul id="choice-people" class="choice-people"></ul>
+    <p id="choice-note" class="small muted"></p>
+    <div class="modal-actions">
+      <button type="button" id="choice-no" class="btn">Mandar seguir</button>
+      <button type="button" id="choice-yes" class="btn btn-gold">Acolher</button>
+    </div>
+  </div>
+</div>
+
+<!-- descobertas: a trilha da Era da Família -->
+<div id="modal-disc" class="modal" hidden>
+  <div class="panel modal-card disc-card" role="dialog" aria-labelledby="disc-title">
+    <h2 id="disc-title">Descobertas</h2>
+    <div class="tabs disc-tabs" role="tablist">
+      <button type="button" role="tab" data-dtab="trilha" class="on">Trilha</button>
+      <button type="button" role="tab" data-dtab="inv">Invenções <span id="inv-count"></span></button>
+      <button type="button" role="tab" data-dtab="campo">Campo <span id="campo-count"></span></button>
+      <button type="button" role="tab" data-dtab="mina">Metais <span id="mina-count"></span></button>
+    </div>
+    <p id="disc-intro" class="small muted"></p>
+    <ol id="disc-list" class="disc-list"></ol>
+    <ul id="inv-list" class="disc-list" hidden></ul>
+    <ul id="campo-list" class="disc-list" hidden></ul>
+    <ul id="mina-list" class="disc-list" hidden></ul>
+    <p id="disc-era" class="small disc-era"></p>
+    <div class="modal-actions"><span></span><button id="disc-close" class="btn">Fechar</button></div>
+  </div>
+</div>
+
+<!-- fim da Era da Família (portão do MVP) -->
+<div id="modal-era" class="modal" hidden>
+  <div class="panel modal-card era-card" role="dialog" aria-labelledby="era-title">
+    <img id="era-ico" class="ico ico-lg" alt="">
+    <h2 id="era-title">A Era da Família chegou ao fim</h2>
+    <p id="era-lead" class="story"></p>
+    <dl id="era-stats" class="site-stats"></dl>
+    <p class="small muted">Agora vem a aldeia: novas metas pedem casas, oficinas e caminhos. As próximas eras chegam nas próximas versões. O jogo continua.</p>
+    <div class="modal-actions"><span></span><button id="era-ok" class="btn btn-gold">Continuar</button></div>
+  </div>
+</div>
+
+<!-- Deus (Etapa 11): níveis e dons, escolhidos, grandes atos -->
+<div id="modal-deus" class="modal" hidden>
+  <div class="panel modal-card deus-card" role="dialog" aria-labelledby="deus-mtitle">
+    <h2 id="deus-mtitle">Deus</h2>
+    <div class="tabs deus-tabs" role="tablist">
+      <button type="button" role="tab" data-gtab="nivel" class="on">Níveis e dons</button>
+      <button type="button" role="tab" data-gtab="escolhidos">Escolhidos</button>
+      <button type="button" role="tab" data-gtab="atos">Grandes atos</button>
+      <button type="button" role="tab" data-gtab="povos">Povos</button>
+      <button type="button" role="tab" data-gtab="memoria">Memória</button>
+      <button type="button" role="tab" data-gtab="sociedade">Sociedade</button>
+    </div>
+    <div id="deus-body" class="deus-body"></div>
+    <div class="modal-actions"><span id="deus-poder" class="small muted"></span><button id="deus-close" class="btn">Fechar</button></div>
+  </div>
+</div>
+<!-- Deus sobe de nível: o nome que o povo dá e o dom -->
+<div id="modal-dom" class="modal" hidden>
+  <form id="form-dom" class="panel modal-card dom-card" role="dialog" aria-labelledby="dom-title">
+    <img id="dom-ico" class="ico ico-lg" alt="">
+    <h2 id="dom-title">Deus</h2>
+    <p id="dom-lead" class="story"></p>
+    <div id="dom-body" class="dom-body"></div>
+    <div class="modal-actions"><span class="small muted">O jogo fica pausado até você decidir.</span><button type="submit" id="dom-ok" class="btn btn-gold">Escolher</button></div>
+  </form>
+</div>
+<!-- árvore da família -->
+<div id="modal-tree" class="modal" hidden>
+  <div class="panel modal-card tree-card">
+    <h2>Árvore da família</h2>
+    <p class="small muted">Pares só entre adultos e nunca entre parentes próximos. Cada um pode ter mais de um par; o arco pontilhado liga pares que não estão lado a lado.</p>
+    <div id="tree" class="tree"></div>
+    <div class="modal-actions"><span></span><button id="tree-close" class="btn">Fechar</button></div>
+  </div>
+</div>
+
+<!-- HUD -->
+<div id="hud" hidden>
+  <header id="topbar">
+    <div class="almanac panel" id="almanac">
+      <img id="season-ico" class="ico ico-lg" alt="">
+      <div>
+        <div class="season-line"><b id="season-name">Primavera</b> <span id="season-day">dia 1</span></div>
+        <div class="small muted"><span id="year-label">Ano 1</span> · <span id="forecast">Inverno em 45 dias</span></div>
+        <div id="event-line" class="event-line small" hidden><img class="ico" alt=""><span></span></div>
+      </div>
+    </div>
+    <div class="clock panel" id="clockbox">
+      <span id="clock">07:00</span>
+      <img id="weather-ico" class="ico" alt="">
+      <span id="temp">16 °C</span>
+    </div>
+    <div class="speed panel" role="group" aria-label="Velocidade do tempo">
+      <button class="spd" data-speed="0" title="Pausar (espaço)" aria-label="Pausar">❚❚</button>
+      <button class="spd" data-speed="1" title="Tecla 1">1x</button>
+      <button class="spd" data-speed="2" title="Tecla 2">2x</button>
+      <button class="spd" data-speed="3" title="Tecla 3">5x</button>
+      <button class="spd" data-speed="4" title="Tecla 4">10x</button>
+      <button class="spd" data-speed="5" title="Tecla 5">20x</button>
+      <button class="spd" data-speed="6" title="Tecla 6">50x</button>
+      <button id="btn-menu" class="spd" title="Menu" aria-label="Menu">≡</button>
+    </div>
+  </header>
+
+  <div id="menu" class="panel menu" hidden role="dialog" aria-label="Menu">
+    <div class="menu-head"><h2>Menu</h2><button id="menu-close" class="btn btn-small" aria-label="Fechar o menu">Fechar</button></div>
+    <button id="menu-save" class="btn btn-small">Salvar agora</button>
+    <button id="menu-title" class="btn btn-small">Voltar ao título</button>
+    <p id="save-status" class="small muted">O jogo salva sozinho a cada minuto.</p>
+    <label class="small muted" for="menu-narr">Narrador</label>
+    <select id="menu-narr" class="select"></select>
+    <p id="narr-desc" class="small muted"></p>
+    <label class="small muted" for="menu-offline">Tempo com o jogo fechado</label>
+    <select id="menu-offline" class="select"></select>
+    <label class="small muted" for="menu-tom">Tom do mundo</label>
+    <select id="menu-tom" class="select">
+      <option value="leve">Leve: sem noites picantes</option>
+      <option value="picante">Picante: insinuado</option>
+      <option value="adulto">Adulto (+18): sem rodeio</option>
+    </select>
+    <p id="tom-desc" class="small muted"></p>
+    <div class="menu-sound" role="group" aria-label="Som">
+      <label class="chk"><input type="checkbox" id="snd-on"> Som</label>
+      <label class="small muted" for="snd-music">Música</label><input type="range" id="snd-music" min="0" max="100" step="5">
+      <label class="small muted" for="snd-amb">Ambiente</label><input type="range" id="snd-amb" min="0" max="100" step="5">
+      <label class="small muted" for="snd-sfx">Efeitos</label><input type="range" id="snd-sfx" min="0" max="100" step="5">
+    </div>
+    <p class="small muted keys">Espaço pausa · 1 a 5 velocidade · F fogueira · B barraca · G armazém · M moquém · J jirau · O forno · K marcenaria · L tecelagem · H roça · Y curral · P caminho · X cerca · Q calor · R raio · U chuva · E cura · V revelação · Z bênção · C crônica · T árvore · I descobertas · N som · Esc fecha · roda do mouse aproxima</p>
+  </div>
+
+  <div id="stock" class="panel stock" aria-label="Estoque"></div>
+
+  <aside id="p-vontades" class="panel sheet" data-sheet="vontades">
+    <h2>Vontades</h2>
+    <p class="story sub">O que seu povo deve priorizar.</p>
+    <div id="vontades"></div>
+    <h2 class="goals-title" id="goals-title">Metas do Ato 1</h2>
+    <ol id="goals" class="goals"></ol>
+  </aside>
+
+  <div id="col-right">
+    <aside id="p-obra" class="panel sheet" data-sheet="obra" aria-label="Obra">
+      <div class="obra-head"><h2 id="obra-title">Obra</h2><button id="obra-close" class="btn btn-small" aria-label="Fechar o painel da obra">Fechar</button></div>
+      <div id="obra"></div>
+    </aside>
+    <!-- a ficha de quem foi escolhido no mapa ou na lista: caixa própria, no lugar do painel da obra -->
+    <aside id="p-pessoa" class="panel sheet" data-sheet="pessoa" aria-label="Ficha da pessoa">
+      <div class="pessoa-head">
+        <div class="pessoa-id"><h2 id="pessoa-title">Pessoa</h2><p id="pessoa-sub" class="small muted"></p></div>
+        <button id="pessoa-close" class="btn btn-small" aria-label="Fechar a ficha">Fechar</button>
+      </div>
+      <div class="pessoa-tools">
+        <button id="pessoa-follow" class="btn btn-small" type="button" aria-pressed="false" title="A câmera acompanha esta pessoa. Arrastar o mapa solta. No mapa: dois toques na pessoa."><img class="ico" alt=""><span>Seguir</span></button>
+        <button id="pessoa-list" class="btn btn-small" type="button" title="Voltar para a lista do povo">Lista</button>
+        <span class="pessoa-nav">
+          <button id="pessoa-prev" class="btn btn-small" type="button" aria-label="Pessoa anterior" title="Anterior na lista (,)"></button>
+          <span id="pessoa-pos" class="small muted"></span>
+          <button id="pessoa-next" class="btn btn-small" type="button" aria-label="Próxima pessoa" title="Próxima na lista (.)"></button>
+        </span>
+      </div>
+      <div id="inspector"></div>
+    </aside>
+    <aside id="p-deus" class="panel sheet" data-sheet="deus">
+      <div class="deus-head"><h2 id="deus-title">Deus</h2><span class="small"><b id="poder-num">0</b> de Poder</span></div>
+      <p id="deus-sub" class="small deus-sub"></p>
+      <div class="bar poder" title="O Poder nasce da fé do povo"><i id="poder-bar"></i></div>
+      <div class="align" title="Como o povo vê você"><span class="small muted">Temido</span><div class="align-track"><i id="align-mark"></i></div><span class="small muted">Bondoso</span></div>
+      <button id="btn-deus" class="btn btn-small deus-more" type="button" title="Níveis, dons, escolhidos e grandes atos"><img class="ico" alt=""><span id="deus-next" class="deus-next">Níveis e dons</span><span class="badge" id="badge-dom" hidden>!</span></button>
+      <div id="miracles" class="miracles"></div>
+      <ol id="prayers" class="prayers"></ol>
+    </aside>
+    <aside id="p-povo" class="panel sheet" data-sheet="povo">
+      <div class="povo-head"><h2 id="povo-title">Seu povo</h2><div class="povo-tools"><button id="btn-tree" class="btn btn-small" title="Árvore da família (T)"><img class="ico" alt=""> Árvore</button><button id="btn-disc" class="btn btn-small" title="Descobertas (I)"><img class="ico" alt=""> Descobertas</button></div></div>
+      <div class="povo-place" id="povo-place">
+        <p class="small"><b id="vila-label"></b> <span id="vila-next" class="muted"></span></p>
+        <p class="small" id="era-label"></p>
+        <form id="vila-form" class="vila-form" hidden><input id="vila-nome" maxlength="22" autocomplete="off" spellcheck="false" aria-label="Nome do lugar"><button class="btn btn-small btn-gold" type="submit">Salvar</button><button class="btn btn-small" type="button" id="vila-cancel">Cancelar</button></form>
+        <div class="povo-tools"><button id="btn-vila-nome" class="btn btn-small" type="button">Dar nome</button><button id="btn-centro" class="btn btn-small" type="button" title="Escolha onde fica o estoque do centro">Mudar o centro</button></div>
+      </div>
+      <div class="povo-filter">
+        <input id="povo-search" type="search" maxlength="14" autocomplete="off" spellcheck="false" placeholder="Buscar pelo nome" aria-label="Buscar pelo nome">
+        <select id="povo-sort" class="select" aria-label="Ordem da lista" title="Ordem da lista">
+          <option value="idade">Idade</option>
+          <option value="nome">Nome</option>
+          <option value="ajuda">Precisa de ajuda</option>
+          <option value="humor">Humor</option>
+        </select>
+      </div>
+      <div id="people"></div>
+      <p id="povo-empty" class="small muted" hidden>Ninguém com esse nome.</p>
+    </aside>
+  </div>
+
+  <div id="p-construir" class="panel sheet" data-sheet="construir">
+    <h2 class="sheet-only">Construir</h2>
+    <div id="builds" class="builds"></div>
+  </div>
+
+  <button id="btn-cronica" class="panel btn-cronica" aria-controls="p-cronica"><img class="ico" alt=""> Crônica</button>
+
+  <aside id="p-cronica" class="panel sheet drawer" data-sheet="cronica" aria-label="Crônica">
+    <div class="drawer-head"><h2>Crônica</h2><button id="cronica-close" class="btn btn-small">Fechar</button></div>
+    <ol id="chron" class="chron"></ol>
+  </aside>
+
+  <nav id="mobnav" aria-label="Painéis">
+    <button data-open="vontades"><img class="ico" alt="">Vontades</button>
+    <button data-open="construir"><img class="ico" alt="">Construir</button>
+    <button data-open="deus"><img class="ico" alt="">Deus<span class="badge" id="badge-deus" hidden></span></button>
+    <button data-open="povo"><img class="ico" alt="">Povo</button>
+    <button data-open="cronica"><img class="ico" alt="">Crônica</button>
+    <button id="btn-mapa" title="O mapa do mundo (tecla M)"><img class="ico" alt="">Mapa</button>
+  </nav>
+
+  <div id="place-hint" class="panel place-hint" hidden></div>
+  <div id="toasts" aria-live="polite"></div>
+</div>
+
+<!-- fim de jogo -->
+<section id="scr-over" class="screen" hidden>
+  <div class="panel over-card">
+    <h2>O povo se foi.</h2>
+    <p class="story">Esta crônica fica como lápide.</p>
+    <ol id="over-chron" class="chron"></ol>
+    <button id="btn-over-new" class="btn btn-gold">Começar outro mundo</button>
+  </div>
+</section>
+<!--/BODY-->
+<script src="js/core.js"></script>
+<script src="js/config.js"></script>
+<script src="js/world.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/family.js"></script>
+<script src="js/life.js"></script>
+<script src="js/tech.js"></script>
+<script src="js/invencoes.js"></script>
+<script src="js/obras.js"></script>
+<script src="js/fauna.js"></script>
+<script src="js/bichos.js"></script>
+<script src="js/campo.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/god.js"></script>
+<script src="js/deus.js"></script>
+<script src="js/narrator.js"></script>
+<script src="js/povos.js"></script>
+<script src="js/minas.js"></script>
+<script src="js/memoria.js"></script>
+<script src="js/sociedade.js"></script>
+<script src="js/gente.js"></script>
+<script src="js/cidade.js"></script>
+<script src="js/regioes.js"></script>
+<script src="js/mar.js"></script>
+<script src="js/eras.js"></script>
+<script src="js/avatar.js"></script>
+<script src="js/visita.js"></script>
+<script src="js/save.js"></script>
+<script src="js/offline.js"></script>
+<script src="js/net.js"></script>
+<script src="js/art.js"></script>
+<script src="js/render.js"></script>
+<script src="js/audio.js"></script>
+<script src="lab/lab.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
