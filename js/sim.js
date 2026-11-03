@@ -54,6 +54,7 @@
     tentou: { t: 'Tentou uma coisa nova e errou', v: 2, d: 2 * 1440 },
     trabalhouJunto: { t: 'Trabalhou junto com quem combinou', v: 3, d: 1440 },
     desabafou: { t: 'Desabafou com alguém', v: 3, d: 1440 },
+    ouviuDeus: { t: 'Ouviu a voz de Deus e respondeu', v: 6, d: 2 * 1440 },   // 0.24: a voz das pessoas
     // Etapa 14: Sociedade
     apanhou: { t: 'Apanhou de alguém', v: -12, d: 4 * 1440 },
     feridoProp: { t: 'Foi ferido de propósito', tf: 'Foi ferida de propósito', v: -18, d: 8 * 1440 },

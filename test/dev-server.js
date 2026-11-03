@@ -8,6 +8,7 @@ const root = path.join(__dirname, '..');
 let shift = 0;
 const g = makeGas({ now: () => Date.now() + shift });
 g.ctx.setup();
+g.gas._props.set('GROQ_API_KEY', 'teste-local');   // 0.24: a voz responde com a fala de teste do gas-mock
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.png': 'image/png' };
 const port = +process.argv[2] || 8787;
 http.createServer((req, res) => {

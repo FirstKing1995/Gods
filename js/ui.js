@@ -273,6 +273,7 @@
     $('#pessoa-list').addEventListener('click', () => UI.showList());
     $('#inspector').addEventListener('click', (e) => {
       const b = e.target.closest('[data-act]'); if (!b || !S) return;
+      if (b.dataset.act === 'voz' && G.Voz) { G.Voz.abrir(S, S.people.find((q) => q.id === UI.sel.person)); return; }   // 0.24
       if (b.dataset.act === 'av-possuir' && G.Avatar) { const r = G.Avatar.possuir(S, UI.sel.person); if (!r.ok) UI.toast('Agora não: ' + r.why + '.', 'warn'); else if (UI.hooks.follow) UI.hooks.follow(UI.sel.person); return; }   // Etapa 21
       if (b.dataset.act === 'av-soltar' && G.Avatar) { G.Avatar.soltar(S); return; }
       if (b.dataset.act === 'av-acao' && G.Avatar) { const r = G.Avatar.agir(S, b.dataset.k, +(b.dataset.pid || 0)); if (!r.ok) UI.toast('Agora não: ' + r.why + '.', 'warn'); return; }
@@ -878,6 +879,7 @@
         deus: godLine,
         rito: ritoLine(p),
         reza: p.prayer ? `<p class="story">Reza: “${esc(p.prayer.text)}”</p>` : '',
+        voz: G.Voz && G.Voz.pode(S, p) ? '<div class="chips"><button type="button" class="btn btn-small btn-gold" data-act="voz" title="Falar com esta pessoa">Conversar</button></div>' : '',   // 0.24
         tracos: `<div class="chips">${indoleChips(p)}${p.traits.map((t) => `<span class="chip" title="${esc(Sim.TRAIT_DESC[t])}">${esc(t)}</span>`).join('')}${criadoChip(p)}</div>`,
         soc: socLine(p) + avatarLine(p),   // Etapa 14: a pena, o descontentamento, o que só Deus viu; Etapa 21: o avatar
         povo: povoChips(p),   // Etapa 12: o povo da pessoa e os dons dela

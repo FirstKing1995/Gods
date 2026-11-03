@@ -751,3 +751,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 .povo-place b { color: var(--gold-hi); }
 .vila-form { display: flex; flex-wrap: wrap; gap: 6px; }
 .vila-form input { flex: 1 1 100%; min-width: 0; min-height: 32px; padding: 4px 8px; font: inherit; background: var(--night); color: var(--text); border: 2px solid var(--edge); }
+
+/* 0.24: a voz das pessoas */
+.voz-card { width: min(520px, 100%); max-height: calc(100dvh - 2 * var(--gut)); }
+.voz-log { max-height: 46vh; min-height: 120px; overflow-y: auto; overscroll-behavior: contain; display: grid; gap: 8px; align-content: start; padding: 8px; background: var(--night); border: 2px solid var(--edge); }
+.voz-log .voz-eu { color: var(--muted); font-style: normal; }
+.voz-form { display: flex; gap: 8px; }
+.voz-form input { flex: 1 1 auto; min-width: 0; min-height: 44px; font: inherit; font-size: 16px; padding: 6px 10px; background: var(--night); color: var(--text); border: 2px solid var(--edge); }
+#modal-voz .modal-actions { align-items: center; }
+#modal-voz .modal-actions .small { flex: 1 1 auto; }
