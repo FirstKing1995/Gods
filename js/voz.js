@@ -62,7 +62,7 @@
     el.innerHTML = '<div class="panel modal-card voz-card" role="dialog" aria-labelledby="voz-titulo">' +
       '<h2 id="voz-titulo">Falar</h2><p id="voz-sub" class="small muted"></p>' +
       '<div id="voz-log" class="voz-log talk" aria-live="polite"></div>' +
-      '<p id="voz-aviso" class="small muted" hidden></p>' +
+      '<p id="voz-aviso" class="voz-aviso" role="status" hidden></p>' +
       '<form id="voz-form" class="voz-form"><input id="voz-msg" type="text" maxlength="300" autocomplete="off" placeholder="O que você diz?"><button type="submit" class="btn btn-gold" id="voz-ir">Falar</button></form>' +
       '<div class="modal-actions"><span class="small muted">A resposta é escrita por IA a partir da vida da pessoa no jogo.</span><button type="button" class="btn" id="voz-fechar">Fechar</button></div></div>';
     document.body.appendChild(el);

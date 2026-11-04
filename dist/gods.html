@@ -787,6 +787,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 .chron .what.ia { font-size: 16px; color: #d9c7a3; }
 #choice-ia-box { display: grid; gap: 6px; justify-items: start; }
 #choice-ia-txt:empty { display: none; }
+.voz-aviso { margin: 0; padding: 8px 10px; font-size: 14px; color: var(--gold-hi); background: rgba(254, 174, 52, 0.1); border-left: 3px solid var(--gold); }   /* 0.25.1: o motivo de a fala não ter ido, bem à vista */
 
 </style>
 </head>
@@ -1320,7 +1321,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.25.0',
+    VERSION: '0.25.1',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -19941,7 +19942,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     el.innerHTML = '<div class="panel modal-card voz-card" role="dialog" aria-labelledby="voz-titulo">' +
       '<h2 id="voz-titulo">Falar</h2><p id="voz-sub" class="small muted"></p>' +
       '<div id="voz-log" class="voz-log talk" aria-live="polite"></div>' +
-      '<p id="voz-aviso" class="small muted" hidden></p>' +
+      '<p id="voz-aviso" class="voz-aviso" role="status" hidden></p>' +
       '<form id="voz-form" class="voz-form"><input id="voz-msg" type="text" maxlength="300" autocomplete="off" placeholder="O que você diz?"><button type="submit" class="btn btn-gold" id="voz-ir">Falar</button></form>' +
       '<div class="modal-actions"><span class="small muted">A resposta é escrita por IA a partir da vida da pessoa no jogo.</span><button type="button" class="btn" id="voz-fechar">Fechar</button></div></div>';
     document.body.appendChild(el);
