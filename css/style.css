@@ -766,3 +766,4 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 .chron .what.ia { font-size: 16px; color: #d9c7a3; }
 #choice-ia-box { display: grid; gap: 6px; justify-items: start; }
 #choice-ia-txt:empty { display: none; }
+.voz-aviso { margin: 0; padding: 8px 10px; font-size: 14px; color: var(--gold-hi); background: rgba(254, 174, 52, 0.1); border-left: 3px solid var(--gold); }   /* 0.25.1: o motivo de a fala não ter ido, bem à vista */
