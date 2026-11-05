@@ -3,7 +3,7 @@
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.25.1',
+    VERSION: '0.26.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -185,9 +185,9 @@
         desc: 'Abrigo com cocho para os bichos de criação: 8 lugares (galinha e coelho ocupam meio; vaca, dois). De dia eles pastam em volta; de noite, dormem aqui.',
         up: [{ name: 'Curral grande', cost: { madeira: 10, tabuas: 6 }, work: 240, pen: { cap: 14 }, desc: 'Cercado maior, com abrigo de tábuas: 14 lugares.' }] },
       // Etapa 11: a estátua de Deus (nível 3). Pronta, Deus a consagra com um milagre próprio, que acontece sozinho
-      estatua: { name: 'Estátua', a: 'a', key: '', w: 2, h: 2, cost: { pedra: 30, madeira: 10 }, work: 480, god: { reach: 1, reza: 1 },
+      estatua: { name: 'Estátua', a: 'a', key: '', w: 2, h: 2, cost: { pedra: 90, madeira: 30 }, work: 900, god: { reach: 1, reza: 1 },   // 0.26: custava 30 de pedra e 10 de madeira, 480 de trabalho
         desc: 'A imagem de Deus em pedra. Consagrada, faz o milagre dela sozinho; quem tem fé reza ali de manhã.',
-        up: [{ name: 'Estátua com altar', cost: { pedra: 20, tabuas: 6 }, work: 360, god: { reach: 1.5, reza: 2 },
+        up: [{ name: 'Estátua com altar', cost: { pedra: 60, tabuas: 15 }, work: 720, god: { reach: 1.5, reza: 2 },
           desc: 'Um altar de pedra aos pés dela: o milagre da estátua vai metade mais longe, e quem reza ali ganha o dobro de fé.' },
         // Etapa 17: a grande estátua, que ficou da Etapa 16
         { name: 'Grande estátua', cost: { pedra: 90, tabuas: 20 }, work: 4800, god: { reach: 2.5, reza: 3 },
@@ -315,6 +315,18 @@
 
     // ---- Deus (Etapa 2) ----
     FAITH_START: 50, POWER_START: 15, POWER_PER_FAITH_H: 0.22,
+    // 0.26: a fé rende inteira até PODER_RENDE "pessoas de fé cheia"; acima disso, cada vez menos (o excedente vira
+    // excedente^PODER_EXP). Medido antes: com 30 pessoas, 9.500 de Poder por ano; com 700, vinte vezes mais
+    PODER_RENDE: 12, PODER_EXP: 0.7,
+    PODER_TETO: [0, 200, 400, 800, 1400, 2400],   // o Poder guardado não passa disso, por nível de Deus
+    // o estoque tem teto por recurso; cada armazém pronto soma ARMAZEM_TETO[nível] vezes o teto base
+    ESTOQUE_TETO: { madeira: 200, pedra: 200, argila: 150, tabuas: 150, fibra: 120, couro: 80, peixe: 220, frutas: 220, carne: 160, defumado: 160, seca: 160 },
+    ARMAZEM_TETO: [0, 1.5, 3],
+    ESTOQUE_POR_PESSOA: { peixe: 5, frutas: 5, carne: 3, defumado: 4, seca: 4 },   // a comida cabe mais quanto maior o povo
+    // o cardume: cada peixe pescado tira CARDUME_PEIXE dele; ele volta CARDUME_DIA por dia; a chance de fisgar vai de
+    // CARDUME_MIN (rio pescado demais) a 100% (rio cheio)
+    CARDUME_PEIXE: 0.004, CARDUME_DIA: 0.06, CARDUME_MIN: 0.3,
+    ROT_FIBRA: 0.01,   // a fibra guardada mofa e esgarça um pouco por dia
     PRAYER_HOURS: 12, PRAYER_COOLDOWN_H: 24, PRAYER_ANSWERED_COOLDOWN_H: 12,
     FAITH_ANSWER: 15, FAITH_ANSWER_SEEN: 6, FAITH_IGNORED: -8, FAITH_IGNORED_SEEN: -2,
     FAITH_MIRACLE_SEEN: 3, FAITH_DEATH: -8,
@@ -455,7 +467,7 @@
     THANKS: { nascimento: 6, primavera: 8, festa: 5, fartura: 4, descoberta: 4, oracao: 3, manha: 1, luto: 2 },
     // pequenos acontecimentos: chance por dia; lua cheia no dia 14 de cada 30
     SMALL_DAILY: 0.35, SMALL_FOOD: 3, SMALL_WOOD: 4, PE_WALK: 0.7, MOON_DAYS: 30, MOON_DAY: 14,
-    POWER_BAR: 100,                // a barra de Poder enche em 100 (o Poder não tem teto)
+    POWER_BAR: 100,                // (até a 0.25 a barra enchia em 100; desde a 0.26 ela mede até o teto do nível)
 
     // ---- Invenções (Etapa 8) ----
     // Uma árvore, não uma trilha: cada invenção abre quando o que ela pede já existe e aprende com o seu trabalho,
@@ -577,12 +589,14 @@
     // Medido em 20 anos em três mundos (0.11): quem atende as orações chega ao nível 2 com 0,6 a 0,7 ano, ao 3 com 3,5
     // a 4,1, ao 4 com 8 a 10 e ao 5 com 12 a 14; quem larga junta glória (a fé de cada hora rende), mas fica com 1 a 3
     // fiéis, e por isso no nível 1 ou 2.
+    // 0.26: na 0.25, com a vila maior das etapas 16 a 22, o nível 4 vinha no 1º ano e o 5 no 2º. Agora a glória pedida
+    // é maior, os fiéis são uma parte do povo (parte, ou o mínimo fixo) e cada nível pede um tempo de mundo (anos)
     GOD_LEVELS: [
-      { name: 'Espírito', glory: 0, fieis: 0 },
-      { name: 'Guardião', glory: 500, fieis: 2 },
-      { name: 'Deus do Povo', glory: 2500, fieis: 4 },
-      { name: 'Deus Antigo', glory: 8000, fieis: 7 },
-      { name: 'Deus Maior', glory: 20000, fieis: 10 },
+      { name: 'Espírito', glory: 0, fieis: 0, parte: 0, anos: 0 },
+      { name: 'Guardião', glory: 4000, fieis: 2, parte: 0.1, anos: 0.75 },
+      { name: 'Deus do Povo', glory: 22000, fieis: 4, parte: 0.2, anos: 3 },
+      { name: 'Deus Antigo', glory: 60000, fieis: 7, parte: 0.3, anos: 7 },
+      { name: 'Deus Maior', glory: 120000, fieis: 10, parte: 0.4, anos: 12 },
     ],
     FIEL_FE: 70, FIEL_AGE: 7,
     // cético que vê sinais demais se converte: CONVERTE_SINAIS sinais e fé de CONVERTE_FE para cima.

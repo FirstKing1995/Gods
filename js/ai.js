@@ -284,6 +284,7 @@
     } else if (c.k === 'agua') S.stock.agua = Math.min(Tech.waterCap(S), S.stock.agua + c.n);
     else S.stock[c.k] += c.n;
     if (c.fibra) { S.stock.fibra += c.fibra; S.stats.fibraGot = (S.stats.fibraGot || 0) + c.fibra; }   // embira da casca (Etapa 7) e lã (Etapa 10)
+    if (c.k !== 'obra') Sim.aparaEstoque(S);   // 0.26: o que não cabe se perde
     if (c.nobre || c.ouro) G.Regioes.trouxe(S, p, c);   // Etapa 17: madeira nobre e ouro do veio
     if (c.k === 'frutas' || c.k === 'peixe') { const got = S.stats.got || (S.stats.got = {}); got[c.k] = (got[c.k] || 0) + c.n; }   // missões do Ato 1
     if (c.k !== 'obra' && c.k !== 'caca' && c.k !== 'cria') Sim.float(S, p.x, p.y - 0.6, '+' + c.n + ' ' + RES_LABEL[c.k] + (c.fibra ? ' +' + c.fibra + ' fibra' : '') + (c.nobre ? ' +' + c.nobre + ' nobre' : '') + (c.ouro ? ' +1 ouro' : ''));
@@ -1455,8 +1456,11 @@
               ch *= G.Narr.fishMult(S);   // seca e nevasca espantam, piracema enche o rio
               ch *= Tech.fishMult(S, p);   // anzol
               if (G.Mar && S.mar) ch *= G.Mar.pescaMult(S);   // Etapa 18: a canoa e o barco
+              const cd = S.stats.cardume === undefined ? 1 : S.stats.cardume;
+              ch *= C.CARDUME_MIN + (1 - C.CARDUME_MIN) * cd;   // 0.26: o rio pescado demais rende menos
               if (S.rng.next() < ch) {
                 a.caught++;
+                S.stats.cardume = Math.max(0, (S.stats.cardume === undefined ? 1 : S.stats.cardume) - C.CARDUME_PEIXE);
                 p.carry = { k: 'peixe', n: a.caught };
                 say(S, p, 'peixe', 0.5);
                 if (a.water >= 0) S.events.push({ k: 'splash', x: a.water % w.W, y: (a.water / w.W) | 0 });
@@ -2308,6 +2312,8 @@
     return 1;
   }
 
+  // 0.26: o trabalho e o recurso que ele enche (se está no teto, ninguém sai para buscar)
+  const CHEIO = { madeira: 'madeira', pedra: 'pedra', pesca: 'peixe', frutas: 'frutas', argila: 'argila' };
   function scoreList(S, p) {
     // Etapa 21: o corpo possuído faz o que você manda (as urgências do corpo ainda passam na frente, em urgentNeed)
     // de noite, o corpo dorme como qualquer corpo (é aí que o filho abençoado pode ser concebido, com o par de sempre)
@@ -2316,6 +2322,7 @@
     const add = (type, s, extra) => {
       if (!(s > 0)) return;
       if (p.fail[type] && p.fail[type] > S.t) return;
+      if (CHEIO[type] && Sim.cheio(S, CHEIO[type])) return;   // 0.26: o depósito disso está cheio
       const o = { type, score: s + (S.rng.next() * 4 - 2) };
       if (extra) Object.assign(o, extra);
       out.push(o);

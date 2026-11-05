@@ -765,7 +765,7 @@
   function paintGod() {
     const g = S.god; if (!g) return;
     $('#poder-num').textContent = Math.floor(g.poder);
-    $('#poder-bar').style.width = Math.min(100, g.poder / C.POWER_BAR * 100) + '%';
+    $('#poder-bar').style.width = Math.min(100, g.poder / G.God.teto(S) * 100) + '%';   // 0.26: até o teto do nível
     $('#align-mark').style.left = ((g.align + 100) / 2) + '%';
     // Etapa 11: o nome, o nível e o que falta para o próximo
     const Dz = G.Deus;
@@ -773,7 +773,7 @@
       const lv = Dz.level(S), def = Dz.levelDef(lv), nx = Dz.next(S);
       setText($('#deus-title'), g.name || 'Deus');
       setText($('#deus-sub'), (g.name ? g.epithet + ' · ' : '') + def.name + ', nível ' + lv);
-      setText($('#deus-next'), nx ? 'Nível ' + (lv + 1) + ': glória ' + fmtN(g.glory) + '/' + fmtN(nx.glory) + ' · fiéis ' + Dz.fieis(S) + '/' + nx.fieis : 'Níveis, dons e grandes atos');
+      setText($('#deus-next'), nx ? 'Nível ' + (lv + 1) + ': glória ' + fmtN(g.glory) + '/' + fmtN(nx.glory) + ' · fiéis ' + Dz.fieis(S) + '/' + Dz.fieisPede(S, nx) : 'Níveis, dons e grandes atos');
       const bd2 = $('#badge-dom'), pend = !!Dz.pending(S) || !!(G.Memoria && G.Memoria.pending(S)) || !!(G.Soc && S.soc && (S.soc.pedidos.length || G.Soc.pendInfo(S)));
       if (bd2.hidden === pend) bd2.hidden = !pend;
       $('#btn-deus').classList.toggle('pend', pend);
@@ -1244,17 +1244,19 @@
     const lv = Dz.level(S), nx = Dz.next(S), fi = Dz.fieis(S);
     const ladder = C.GOD_LEVELS.map((L, i) => {
       const n = i + 1, st = n < lv ? 'done' : n === lv ? 'on' : '';
-      const req = n === 1 ? 'o começo' : 'glória ' + fmtN(L.glory) + ' · ' + L.fieis + ' fiéis';
+      const req = n === 1 ? 'o começo' : 'glória ' + fmtN(L.glory) + ' · ' + (L.parte ? Math.round(L.parte * 100) + '% do povo fiel' : L.fieis + ' fiéis') + ' · ' + String(L.anos).replace('.', ',') + (L.anos === 1 ? ' ano' : ' anos') + ' de mundo';
       return `<li class="${st}"><span class="lvn">${n}</span><div><b>${esc(L.name)}</b> <span class="small muted">${req}</span><span class="small">${esc(LEVEL_GIFT[n])}</span></div></li>`;
     }).join('');
     let prog = '';
     if (nx) {
-      const gf = Math.min(1, g.glory / nx.glory), ff = Math.min(1, fi / Math.max(1, nx.fieis));
+      const pede = Dz.fieisPede(S, nx), anos = Dz.anosMundo(S);
+      const gf = Math.min(1, g.glory / nx.glory), ff = Math.min(1, fi / Math.max(1, pede)), tf = Math.min(1, anos / Math.max(0.01, nx.anos || 0.01));
       const lack = [];
       if (g.glory < nx.glory) lack.push('glória: atenda as orações, e a fé do povo rende Poder todo dia');
-      if (fi < nx.fieis) lack.push('fiéis: gente de 7 anos ou mais com fé 70; o cético só conta depois de convertido');
-      prog = `<div class="lvprog"><span class="small">Para o nível ${lv + 1} (${esc(nx.name)}): glória ${fmtN(g.glory)} de ${fmtN(nx.glory)} · fiéis ${fi} de ${nx.fieis}</span>
-        <div class="bar poder"><i style="width:${Math.round(Math.min(gf, ff) * 100)}%"></i></div>${lack.length ? `<span class="small muted">Falta ${esc(lack.join('; falta '))}.</span>` : '<span class="small muted">Tudo pronto: o nível chega na próxima hora.</span>'}</div>`;
+      if (fi < pede) lack.push('fiéis: gente de 7 anos ou mais com fé 70; o cético só conta depois de convertido');
+      if (anos < (nx.anos || 0)) lack.push('tempo: o mundo precisa de ' + String(nx.anos).replace('.', ',') + ' anos (está com ' + anos.toFixed(1).replace('.', ',') + ')');
+      prog = `<div class="lvprog"><span class="small">Para o nível ${lv + 1} (${esc(nx.name)}): glória ${fmtN(g.glory)} de ${fmtN(nx.glory)} · fiéis ${fi} de ${pede}</span>
+        <div class="bar poder"><i style="width:${Math.round(Math.min(gf, ff, tf) * 100)}%"></i></div>${lack.length ? `<span class="small muted">Falta ${esc(lack.join('; falta '))}.</span>` : '<span class="small muted">Tudo pronto: o nível chega na próxima hora.</span>'}</div>`;
     } else prog = '<p class="small">Você chegou ao nível mais alto.</p>';
     const pend = Dz.pending(S);
     const dons = g.dons.length ? g.dons.map((id) => { const d = Dz.DONS[id]; return `<li><img class="ico" src="${ic(d.icon)}" alt=""><div><b>${esc(d.name)}</b><span class="small">${esc(d.desc)}</span></div></li>`; }).join('') : '<li class="none small muted">Nenhum ainda: cada nível novo traz um dom para escolher.</li>';
