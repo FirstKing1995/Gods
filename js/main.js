@@ -186,6 +186,7 @@
       holdSim = true; holdDrawn = false;
       // em fatias: ausências longas não travam a tela (0.12: quase tudo em dias resumidos; "Entrar agora" corta o resto)
       const job = G.Offline.runAsync(S, minutes, (f, j) => UI.awayProgress(f, minutes, j), (r) => {
+        for (const T of tribos()) if (T !== S && !T.over) { try { G.Offline.run(T, minutes); } catch (e) { /* a outra tribo segue de onde está */ } T.events.length = 0; }   // 0.28
         UI.consume(S, 0, true);
         R.invalidate();
         UI.bind(S);
@@ -342,10 +343,22 @@
   }
 
   // ---------- salvar ----------
+  // 0.28: as tribos. S é a tribo que você está olhando (painéis, vontades, obras); as outras vivem junto
+  const raiz = () => (G.Tribos ? G.Tribos.raiz(S) : S);
+  const tribos = () => (S && G.Tribos ? G.Tribos.todas(S) : S ? [S] : []);
+  function trocaTribo(T) {
+    if (!T || T === S) return;
+    S = T;
+    follow = 0; camTarget = { x: (S.camp.x + 1) * TS, y: (S.camp.y + 1) * TS };
+    UI.select(0, 0);
+    UI.bind(S);
+    UI.update(0, true);
+    UI.toast('Agora você olha por ' + G.Tribos.nome(S) + '.', 'good');
+  }
   function save(forceCloud) {
     if (!S) return false;
     const s = session();
-    const txt = Save.store(S, { conta: s ? s.email : '' });
+    const txt = Save.store(raiz(), { conta: s ? s.email : '' });   // 0.28: a primeira tribo leva as outras
     lastSave = performance.now();
     const el = $('#save-status');
     const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -359,12 +372,12 @@
     const s = session();
     if (!s || cloudBusy) return;
     cloudBusy = true; lastCloud = performance.now();
-    const res = await Net.call('salvar', { token: s.token, dados: txt, resumo: Save.summary(S) });
+    const res = await Net.call('salvar', { token: s.token, dados: txt, resumo: Save.summary(raiz()) });
     if (res.ok) recadosChegaram(s);   // Etapa 22: o que outros deuses mandaram
     cloudBusy = false;
     const el = $('#save-status');
     if (res.ok) {
-      s.mundo = Save.summary(S); Net.setSession(s);
+      s.mundo = Save.summary(raiz()); Net.setSession(s);
       if (el) el.textContent = 'Salvo na nuvem e neste aparelho às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + '.';
     } else if (res.sessao === false) {
       UI.toast('Sua sessão expirou. O jogo segue salvando neste aparelho.', 'warn');
@@ -373,8 +386,8 @@
   function beaconSave() {
     if (!S) return;
     const s = session();
-    const txt = Save.store(S, { conta: s ? s.email : '' });
-    if (s && txt) Net.beacon('salvar', { token: s.token, dados: txt, resumo: Save.summary(S) });
+    const txt = Save.store(raiz(), { conta: s ? s.email : '' });
+    if (s && txt) Net.beacon('salvar', { token: s.token, dados: txt, resumo: Save.summary(raiz()) });
   }
 
   // ---------- construção: posicionar antes de confirmar ----------
@@ -1169,7 +1182,9 @@
         // velocidade pedida, o mundo anda o que dá e a tela segue fluida, em vez de travar tentando alcançar
         const t0 = performance.now();
         let n = 0;
-        while (acc >= C.STEP_MIN) { Sim.step(S, C.STEP_MIN); acc -= C.STEP_MIN; n++; if (S.over || performance.now() - t0 > C.SIM_BUDGET_MS) break; }
+        const ts = tribos();   // 0.28: todas as tribos andam no mesmo relógio
+        while (acc >= C.STEP_MIN) { for (const T of ts) if (!T.over) Sim.step(T, C.STEP_MIN); acc -= C.STEP_MIN; n++; if (S.over || performance.now() - t0 > C.SIM_BUDGET_MS) break; }
+        if (G.Tribos) G.Tribos.passo(S);
         if (acc > C.SIM_BACKLOG * C.STEP_MIN) { simLag = Math.min(1, simLag + 0.05); acc = C.SIM_BACKLOG * C.STEP_MIN; } else simLag = Math.max(0, simLag - 0.02);
         // o botão da velocidade avisa quando o mundo não acompanha
         const lag = simLag > 0.5;
@@ -1195,10 +1210,15 @@
       if (placing && now - placing.at > 400) { placing.at = now; setGhost(placing.x, placing.y); }
       // com o mundo seguindo fora (tempo offline), o mapa atrás da janela é desenhado uma vez só (inteiro) e fica
       // parado: o aparelho fica para o cálculo
-      if (!holdSim) R.draw(S, alpha, now);
-      else if (!holdDrawn) { holdDrawn = true; R.chunkBudget = 999; R.draw(S, alpha, now); R.chunkBudget = 0; }
+      const fora = tribos().filter((T) => T !== S);   // 0.28: as outras tribos aparecem no mesmo mapa
+      if (!holdSim) R.draw(S, alpha, now, null, fora);
+      else if (!holdDrawn) { holdDrawn = true; R.chunkBudget = 999; R.draw(S, alpha, now, null, fora); R.chunkBudget = 0; }
       if (!holdSim) {   // e os avisos esperam o resumo
         UI.consume(S, now);
+        for (const T of fora) {   // 0.28: das outras tribos, só o que conta (com o nome da tribo na frente)
+          for (const e of T.events) if (e.k === 'chron' || e.k === 'tribo') UI.toast(G.Tribos.nome(T).replace(/^./, (c) => c.toUpperCase()) + ': ' + e.text, e.k === 'tribo' ? e.tom : 'chron');
+          T.events.length = 0;
+        }
         UI.frame(now);
         UI.update(now);
         if (mode === 'game' && now - lastSave > 60000) save();
@@ -1227,6 +1247,14 @@
       placing: () => (placing && !placing.custom ? placing.type : null),   // a obra nova que está sendo posicionada (acende o botão dela)
       save: () => { save(true); },
       toTitle: () => { save(true); S = null; showTitle(); },
+      // 0.28: as tribos (criar, olhar por outra, sonho de irmandade e boato de discórdia)
+      tribo: (acao, i, j) => {
+        const ts = tribos();
+        if (acao === 'criar') { const B = G.Tribos.criar(S); if (B) { UI.toast('Nasceu ' + B.tribo.nome + ': ' + B.people.map((p) => p.name).join(' e ') + '.', 'good'); save(); } return !!B; }
+        if (acao === 'ver') { trocaTribo(ts[i]); return true; }
+        if (acao === 'paz' || acao === 'discordia') return G.Tribos.influir(S, ts[i], ts[j], acao);
+        return false;
+      },
       center: (x, y) => { if (!follow) camTarget = { x, y }; },   // seguindo alguém, a câmera já tem dono
       // seguir alguém com a câmera: follow(pid) liga, follow(0) solta; following() diz quem (0: ninguém)
       follow: (pid) => setFollow(pid),

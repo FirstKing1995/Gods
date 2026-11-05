@@ -3,7 +3,7 @@
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.27.0',
+    VERSION: '0.28.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -619,6 +619,14 @@
     // 0.27: a reforma das construções quando o povo muda de idade: por dia, REFORMA_DIA (fração) das que estão no
     // jeito antigo passam para o novo (no mínimo uma)
     REFORMA_DIA: 0.08,
+    // 0.28: as tribos. Nasce no nível TRIBO_NIVEL de Deus, por TRIBO_CUSTO de Poder, a TRIBO_DIST passos ou mais da outra
+    // (até TRIBO_MAX tribos). Elas se conhecem quando alguém chega a TRIBO_VE passos do acampamento da outra, ou quando
+    // caçadores se cruzam (mais fácil com os acampamentos a menos de TRIBO_CRUZA passos)
+    TRIBO_NIVEL: 2, TRIBO_CUSTO: 150, TRIBO_DIST: 55, TRIBO_MAX: 3, TRIBO_VE: 12, TRIBO_CRUZA: 140,
+    TRIBO_FE_SOBE: 0.4,                       // por dia: fé alta dos dois povos aproxima; fé baixa afasta
+    TRIBO_VOLTA: 0.01,                        // por dia, sem nada acontecendo, a relação volta 1% para o meio
+    TRIBO_TREGUA_D: 40, TRIBO_GUERRA_D: 45, TRIBO_ROUBO_D: 10,   // a trégua depois da guerra; o tempo mínimo entre guerras e entre roubos
+    TRIBO_PAZ: 60, TRIBO_DISCORDIA: 40, TRIBO_INFLUI: 15,   // o sonho de irmandade e o boato de discórdia
     SERMAO_GAP_D: 2, SERMAO_FE: 5, SERMAO_PODER: 1, SERMAO_LONGE: 15,   // Palavra: uma pregação a cada 2 dias, de tardinha, por quem está a até 15 passos do fogo
     LUZ_R: 3.5, LUZ_HEAT: 10,                        // Luz: lobo e onça não chegam; quem está perto se aquece
     // Bênção (nível 2): um lugar abençoado por BENCAO_H horas; quem trabalha ali rende BENCAO_MULT

@@ -568,7 +568,7 @@
     return { carried, tent, forja, mina };
   }
   let lastS = null;
-  R.draw = function (S, alpha, now, world) {
+  R.draw = function (S, alpha, now, world, outras) {
     lastS = S || null;
     FX = S ? frameIdx(S) : null;
     const dt = lastNow ? Math.min(0.1, (now - lastNow) / 1000) : 0;
@@ -687,9 +687,48 @@
         list.push({ y: y * TS + 4, e, x, y });
       }
     }
+    // 0.28: as outras tribos (obras, gente, bichos de criação e quem ronda), cada item marcado com a tribo dele
+    if (S && outras && outras.length && !far) for (const B of outras) {
+      const fxB = frameIdx(B);
+      drawCamp(B);
+      for (const b of B.buildings) {
+        if (b.x + b.w < tx0 || b.x > tx1 || b.y + b.h < ty0 || b.y > ty1) continue;
+        if (b.type === 'roca' && b.built) { for (let r = 0; r < 3; r++) list.push({ y: (b.y + r + 1) * TS - 2, b, row: r, T: B, fx: fxB }); if (!G.Sim.jobOf(b)) continue; }
+        if (b.type === 'curral') { list.push({ y: b.y * TS + 1, b, part: 'back', T: B, fx: fxB }); list.push({ y: (b.y + b.h) * TS - 1, b, part: 'front', T: B, fx: fxB }); continue; }
+        list.push({ y: (b.y + b.h) * TS - 1, b, T: B, fx: fxB });
+      }
+      for (const p of B.people) {
+        if (!p.alive || p.inTent || p.carriedBy) continue;
+        const x = U.lerp(p.px, p.x, alpha), y = U.lerp(p.py, p.y, alpha);
+        if (x < tx0 - 2 || x > tx1 + 2 || y < ty0 - 2 || y > ty1 + 3) continue;
+        list.push({ y: y * TS + 4, p, x, y, T: B, fx: fxB });
+      }
+      if (B.campo) for (const a of B.campo.bichos) {
+        const x = U.lerp(a.px, a.x, alpha), y = U.lerp(a.py, a.y, alpha);
+        if (x < tx0 - 1 || x > tx1 + 1 || y < ty0 - 1 || y > ty1 + 1) continue;
+        list.push({ y: y * TS + 3, cr: a, x, y, T: B, fx: fxB });
+      }
+      if (B.narr) for (const e of B.narr.ents) {
+        if (e.gone) continue;
+        const x = U.lerp(e.px, e.x, alpha), y = U.lerp(e.py, e.y, alpha);
+        if (x < tx0 - 1 || x > tx1 + 1 || y < ty0 - 1 || y > ty1 + 1) continue;
+        list.push({ y: y * TS + 4, e, x, y, T: B, fx: fxB });
+      }
+    }
     list.sort((a, b) => a.y - b.y);
     const snow = season === 3;
+    const fx0 = FX;
     for (const it of list) {
+      if (it.T) {   // 0.28: um item de outra tribo
+        FX = it.fx;
+        try {
+          if (it.b) drawBuilding(it.T, it.b, now, it.row, it.part);
+          else if (it.e) drawEnt(it.T, it.e, it.x, it.y, now);
+          else if (it.cr) drawCria(it.T, it.cr, it.x, it.y);
+          else if (it.p) drawPerson(it.T, it.p, it.x, it.y, now);
+        } finally { FX = fx0; }
+        continue;
+      }
       if (it.o) drawObj(it.o, season, snow, sc < 1, S, now);
       else if (it.corpo) drawCorpo(it.corpo, now);
       else if (it.b) drawBuilding(S, it.b, now, it.row, it.part);

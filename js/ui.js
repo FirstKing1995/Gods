@@ -1215,9 +1215,30 @@
     document.querySelectorAll('#modal-deus [data-gtab]').forEach((b) => { b.classList.toggle('on', b.dataset.gtab === deusTab); b.setAttribute('aria-selected', b.dataset.gtab === deusTab ? 'true' : 'false'); });
     $('#deus-mtitle').textContent = g.name ? g.name + ', ' + g.epithet : 'Deus';
     $('#deus-poder').textContent = fmtN(g.poder) + ' de Poder · glória ' + fmtN(g.glory);
-    $('#deus-body').innerHTML = deusTab === 'escolhidos' ? escolhidosHTML(Dz, g) : deusTab === 'atos' ? atosHTML(Dz, g) : deusTab === 'povos' && G.Povos ? povosHTML(Dz, g) : deusTab === 'memoria' && G.Memoria && S.memoria ? memoriaHTML(Dz) : deusTab === 'sociedade' && G.Soc && S.soc ? sociedadeHTML(Dz) : nivelHTML(Dz, g);
+    $('#deus-body').innerHTML = deusTab === 'escolhidos' ? escolhidosHTML(Dz, g) : deusTab === 'atos' ? atosHTML(Dz, g) : deusTab === 'povos' && G.Povos ? povosHTML(Dz, g) : deusTab === 'memoria' && G.Memoria && S.memoria ? memoriaHTML(Dz) : deusTab === 'sociedade' && G.Soc && S.soc ? sociedadeHTML(Dz) : deusTab === 'tribos' && G.Tribos ? tribosHTML() : nivelHTML(Dz, g);
     $('#modal-deus').hidden = false;
   };
+  // 0.28: as tribos (fazer nascer outra, olhar por cada uma, a relação entre elas e o que Deus faz por ela)
+  function tribosHTML() {
+    const Tb = G.Tribos, ts = Tb.todas(S), why = Tb.criarWhy(S);
+    const nomeT = (t) => Tb.nome(t).replace(/^./, (c) => c.toUpperCase());
+    const lista = ts.map((t, i) => {
+      const n = t.people.filter((p) => p.alive).length, fe = n ? Math.round(t.people.filter((p) => p.alive).reduce((a, p) => a + p.fe, 0) / n) : 0;
+      return `<li><img class="ico" src="${ic('vila')}" alt=""><div><b>${esc(nomeT(t))}</b>${t === S ? ' <span class="small ttl">você está olhando</span>' : ''}<span class="small">${n} ${n === 1 ? 'pessoa' : 'pessoas'} · fé média ${fe} · ${esc(t.siteLabel || '')}</span></div>${t === S ? '' : `<button type="button" class="btn btn-small" data-gact="tribo-ver" data-i="${i}">Olhar por esta</button>`}</li>`;
+    }).join('');
+    const pares = Tb.pares(S).map(({ x, y, i, j, par }) => {
+      if (!par.contato) return `<li><span class="small">${esc(nomeT(x))} e ${esc(Tb.nome(y))} ainda não se conhecem.</span></li>`;
+      const v = Math.round(par.v), w = Math.round((v + 100) / 2);
+      const bt = (k, txt, custo) => { const wy = Tb.influirWhy(S, x, y, k); return `<button type="button" class="btn btn-small" data-gact="tribo-${k}" data-i="${i}" data-j="${j}"${wy ? ' disabled title="Agora não: ' + esc(wy) + '"' : ''}>${txt} (${custo} de Poder)</button>`; };
+      const ult = par.hist.length ? '<span class="small muted">' + esc(par.hist[par.hist.length - 1].txt) + '</span>' : '';
+      return `<li><span class="small">${esc(nomeT(x))} e ${esc(Tb.nome(y))} · <b>${v}</b> · ${Tb.palavra(v)}</span><div class="bar ${v < -25 ? 'low' : v < 25 ? 'mid' : ''}"><i style="width:${w}%"></i></div>${ult}
+        <div class="chips">${bt('paz', 'Sonho de irmandade', C.TRIBO_PAZ)}${bt('discordia', 'Boato de discórdia', C.TRIBO_DISCORDIA)}</div></li>`;
+    }).join('');
+    return `<p class="small muted">Você pode fazer nascer outra tribo no mesmo mundo, longe desta. Cada uma vive a sua vida, e você é o Deus das duas. Quando se encontram, a relação anda sozinha pela fé de cada povo e pelo que você faz: amigos trocam o que sobra e às vezes alguém vai morar do outro lado; inimigos roubam comida; no fundo, guerra.</p>
+      <h3>As tribos</h3><ul class="donlist">${lista}</ul>
+      <div class="chips"><button type="button" class="btn btn-gold" data-gact="tribo-criar"${why ? ' disabled' : ''}>Fazer nascer outra tribo (${C.TRIBO_CUSTO} de Poder)</button>${why ? `<span class="small muted">Agora não: ${esc(why)}.</span>` : ''}</div>
+      ${pares ? `<h3>Entre elas</h3><ul class="convlist">${pares}</ul>` : ''}`;
+  }
   // Etapa 12: os povos (quem são, os dons, a convivência entre eles) e o chamado de Deus
   function povosHTML(Dz, g) {
     const Pv = G.Povos, P = S.povos;
@@ -1775,6 +1796,12 @@
   const Fam = () => G.Family;
   function godAct(b) {
     const Dz = G.Deus, a = b.dataset.gact;
+    if (a && a.indexOf('tribo-') === 0 && UI.hooks.tribo) {   // 0.28
+      const ok = UI.hooks.tribo(a.slice(6), +(b.dataset.i || 0), +(b.dataset.j || 0));
+      if (a === 'tribo-ver' && ok) { $('#modal-deus').hidden = true; return; }
+      UI.deus('tribos'); UI.update(0, true);
+      return;
+    }
     if (a === 'pending') { $('#modal-deus').hidden = true; if (UI.hooks.godPending) UI.hooks.godPending(); return; }
     // Etapa 13: a pergunta que espera, e o que Deus diz do rito (muda quando quiser)
     if (a === 'pendmem') { $('#modal-deus').hidden = true; if (UI.hooks.memPending) UI.hooks.memPending(); return; }

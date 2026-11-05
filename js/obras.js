@@ -252,8 +252,10 @@
   // o nome que o povo daria (sorteado pela seed, sem repetir o da vila de fora)
   O.nomeSugerido = function (S, k) {
     const fora = S.soc && S.soc.vila ? S.soc.vila.nome : '';
-    const ok = NOMES.filter((n) => n !== fora && n !== (S.povo && S.povo.nome));
-    return ok[Math.floor(G.hash2(S.seed, (k || 0) + 7, 991) * ok.length)];
+    // 0.28: nem o nome de outra tribo do mesmo mundo (o sorteio leva o número da tribo)
+    const outras = G.Tribos ? G.Tribos.todas(S).filter((t) => t !== S).map((t) => t.povo && t.povo.nome) : [];
+    const ok = NOMES.filter((n) => n !== fora && n !== (S.povo && S.povo.nome) && outras.indexOf(n) < 0);
+    return ok[Math.floor(G.hash2(S.seed, (k || 0) + 7 + (S.tribo ? S.tribo.id * 13 : 0), 991) * ok.length)];
   };
   O.renomear = function (S, nome) {
     nome = String(nome || '').replace(/\s+/g, ' ').trim().slice(0, 22);

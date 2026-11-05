@@ -1006,6 +1006,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       <button type="button" role="tab" data-gtab="povos">Povos</button>
       <button type="button" role="tab" data-gtab="memoria">Memória</button>
       <button type="button" role="tab" data-gtab="sociedade">Sociedade</button>
+      <button type="button" role="tab" data-gtab="tribos">Tribos</button>
     </div>
     <div id="deus-body" class="deus-body"></div>
     <div class="modal-actions"><span id="deus-poder" class="small muted"></span><button id="deus-close" class="btn">Fechar</button></div>
@@ -1312,7 +1313,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.27.0',
+    VERSION: '0.28.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -1928,6 +1929,14 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     // 0.27: a reforma das construções quando o povo muda de idade: por dia, REFORMA_DIA (fração) das que estão no
     // jeito antigo passam para o novo (no mínimo uma)
     REFORMA_DIA: 0.08,
+    // 0.28: as tribos. Nasce no nível TRIBO_NIVEL de Deus, por TRIBO_CUSTO de Poder, a TRIBO_DIST passos ou mais da outra
+    // (até TRIBO_MAX tribos). Elas se conhecem quando alguém chega a TRIBO_VE passos do acampamento da outra, ou quando
+    // caçadores se cruzam (mais fácil com os acampamentos a menos de TRIBO_CRUZA passos)
+    TRIBO_NIVEL: 2, TRIBO_CUSTO: 150, TRIBO_DIST: 55, TRIBO_MAX: 3, TRIBO_VE: 12, TRIBO_CRUZA: 140,
+    TRIBO_FE_SOBE: 0.4,                       // por dia: fé alta dos dois povos aproxima; fé baixa afasta
+    TRIBO_VOLTA: 0.01,                        // por dia, sem nada acontecendo, a relação volta 1% para o meio
+    TRIBO_TREGUA_D: 40, TRIBO_GUERRA_D: 45, TRIBO_ROUBO_D: 10,   // a trégua depois da guerra; o tempo mínimo entre guerras e entre roubos
+    TRIBO_PAZ: 60, TRIBO_DISCORDIA: 40, TRIBO_INFLUI: 15,   // o sonho de irmandade e o boato de discórdia
     SERMAO_GAP_D: 2, SERMAO_FE: 5, SERMAO_PODER: 1, SERMAO_LONGE: 15,   // Palavra: uma pregação a cada 2 dias, de tardinha, por quem está a até 15 passos do fogo
     LUZ_R: 3.5, LUZ_HEAT: 10,                        // Luz: lobo e onça não chegam; quem está perto se aquece
     // Bênção (nível 2): um lugar abençoado por BENCAO_H horas; quem trabalha ali rende BENCAO_MULT
@@ -3521,7 +3530,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const per = C.BUSH_DAYS_PER_FRUIT[ck.season];
     const bm = G.Narr ? G.Narr.bushMult(S) : 1;   // seca para, fartura acelera
     const terra = G.Deus && G.Deus.dom(S, 'terra') ? C.DOM.terraBush : 1;   // Etapa 11: Mão na Terra
-    for (const o of w.objs) {
+    if (!S.base) for (const o of w.objs) {   // 0.28: o mapa é um só; quem cuida dele é a primeira tribo
       if (o.k === 'bush') {
         if (o.holy) {
           // Etapa 11: a árvore criada por Deus dá fruta o ano todo, até no inverno e na seca
@@ -3541,7 +3550,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         o.regrow = (o.regrow || 0) + 1;
         const i = o.y * w.W + o.x;
         // no caminho, na trilha e no caminho marcado a árvore não volta (Etapa 7)
-        if (o.regrow >= C.TREE_REGROW_DAYS && w.bgrid[i] < 0 && !Sim.isCamp(S, i) && !(w.road && (w.road[i] || w.roadJob[i])) && !(w.fence && (w.fence[i] || w.fenceJob[i])) &&
+        if (o.regrow >= C.TREE_REGROW_DAYS && w.bgrid[i] < 0 && !Sim.isCamp(S, i) && !(S.outras && S.outras.some((B) => Sim.isCamp(B, i))) && !(w.road && (w.road[i] || w.roadJob[i])) && !(w.fence && (w.fence[i] || w.fenceJob[i])) &&
           !S.people.some((p) => p.alive && Math.floor(p.x) === o.x && Math.floor(p.y) === o.y) && !fechaPassagem(w, i)) {
           o.k = 'tree'; o.regrow = 0; G.W.refreshBlock(w, i);
         }
@@ -3585,7 +3594,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (G.Narr) G.Narr.daily(S);
     G.Tech.daily(S);
     if (G.Obras) G.Obras.daily(S);
-    if (G.Fauna) G.Fauna.daily(S);
+    if (G.Fauna && !S.base) G.Fauna.daily(S);   // 0.28: os bichos são um só para as tribos
     if (G.Campo) G.Campo.daily(S);   // Etapa 10: roça, criação, descobertas do campo
     if (G.Minas) G.Minas.daily(S);   // Etapa 12: as descobertas da mina
     if (G.Povos) G.Povos.daily(S);   // a convivência e as caravanas
@@ -3811,7 +3820,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       const i = ty * w.W + tx;
       if (!seen[i] && (tx + 0.5 - x) ** 2 + (ty + 0.5 - y) ** 2 <= r * r) { seen[i] = 1; n++; }
     }
-    if (n) S.seenRev = (S.seenRev || 0) + 1;
+    if (n) { S.seenRev = (S.seenRev || 0) + 1; const A = S.base || S; if (A !== S) A.seenRev = (A.seenRev || 0) + 1; if (A.outras) for (const B of A.outras) if (B !== S) B.seenRev = (B.seenRev || 0) + 1; }   // 0.28: a névoa é uma só para as tribos
     return n;
   }
   Sim.reveal = reveal;
@@ -3878,7 +3887,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       else p.needs.saude = -999;
     }
     if (G.Narr) G.Narr.step(S, dt);   // lobos e viajantes
-    if (G.Fauna) G.Fauna.step(S, dt);   // capivaras
+    if (G.Fauna && !S.base) G.Fauna.step(S, dt);   // capivaras (0.28: um só bando para as tribos)
     if (G.Campo) G.Campo.step(S, dt);   // bichos de criação (Etapa 10)
     if (G.Deus && S.god && S.god.pending) G.Deus.tick(S, dt);   // o raio da estátua do trovão (Etapa 11)
     if (G.Soc && G.Soc.busy(S)) G.Soc.tick(S);   // Etapa 14: o julgamento, o fogo posto, quem vai embora
@@ -6447,8 +6456,10 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // o nome que o povo daria (sorteado pela seed, sem repetir o da vila de fora)
   O.nomeSugerido = function (S, k) {
     const fora = S.soc && S.soc.vila ? S.soc.vila.nome : '';
-    const ok = NOMES.filter((n) => n !== fora && n !== (S.povo && S.povo.nome));
-    return ok[Math.floor(G.hash2(S.seed, (k || 0) + 7, 991) * ok.length)];
+    // 0.28: nem o nome de outra tribo do mesmo mundo (o sorteio leva o número da tribo)
+    const outras = G.Tribos ? G.Tribos.todas(S).filter((t) => t !== S).map((t) => t.povo && t.povo.nome) : [];
+    const ok = NOMES.filter((n) => n !== fora && n !== (S.povo && S.povo.nome) && outras.indexOf(n) < 0);
+    return ok[Math.floor(G.hash2(S.seed, (k || 0) + 7 + (S.tribo ? S.tribo.id * 13 : 0), 991) * ok.length)];
   };
   O.renomear = function (S, nome) {
     nome = String(nome || '').replace(/\s+/g, ' ').trim().slice(0, 22);
@@ -19323,6 +19334,247 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   };
 })(globalThis.G = globalThis.G || {});
 
+/* ---- js/tribos.js ---- */
+/* Gods · as tribos (0.28). Você pode fazer nascer outra tribo no mesmo mapa, longe da primeira. Cada tribo é um estado
+   inteiro da simulação (o mesmo motor), e as duas dividem o mapa, a névoa, os bichos, o relógio e o Deus. A primeira
+   tribo guarda as outras (S.outras) e a relação entre elas (S.rel); as outras apontam para ela (S.base).
+   Quando se encontram, a relação (de -100 a 100) anda sozinha pela fé de cada uma e pelo que você faz: perto de cima,
+   trocam o que sobra e alguém vai morar com o outro povo; perto de baixo, roubam comida; no fundo, guerra, e depois
+   trégua. Tudo o que acontece entre elas usa um sorteio próprio da relação: a vida de cada tribo não muda por isso. */
+(function (G) {
+  'use strict';
+  const T = G.Tribos = {};
+  const C = G.CFG;
+  const Sim = () => G.Sim;
+  const DAY = () => C.DAY_MIN;
+
+  T.raiz = (S) => (S && S.base) || S;
+  T.todas = (S) => { const A = T.raiz(S); return A ? [A].concat(A.outras || []) : []; };
+  T.nome = (S) => (S.povo && S.povo.nome) || (S.tribo && S.tribo.nome) || 'a primeira tribo';
+  const vivos = (S) => S.people.filter((p) => p.alive);
+  const feMedia = (S) => { const v = vivos(S); return v.length ? v.reduce((a, p) => a + p.fe, 0) / v.length : 0; };
+
+  // ---------- nascer uma tribo ----------
+  T.criarWhy = function (S) {
+    const A = T.raiz(S);
+    if (!A || !A.god) return 'ainda não';
+    if ((A.outras || []).length >= C.TRIBO_MAX - 1) return 'o mundo já tem ' + C.TRIBO_MAX + ' tribos';
+    if (G.Deus && G.Deus.level(A) < C.TRIBO_NIVEL) return 'chega com o nível ' + C.TRIBO_NIVEL + ' de Deus';
+    if (A.god.poder < C.TRIBO_CUSTO) return 'custa ' + C.TRIBO_CUSTO + ' de Poder';
+    if (!T.lugar(A)) return 'não há lugar bom longe o bastante';
+    return null;
+  };
+  // um lugar bom, longe de toda tribo (de preferência onde ninguém ainda foi)
+  T.lugar = function (A) {
+    const w = A.world, campos = T.todas(A).map((t) => t.camp);
+    let best = null, bestSc = -1e9;
+    for (const minD of [C.TRIBO_DIST, C.TRIBO_DIST * 0.65]) {
+      for (let y = 12; y < w.H - 12; y += 4) for (let x = 12; x < w.W - 12; x += 4) {
+        if (campos.some((c) => Math.hypot(c.x - x, c.y - y) < minD)) continue;
+        const s = G.W.evalSite(w, x, y);
+        if (!s.valid) continue;
+        const sc = Math.min(s.trees, 40) + Math.min(s.rocks, 12) * 2 + Math.min(s.bushes, 20) * 2.5 - s.waterDist * 3 - s.cold * 30 + (s.waterDist <= 1 ? -6 : 0) + (A.seen[y * w.W + x] ? 0 : 8);
+        if (sc > bestSc) { bestSc = sc; best = s; }
+      }
+      if (best) return best;
+    }
+    return null;
+  };
+  T.criar = function (S) {
+    if (T.criarWhy(S)) return null;
+    const A = T.raiz(S), w = A.world, s = T.lugar(A), n = (A.outras || []).length + 1;
+    // nomes que ninguém das tribos usa
+    const usados = new Set(); for (const t of T.todas(A)) for (const p of t.people) usados.add(p.name);
+    const P = Sim().namePool, h = (A.t + n * 7919) >>> 0;
+    const livre = (L, k) => { for (let i = 0; i < L.length; i++) { const nm = L[(h + k * 31 + i) % L.length]; if (!usados.has(nm)) return nm; } return L[h % L.length]; };
+    const B = Sim().newGame(A.seed, { x: s.x, y: s.y }, [livre(P.FEM, 1), livre(P.MASC, 2)], w);
+    // o mesmo relógio, o mesmo Deus, os mesmos bichos e a mesma névoa (o que uma tribo vê, Deus vê)
+    for (let i = 0; i < B.seen.length; i++) if (B.seen[i]) A.seen[i] = 1;
+    B.seen = A.seen; A.seenRev = (A.seenRev || 0) + 1;
+    B.god = A.god; B.fauna = A.fauna;
+    B.t = A.t; B.ck = Sim().clock(B.t); B.precip = A.precip; B.temp = A.temp;
+    B.rng = new G.RNG(((A.seed ^ 0x9e3779b9) + n * 104729 + Math.floor(A.t)) >>> 0);
+    B.base = A;
+    B.tribo = { id: n, nome: n === 1 ? 'a segunda tribo' : 'a terceira tribo', t: A.t };
+    A.tribo = A.tribo || { id: 0, nome: 'a primeira tribo' };
+    A.outras = (A.outras || []).concat([B]);
+    A.rel = A.rel || { pares: {} };
+    B.rel = A.rel;
+    for (const t of T.todas(A)) if (t !== B) T.par(A, t, B);
+    A.god.poder -= C.TRIBO_CUSTO;
+    const casal = B.people.map((p) => p.name).join(' e '), lugar = s ? G.W.siteLabel(w, s) : '';
+    Sim().chron(A, 'Por vontade de ' + (G.Deus ? G.Deus.call(A) : 'Deus') + ', um casal novo, ' + casal + ', chegou ' + lugar + ', longe daqui. Ninguém da aldeia sabe deles ainda.');
+    B.chron.push({ t: B.t, text: casal + ' chegaram ' + lugar + '. Começa ' + B.tribo.nome + '.' });
+    return B;
+  };
+
+  // ---------- a relação entre duas tribos ----------
+  const chave = (a, b) => Math.min(a.tribo.id, b.tribo.id) + '-' + Math.max(a.tribo.id, b.tribo.id);
+  T.par = function (A, x, y) {
+    const pares = A.rel.pares, k = chave(x, y);
+    return pares[k] || (pares[k] = { v: 0, contato: false, ult: {}, r: (G.hash2(x.tribo.id + 3, y.tribo.id + 5, A.seed >>> 0) * 4294967296) >>> 0, hist: [] });
+  };
+  function sorte(par) { par.r = (Math.imul(par.r ^ (par.r >>> 15), 2246822507) + 0x6d2b79f5) >>> 0; return par.r / 4294967296; }
+  T.palavra = (v) => (v >= 60 ? 'irmãos' : v >= 25 ? 'amigos' : v > -25 ? 'desconfiados' : v > -60 ? 'inimigos' : 'em guerra');
+  function conta(par, x, y, txt, tom) {
+    par.hist.push({ t: x.t, txt });
+    if (par.hist.length > 12) par.hist.shift();
+    for (const t of [x, y]) Sim().chron(t, txt);
+    if (tom) for (const t of [x, y]) t.events.push({ k: 'tribo', tom, text: txt });
+  }
+
+  // ---------- a cada quadro (de hora em hora e de dia em dia do relógio comum) ----------
+  T.passo = function (S) {
+    const A = T.raiz(S);
+    if (!A || !A.outras || !A.outras.length || A.safe) return;
+    const h = Math.floor(A.t / 60), d = Math.floor(A.t / DAY());
+    if (A.rel.h === undefined) { A.rel.h = h; A.rel.d = d; }
+    if (h !== A.rel.h) { A.rel.h = h; horaria(A); }
+    if (d !== A.rel.d) { A.rel.d = d; diaria(A); }
+  };
+  function perto(x, y, r) {
+    for (const p of x.people) if (p.alive && !p.carriedBy && Math.abs(p.x - y.camp.x) <= r && Math.abs(p.y - y.camp.y) <= r) return p;
+    return null;
+  }
+  function horaria(A) {
+    const ts = T.todas(A);
+    for (let i = 0; i < ts.length; i++) for (let j = i + 1; j < ts.length; j++) {
+      const x = ts[i], y = ts[j], par = T.par(A, x, y);
+      if (par.contato || !vivos(x).length || !vivos(y).length) continue;
+      const p = perto(x, y, C.TRIBO_VE) || perto(y, x, C.TRIBO_VE);
+      if (p) encontro(A, par, x, y, p.name + ' chegou perto de onde vive ' + (x.people.indexOf(p) >= 0 ? T.nome(y) : T.nome(x)) + '.');
+    }
+  }
+  function encontro(A, par, x, y, como) {
+    par.contato = true; par.t0 = A.t;
+    // começa pela fé: quem acredita no mesmo Deus desconfia menos
+    par.v = Math.round((feMedia(x) + feMedia(y)) / 2 - 50) * 0.4;
+    conta(par, x, y, 'Pela primeira vez, ' + T.nome(x) + ' e ' + T.nome(y) + ' se viram. ' + como + ' Os dois povos rezam para o mesmo céu, mas não se conhecem.', 'good');
+  }
+  function diaria(A) {
+    const ts = T.todas(A);
+    for (let i = 0; i < ts.length; i++) for (let j = i + 1; j < ts.length; j++) {
+      const x = ts[i], y = ts[j], par = T.par(A, x, y);
+      const nx = vivos(x).length, ny = vivos(y).length;
+      if (!nx || !ny) continue;
+      if (!par.contato) {
+        // caçadores e coletores se cruzam de vez em quando: mais fácil quanto mais perto e maior o povo
+        const dist = Math.hypot(x.camp.x - y.camp.x, x.camp.y - y.camp.y);
+        const ch = Math.max(0, 1 - dist / C.TRIBO_CRUZA) * Math.min(1, (nx + ny) / 30) * 0.12;
+        if (sorte(par) < ch) encontro(A, par, x, y, 'Caçadores dos dois povos se cruzaram no mato.');
+        continue;
+      }
+      // a fé dos dois puxa a relação: muita fé, para cima; pouca, para baixo
+      const fe = (feMedia(x) + feMedia(y)) / 2;
+      par.v *= 1 - C.TRIBO_VOLTA;   // sem nada acontecendo, a relação volta devagar para o meio
+      par.v += fe >= 65 ? C.TRIBO_FE_SOBE : fe < 40 ? -C.TRIBO_FE_SOBE : 0;
+      par.v = Math.max(-100, Math.min(100, par.v));
+      acontece(A, par, x, y);
+    }
+  }
+  const desde = (A, par, k) => (A.t - (par.ult[k] || -1e9)) / DAY();
+  function acontece(A, par, x, y) {
+    const v = par.v;
+    if (v >= 25 && desde(A, par, 'troca') >= 5 && sorte(par) < 0.5) { troca(par, x, y); par.ult.troca = A.t; par.v += 2; return; }
+    if (v >= 55 && desde(A, par, 'muda') >= 12 && sorte(par) < 0.4 && muda(par, x, y)) { par.ult.muda = A.t; par.v += 5; return; }
+    if ((par.tregua || 0) > A.t) return;   // na trégua, ninguém rouba nem guerreia
+    if (v <= -25 && desde(A, par, 'roubo') >= C.TRIBO_ROUBO_D && sorte(par) < 0.35) { roubo(par, x, y); par.ult.roubo = A.t; par.v -= 4; return; }
+    if (v <= -60 && desde(A, par, 'guerra') >= C.TRIBO_GUERRA_D && sorte(par) < 0.5 && vivos(x).length >= 4 && vivos(y).length >= 4) { guerra(par, x, y); par.ult.guerra = A.t; par.v = -20; par.tregua = A.t + C.TRIBO_TREGUA_D * DAY(); }
+  }
+  const TROCA = ['peixe', 'frutas', 'carne', 'defumado', 'madeira', 'pedra', 'fibra', 'couro', 'argila', 'tabuas'];
+  const NOME = { peixe: 'peixe', frutas: 'frutas', carne: 'carne', defumado: 'defumado', madeira: 'madeira', pedra: 'pedra', fibra: 'fibra', couro: 'couro', argila: 'argila', tabuas: 'tábuas' };
+  function sobra(S) { let k = null, n = 0; for (const r of TROCA) if ((S.stock[r] || 0) > n) { n = S.stock[r]; k = r; } return k; }
+  function troca(par, x, y) {
+    const kx = sobra(x), ky = sobra(y);
+    if (!kx || !ky) return;
+    const nx = Math.min(25, Math.floor(x.stock[kx] * 0.15)), ny = Math.min(25, Math.floor(y.stock[ky] * 0.15));
+    if (nx < 2 || ny < 2) return;
+    x.stock[kx] -= nx; y.stock[kx] = (y.stock[kx] || 0) + nx;
+    y.stock[ky] -= ny; x.stock[ky] = (x.stock[ky] || 0) + ny;
+    for (const t of [x, y]) Sim().aparaEstoque(t);
+    conta(par, x, y, 'Gente de ' + T.nome(x) + ' e de ' + T.nome(y) + ' se encontrou na trilha para trocar: foram ' + nx + ' de ' + NOME[kx] + ' para um lado e ' + ny + ' de ' + NOME[ky] + ' para o outro.', 'good');
+  }
+  function solteiro(S) {
+    const F = G.Family;
+    return vivos(S).filter((p) => { const a = F.age(S, p); return a >= 18 && a <= 32 && !p.carriedBy && !p.escolhido && !p.preg && !(F.partners && F.partners(S, p).length) && !(G.Avatar && G.Avatar.ativoEm && G.Avatar.ativoEm(S, p)); })
+      .sort((a, b) => a.id - b.id);
+  }
+  // alguém se encanta pelo outro povo e vai morar lá (sai como quem vai embora; chega como gente nova, com o mesmo jeito)
+  function muda(par, x, y) {
+    const [de, para] = vivos(x).length >= vivos(y).length ? [x, y] : [y, x];
+    const cand = solteiro(de);
+    if (!cand.length || vivos(de).length < 6) return false;
+    const p = cand[Math.floor(sorte(par) * cand.length)], idade = G.Family.age(de, p);
+    if (G.Soc && de.soc) G.Soc.sair(de, p, 'foi morar com ' + T.nome(para)); else { p.alive = false; p.fora = de.t; de.people.splice(de.people.indexOf(p), 1); }
+    const q = Sim().makePerson(para, p.sex, p.name, idade);
+    for (const k of ['traits', 'skills', 'indole', 'povo', 'sangue']) if (p[k] !== undefined) q[k] = JSON.parse(JSON.stringify(p[k]));
+    q.fe = p.fe; q.x = para.camp.x + 1.5; q.y = para.camp.y + 2.5; q.px = q.x; q.py = q.y; q.lastAge = G.Family.age(para, q);
+    para.people.push(q);
+    for (const f of ['Family', 'God', 'Deus', 'Tech', 'Life', 'Campo', 'Minas']) if (G[f] && G[f].init) G[f].init(para);
+    if (G.Povos && G.Povos.recount) G.Povos.recount(para);
+    conta(par, x, y, p.name + ' se encantou pela gente de ' + T.nome(para) + ' e foi morar com ' + (para.people.length > 1 ? 'eles' : 'ela') + '. Os dois povos agora têm parente do outro lado.', 'good');
+    return true;
+  }
+  function roubo(par, x, y) {
+    // rouba quem tem menos fé (ou menos comida)
+    const [ladrao, vitima] = feMedia(x) <= feMedia(y) ? [x, y] : [y, x];
+    const levou = [];
+    for (const k of ['peixe', 'frutas', 'carne', 'defumado']) {
+      const n = Math.floor((vitima.stock[k] || 0) * 0.15);
+      if (n < 2) continue;
+      vitima.stock[k] -= n; ladrao.stock[k] = (ladrao.stock[k] || 0) + n; levou.push(n + ' de ' + NOME[k]);
+    }
+    Sim().aparaEstoque(ladrao);
+    if (!levou.length) return;
+    conta(par, x, y, 'Gente de ' + T.nome(ladrao) + ' entrou de noite no estoque de ' + T.nome(vitima) + ' e levou ' + levou.join(', ') + '.', 'warn');
+  }
+  function guerra(par, x, y) {
+    const mortos = [];
+    for (const t of [x, y]) {
+      const n = vivos(t).length > 40 ? 2 : 1;
+      const lut = vivos(t).filter((p) => !p.carriedBy && G.Family.age(t, p) >= 16).sort((a, b) => a.id - b.id);
+      for (let k = 0; k < n && lut.length; k++) {
+        const p = lut.splice(Math.floor(sorte(par) * lut.length), 1)[0];
+        p.needs.saude = 0; p.dmg = p.dmg || {}; p.dmg.guerra = 100;
+        Sim().die(t, p);
+        p.cause = 'guerra';
+        mortos.push(p.name + ' (' + T.nome(t) + ')');
+      }
+      for (const k of ['madeira', 'pedra', 'peixe', 'frutas']) t.stock[k] = Math.floor((t.stock[k] || 0) * 0.85);
+    }
+    conta(par, x, y, 'Guerra entre ' + T.nome(x) + ' e ' + T.nome(y) + '. Morreram ' + mortos.join(', ') + '. Depois do sangue, os dois povos fizeram uma trégua de ' + C.TRIBO_TREGUA_D + ' dias, mas não esquecem.', 'warn');
+  }
+
+  // ---------- o que Deus faz pela relação ----------
+  T.influirWhy = function (S, x, y, k) {
+    const A = T.raiz(S), par = A.rel && A.rel.pares[chave(x, y)];
+    if (!par || !par.contato) return 'os dois povos ainda não se conhecem';
+    const custo = k === 'paz' ? C.TRIBO_PAZ : C.TRIBO_DISCORDIA;
+    if (A.god.poder < custo) return 'custa ' + custo + ' de Poder';
+    if (A.t - (par.ult.deus || -1e9) < DAY()) return 'uma vez por dia';
+    return null;
+  };
+  T.influir = function (S, x, y, k) {
+    if (T.influirWhy(S, x, y, k)) return false;
+    const A = T.raiz(S), par = T.par(A, x, y);
+    A.god.poder -= k === 'paz' ? C.TRIBO_PAZ : C.TRIBO_DISCORDIA;
+    par.ult.deus = A.t;
+    if (k === 'paz') {
+      par.v = Math.min(100, par.v + C.TRIBO_INFLUI);
+      conta(par, x, y, 'Na mesma noite, gente de ' + T.nome(x) + ' e de ' + T.nome(y) + ' sonhou com o mesmo fogo, e acordou com saudade de quem nem conhece direito.', 'good');
+    } else {
+      par.v = Math.max(-100, par.v - C.TRIBO_INFLUI);
+      conta(par, x, y, 'Um boato correu entre ' + T.nome(x) + ' e ' + T.nome(y) + ': cada povo jura que o outro anda rondando à noite.', 'warn');
+    }
+    return true;
+  };
+  T.pares = function (S) {
+    const A = T.raiz(S), ts = T.todas(A), out = [];
+    for (let i = 0; i < ts.length; i++) for (let j = i + 1; j < ts.length; j++) out.push({ x: ts[i], y: ts[j], i, j, par: T.par(A, ts[i], ts[j]) });
+    return out;
+  };
+})(globalThis.G = globalThis.G || {});
+
 /* ---- js/save.js ---- */
 /* Gods · save: seed + o que mudou. O mundo é regerado pela seed ao carregar. */
 (function (G) {
@@ -19398,7 +19650,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   }
   Save.serialize = function (S) {
     const w = S.world, objD = [], extra = [], holy = [];
-    for (let i = 0; i < w.objs.length; i++) {
+    for (let i = 0; i < w.objs.length && !S.base; i++) {   // 0.28: a tribo de fora não leva o mapa (é o da primeira)
       const o = w.objs[i];
       if (i < w.genCount) {
         // 0.16: só o que mudou desde a geração (árvore de pé e pedra inteira são como nasceram e não vão)
@@ -19424,8 +19676,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       v: 1, game: 'genesis', seed: S.seed, size: w.W, gen: w.gen || 1, t: S.t, rng: S.rng.s, camp: S.camp, siteLabel: S.siteLabel,
       stock: S.stock, vontades: S.vontades, nextPid: S.nextPid, nextBid: S.nextBid,
       chron: S.chron, goals: S.goals, stats: S.stats, over: S.over, arrived: S.arrived,
-      people, buildings: S.buildings, objD, graves: extra, holy, god: S.god, seen: packSeen(S.seen), narr: packNarr(S.narr),
-      tech: S.tech || null, fauna: packFauna(S.fauna), opts: S.opts || null, life: packLife(S.life),
+      people, buildings: S.buildings, objD, graves: extra, holy, god: S.base ? null : S.god, seen: S.base ? null : packSeen(S.seen), narr: packNarr(S.narr),
+      tech: S.tech || null, fauna: S.base ? null : packFauna(S.fauna), opts: S.opts || null, life: packLife(S.life),
       obras: G.Obras ? G.Obras.pack(S) : null, campo: G.Campo ? G.Campo.pack(S) : null,
       goalsPhase: S.goalsPhase || 1, era: S.era || '', famInit: !!S.famInit, savedAt: G.Net ? G.Net.now() : Date.now(),
       hist: S.hist ? { day: S.hist.day, s: S.hist.s, n: S.hist.n } : null,   // a memória da aldeia (0.12), para o jogo fechado
@@ -19441,15 +19693,19 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       ia: S.ia || null,   // 0.25: o que a IA já escreveu (nomes, histórias das obras) e o que já viu
       visita: S.visita || null,   // Etapa 22: a abertura do mundo e os recados já aplicados
       povo: S.povo || null,   // 0.16: o nome e o título do lugar
+      tribo: S.tribo || null,   // 0.28: as tribos (a primeira leva as outras e a relação entre elas)
+      rel: S.base ? null : S.rel || null,
+      outras: S.base || !S.outras ? null : S.outras.map((B) => Save.serialize(B)),
     };
   };
 
-  Save.deserialize = function (d) {
+  Save.deserialize = function (d, base) {
     if (!d || d.v !== 1 || d.game !== 'genesis') return null;
-    const w = G.W.generate(d.seed, d.size || C.MAP, d.gen || 1);   // 0.18: o save de antes refaz o mundo sem regiões, como era
+    // 0.28: a tribo de fora (base = a primeira) mora no mapa da primeira
+    const w = base ? base.world : G.W.generate(d.seed, d.size || C.MAP, d.gen || 1);   // 0.18: o save de antes refaz o mundo sem regiões, como era
     const K = ['gone', 'tree', 'stump', 'rock', 'bush'];
     // 0.16: só o que mudou desde a geração (no mapa enorme, a lista inteira pesava demais)
-    if (d.objD) for (let j = 0; j + 3 < d.objD.length; j += 4) {
+    if (d.objD && !base) for (let j = 0; j + 3 < d.objD.length; j += 4) {
       const o = w.objs[d.objD[j]];
       if (!o) continue;
       const k = K[d.objD[j + 1]] || 'gone', a = d.objD[j + 2], b = d.objD[j + 3];
@@ -19460,7 +19716,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       else if (k === 'bush') { o.fruit = a; o.grow = b / 100; }
       G.W.refreshBlock(w, o.y * w.W + o.x);
     }
-    for (let i = 0; d.objs && i < w.genCount && i * 3 < d.objs.length; i++) {
+    for (let i = 0; d.objs && !base && i < w.genCount && i * 3 < d.objs.length; i++) {
       const o = w.objs[i], c = d.objs[i * 3], a = d.objs[i * 3 + 1], b = d.objs[i * 3 + 2];
       const k = K[c] || 'gone';
       if (k === 'gone') { G.W.removeObj(w, o); continue; }
@@ -19470,8 +19726,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       else if (k === 'bush') { o.fruit = a; o.grow = b / 100; }
       G.W.refreshBlock(w, o.y * w.W + o.x);
     }
-    for (const g of d.graves || []) { const o = G.W.addObj(w, 'grave', g.x, g.y, { name: g.name }); for (const f of ['pid', 't', 'r', 'vel', 'laje', 'fl', 'of']) if (g[f]) o[f] = g[f]; }
-    for (const h of d.holy || []) { const o = G.W.addObj(w, 'bush', h[0], h[1], { v: h[2], fruit: h[3], grow: h[4] / 100, holy: 1 }); G.W.refreshBlock(w, h[1] * w.W + h[0]); }
+    if (!base) for (const g of d.graves || []) { const o = G.W.addObj(w, 'grave', g.x, g.y, { name: g.name }); for (const f of ['pid', 't', 'r', 'vel', 'laje', 'fl', 'of']) if (g[f]) o[f] = g[f]; }
+    if (!base) for (const h of d.holy || []) { const o = G.W.addObj(w, 'bush', h[0], h[1], { v: h[2], fruit: h[3], grow: h[4] / 100, holy: 1 }); G.W.refreshBlock(w, h[1] * w.W + h[0]); }
     for (const b of d.buildings) {
       for (let dy = 0; dy < b.h; dy++) for (let dx = 0; dx < b.w; dx++) {
         const i = (b.y + dy) * w.W + b.x + dx;
@@ -19482,10 +19738,10 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       v: 1, seed: d.seed, world: w, t: d.t, rng: new G.RNG(d.rng), camp: d.camp, siteLabel: d.siteLabel,
       stock: d.stock, vontades: d.vontades, people: d.people, buildings: d.buildings,
       nextPid: d.nextPid, nextBid: d.nextBid, chron: d.chron, events: [], goals: d.goals, stats: d.stats,
-      over: d.over, arrived: d.arrived, god: d.god || null, narr: d.narr || null, savedAt: d.savedAt || 0,
-      tech: d.tech || null, fauna: d.fauna || null, opts: d.opts || null, life: d.life || null,
+      over: d.over, arrived: d.arrived, god: base ? base.god : d.god || null, narr: d.narr || null, savedAt: d.savedAt || 0,
+      tech: d.tech || null, fauna: base ? base.fauna : d.fauna || null, opts: d.opts || null, life: d.life || null,
       obras: d.obras || null, campo: d.campo || null,
-      seen: unpackSeen(d.seen, w.W * w.H),
+      seen: base ? base.seen : unpackSeen(d.seen, w.W * w.H),
       goalsPhase: d.goalsPhase || 1, era: d.era || '', famInit: !!d.famInit,
       hist: d.hist ? { day: -2, s: d.hist.s || [null, null, null, null], n: d.hist.n || [0, 0, 0, 0] } : null,
       povos: d.povos || null,
@@ -19500,13 +19756,16 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       ia: d.ia || null,
       visita: d.visita || null,
       povo: d.povo || null,
+      tribo: d.tribo || null,
     };
+    if (base) { S.base = base; S.rel = base.rel; } else S.rel = d.rel || null;
     for (const p of S.people) {
       p.path = null; p.pathI = 0; p.act = null; p.px = p.x; p.py = p.y; p.fail = {}; p.stuck = false;
       p.sleeping = false; p.inTent = 0;
       // quem estava em trabalho de parto volta direto para ele (a ação é recriada pela IA)
     }
     G.Sim.init(S);
+    if (!base && d.outras && d.outras.length) S.outras = d.outras.map((x) => Save.deserialize(x, S)).filter(Boolean);
     return S;
   };
 
@@ -23523,7 +23782,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     return { carried, tent, forja, mina };
   }
   let lastS = null;
-  R.draw = function (S, alpha, now, world) {
+  R.draw = function (S, alpha, now, world, outras) {
     lastS = S || null;
     FX = S ? frameIdx(S) : null;
     const dt = lastNow ? Math.min(0.1, (now - lastNow) / 1000) : 0;
@@ -23642,9 +23901,48 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         list.push({ y: y * TS + 4, e, x, y });
       }
     }
+    // 0.28: as outras tribos (obras, gente, bichos de criação e quem ronda), cada item marcado com a tribo dele
+    if (S && outras && outras.length && !far) for (const B of outras) {
+      const fxB = frameIdx(B);
+      drawCamp(B);
+      for (const b of B.buildings) {
+        if (b.x + b.w < tx0 || b.x > tx1 || b.y + b.h < ty0 || b.y > ty1) continue;
+        if (b.type === 'roca' && b.built) { for (let r = 0; r < 3; r++) list.push({ y: (b.y + r + 1) * TS - 2, b, row: r, T: B, fx: fxB }); if (!G.Sim.jobOf(b)) continue; }
+        if (b.type === 'curral') { list.push({ y: b.y * TS + 1, b, part: 'back', T: B, fx: fxB }); list.push({ y: (b.y + b.h) * TS - 1, b, part: 'front', T: B, fx: fxB }); continue; }
+        list.push({ y: (b.y + b.h) * TS - 1, b, T: B, fx: fxB });
+      }
+      for (const p of B.people) {
+        if (!p.alive || p.inTent || p.carriedBy) continue;
+        const x = U.lerp(p.px, p.x, alpha), y = U.lerp(p.py, p.y, alpha);
+        if (x < tx0 - 2 || x > tx1 + 2 || y < ty0 - 2 || y > ty1 + 3) continue;
+        list.push({ y: y * TS + 4, p, x, y, T: B, fx: fxB });
+      }
+      if (B.campo) for (const a of B.campo.bichos) {
+        const x = U.lerp(a.px, a.x, alpha), y = U.lerp(a.py, a.y, alpha);
+        if (x < tx0 - 1 || x > tx1 + 1 || y < ty0 - 1 || y > ty1 + 1) continue;
+        list.push({ y: y * TS + 3, cr: a, x, y, T: B, fx: fxB });
+      }
+      if (B.narr) for (const e of B.narr.ents) {
+        if (e.gone) continue;
+        const x = U.lerp(e.px, e.x, alpha), y = U.lerp(e.py, e.y, alpha);
+        if (x < tx0 - 1 || x > tx1 + 1 || y < ty0 - 1 || y > ty1 + 1) continue;
+        list.push({ y: y * TS + 4, e, x, y, T: B, fx: fxB });
+      }
+    }
     list.sort((a, b) => a.y - b.y);
     const snow = season === 3;
+    const fx0 = FX;
     for (const it of list) {
+      if (it.T) {   // 0.28: um item de outra tribo
+        FX = it.fx;
+        try {
+          if (it.b) drawBuilding(it.T, it.b, now, it.row, it.part);
+          else if (it.e) drawEnt(it.T, it.e, it.x, it.y, now);
+          else if (it.cr) drawCria(it.T, it.cr, it.x, it.y);
+          else if (it.p) drawPerson(it.T, it.p, it.x, it.y, now);
+        } finally { FX = fx0; }
+        continue;
+      }
       if (it.o) drawObj(it.o, season, snow, sc < 1, S, now);
       else if (it.corpo) drawCorpo(it.corpo, now);
       else if (it.b) drawBuilding(S, it.b, now, it.row, it.part);
@@ -27118,9 +27416,30 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     document.querySelectorAll('#modal-deus [data-gtab]').forEach((b) => { b.classList.toggle('on', b.dataset.gtab === deusTab); b.setAttribute('aria-selected', b.dataset.gtab === deusTab ? 'true' : 'false'); });
     $('#deus-mtitle').textContent = g.name ? g.name + ', ' + g.epithet : 'Deus';
     $('#deus-poder').textContent = fmtN(g.poder) + ' de Poder · glória ' + fmtN(g.glory);
-    $('#deus-body').innerHTML = deusTab === 'escolhidos' ? escolhidosHTML(Dz, g) : deusTab === 'atos' ? atosHTML(Dz, g) : deusTab === 'povos' && G.Povos ? povosHTML(Dz, g) : deusTab === 'memoria' && G.Memoria && S.memoria ? memoriaHTML(Dz) : deusTab === 'sociedade' && G.Soc && S.soc ? sociedadeHTML(Dz) : nivelHTML(Dz, g);
+    $('#deus-body').innerHTML = deusTab === 'escolhidos' ? escolhidosHTML(Dz, g) : deusTab === 'atos' ? atosHTML(Dz, g) : deusTab === 'povos' && G.Povos ? povosHTML(Dz, g) : deusTab === 'memoria' && G.Memoria && S.memoria ? memoriaHTML(Dz) : deusTab === 'sociedade' && G.Soc && S.soc ? sociedadeHTML(Dz) : deusTab === 'tribos' && G.Tribos ? tribosHTML() : nivelHTML(Dz, g);
     $('#modal-deus').hidden = false;
   };
+  // 0.28: as tribos (fazer nascer outra, olhar por cada uma, a relação entre elas e o que Deus faz por ela)
+  function tribosHTML() {
+    const Tb = G.Tribos, ts = Tb.todas(S), why = Tb.criarWhy(S);
+    const nomeT = (t) => Tb.nome(t).replace(/^./, (c) => c.toUpperCase());
+    const lista = ts.map((t, i) => {
+      const n = t.people.filter((p) => p.alive).length, fe = n ? Math.round(t.people.filter((p) => p.alive).reduce((a, p) => a + p.fe, 0) / n) : 0;
+      return `<li><img class="ico" src="${ic('vila')}" alt=""><div><b>${esc(nomeT(t))}</b>${t === S ? ' <span class="small ttl">você está olhando</span>' : ''}<span class="small">${n} ${n === 1 ? 'pessoa' : 'pessoas'} · fé média ${fe} · ${esc(t.siteLabel || '')}</span></div>${t === S ? '' : `<button type="button" class="btn btn-small" data-gact="tribo-ver" data-i="${i}">Olhar por esta</button>`}</li>`;
+    }).join('');
+    const pares = Tb.pares(S).map(({ x, y, i, j, par }) => {
+      if (!par.contato) return `<li><span class="small">${esc(nomeT(x))} e ${esc(Tb.nome(y))} ainda não se conhecem.</span></li>`;
+      const v = Math.round(par.v), w = Math.round((v + 100) / 2);
+      const bt = (k, txt, custo) => { const wy = Tb.influirWhy(S, x, y, k); return `<button type="button" class="btn btn-small" data-gact="tribo-${k}" data-i="${i}" data-j="${j}"${wy ? ' disabled title="Agora não: ' + esc(wy) + '"' : ''}>${txt} (${custo} de Poder)</button>`; };
+      const ult = par.hist.length ? '<span class="small muted">' + esc(par.hist[par.hist.length - 1].txt) + '</span>' : '';
+      return `<li><span class="small">${esc(nomeT(x))} e ${esc(Tb.nome(y))} · <b>${v}</b> · ${Tb.palavra(v)}</span><div class="bar ${v < -25 ? 'low' : v < 25 ? 'mid' : ''}"><i style="width:${w}%"></i></div>${ult}
+        <div class="chips">${bt('paz', 'Sonho de irmandade', C.TRIBO_PAZ)}${bt('discordia', 'Boato de discórdia', C.TRIBO_DISCORDIA)}</div></li>`;
+    }).join('');
+    return `<p class="small muted">Você pode fazer nascer outra tribo no mesmo mundo, longe desta. Cada uma vive a sua vida, e você é o Deus das duas. Quando se encontram, a relação anda sozinha pela fé de cada povo e pelo que você faz: amigos trocam o que sobra e às vezes alguém vai morar do outro lado; inimigos roubam comida; no fundo, guerra.</p>
+      <h3>As tribos</h3><ul class="donlist">${lista}</ul>
+      <div class="chips"><button type="button" class="btn btn-gold" data-gact="tribo-criar"${why ? ' disabled' : ''}>Fazer nascer outra tribo (${C.TRIBO_CUSTO} de Poder)</button>${why ? `<span class="small muted">Agora não: ${esc(why)}.</span>` : ''}</div>
+      ${pares ? `<h3>Entre elas</h3><ul class="convlist">${pares}</ul>` : ''}`;
+  }
   // Etapa 12: os povos (quem são, os dons, a convivência entre eles) e o chamado de Deus
   function povosHTML(Dz, g) {
     const Pv = G.Povos, P = S.povos;
@@ -27678,6 +27997,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   const Fam = () => G.Family;
   function godAct(b) {
     const Dz = G.Deus, a = b.dataset.gact;
+    if (a && a.indexOf('tribo-') === 0 && UI.hooks.tribo) {   // 0.28
+      const ok = UI.hooks.tribo(a.slice(6), +(b.dataset.i || 0), +(b.dataset.j || 0));
+      if (a === 'tribo-ver' && ok) { $('#modal-deus').hidden = true; return; }
+      UI.deus('tribos'); UI.update(0, true);
+      return;
+    }
     if (a === 'pending') { $('#modal-deus').hidden = true; if (UI.hooks.godPending) UI.hooks.godPending(); return; }
     // Etapa 13: a pergunta que espera, e o que Deus diz do rito (muda quando quiser)
     if (a === 'pendmem') { $('#modal-deus').hidden = true; if (UI.hooks.memPending) UI.hooks.memPending(); return; }
@@ -28586,6 +28911,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       holdSim = true; holdDrawn = false;
       // em fatias: ausências longas não travam a tela (0.12: quase tudo em dias resumidos; "Entrar agora" corta o resto)
       const job = G.Offline.runAsync(S, minutes, (f, j) => UI.awayProgress(f, minutes, j), (r) => {
+        for (const T of tribos()) if (T !== S && !T.over) { try { G.Offline.run(T, minutes); } catch (e) { /* a outra tribo segue de onde está */ } T.events.length = 0; }   // 0.28
         UI.consume(S, 0, true);
         R.invalidate();
         UI.bind(S);
@@ -28742,10 +29068,22 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   }
 
   // ---------- salvar ----------
+  // 0.28: as tribos. S é a tribo que você está olhando (painéis, vontades, obras); as outras vivem junto
+  const raiz = () => (G.Tribos ? G.Tribos.raiz(S) : S);
+  const tribos = () => (S && G.Tribos ? G.Tribos.todas(S) : S ? [S] : []);
+  function trocaTribo(T) {
+    if (!T || T === S) return;
+    S = T;
+    follow = 0; camTarget = { x: (S.camp.x + 1) * TS, y: (S.camp.y + 1) * TS };
+    UI.select(0, 0);
+    UI.bind(S);
+    UI.update(0, true);
+    UI.toast('Agora você olha por ' + G.Tribos.nome(S) + '.', 'good');
+  }
   function save(forceCloud) {
     if (!S) return false;
     const s = session();
-    const txt = Save.store(S, { conta: s ? s.email : '' });
+    const txt = Save.store(raiz(), { conta: s ? s.email : '' });   // 0.28: a primeira tribo leva as outras
     lastSave = performance.now();
     const el = $('#save-status');
     const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -28759,12 +29097,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const s = session();
     if (!s || cloudBusy) return;
     cloudBusy = true; lastCloud = performance.now();
-    const res = await Net.call('salvar', { token: s.token, dados: txt, resumo: Save.summary(S) });
+    const res = await Net.call('salvar', { token: s.token, dados: txt, resumo: Save.summary(raiz()) });
     if (res.ok) recadosChegaram(s);   // Etapa 22: o que outros deuses mandaram
     cloudBusy = false;
     const el = $('#save-status');
     if (res.ok) {
-      s.mundo = Save.summary(S); Net.setSession(s);
+      s.mundo = Save.summary(raiz()); Net.setSession(s);
       if (el) el.textContent = 'Salvo na nuvem e neste aparelho às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + '.';
     } else if (res.sessao === false) {
       UI.toast('Sua sessão expirou. O jogo segue salvando neste aparelho.', 'warn');
@@ -28773,8 +29111,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   function beaconSave() {
     if (!S) return;
     const s = session();
-    const txt = Save.store(S, { conta: s ? s.email : '' });
-    if (s && txt) Net.beacon('salvar', { token: s.token, dados: txt, resumo: Save.summary(S) });
+    const txt = Save.store(raiz(), { conta: s ? s.email : '' });
+    if (s && txt) Net.beacon('salvar', { token: s.token, dados: txt, resumo: Save.summary(raiz()) });
   }
 
   // ---------- construção: posicionar antes de confirmar ----------
@@ -29569,7 +29907,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         // velocidade pedida, o mundo anda o que dá e a tela segue fluida, em vez de travar tentando alcançar
         const t0 = performance.now();
         let n = 0;
-        while (acc >= C.STEP_MIN) { Sim.step(S, C.STEP_MIN); acc -= C.STEP_MIN; n++; if (S.over || performance.now() - t0 > C.SIM_BUDGET_MS) break; }
+        const ts = tribos();   // 0.28: todas as tribos andam no mesmo relógio
+        while (acc >= C.STEP_MIN) { for (const T of ts) if (!T.over) Sim.step(T, C.STEP_MIN); acc -= C.STEP_MIN; n++; if (S.over || performance.now() - t0 > C.SIM_BUDGET_MS) break; }
+        if (G.Tribos) G.Tribos.passo(S);
         if (acc > C.SIM_BACKLOG * C.STEP_MIN) { simLag = Math.min(1, simLag + 0.05); acc = C.SIM_BACKLOG * C.STEP_MIN; } else simLag = Math.max(0, simLag - 0.02);
         // o botão da velocidade avisa quando o mundo não acompanha
         const lag = simLag > 0.5;
@@ -29595,10 +29935,15 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       if (placing && now - placing.at > 400) { placing.at = now; setGhost(placing.x, placing.y); }
       // com o mundo seguindo fora (tempo offline), o mapa atrás da janela é desenhado uma vez só (inteiro) e fica
       // parado: o aparelho fica para o cálculo
-      if (!holdSim) R.draw(S, alpha, now);
-      else if (!holdDrawn) { holdDrawn = true; R.chunkBudget = 999; R.draw(S, alpha, now); R.chunkBudget = 0; }
+      const fora = tribos().filter((T) => T !== S);   // 0.28: as outras tribos aparecem no mesmo mapa
+      if (!holdSim) R.draw(S, alpha, now, null, fora);
+      else if (!holdDrawn) { holdDrawn = true; R.chunkBudget = 999; R.draw(S, alpha, now, null, fora); R.chunkBudget = 0; }
       if (!holdSim) {   // e os avisos esperam o resumo
         UI.consume(S, now);
+        for (const T of fora) {   // 0.28: das outras tribos, só o que conta (com o nome da tribo na frente)
+          for (const e of T.events) if (e.k === 'chron' || e.k === 'tribo') UI.toast(G.Tribos.nome(T).replace(/^./, (c) => c.toUpperCase()) + ': ' + e.text, e.k === 'tribo' ? e.tom : 'chron');
+          T.events.length = 0;
+        }
         UI.frame(now);
         UI.update(now);
         if (mode === 'game' && now - lastSave > 60000) save();
@@ -29627,6 +29972,14 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       placing: () => (placing && !placing.custom ? placing.type : null),   // a obra nova que está sendo posicionada (acende o botão dela)
       save: () => { save(true); },
       toTitle: () => { save(true); S = null; showTitle(); },
+      // 0.28: as tribos (criar, olhar por outra, sonho de irmandade e boato de discórdia)
+      tribo: (acao, i, j) => {
+        const ts = tribos();
+        if (acao === 'criar') { const B = G.Tribos.criar(S); if (B) { UI.toast('Nasceu ' + B.tribo.nome + ': ' + B.people.map((p) => p.name).join(' e ') + '.', 'good'); save(); } return !!B; }
+        if (acao === 'ver') { trocaTribo(ts[i]); return true; }
+        if (acao === 'paz' || acao === 'discordia') return G.Tribos.influir(S, ts[i], ts[j], acao);
+        return false;
+      },
       center: (x, y) => { if (!follow) camTarget = { x, y }; },   // seguindo alguém, a câmera já tem dono
       // seguir alguém com a câmera: follow(pid) liga, follow(0) solta; following() diz quem (0: ninguém)
       follow: (pid) => setFollow(pid),

@@ -996,7 +996,7 @@
     const per = C.BUSH_DAYS_PER_FRUIT[ck.season];
     const bm = G.Narr ? G.Narr.bushMult(S) : 1;   // seca para, fartura acelera
     const terra = G.Deus && G.Deus.dom(S, 'terra') ? C.DOM.terraBush : 1;   // Etapa 11: Mão na Terra
-    for (const o of w.objs) {
+    if (!S.base) for (const o of w.objs) {   // 0.28: o mapa é um só; quem cuida dele é a primeira tribo
       if (o.k === 'bush') {
         if (o.holy) {
           // Etapa 11: a árvore criada por Deus dá fruta o ano todo, até no inverno e na seca
@@ -1016,7 +1016,7 @@
         o.regrow = (o.regrow || 0) + 1;
         const i = o.y * w.W + o.x;
         // no caminho, na trilha e no caminho marcado a árvore não volta (Etapa 7)
-        if (o.regrow >= C.TREE_REGROW_DAYS && w.bgrid[i] < 0 && !Sim.isCamp(S, i) && !(w.road && (w.road[i] || w.roadJob[i])) && !(w.fence && (w.fence[i] || w.fenceJob[i])) &&
+        if (o.regrow >= C.TREE_REGROW_DAYS && w.bgrid[i] < 0 && !Sim.isCamp(S, i) && !(S.outras && S.outras.some((B) => Sim.isCamp(B, i))) && !(w.road && (w.road[i] || w.roadJob[i])) && !(w.fence && (w.fence[i] || w.fenceJob[i])) &&
           !S.people.some((p) => p.alive && Math.floor(p.x) === o.x && Math.floor(p.y) === o.y) && !fechaPassagem(w, i)) {
           o.k = 'tree'; o.regrow = 0; G.W.refreshBlock(w, i);
         }
@@ -1060,7 +1060,7 @@
     if (G.Narr) G.Narr.daily(S);
     G.Tech.daily(S);
     if (G.Obras) G.Obras.daily(S);
-    if (G.Fauna) G.Fauna.daily(S);
+    if (G.Fauna && !S.base) G.Fauna.daily(S);   // 0.28: os bichos são um só para as tribos
     if (G.Campo) G.Campo.daily(S);   // Etapa 10: roça, criação, descobertas do campo
     if (G.Minas) G.Minas.daily(S);   // Etapa 12: as descobertas da mina
     if (G.Povos) G.Povos.daily(S);   // a convivência e as caravanas
@@ -1286,7 +1286,7 @@
       const i = ty * w.W + tx;
       if (!seen[i] && (tx + 0.5 - x) ** 2 + (ty + 0.5 - y) ** 2 <= r * r) { seen[i] = 1; n++; }
     }
-    if (n) S.seenRev = (S.seenRev || 0) + 1;
+    if (n) { S.seenRev = (S.seenRev || 0) + 1; const A = S.base || S; if (A !== S) A.seenRev = (A.seenRev || 0) + 1; if (A.outras) for (const B of A.outras) if (B !== S) B.seenRev = (B.seenRev || 0) + 1; }   // 0.28: a névoa é uma só para as tribos
     return n;
   }
   Sim.reveal = reveal;
@@ -1353,7 +1353,7 @@
       else p.needs.saude = -999;
     }
     if (G.Narr) G.Narr.step(S, dt);   // lobos e viajantes
-    if (G.Fauna) G.Fauna.step(S, dt);   // capivaras
+    if (G.Fauna && !S.base) G.Fauna.step(S, dt);   // capivaras (0.28: um só bando para as tribos)
     if (G.Campo) G.Campo.step(S, dt);   // bichos de criação (Etapa 10)
     if (G.Deus && S.god && S.god.pending) G.Deus.tick(S, dt);   // o raio da estátua do trovão (Etapa 11)
     if (G.Soc && G.Soc.busy(S)) G.Soc.tick(S);   // Etapa 14: o julgamento, o fogo posto, quem vai embora
