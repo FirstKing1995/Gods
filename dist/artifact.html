@@ -1312,7 +1312,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.26.0',
+    VERSION: '0.27.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -1631,7 +1631,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     // o estoque tem teto por recurso; cada armazém pronto soma ARMAZEM_TETO[nível] vezes o teto base
     ESTOQUE_TETO: { madeira: 200, pedra: 200, argila: 150, tabuas: 150, fibra: 120, couro: 80, peixe: 220, frutas: 220, carne: 160, defumado: 160, seca: 160 },
     ARMAZEM_TETO: [0, 1.5, 3],
-    ESTOQUE_POR_PESSOA: { peixe: 5, frutas: 5, carne: 3, defumado: 4, seca: 4 },   // a comida cabe mais quanto maior o povo
+    // a comida cabe mais quanto maior o povo: o bastante para atravessar o inverno (cada pessoa come de 2 a 4 peixes por dia);
+    // 0.27: na 0.26 era 5 por pessoa, e as vilas sem ajuda de Deus passavam fome no inverno
+    ESTOQUE_POR_PESSOA: { peixe: 18, frutas: 15, carne: 10, defumado: 25, seca: 25 },
     // o cardume: cada peixe pescado tira CARDUME_PEIXE dele; ele volta CARDUME_DIA por dia; a chance de fisgar vai de
     // CARDUME_MIN (rio pescado demais) a 100% (rio cheio)
     CARDUME_PEIXE: 0.004, CARDUME_DIA: 0.06, CARDUME_MIN: 0.3,
@@ -1917,6 +1919,15 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     // Ungir custa UNGIR_COST; um por vez no nível 3, dois no 4, três no 5. Abaixo de GRACA_FE, perde a graça
     UNGIR_COST: 150, UNGIR_AGE: 16, FE100_DAYS: 5, GRACA_FE: 70, ESCOLHIDOS: [0, 0, 0, 1, 2, 3],
     ESCOLHIDO_CURA: 8, ESCOLHIDO_HEAL: 40,          // Mãos que curam: cada cura gasta 8 de Poder e dá 40 de saúde
+    // 0.27: os poderes novos (o raio é em passos, em volta de quem tem o poder)
+    ESC_COLHEITA: 1.3, ESC_COLHEITA_R: 7,           // Semear: a roça perto rende 30% mais
+    ESC_CACA: 1.3,                                   // Caça: o bicho não foge dele, e a caçada dele rende 30% mais
+    ESC_PAZ: 0.5, ESC_PAZ_R: 8, ESC_PAZ_H: 6,        // Paz: metade dos malfeitos; a briga de quem está perto acaba 6 h mais cedo por hora
+    ESC_SABIO: 1.5, ESC_SABIO_R: 6,                  // Sabedoria: quem trabalha perto pratica 50% mais as descobertas
+    ESC_FORCA: 1.4, ESC_FORCA_R: 6,                  // Força: obra perto anda 40% mais rápido
+    // 0.27: a reforma das construções quando o povo muda de idade: por dia, REFORMA_DIA (fração) das que estão no
+    // jeito antigo passam para o novo (no mínimo uma)
+    REFORMA_DIA: 0.08,
     SERMAO_GAP_D: 2, SERMAO_FE: 5, SERMAO_PODER: 1, SERMAO_LONGE: 15,   // Palavra: uma pregação a cada 2 dias, de tardinha, por quem está a até 15 passos do fogo
     LUZ_R: 3.5, LUZ_HEAT: 10,                        // Luz: lobo e onça não chegam; quem está perto se aquece
     // Bênção (nível 2): um lugar abençoado por BENCAO_H horas; quem trabalha ali rende BENCAO_MULT
@@ -3273,6 +3284,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   };
   Sim.complete = function (S, b) {
     if (b.demol) { finishDemolish(S, b); return; }
+    if (S.eras) b.era = S.eras.idade || 0;   // 0.27: erguida no jeito da idade de agora
     if (b.re) {
       // a obra que mudou de lugar está de pé de novo, como era (nível, moradores, o que guardava)
       const d = Sim.def(b);
@@ -3717,7 +3729,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (!base) return Infinity;
     const ctx = S.ctx || {};
     const m = ctx.armazens === undefined ? armazens(S) : ctx.armazens;
-    return Math.round((base + (C.ESTOQUE_POR_PESSOA[k] || 0) * (ctx.alive || 0)) * m);
+    return Math.round(base * m + (C.ESTOQUE_POR_PESSOA[k] || 0) * (ctx.alive || 0));   // o armazém multiplica a parte base
   };
   function armazens(S) {
     let m = 1;
@@ -5654,7 +5666,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (!open) return;
     const w = TEACH[open][key];
     if (!w) return;
-    T.addPractice(S, open, w * dt / 60 * (G.Deus ? G.Deus.pratMult(S) : 1), p);   // a escrita (Etapa 11) apressa
+    const sabio = G.Deus && G.Deus.poderPerto && G.Deus.poderPerto(S, p.x, p.y, 'sabedoria', C.ESC_SABIO_R) ? C.ESC_SABIO : 1;   // 0.27: a Sabedoria
+    T.addPractice(S, open, w * dt / 60 * (G.Deus ? G.Deus.pratMult(S) : 1) * sabio, p);   // a escrita (Etapa 11) apressa
   };
   T.addPractice = function (S, id, h, p) {
     const t = S.tech;
@@ -6855,6 +6868,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const ok = (p) => {
       if (!p.alive || p.carriedBy || p.inTent || p.sleeping || G.Family.age(S, p) < 7) return false;
       if (p.sangue && G.Povos && G.Povos.has(p, 'faro')) return false;   // Etapa 12: o faro chega sem ser notado
+      if (p.escolhido && p.escolhido.power === 'caca') return false;   // 0.27: o bicho não foge do Caçador
       return Math.abs(p.x - e.x) <= r && Math.abs(p.y - e.y) <= r && Math.hypot(p.x - e.x, p.y - e.y) <= r;
     };
     // 0.14: olha só os cantos do mapa em volta do bicho (o retrato do povo por passo, da IA), não o povo inteiro
@@ -7478,7 +7492,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const f = farmOf(b), d = C.ROCA[f.k];
     if (!d) return 0;
     const mult = (Sim().def(b).farm || { mult: 1 }).mult * (G.Regioes ? G.Regioes.rocaMult(S, b) : 1) * (G.Eras ? G.Eras.rocaMult(S) : 1);   // e os círculos do conselho   // Etapa 17: a seca do sertão
-    const terra = G.Deus && G.Deus.dom(S, 'terra') ? C.DOM.terraRoca : 1;   // Etapa 11: Mão na Terra
+    const terra = (G.Deus && G.Deus.dom(S, 'terra') ? C.DOM.terraRoca : 1) *
+      (G.Deus && G.Deus.poderPerto && G.Deus.poderPerto(S, b.x + 1, b.y + 1, 'colheita', C.ESC_COLHEITA_R) ? C.ESC_COLHEITA : 1);   // Etapa 11: Mão na Terra; 0.27: Semear
     return Math.max(0, Math.round(d.yield * mult * (f.bonus || 1) * terra * (1 - Math.min(0.95, f.lost || 0))));
   };
   // tarefa da roça para alguém (ou só para saber se há): colher, levar a colheita, capinar, plantar
@@ -8585,6 +8600,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (c.k === 'obra') { for (const m of C.MATERIALS) S.stock[m] += c[m] || 0; }
     else if (c.k === 'caca') {
       if (G.Eras && S.eras) c.carne = Math.round(c.carne * G.Eras.cacaMult(S));   // os clãs: a caçada é a lei
+      if (p.escolhido && p.escolhido.power === 'caca') c.carne = Math.round(c.carne * C.ESC_CACA);   // 0.27: o Caçador
       S.stock.carne += c.carne; S.stock.couro += c.couro;
       Sim.float(S, p.x, p.y - 0.6, '+' + c.carne + ' carne' + (c.couro ? ' +' + c.couro + ' couro' : ''));
     } else if (c.k === 'cria') {
@@ -9862,7 +9878,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         face(p, b.x, b.y);
         say(S, p, 'construir', 0.3);
       }
-      const wsp = workSpeed(p, 'construcao', 'construir');
+      const wsp = workSpeed(p, 'construcao', 'construir') * (G.Deus && G.Deus.poderPerto(S, b.x + 1, b.y + 1, 'forca', C.ESC_FORCA_R) ? C.ESC_FORCA : 1);   // 0.27: a Força
       job.progress = job.progress + dt * wsp / job.work;
       S.stats.buildMin = (S.stats.buildMin || 0) + dt * wsp;   // a memória da aldeia (0.12): quanto se trabalha em obra
       p.skills.construcao += dt / 60 * Fam.xpFactor(S, p);
@@ -11664,8 +11680,25 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     cura: { name: 'Mãos que curam', icon: 'cura', desc: 'Vai até quem está doente ou num parto difícil e cura com as mãos. Cada cura gasta ' + C.ESCOLHIDO_CURA + ' de Poder e atende a oração.' },
     palavra: { name: 'Palavra', icon: 'reza', desc: 'A cada 2 dias, de tardinha, prega ao pé do fogo: a fé de quem ouve sobe, e os céticos veem sinais.' },
     luz: { name: 'Luz', icon: 'verao', desc: 'Brilha como fogo aceso: lobo e onça não chegam perto, e quem está do lado se aquece.' },
+    // 0.27: os poderes novos
+    colheita: { name: 'Semear', icon: 'milho', desc: 'A roça a até ' + C.ESC_COLHEITA_R + ' passos dele rende ' + Math.round((C.ESC_COLHEITA - 1) * 100) + '% mais na colheita.' },
+    caca: { name: 'Caça', icon: 'arco', desc: 'Os bichos não fogem quando ele chega, e o que ele caça rende ' + Math.round((C.ESC_CACA - 1) * 100) + '% mais carne.' },
+    paz: { name: 'Paz', icon: 'perdao', desc: 'Com ele na aldeia, metade dos malfeitos nem acontece; quem está brigado perto dele faz as pazes mais cedo.' },
+    sabedoria: { name: 'Sabedoria', icon: 'escrita', desc: 'Quem trabalha a até ' + C.ESC_SABIO_R + ' passos dele aprende ' + Math.round((C.ESC_SABIO - 1) * 100) + '% mais depressa o que o povo está descobrindo.' },
+    forca: { name: 'Força', icon: 'machado', desc: 'A obra a até ' + C.ESC_FORCA_R + ' passos dele fica pronta ' + Math.round((C.ESC_FORCA - 1) * 100) + '% mais rápido.' },
   };
-  const TITLES = { cura: ['Curandeira', 'Curandeiro'], palavra: ['Profetisa', 'Profeta'], luz: ['Guardiã', 'Guardião'] };
+  // o que cada poder é, no meio da frase (quando a graça vai embora)
+  D.POWER_WHAT = { cura: 'o dom de curar', palavra: 'a Palavra', luz: 'a luz', colheita: 'a mão boa para a roça', caca: 'o dom da caça', paz: 'a paz que ele levava', sabedoria: 'a sabedoria', forca: 'a força' };
+  // 0.27: há alguém com esse poder a até r passos de (x, y)? (a lista é refeita uma vez por minuto do jogo)
+  let escCache = { t: -1, S: null, list: [] };
+  D.poderPerto = function (S, x, y, power, r) {
+    if (escCache.t !== S.t || escCache.S !== S) escCache = { t: S.t, S, list: S.people.filter((p) => p.alive && p.escolhido && !p.carriedBy && !p.inTent) };
+    for (const p of escCache.list) if (p.escolhido.power === power && Math.abs(p.x - x) <= r && Math.abs(p.y - y) <= r && Math.hypot(p.x - x, p.y - y) <= r) return true;
+    return false;
+  };
+  D.temPoder = (S, power) => S.people.some((p) => p.alive && p.escolhido && p.escolhido.power === power);
+  const TITLES = { cura: ['Curandeira', 'Curandeiro'], palavra: ['Profetisa', 'Profeta'], luz: ['Guardiã', 'Guardião'],
+    colheita: ['Semeadora', 'Semeador'], caca: ['Caçadora', 'Caçador'], paz: ['Pacificadora', 'Pacificador'], sabedoria: ['Sábia', 'Sábio'], forca: ['Mestra de obras', 'Mestre de obras'] };
   D.title = (p) => (p && p.escolhido && TITLES[p.escolhido.power] ? TITLES[p.escolhido.power][ela(p) ? 0 : 1] : '');
   D.escolhidos = (S) => S.people.filter((p) => p.alive && p.escolhido);
   D.slots = (S) => C.ESCOLHIDOS[D.level(S)] || 0;
@@ -11700,7 +11733,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   };
   // a graça vai embora quando a fé esfria (e o dom vai junto)
   function loseGrace(S, p) {
-    const what = { cura: 'o dom de curar', palavra: 'a Palavra', luz: 'a luz' }[p.escolhido.power];
+    const what = D.POWER_WHAT[p.escolhido.power];
     p.escolhido = null; p.graceLost = S.t;
     chron(S, 'A fé de ' + p.name + ' esfriou, e com ela foi-se ' + what + '. ' + D.call(S) + ' pode escolher outra pessoa.');
   }
@@ -12066,6 +12099,14 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     checkLevel(S);
     statueHour(S);
     // alguém chegou à fé inteira e cabe um escolhido: avisa (uma vez a cada 10 dias por pessoa)
+    // 0.27: a Paz: quem está brigado perto de quem tem a Paz faz as pazes mais cedo
+    if (!S.safe) for (const pz of S.people) {
+      if (!pz.alive || !pz.escolhido || pz.escolhido.power !== 'paz') continue;
+      for (const q of S.people) {
+        if (!q.alive || !q.feud || Math.abs(q.x - pz.x) > C.ESC_PAZ_R || Math.abs(q.y - pz.y) > C.ESC_PAZ_R) continue;
+        for (const id in q.feud) q.feud[id] -= C.ESC_PAZ_H * 60;
+      }
+    }
     if (!S.safe && D.level(S) >= 3 && D.escolhidos(S).length < D.slots(S)) {
       for (const p of D.candidates(S)) {
         if (p.fe100Told && S.t - p.fe100Told < 10 * DAY()) continue;
@@ -12081,7 +12122,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   };
   D.onDeath = function (S, p) {
     if (!p.escolhido || S.safe) return;
-    const what = { cura: 'o dom de curar', palavra: 'a Palavra', luz: 'a luz' }[p.escolhido.power];
+    const what = D.POWER_WHAT[p.escolhido.power];
     Sim().toast(S, 'Com ' + p.name + ' foi-se também ' + what + '. ' + D.call(S) + ' pode escolher outra pessoa.', 'warn');
   };
   // efeitos lidos pelos outros módulos
@@ -15498,6 +15539,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   function tentar(S) {
     if (!podeCrime(S)) return;
     if (G.Cidade && S.cidade) { const cm = G.Cidade.crimeMult(S) * (G.Eras ? G.Eras.crimeMult(S) : 1); if (cm < 1 && S.rng.next() > cm) return; }   // Etapa 16: a guarda segura o malfeito (sem guarda, não gasta o sorteio)
+    if (G.Deus && G.Deus.temPoder && G.Deus.temPoder(S, 'paz') && S.rng.next() > C.ESC_PAZ) return;   // 0.27: a Paz (sem ela, não gasta o sorteio)
     const s = S.soc, h = hourOf(S), hi = Math.floor(S.t / 60);
     if (h < 6) return;
     const work = h >= 8 && h < 17, st = S.stock;
@@ -18951,7 +18993,23 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     rumo(S);
     magia(S);
     desafios(S);
+    reforma(S);
   };
+  // 0.27: quando o povo muda de idade, as construções vão sendo refeitas no jeito novo, poucas por dia (as mais antigas
+  // primeiro). O jeito aparece no telhado: sapê até a Pedra Polida, sapê trançado no Bronze, tabuinha no Ferro, telha
+  // de barro nos Reinos
+  const REFORMA_TXT = { 2: 'trançam o sapê novo, mais firme', 3: 'trocam o sapê por tabuinhas de madeira', 4: 'cobrem os telhados com telha de barro' };
+  function reforma(S) {
+    const idade = S.eras.idade || 0;
+    if (idade < 2) return;
+    const velhas = S.buildings.filter((b) => b.built && !b.demol && (b.era || 0) < idade);
+    if (!velhas.length) return;
+    velhas.sort((a, b) => (a.era || 0) - (b.era || 0) || a.id - b.id);
+    const n = Math.max(1, Math.ceil(velhas.length * C.REFORMA_DIA));
+    if ((S.eras.reformou || 0) < idade && REFORMA_TXT[idade]) { S.eras.reformou = idade; Sim().chron(S, 'Com a ' + E.IDADES[idade].nome + ', o povo começa a refazer as casas: ' + REFORMA_TXT[idade] + '.'); }
+    for (let i = 0; i < n && i < velhas.length; i++) velhas[i].era = idade;
+  }
+  E.reforma = reforma;
   E.info = function (S) {
     const e = S.eras || {}, I = E.IDADES[e.idade || 0], O = e.ordem ? E.ORDENS[e.ordem] : null;
     return { idade: I.nome, prox: E.IDADES[(e.idade || 0) + 1] ? E.IDADES[(e.idade || 0) + 1].nome : '', falta: E.faltaWhy(S), ordem: O ? O.nome : '', ordemDesc: O ? O.desc : '', magia: Object.keys(e.magia || {}).map((k) => MAGIA[k].nome) };
@@ -20913,6 +20971,33 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   const THATCH = ['#5e4228', '#8a6440', '#b8904e', '#d8b56a', '#ecd28e'];
   const PLANK = ['#4e2e22', '#733e39', '#9a5e42', '#b86f50', '#d49a6a'];
   const STONE = ['#262b44', '#3a4466', '#5a6988', '#8b9bb4', '#c0cbdc'];
+  // 0.27: o telhado de cada idade (troca as cinco cores do sapê): sapê trançado, tabuinha, telha de barro
+  const ERA_TETO = { 2: ['#4a3420', '#765236', '#9c7642', '#c09a58', '#dabd7c'], 3: PLANK, 4: ['#4a1a1c', '#7c2a26', '#a8443a', '#c8634c', '#e08a6a'] };
+  const eraCache = new WeakMap();
+  A.eraImg = function (img, era) {
+    const to = ERA_TETO[Math.min(4, era)];
+    if (!to || !img || !img.getContext) return img;
+    let m = eraCache.get(img);
+    if (!m) { m = {}; eraCache.set(img, m); }
+    if (m[era]) return m[era];
+    const c = document.createElement('canvas');
+    c.width = img.width; c.height = img.height;
+    const x = c.getContext('2d');
+    x.drawImage(img, 0, 0);
+    const id = x.getImageData(0, 0, c.width, c.height), px = id.data;
+    const de = THATCH.map((h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
+    const para = to.map((h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
+    for (let i = 0; i < px.length; i += 4) {
+      if (!px[i + 3]) continue;
+      // a cor mais perto do sapê (o acabamento de luz e contorno mexe um pouco nas cores), com folga de 30
+      let kb = -1, db = 30 * 30;
+      for (let k = 0; k < de.length; k++) { const dr = px[i] - de[k][0], dg = px[i + 1] - de[k][1], dbb = px[i + 2] - de[k][2], dd = dr * dr + dg * dg + dbb * dbb; if (dd < db) { db = dd; kb = k; } }
+      if (kb >= 0) { px[i] = para[kb][0]; px[i + 1] = para[kb][1]; px[i + 2] = para[kb][2]; }
+    }
+    x.putImageData(id, 0, 0);
+    m[era] = c;
+    return c;
+  };
   A.THATCH = THATCH; A.PLANK = PLANK;
   const H7 = (x, y, s) => G.hash2(x, y, 700 + (s || 0));
   // telhado de palha em duas águas: do cume (y0, meia largura hw0) ao beiral (y1, hw1), com fiadas e franja
@@ -23392,7 +23477,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   }
 
   // ---------- helpers de desenho ----------
+  let eraObra = 0;   // 0.27: a idade da construção que está sendo desenhada (o telhado muda de cor)
   function blit(img, wx, wy, alpha) {
+    if (eraObra >= 2) img = A.eraImg(img, eraObra);
     if (alpha !== undefined) ctx.globalAlpha = alpha;
     ctx.drawImage(img, Math.round(wx * sc + ox), Math.round(wy * sc + oy), Math.round(img.width * sc), Math.round(img.height * sc));
     if (alpha !== undefined) ctx.globalAlpha = 1;
@@ -23981,9 +24068,15 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const q = S.people.find((x) => x.id === pt.drummer);
     return !!(q && q.alive && q.act && q.act.type === 'festa' && q.act.stage === 'dance' && !(q.path && q.pathI < q.path.length));
   }
+  // o halo do escolhido, pela cor do poder (0.27: os cinco novos)
+  const HALO = { cura: '#9be070', palavra: '#ffffff', luz: '#fee761', colheita: '#d8c040', caca: '#e4a672', paz: '#9fd8ff', sabedoria: '#c8a8ff', forca: '#f77622' };
   // a figura da obra no nível dela (Etapa 7): casas, oficinas, armazém
   function houseImg(d) { const S2 = A.spr; return d.lv >= 3 && d.kind ? S2.house[d.kind] : S2.house[d.lv >= 2 ? 2 : 1]; }
   function drawBuilding(S, b, now, row, part) {
+    eraObra = b.built ? b.era || 0 : 0;
+    try { drawBuilding0(S, b, now, row, part); } finally { eraObra = 0; }
+  }
+  function drawBuilding0(S, b, now, row, part) {
     const S2 = A.spr, bx = b.x * TS, by = b.y * TS;
     const ghost = !b.built, d = G.Sim.def(b), lv = d.lv || 1;
     if (b.type === 'roca') {
@@ -24376,7 +24469,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     else if (drummer) drawDrum(wx, wy, p.dir, now);
     // Etapa 11: o escolhido tem um halo (curar: verde; Palavra: branco; Luz: dourado); quem reza na estátua, mãos para o alto
     if (p.escolhido) {
-      const col = p.escolhido.power === 'cura' ? '#9be070' : p.escolhido.power === 'palavra' ? '#ffffff' : '#fee761';
+      const col = HALO[p.escolhido.power] || '#fee761';
       const hy = top - 2 + dy + Math.round(Math.sin(now / 400) * 0.5);
       rect(wx - 2, hy, 4, 1, col); rect(wx - 3, hy + 1, 1, 1, col); rect(wx + 2, hy + 1, 1, 1, col);
     }

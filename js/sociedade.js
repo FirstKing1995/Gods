@@ -317,6 +317,7 @@
   function tentar(S) {
     if (!podeCrime(S)) return;
     if (G.Cidade && S.cidade) { const cm = G.Cidade.crimeMult(S) * (G.Eras ? G.Eras.crimeMult(S) : 1); if (cm < 1 && S.rng.next() > cm) return; }   // Etapa 16: a guarda segura o malfeito (sem guarda, não gasta o sorteio)
+    if (G.Deus && G.Deus.temPoder && G.Deus.temPoder(S, 'paz') && S.rng.next() > C.ESC_PAZ) return;   // 0.27: a Paz (sem ela, não gasta o sorteio)
     const s = S.soc, h = hourOf(S), hi = Math.floor(S.t / 60);
     if (h < 6) return;
     const work = h >= 8 && h < 17, st = S.stock;

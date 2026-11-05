@@ -759,6 +759,7 @@
   };
   Sim.complete = function (S, b) {
     if (b.demol) { finishDemolish(S, b); return; }
+    if (S.eras) b.era = S.eras.idade || 0;   // 0.27: erguida no jeito da idade de agora
     if (b.re) {
       // a obra que mudou de lugar está de pé de novo, como era (nível, moradores, o que guardava)
       const d = Sim.def(b);
@@ -1203,7 +1204,7 @@
     if (!base) return Infinity;
     const ctx = S.ctx || {};
     const m = ctx.armazens === undefined ? armazens(S) : ctx.armazens;
-    return Math.round((base + (C.ESTOQUE_POR_PESSOA[k] || 0) * (ctx.alive || 0)) * m);
+    return Math.round(base * m + (C.ESTOQUE_POR_PESSOA[k] || 0) * (ctx.alive || 0));   // o armazém multiplica a parte base
   };
   function armazens(S) {
     let m = 1;

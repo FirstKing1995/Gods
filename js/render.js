@@ -522,7 +522,9 @@
   }
 
   // ---------- helpers de desenho ----------
+  let eraObra = 0;   // 0.27: a idade da construção que está sendo desenhada (o telhado muda de cor)
   function blit(img, wx, wy, alpha) {
+    if (eraObra >= 2) img = A.eraImg(img, eraObra);
     if (alpha !== undefined) ctx.globalAlpha = alpha;
     ctx.drawImage(img, Math.round(wx * sc + ox), Math.round(wy * sc + oy), Math.round(img.width * sc), Math.round(img.height * sc));
     if (alpha !== undefined) ctx.globalAlpha = 1;
@@ -1111,9 +1113,15 @@
     const q = S.people.find((x) => x.id === pt.drummer);
     return !!(q && q.alive && q.act && q.act.type === 'festa' && q.act.stage === 'dance' && !(q.path && q.pathI < q.path.length));
   }
+  // o halo do escolhido, pela cor do poder (0.27: os cinco novos)
+  const HALO = { cura: '#9be070', palavra: '#ffffff', luz: '#fee761', colheita: '#d8c040', caca: '#e4a672', paz: '#9fd8ff', sabedoria: '#c8a8ff', forca: '#f77622' };
   // a figura da obra no nível dela (Etapa 7): casas, oficinas, armazém
   function houseImg(d) { const S2 = A.spr; return d.lv >= 3 && d.kind ? S2.house[d.kind] : S2.house[d.lv >= 2 ? 2 : 1]; }
   function drawBuilding(S, b, now, row, part) {
+    eraObra = b.built ? b.era || 0 : 0;
+    try { drawBuilding0(S, b, now, row, part); } finally { eraObra = 0; }
+  }
+  function drawBuilding0(S, b, now, row, part) {
     const S2 = A.spr, bx = b.x * TS, by = b.y * TS;
     const ghost = !b.built, d = G.Sim.def(b), lv = d.lv || 1;
     if (b.type === 'roca') {
@@ -1506,7 +1514,7 @@
     else if (drummer) drawDrum(wx, wy, p.dir, now);
     // Etapa 11: o escolhido tem um halo (curar: verde; Palavra: branco; Luz: dourado); quem reza na estátua, mãos para o alto
     if (p.escolhido) {
-      const col = p.escolhido.power === 'cura' ? '#9be070' : p.escolhido.power === 'palavra' ? '#ffffff' : '#fee761';
+      const col = HALO[p.escolhido.power] || '#fee761';
       const hy = top - 2 + dy + Math.round(Math.sin(now / 400) * 0.5);
       rect(wx - 2, hy, 4, 1, col); rect(wx - 3, hy + 1, 1, 1, col); rect(wx + 2, hy + 1, 1, 1, col);
     }
