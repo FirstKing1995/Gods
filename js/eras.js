@@ -169,7 +169,23 @@
     rumo(S);
     magia(S);
     desafios(S);
+    reforma(S);
   };
+  // 0.27: quando o povo muda de idade, as construções vão sendo refeitas no jeito novo, poucas por dia (as mais antigas
+  // primeiro). O jeito aparece no telhado: sapê até a Pedra Polida, sapê trançado no Bronze, tabuinha no Ferro, telha
+  // de barro nos Reinos
+  const REFORMA_TXT = { 2: 'trançam o sapê novo, mais firme', 3: 'trocam o sapê por tabuinhas de madeira', 4: 'cobrem os telhados com telha de barro' };
+  function reforma(S) {
+    const idade = S.eras.idade || 0;
+    if (idade < 2) return;
+    const velhas = S.buildings.filter((b) => b.built && !b.demol && (b.era || 0) < idade);
+    if (!velhas.length) return;
+    velhas.sort((a, b) => (a.era || 0) - (b.era || 0) || a.id - b.id);
+    const n = Math.max(1, Math.ceil(velhas.length * C.REFORMA_DIA));
+    if ((S.eras.reformou || 0) < idade && REFORMA_TXT[idade]) { S.eras.reformou = idade; Sim().chron(S, 'Com a ' + E.IDADES[idade].nome + ', o povo começa a refazer as casas: ' + REFORMA_TXT[idade] + '.'); }
+    for (let i = 0; i < n && i < velhas.length; i++) velhas[i].era = idade;
+  }
+  E.reforma = reforma;
   E.info = function (S) {
     const e = S.eras || {}, I = E.IDADES[e.idade || 0], O = e.ordem ? E.ORDENS[e.ordem] : null;
     return { idade: I.nome, prox: E.IDADES[(e.idade || 0) + 1] ? E.IDADES[(e.idade || 0) + 1].nome : '', falta: E.faltaWhy(S), ordem: O ? O.nome : '', ordemDesc: O ? O.desc : '', magia: Object.keys(e.magia || {}).map((k) => MAGIA[k].nome) };

@@ -560,6 +560,33 @@
   const THATCH = ['#5e4228', '#8a6440', '#b8904e', '#d8b56a', '#ecd28e'];
   const PLANK = ['#4e2e22', '#733e39', '#9a5e42', '#b86f50', '#d49a6a'];
   const STONE = ['#262b44', '#3a4466', '#5a6988', '#8b9bb4', '#c0cbdc'];
+  // 0.27: o telhado de cada idade (troca as cinco cores do sapê): sapê trançado, tabuinha, telha de barro
+  const ERA_TETO = { 2: ['#4a3420', '#765236', '#9c7642', '#c09a58', '#dabd7c'], 3: PLANK, 4: ['#4a1a1c', '#7c2a26', '#a8443a', '#c8634c', '#e08a6a'] };
+  const eraCache = new WeakMap();
+  A.eraImg = function (img, era) {
+    const to = ERA_TETO[Math.min(4, era)];
+    if (!to || !img || !img.getContext) return img;
+    let m = eraCache.get(img);
+    if (!m) { m = {}; eraCache.set(img, m); }
+    if (m[era]) return m[era];
+    const c = document.createElement('canvas');
+    c.width = img.width; c.height = img.height;
+    const x = c.getContext('2d');
+    x.drawImage(img, 0, 0);
+    const id = x.getImageData(0, 0, c.width, c.height), px = id.data;
+    const de = THATCH.map((h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
+    const para = to.map((h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
+    for (let i = 0; i < px.length; i += 4) {
+      if (!px[i + 3]) continue;
+      // a cor mais perto do sapê (o acabamento de luz e contorno mexe um pouco nas cores), com folga de 30
+      let kb = -1, db = 30 * 30;
+      for (let k = 0; k < de.length; k++) { const dr = px[i] - de[k][0], dg = px[i + 1] - de[k][1], dbb = px[i + 2] - de[k][2], dd = dr * dr + dg * dg + dbb * dbb; if (dd < db) { db = dd; kb = k; } }
+      if (kb >= 0) { px[i] = para[kb][0]; px[i + 1] = para[kb][1]; px[i + 2] = para[kb][2]; }
+    }
+    x.putImageData(id, 0, 0);
+    m[era] = c;
+    return c;
+  };
   A.THATCH = THATCH; A.PLANK = PLANK;
   const H7 = (x, y, s) => G.hash2(x, y, 700 + (s || 0));
   // telhado de palha em duas águas: do cume (y0, meia largura hw0) ao beiral (y1, hw1), com fiadas e franja

@@ -270,6 +270,7 @@
     if (c.k === 'obra') { for (const m of C.MATERIALS) S.stock[m] += c[m] || 0; }
     else if (c.k === 'caca') {
       if (G.Eras && S.eras) c.carne = Math.round(c.carne * G.Eras.cacaMult(S));   // os clãs: a caçada é a lei
+      if (p.escolhido && p.escolhido.power === 'caca') c.carne = Math.round(c.carne * C.ESC_CACA);   // 0.27: o Caçador
       S.stock.carne += c.carne; S.stock.couro += c.couro;
       Sim.float(S, p.x, p.y - 0.6, '+' + c.carne + ' carne' + (c.couro ? ' +' + c.couro + ' couro' : ''));
     } else if (c.k === 'cria') {
@@ -1547,7 +1548,7 @@
         face(p, b.x, b.y);
         say(S, p, 'construir', 0.3);
       }
-      const wsp = workSpeed(p, 'construcao', 'construir');
+      const wsp = workSpeed(p, 'construcao', 'construir') * (G.Deus && G.Deus.poderPerto(S, b.x + 1, b.y + 1, 'forca', C.ESC_FORCA_R) ? C.ESC_FORCA : 1);   // 0.27: a Força
       job.progress = job.progress + dt * wsp / job.work;
       S.stats.buildMin = (S.stats.buildMin || 0) + dt * wsp;   // a memória da aldeia (0.12): quanto se trabalha em obra
       p.skills.construcao += dt / 60 * Fam.xpFactor(S, p);

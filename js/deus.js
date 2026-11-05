@@ -235,8 +235,25 @@
     cura: { name: 'Mãos que curam', icon: 'cura', desc: 'Vai até quem está doente ou num parto difícil e cura com as mãos. Cada cura gasta ' + C.ESCOLHIDO_CURA + ' de Poder e atende a oração.' },
     palavra: { name: 'Palavra', icon: 'reza', desc: 'A cada 2 dias, de tardinha, prega ao pé do fogo: a fé de quem ouve sobe, e os céticos veem sinais.' },
     luz: { name: 'Luz', icon: 'verao', desc: 'Brilha como fogo aceso: lobo e onça não chegam perto, e quem está do lado se aquece.' },
+    // 0.27: os poderes novos
+    colheita: { name: 'Semear', icon: 'milho', desc: 'A roça a até ' + C.ESC_COLHEITA_R + ' passos dele rende ' + Math.round((C.ESC_COLHEITA - 1) * 100) + '% mais na colheita.' },
+    caca: { name: 'Caça', icon: 'arco', desc: 'Os bichos não fogem quando ele chega, e o que ele caça rende ' + Math.round((C.ESC_CACA - 1) * 100) + '% mais carne.' },
+    paz: { name: 'Paz', icon: 'perdao', desc: 'Com ele na aldeia, metade dos malfeitos nem acontece; quem está brigado perto dele faz as pazes mais cedo.' },
+    sabedoria: { name: 'Sabedoria', icon: 'escrita', desc: 'Quem trabalha a até ' + C.ESC_SABIO_R + ' passos dele aprende ' + Math.round((C.ESC_SABIO - 1) * 100) + '% mais depressa o que o povo está descobrindo.' },
+    forca: { name: 'Força', icon: 'machado', desc: 'A obra a até ' + C.ESC_FORCA_R + ' passos dele fica pronta ' + Math.round((C.ESC_FORCA - 1) * 100) + '% mais rápido.' },
   };
-  const TITLES = { cura: ['Curandeira', 'Curandeiro'], palavra: ['Profetisa', 'Profeta'], luz: ['Guardiã', 'Guardião'] };
+  // o que cada poder é, no meio da frase (quando a graça vai embora)
+  D.POWER_WHAT = { cura: 'o dom de curar', palavra: 'a Palavra', luz: 'a luz', colheita: 'a mão boa para a roça', caca: 'o dom da caça', paz: 'a paz que ele levava', sabedoria: 'a sabedoria', forca: 'a força' };
+  // 0.27: há alguém com esse poder a até r passos de (x, y)? (a lista é refeita uma vez por minuto do jogo)
+  let escCache = { t: -1, S: null, list: [] };
+  D.poderPerto = function (S, x, y, power, r) {
+    if (escCache.t !== S.t || escCache.S !== S) escCache = { t: S.t, S, list: S.people.filter((p) => p.alive && p.escolhido && !p.carriedBy && !p.inTent) };
+    for (const p of escCache.list) if (p.escolhido.power === power && Math.abs(p.x - x) <= r && Math.abs(p.y - y) <= r && Math.hypot(p.x - x, p.y - y) <= r) return true;
+    return false;
+  };
+  D.temPoder = (S, power) => S.people.some((p) => p.alive && p.escolhido && p.escolhido.power === power);
+  const TITLES = { cura: ['Curandeira', 'Curandeiro'], palavra: ['Profetisa', 'Profeta'], luz: ['Guardiã', 'Guardião'],
+    colheita: ['Semeadora', 'Semeador'], caca: ['Caçadora', 'Caçador'], paz: ['Pacificadora', 'Pacificador'], sabedoria: ['Sábia', 'Sábio'], forca: ['Mestra de obras', 'Mestre de obras'] };
   D.title = (p) => (p && p.escolhido && TITLES[p.escolhido.power] ? TITLES[p.escolhido.power][ela(p) ? 0 : 1] : '');
   D.escolhidos = (S) => S.people.filter((p) => p.alive && p.escolhido);
   D.slots = (S) => C.ESCOLHIDOS[D.level(S)] || 0;
@@ -271,7 +288,7 @@
   };
   // a graça vai embora quando a fé esfria (e o dom vai junto)
   function loseGrace(S, p) {
-    const what = { cura: 'o dom de curar', palavra: 'a Palavra', luz: 'a luz' }[p.escolhido.power];
+    const what = D.POWER_WHAT[p.escolhido.power];
     p.escolhido = null; p.graceLost = S.t;
     chron(S, 'A fé de ' + p.name + ' esfriou, e com ela foi-se ' + what + '. ' + D.call(S) + ' pode escolher outra pessoa.');
   }
@@ -637,6 +654,14 @@
     checkLevel(S);
     statueHour(S);
     // alguém chegou à fé inteira e cabe um escolhido: avisa (uma vez a cada 10 dias por pessoa)
+    // 0.27: a Paz: quem está brigado perto de quem tem a Paz faz as pazes mais cedo
+    if (!S.safe) for (const pz of S.people) {
+      if (!pz.alive || !pz.escolhido || pz.escolhido.power !== 'paz') continue;
+      for (const q of S.people) {
+        if (!q.alive || !q.feud || Math.abs(q.x - pz.x) > C.ESC_PAZ_R || Math.abs(q.y - pz.y) > C.ESC_PAZ_R) continue;
+        for (const id in q.feud) q.feud[id] -= C.ESC_PAZ_H * 60;
+      }
+    }
     if (!S.safe && D.level(S) >= 3 && D.escolhidos(S).length < D.slots(S)) {
       for (const p of D.candidates(S)) {
         if (p.fe100Told && S.t - p.fe100Told < 10 * DAY()) continue;
@@ -652,7 +677,7 @@
   };
   D.onDeath = function (S, p) {
     if (!p.escolhido || S.safe) return;
-    const what = { cura: 'o dom de curar', palavra: 'a Palavra', luz: 'a luz' }[p.escolhido.power];
+    const what = D.POWER_WHAT[p.escolhido.power];
     Sim().toast(S, 'Com ' + p.name + ' foi-se também ' + what + '. ' + D.call(S) + ' pode escolher outra pessoa.', 'warn');
   };
   // efeitos lidos pelos outros módulos

@@ -3,7 +3,7 @@
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.26.0',
+    VERSION: '0.27.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -322,7 +322,9 @@
     // o estoque tem teto por recurso; cada armazém pronto soma ARMAZEM_TETO[nível] vezes o teto base
     ESTOQUE_TETO: { madeira: 200, pedra: 200, argila: 150, tabuas: 150, fibra: 120, couro: 80, peixe: 220, frutas: 220, carne: 160, defumado: 160, seca: 160 },
     ARMAZEM_TETO: [0, 1.5, 3],
-    ESTOQUE_POR_PESSOA: { peixe: 5, frutas: 5, carne: 3, defumado: 4, seca: 4 },   // a comida cabe mais quanto maior o povo
+    // a comida cabe mais quanto maior o povo: o bastante para atravessar o inverno (cada pessoa come de 2 a 4 peixes por dia);
+    // 0.27: na 0.26 era 5 por pessoa, e as vilas sem ajuda de Deus passavam fome no inverno
+    ESTOQUE_POR_PESSOA: { peixe: 18, frutas: 15, carne: 10, defumado: 25, seca: 25 },
     // o cardume: cada peixe pescado tira CARDUME_PEIXE dele; ele volta CARDUME_DIA por dia; a chance de fisgar vai de
     // CARDUME_MIN (rio pescado demais) a 100% (rio cheio)
     CARDUME_PEIXE: 0.004, CARDUME_DIA: 0.06, CARDUME_MIN: 0.3,
@@ -608,6 +610,15 @@
     // Ungir custa UNGIR_COST; um por vez no nível 3, dois no 4, três no 5. Abaixo de GRACA_FE, perde a graça
     UNGIR_COST: 150, UNGIR_AGE: 16, FE100_DAYS: 5, GRACA_FE: 70, ESCOLHIDOS: [0, 0, 0, 1, 2, 3],
     ESCOLHIDO_CURA: 8, ESCOLHIDO_HEAL: 40,          // Mãos que curam: cada cura gasta 8 de Poder e dá 40 de saúde
+    // 0.27: os poderes novos (o raio é em passos, em volta de quem tem o poder)
+    ESC_COLHEITA: 1.3, ESC_COLHEITA_R: 7,           // Semear: a roça perto rende 30% mais
+    ESC_CACA: 1.3,                                   // Caça: o bicho não foge dele, e a caçada dele rende 30% mais
+    ESC_PAZ: 0.5, ESC_PAZ_R: 8, ESC_PAZ_H: 6,        // Paz: metade dos malfeitos; a briga de quem está perto acaba 6 h mais cedo por hora
+    ESC_SABIO: 1.5, ESC_SABIO_R: 6,                  // Sabedoria: quem trabalha perto pratica 50% mais as descobertas
+    ESC_FORCA: 1.4, ESC_FORCA_R: 6,                  // Força: obra perto anda 40% mais rápido
+    // 0.27: a reforma das construções quando o povo muda de idade: por dia, REFORMA_DIA (fração) das que estão no
+    // jeito antigo passam para o novo (no mínimo uma)
+    REFORMA_DIA: 0.08,
     SERMAO_GAP_D: 2, SERMAO_FE: 5, SERMAO_PODER: 1, SERMAO_LONGE: 15,   // Palavra: uma pregação a cada 2 dias, de tardinha, por quem está a até 15 passos do fogo
     LUZ_R: 3.5, LUZ_HEAT: 10,                        // Luz: lobo e onça não chegam; quem está perto se aquece
     // Bênção (nível 2): um lugar abençoado por BENCAO_H horas; quem trabalha ali rende BENCAO_MULT
