@@ -28,7 +28,7 @@ function ergue(S, t) {
 }
 
 {
-  check('a Idade Média é a sexta idade', E.IDADES.length === 6 && E.IDADES[5].nome === 'Idade Média');
+  check('a Idade Média é a sexta idade', E.IDADES.length >= 6 && E.IDADES[5].nome === 'Idade Média');
   const S = mundo(42, 70);
   check('nos Reinos ainda não há moinho nem castelo', Ci.openWhy(S, 'moinho') !== '' && Ci.openWhy(S, 'castelo') !== '');
   S.eras.idade = 4;

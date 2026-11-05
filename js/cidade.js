@@ -10,7 +10,7 @@
   const Sim = () => G.Sim, Fam = () => G.Family;
   const DAY = () => C.DAY_MIN;
 
-  const GRANDES = ['templo', 'muralha', 'torre', 'aqueduto', 'ponte', 'castelo'];   // a ponte de pedra veio com a Etapa 17; o castelo, com a 0.29
+  const GRANDES = ['templo', 'muralha', 'torre', 'aqueduto', 'ponte', 'castelo', 'porto'];   // 0.30: o porto   // a ponte de pedra veio com a Etapa 17; o castelo, com a 0.29
   const INST = ['guarda', 'brigada', 'hospital', 'escola', 'biblioteca', 'mercado'];   // a ordem em que o líder olha
   Ci.GRANDES = GRANDES; Ci.INST = INST;
   Ci.isCidade = (t) => GRANDES.indexOf(t) >= 0 || INST.indexOf(t) >= 0;
@@ -51,6 +51,9 @@
     mercado: (S) => (S.soc && S.soc.vila && !S.soc.vila.fim ? '' : 'pede uma vila de fora para trocar'),
     // 0.29: a Idade Média (os dois chegam com os Reinos; o castelo pede uma cidade)
     moinho: (S) => (G.Eras && G.Eras.idade(S) >= 4 ? '' : 'chega com a Idade dos Reinos'),
+    // 0.30: as Navegações (chegam com a Idade Média; o galeão pede o porto)
+    porto: (S) => (G.Eras && G.Eras.idade(S) >= 5 ? '' : 'chega com a Idade Média'),
+    galeao: (S) => (!(G.Eras && G.Eras.idade(S) >= 5) ? 'chega com a Idade Média' : S.buildings.some((b) => b.type === 'porto' && b.built) ? '' : 'pede um porto pronto'),
     castelo: (S) => (!(G.Eras && G.Eras.idade(S) >= 4) ? 'chega com a Idade dos Reinos' : vivos(S) >= 60 ? '' : 'pede uma cidade de 60 pessoas'),
   };
   // '' pode; texto: por que não; null: não é obra desta etapa

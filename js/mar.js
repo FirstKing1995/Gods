@@ -21,9 +21,11 @@
     const st = S.stats;
     for (const k of ['viagens', 'naufragios', 'terras', 'colonias', 'cargas', 'perdidosMar']) st[k] = st[k] || 0;
   };
-  const navios = (S) => S.buildings.filter((b) => b.type === 'navio' && b.built);
+  // 0.30: o galeão também é navio (e vai primeiro, quando está livre)
+  const navios = (S) => S.buildings.filter((b) => (b.type === 'navio' || b.type === 'galeao') && b.built).sort((a, b) => (a.type === 'galeao' ? 0 : 1) - (b.type === 'galeao' ? 0 : 1) || a.id - b.id);
   const tem = (S, k) => S.buildings.some((b) => b.type === k && b.built);
   M.navioLivre = (S) => navios(S).find((b) => !b.mar) || null;
+  M.tripMax = (S) => { const n = M.navioLivre(S); return n && n.type === 'galeao' ? C.GALEAO_GENTE : C.MAR_TRIPULACAO[1]; };
 
   // ---------- a pesca e a carga ----------
   // a canoa pesca mais no rio e no lago; o barco, mais ainda (pesca de mar)
@@ -54,7 +56,7 @@
   M.partirWhy = function (S, n, comida) {
     if (!M.navioLivre(S)) return 'precisa de um navio pronto no porto';
     if (S.mar.viagem) return 'o navio já está no mar';
-    if (n < C.MAR_TRIPULACAO[0] || n > C.MAR_TRIPULACAO[1]) return 'vão de ' + C.MAR_TRIPULACAO[0] + ' a ' + C.MAR_TRIPULACAO[1];
+    if (n < C.MAR_TRIPULACAO[0] || n > M.tripMax(S)) return 'vão de ' + C.MAR_TRIPULACAO[0] + ' a ' + M.tripMax(S);
     if (M.marujos(S).length < n) return 'não há ' + n + ' adultos com saúde para ir';
     if (comidaTem(S) < comida) return 'não há ' + comida + ' de comida no estoque';
     if (S.people.filter((p) => p.alive && !p.fora).length - n < 4) return 'a aldeia ficaria vazia demais';
@@ -72,13 +74,14 @@
     embarca(S, gente, 'mar');
     nav.mar = 1;
     const dias = C.MAR_DIAS[0] + S.rng.next() * (C.MAR_DIAS[1] - C.MAR_DIAS[0]);
-    S.mar.viagem = { t0: S.t, volta: S.t + dias * DAY(), ids: gente.map((p) => p.id), comida, nav: nav.id };
+    S.mar.viagem = { t0: S.t, volta: S.t + dias * DAY(), ids: gente.map((p) => p.id), comida, nav: nav.id,
+      galeao: nav.type === 'galeao' ? 1 : 0, porto: tem(S, 'porto') ? 1 : 0, mares: G.Eras && G.Eras.temMagia(S, 'mares') ? 1 : 0 };   // 0.30
     S.stats.viagens++;
     Sim().chron(S, Sim().listNames(gente) + ' embarcaram no navio com ' + comida + ' de comida e saíram pela beira do mundo. Voltam em uma ou duas estações, se voltarem.');
     return { ok: true, gente };
   };
   // o perigo da viagem: menos com mais gente e mais comida (até um ponto)
-  M.perigo = (v) => Math.max(C.MAR_PERIGO_MIN, C.MAR_PERIGO - 0.02 * v.ids.length - Math.min(0.1, v.comida / 600));
+  M.perigo = (v) => Math.max(C.MAR_PERIGO_MIN, C.MAR_PERIGO - 0.02 * v.ids.length - Math.min(0.1, v.comida / 600)) * (v.porto ? C.PORTO_PERIGO : 1) * (v.mares ? C.MARES_PERIGO : 1);   // 0.30: o porto e as marés
 
   // ---------- a terra nova ----------
   const TERRAS = ['Ilha do Sol Poente', 'Terra das Três Pedras', 'Costa Vermelha', 'Ilha Comprida', 'Terra dos Ventos', 'Baía Funda'];
@@ -102,11 +105,11 @@
     return t;
   }
   // o que a viagem traz: o que a terra achada tem de bom
-  function carga(S, t, n) {
+  function carga(S, t, n, mult) {
     const out = {};
     const mapa = { 'Mata fechada': 'nobre', 'Litoral': 'sal', 'Serra alta': 'ouro', 'Mangue': 'peixe', 'Sertão': 'couro', 'Pântano': 'fibra', 'Campo': 'frutas' };
     for (const r of t.mistura.slice(0, 2)) { const k = mapa[r]; if (k) out[k] = (out[k] || 0) + (k === 'ouro' ? 2 : 6) + n; }
-    for (const k in out) S.stock[k] = (S.stock[k] || 0) + out[k];
+    for (const k in out) { out[k] = Math.round(out[k] * (mult || 1)); S.stock[k] = (S.stock[k] || 0) + out[k]; }   // 0.30: o galeão traz mais
     return Object.keys(out).map((k) => out[k] + ' de ' + (G.AI && G.AI.RES_LABEL && G.AI.RES_LABEL[k] || k)).join(', ');
   }
   // a volta: tudo bem, alguns perdidos no mar, ou o navio que não volta
@@ -137,7 +140,7 @@
     if (t) {
       if (nova) txt += ' Acharam terra além do mar: ' + t.nome + ' (' + t.mistura.join(', ').toLowerCase() + ').' + (t.povo ? ' Lá vivem ' + t.povo.nome + ', ' + t.povo.jeito + '.' : ' Ninguém vive lá.');
       else txt += ' Voltaram a ' + t.nome + '.';
-      const c = carga(S, t, volta.length);
+      const c = carga(S, t, volta.length, v.galeao ? C.GALEAO_CARGA : 1);
       if (c) txt += ' Trouxeram ' + c + '.';
       if (t.povo) t.povo.laco = Math.min(100, t.povo.laco + (t.povo.nome === 'os Iporã' ? -3 : 6));
     } else txt += ' Não acharam terra nenhuma, só mar.';
@@ -180,7 +183,7 @@
     if (S.t < c.prox) return;
     c.prox = S.t + C.SEASON_DAYS * DAY();
     if (!navios(S).length) return;   // sem navio, ninguém vai e ninguém traz
-    const vem = Math.round(4 + c.n * (c.bem / 100) * 2), k = t.mistura[0] === 'Mata fechada' ? 'nobre' : t.mistura[0] === 'Litoral' ? 'sal' : 'peixe';
+    const vem = Math.round((4 + c.n * (c.bem / 100) * 2) * (tem(S, 'porto') ? C.PORTO_CARGA : 1)), k = t.mistura[0] === 'Mata fechada' ? 'nobre' : t.mistura[0] === 'Litoral' ? 'sal' : 'peixe';
     S.stock[k] = (S.stock[k] || 0) + vem;
     S.stats.cargas++;
     const novas = c.bem > 70 ? 'vão bem, e mandam dizer que a terra é boa' : c.bem > 35 ? 'seguem firmes' : 'passam aperto e pedem ajuda';
@@ -189,6 +192,27 @@
     Sim().chron(S, 'O navio voltou de ' + c.nome + ' (' + c.n + (c.n === 1 ? ' pessoa' : ' pessoas') + '): ' + novas + '.' + povo + ' Trouxe ' + vem + ' de ' + ((G.AI && G.AI.RES_LABEL[k]) || k) + '.');
   }
 
+  // ---------- 0.30: o comércio de longe ----------
+  // a cada COMERCIO_D dias, com o porto pronto, um barco de fora troca o que mais sobra por sal, ferro e ouro
+  const SOBRA = ['peixe', 'frutas', 'madeira', 'pedra', 'fibra', 'couro', 'tabuas', 'defumado'];
+  function comercio(S) {
+    if (!tem(S, 'porto') || S.safe || S.resumido) return;
+    if (S.t < (S.mar.comercio || 0)) return;
+    S.mar.comercio = S.t + C.COMERCIO_D * DAY();
+    let k = null, n = 0;
+    for (const r of SOBRA) if ((S.stock[r] || 0) > n) { n = S.stock[r]; k = r; }
+    const da = Math.min(40, Math.floor(n * 0.2));
+    if (!k || da < 10) return;
+    S.stock[k] -= da;
+    const vem = { sal: 4 + Math.floor(da / 8), ferro: Math.floor(da / 15) };
+    if (S.ck.day % 3 === 0) vem.ouro = 1;
+    const txt = [];
+    for (const r in vem) if (vem[r] > 0) { S.stock[r] = (S.stock[r] || 0) + vem[r]; txt.push(vem[r] + ' de ' + ((G.AI && G.AI.RES_LABEL && G.AI.RES_LABEL[r]) || r)); }
+    S.stats.comercios = (S.stats.comercios || 0) + 1;
+    const frase = 'Um barco de fora parou no porto: levou ' + da + ' de ' + ((G.AI && G.AI.RES_LABEL && G.AI.RES_LABEL[k]) || k) + ' e deixou ' + txt.join(', ') + '.';
+    if (S.stats.comercios === 1) Sim().chron(S, 'Pela primeira vez, um barco de fora parou no nosso porto para trocar. ' + frase);
+    else Sim().toast(S, frase, 'good');
+  }
   // ---------- o relógio ----------
   M.daily = function (S) {
     if (!S.mar) M.init(S);
@@ -196,10 +220,11 @@
     if (v && S.t >= v.volta) chegada(S);
     cargaBarco(S);
     for (const c of S.mar.colonias) if (!c.fim) coloniaDia(S, c);
+    comercio(S);   // 0.30: o barco de fora no porto
     // o primeiro barco de cada tipo
-    for (const k of ['canoa', 'barco', 'navio']) if (!S.mar.first[k] && tem(S, k)) {
+    for (const k of ['canoa', 'barco', 'navio', 'galeao']) if (!S.mar.first[k] && tem(S, k)) {
       S.mar.first[k] = S.t;
-      Sim().chron(S, { canoa: 'A primeira canoa foi para a água: no rio e no lago, a pesca rende mais.', barco: 'O primeiro barco saiu pela costa: a pesca de mar rende mais, e ele leva carga até a vila de fora.', navio: 'O navio está pronto no porto. O mar aberto espera uma expedição.' }[k]);
+      Sim().chron(S, { canoa: 'A primeira canoa foi para a água: no rio e no lago, a pesca rende mais.', barco: 'O primeiro barco saiu pela costa: a pesca de mar rende mais, e ele leva carga até a vila de fora.', navio: 'O navio está pronto no porto. O mar aberto espera uma expedição.', galeao: 'O galeão está pronto, com os três mastros de pé: cabe gente para fundar uma cidade do outro lado do mar.' }[k]);
     }
   };
   // para o mapa do mundo e a ficha do navio

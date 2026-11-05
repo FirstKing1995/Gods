@@ -3,7 +3,7 @@
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.29.0',
+    VERSION: '0.30.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -204,6 +204,11 @@
         desc: 'A casa de Deus, de pedra e de muitas mãos. Quem tem fé reza ali de manhã e ganha o dobro de fé; a festa e o rito ficam maiores perto dele.' },
       muralha: { name: 'Muralha', a: 'a', key: '', w: 3, h: 2, cost: { pedra: 200, madeira: 40 }, work: 30000, grande: true, wall: { r: 16 },
         desc: 'Um anel de pedra em volta do centro, com portão. Lobo e onça não entram, e ninguém leva a comida guardada lá dentro.' },
+      // 0.30: as Navegações. O porto (grande obra, na beira do mar) e o galeão (o navio grande)
+      porto: { name: 'Porto', a: 'o', key: '', w: 4, h: 2, cost: { pedra: 120, tabuas: 80, madeira: 40 }, work: 20000, grande: true, env: 'mar',
+        desc: 'Cais de pedra e de tábua, guindaste e armazém de carga. As viagens ficam bem menos perigosas, as colônias mandam metade a mais, e a cada 10 dias um barco de fora troca o que sobra por sal, ferro e ouro.' },
+      galeao: { name: 'Galeão', a: 'o', key: '', w: 4, h: 3, cost: { tabuas: 120, madeira: 40, fibra: 20 }, extra: { mantas: 10, ferro: 8 }, work: 6000, need: 'corda', env: 'mar', boat: 'galeao',
+        desc: 'O navio grande, de três mastros: a expedição leva até 16 pessoas e traz metade a mais das terras novas. Pede água funda, 10 mantas e 8 ferramentas de ferro.' },
       // 0.29: a Idade Média. O moinho (obra comum) e o castelo (grande obra)
       moinho: { name: 'Moinho', a: 'o', key: '', w: 2, h: 2, cost: { madeira: 50, pedra: 40, tabuas: 30 }, work: 2400, need: 'roca',
         desc: 'Pás que o vento gira e a mó que mói o grão: toda a roça da aldeia rende 25% mais.' },
@@ -626,6 +631,8 @@
     REFORMA_DIA: 0.08,
     // 0.29: a Idade Média
     MOINHO_ROCA: 1.25, CASTELO_CRIME: 0.8, ERA_PESTE: 0.5, PESTE_PARTE: 0.2, ESTRELAS_PRAGA: 0.5,
+    // 0.30: as Navegações
+    GALEAO_GENTE: 16, GALEAO_CARGA: 1.5, PORTO_PERIGO: 0.5, PORTO_CARGA: 1.5, MARES_PERIGO: 0.6, COMERCIO_D: 10, ERA_PIRATAS: 0.6, PIRATAS_LEVA: 0.15,
     // 0.28: as tribos. Nasce no nível TRIBO_NIVEL de Deus, por TRIBO_CUSTO de Poder, a TRIBO_DIST passos ou mais da outra
     // (até TRIBO_MAX tribos). Elas se conhecem quando alguém chega a TRIBO_VE passos do acampamento da outra, ou quando
     // caçadores se cruzam (mais fácil com os acampamentos a menos de TRIBO_CRUZA passos)
