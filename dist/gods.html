@@ -1322,7 +1322,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.28.0',
+    VERSION: '0.29.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -1523,6 +1523,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         desc: 'A casa de Deus, de pedra e de muitas mãos. Quem tem fé reza ali de manhã e ganha o dobro de fé; a festa e o rito ficam maiores perto dele.' },
       muralha: { name: 'Muralha', a: 'a', key: '', w: 3, h: 2, cost: { pedra: 200, madeira: 40 }, work: 30000, grande: true, wall: { r: 16 },
         desc: 'Um anel de pedra em volta do centro, com portão. Lobo e onça não entram, e ninguém leva a comida guardada lá dentro.' },
+      // 0.29: a Idade Média. O moinho (obra comum) e o castelo (grande obra)
+      moinho: { name: 'Moinho', a: 'o', key: '', w: 2, h: 2, cost: { madeira: 50, pedra: 40, tabuas: 30 }, work: 2400, need: 'roca',
+        desc: 'Pás que o vento gira e a mó que mói o grão: toda a roça da aldeia rende 25% mais.' },
+      castelo: { name: 'Castelo', a: 'o', key: '', w: 4, h: 4, cost: { pedra: 180, madeira: 60, tabuas: 60 }, work: 42000, grande: true,
+        desc: 'Torres, ameias e portão. Na guerra entre tribos, ninguém daqui morre; a vila de fora não leva a comida; e o malfeito cai 20%.' },
       torre: { name: 'Torre de vigia', a: 'a', key: '', w: 2, h: 2, cost: { pedra: 80, tabuas: 40, madeira: 30 }, work: 18000, grande: true, watch: { r: 24 },
         desc: 'Do alto se vê longe: a névoa se abre em volta dela, o bicho que vem chegando é avisado antes e o malfeito da noite tem testemunha.' },
       aqueduto: { name: 'Aqueduto', a: 'o', key: '', w: 4, h: 2, cost: { pedra: 180, argila: 60, tabuas: 20 }, work: 33000, grande: true, need: 'ceramica', water: { h: 3 },
@@ -1646,7 +1651,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     ESTOQUE_POR_PESSOA: { peixe: 18, frutas: 15, carne: 10, defumado: 25, seca: 25 },
     // o cardume: cada peixe pescado tira CARDUME_PEIXE dele; ele volta CARDUME_DIA por dia; a chance de fisgar vai de
     // CARDUME_MIN (rio pescado demais) a 100% (rio cheio)
-    CARDUME_PEIXE: 0.004, CARDUME_DIA: 0.06, CARDUME_MIN: 0.3,
+    CARDUME_PEIXE: 0.0015, CARDUME_DIA: 0.08, CARDUME_MIN: 0.55,   // 0.28.1: era 0.004, 0.06 e 0.3 (as vilas sem ajuda passavam fome)
     ROT_FIBRA: 0.01,   // a fibra guardada mofa e esgarça um pouco por dia
     PRAYER_HOURS: 12, PRAYER_COOLDOWN_H: 24, PRAYER_ANSWERED_COOLDOWN_H: 12,
     FAITH_ANSWER: 15, FAITH_ANSWER_SEEN: 6, FAITH_IGNORED: -8, FAITH_IGNORED_SEEN: -2,
@@ -1938,6 +1943,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     // 0.27: a reforma das construções quando o povo muda de idade: por dia, REFORMA_DIA (fração) das que estão no
     // jeito antigo passam para o novo (no mínimo uma)
     REFORMA_DIA: 0.08,
+    // 0.29: a Idade Média
+    MOINHO_ROCA: 1.25, CASTELO_CRIME: 0.8, ERA_PESTE: 0.5, PESTE_PARTE: 0.2, ESTRELAS_PRAGA: 0.5,
     // 0.28: as tribos. Nasce no nível TRIBO_NIVEL de Deus, por TRIBO_CUSTO de Poder, a TRIBO_DIST passos ou mais da outra
     // (até TRIBO_MAX tribos). Elas se conhecem quando alguém chega a TRIBO_VE passos do acampamento da outra, ou quando
     // caçadores se cruzam (mais fácil com os acampamentos a menos de TRIBO_CRUZA passos)
@@ -18045,7 +18052,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   const Sim = () => G.Sim, Fam = () => G.Family;
   const DAY = () => C.DAY_MIN;
 
-  const GRANDES = ['templo', 'muralha', 'torre', 'aqueduto', 'ponte'];   // a ponte de pedra veio com a Etapa 17
+  const GRANDES = ['templo', 'muralha', 'torre', 'aqueduto', 'ponte', 'castelo'];   // a ponte de pedra veio com a Etapa 17; o castelo, com a 0.29
   const INST = ['guarda', 'brigada', 'hospital', 'escola', 'biblioteca', 'mercado'];   // a ordem em que o líder olha
   Ci.GRANDES = GRANDES; Ci.INST = INST;
   Ci.isCidade = (t) => GRANDES.indexOf(t) >= 0 || INST.indexOf(t) >= 0;
@@ -18084,6 +18091,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     guarda: (S) => ((S.stats.crimesG && S.stats.crimesG[3] > 0) ? '' : 'aparece depois do primeiro crime grave'),
     brigada: (S) => ((S.stats.incendios || 0) + ((S.cidade && S.cidade.fogos) || 0) > 0 ? '' : 'aparece depois do primeiro incêndio'),
     mercado: (S) => (S.soc && S.soc.vila && !S.soc.vila.fim ? '' : 'pede uma vila de fora para trocar'),
+    // 0.29: a Idade Média (os dois chegam com os Reinos; o castelo pede uma cidade)
+    moinho: (S) => (G.Eras && G.Eras.idade(S) >= 4 ? '' : 'chega com a Idade dos Reinos'),
+    castelo: (S) => (!(G.Eras && G.Eras.idade(S) >= 4) ? 'chega com a Idade dos Reinos' : vivos(S) >= 60 ? '' : 'pede uma cidade de 60 pessoas'),
   };
   // '' pode; texto: por que não; null: não é obra desta etapa
   Ci.openWhy = function (S, type) {
@@ -18866,6 +18876,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     { nome: 'Idade do Bronze', curto: 'bronze', disc: ['mineracao'], magia: 'runas', gente: 25, marco: ['mina', 'estatua'], txt: 'Do fundo da serra sai o primeiro metal: começou a Idade do Bronze.', txtM: 'As runas gravadas na pedra fazem o que o metal faria: começou, do jeito do conselho, a Idade do Bronze.' },
     { nome: 'Idade do Ferro', curto: 'ferro', disc: ['metalurgia'], magia: 'ervas', gente: 45, marco: ['ferraria', 'escola'], txt: 'O ferro bate na bigorna: começou a Idade do Ferro.', txtM: 'As ervas e os cantos curam e fortalecem sem forja nenhuma: começou, do jeito do conselho, a Idade do Ferro.' },
     { nome: 'Idade dos Reinos', curto: 'reinos', escrita: true, magia: 'circulos', gente: 80, marco: ['templo', 'muralha'], txt: 'A aldeia virou reino: lei escrita, obra grande e quem governa. Começou a Idade dos Reinos.' },
+    // 0.29: a Idade Média (o conselho chega a ela pelas estrelas)
+    { nome: 'Idade Média', curto: 'castelos e moinhos', escrita: true, magia: 'estrelas', gente: 120, marco: ['moinho', 'castelo'], txt: 'O moinho gira e a pedra dos castelos sobe: começou a Idade Média.', txtM: 'As mais velhas aprenderam a ler as estrelas e o tempo das coisas: começou, do jeito do conselho, a Idade Média.' },
   ];
   E.init = function (S) {
     const e = S.eras || (S.eras = {});
@@ -18930,7 +18942,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   }
   E.ordem = (S) => (S.eras ? S.eras.ordem : '');
   // os efeitos de cada ordem (ganchos pequenos, chamados de onde a coisa acontece)
-  E.crimeMult = (S) => (E.ordem(S) === 'reino' ? 0.85 : 1);
+  E.crimeMult = (S) => (E.ordem(S) === 'reino' ? 0.85 : 1) * (E.temCastelo && E.temCastelo(S) ? C.CASTELO_CRIME : 1);   // 0.29: o castelo
   E.trocaMult = (S) => (E.ordem(S) === 'reino' ? 1.3 : 1);
   E.xp = (S) => (E.ordem(S) === 'guildas' ? 1.15 : 1);
   E.cacaMult = (S) => (E.ordem(S) === 'clas' ? 1.25 : 1);
@@ -18943,12 +18955,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     runas: { nome: 'Runas', de: 'das runas', txt: 'As mais velhas gravaram runas nas pedras das casas: a pedra aquece, e quem dorme sente 4 °C a mais.' },
     ervas: { nome: 'Ervas', de: 'das ervas', txt: 'O conselho juntou o saber das ervas e dos cantos: a febre pesa bem menos, e a saúde volta mais depressa.' },
     circulos: { nome: 'Círculos', de: 'dos círculos', txt: 'Círculos de pedra em volta da roça: a terra rende 20% mais.' },
+    estrelas: { nome: 'Estrelas', de: 'das estrelas', txt: 'As mais velhas leem as estrelas: sabem quando vem a chuva e a geada, e a praga pega a roça pela metade.' },   // 0.29
   };
   E.MAGIA = MAGIA;
   // o conselho aprende um saber por idade (a partir da Pedra Polida), em vez de esperar o metal
   function magia(S) {
     if (E.ordem(S) !== 'conselho') return;
-    const ordem = ['runas', 'ervas', 'circulos'], e = S.eras;
+    const ordem = ['runas', 'ervas', 'circulos', 'estrelas'], e = S.eras;
     for (let k = 0; k < ordem.length; k++) {
       const id = ordem[k];
       if (e.magia[id]) continue;
@@ -18959,7 +18972,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   E.temMagia = (S, id) => !!(S.eras && S.eras.magia[id]);
   E.calorCasa = (S) => (E.temMagia(S, 'runas') ? C.RUNAS_HEAT : 0);
   E.febreMult = (S) => (E.temMagia(S, 'ervas') ? 0.6 : 1);
-  E.rocaMult = (S) => (E.temMagia(S, 'circulos') ? 1.2 : 1);
+  // 0.29: o moinho (qualquer um pronto) faz toda a roça render mais
+  E.rocaMult = (S) => (E.temMagia(S, 'circulos') ? 1.2 : 1) * (S.buildings.some((b) => b.type === 'moinho' && b.built) ? C.MOINHO_ROCA : 1);
+  E.temCastelo = (S) => S.buildings.some((b) => b.type === 'castelo' && b.built);
 
   // ---------- o desafio de cada idade ----------
   const pronto = (S, k) => !(S.eras.prox[k] > S.t);
@@ -18972,7 +18987,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (id >= 1 && pronto(S, 'praga') && r < C.ERA_PRAGA / C.YEAR_DAYS) {
       const rocas = S.buildings.filter((b) => b.type === 'roca' && b.built && b.farm && b.farm.st === 'crescendo');
       if (rocas.length) {
-        for (const b of rocas) b.farm.lost = Math.min(0.95, (b.farm.lost || 0) + 0.5);
+        const pega = 0.5 * (E.temMagia(S, 'estrelas') ? C.ESTRELAS_PRAGA : 1);   // 0.29: quem lê as estrelas planta na hora certa
+        for (const b of rocas) b.farm.lost = Math.min(0.95, (b.farm.lost || 0) + pega);
         S.eras.prox.praga = S.t + 2 * YEAR(); S.stats.pragas++;
         Sim().chron(S, 'Uma praga de lagarta desceu na roça: ' + (rocas.length > 1 ? 'as ' + rocas.length + ' roças vão render' : 'a roça vai render') + ' a metade.');
         return;
@@ -18982,13 +18998,22 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const v = S.soc && S.soc.vila;
     if (id >= 2 && v && !v.fim && (v.laco || 0) < 0 && pronto(S, 'guerra') && r < C.ERA_GUERRA / C.YEAR_DAYS) {
       S.eras.prox.guerra = S.t + 2 * YEAR(); S.stats.guerras++;
-      if (G.Cidade && S.buildings.some((b) => b.type === 'muralha' && b.built)) { Sim().chron(S, 'Gente d' + (v.art || 'e') + ' ' + v.nome + ' veio armada, mas parou na muralha e voltou.'); return; }
+      if (G.Cidade && S.buildings.some((b) => (b.type === 'muralha' || b.type === 'castelo') && b.built)) { Sim().chron(S, 'Gente d' + (v.art || 'e') + ' ' + v.nome + ' veio armada, mas parou ' + (E.temCastelo(S) ? 'no castelo' : 'na muralha') + ' e voltou.'); return; }
       let levou = 0;
       for (const k of ['peixe', 'carne', 'frutas', 'milho', 'feijao', 'mandioca', 'defumado', 'seca']) { const n = Math.floor((S.stock[k] || 0) * 0.2); S.stock[k] -= n; levou += n; }
       const feridos = S.people.filter((p) => p.alive && !p.fora && Fam().age(S, p) >= 16).sort(() => S.rng.next() - 0.5).slice(0, 1 + Math.floor(S.rng.next() * 3));
       for (const p of feridos) { p.needs.saude = Math.max(5, p.needs.saude - 40); }
       v.laco = Math.max(-100, (v.laco || 0) - 10);
       Sim().chron(S, 'Guerra: gente d' + (v.art || 'e') + ' ' + v.nome + ' atacou de noite e levou ' + levou + ' de comida. ' + Sim().listNames(feridos) + (feridos.length > 1 ? ' saíram feridos.' : ' saiu ferido.'));
+      return;
+    }
+    // 0.29: Idade Média: a Grande Peste (uma onda de febre pela trilha; o hospital encurta, as ervas aliviam)
+    if (id >= 5 && G.Cidade && G.Cidade.adoece && S.cidade && pronto(S, 'peste') && r < C.ERA_PESTE / C.YEAR_DAYS) {
+      const pode = S.people.filter((p) => p.alive && !p.fora && !p.sick && !(p.imune > S.t));
+      const n = Math.max(1, Math.round(pode.length * C.PESTE_PARTE));
+      for (let k = 0; k < n && pode.length; k++) G.Cidade.adoece(S, pode.splice(Math.floor(S.rng.next() * pode.length), 1)[0]);
+      S.eras.prox.peste = S.t + 3 * YEAR(); S.stats.pestes = (S.stats.pestes || 0) + 1;
+      Sim().chron(S, 'A Grande Peste chegou pela trilha: ' + n + (n === 1 ? ' pessoa caiu' : ' pessoas caíram') + ' de febre de uma vez. Quem tem casa de cura sofre menos.');
       return;
     }
     // ferro: a fome da cidade grande (a cidade cresce mais que a roça)
@@ -19018,7 +19043,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // 0.27: quando o povo muda de idade, as construções vão sendo refeitas no jeito novo, poucas por dia (as mais antigas
   // primeiro). O jeito aparece no telhado: sapê até a Pedra Polida, sapê trançado no Bronze, tabuinha no Ferro, telha
   // de barro nos Reinos
-  const REFORMA_TXT = { 2: 'trançam o sapê novo, mais firme', 3: 'trocam o sapê por tabuinhas de madeira', 4: 'cobrem os telhados com telha de barro' };
+  const REFORMA_TXT = { 2: 'trançam o sapê novo, mais firme', 3: 'trocam o sapê por tabuinhas de madeira', 4: 'cobrem os telhados com telha de barro', 5: 'cobrem os telhados de ardósia' };
   function reforma(S) {
     const idade = S.eras.idade || 0;
     if (idade < 2) return;
@@ -19539,7 +19564,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   }
   function guerra(par, x, y) {
     const mortos = [];
+    const seguros = [];
     for (const t of [x, y]) {
+      if (G.Eras && G.Eras.temCastelo && G.Eras.temCastelo(t)) { seguros.push(T.nome(t)); continue; }   // 0.29: o castelo segura
       const n = vivos(t).length > 40 ? 2 : 1;
       const lut = vivos(t).filter((p) => !p.carriedBy && G.Family.age(t, p) >= 16).sort((a, b) => a.id - b.id);
       for (let k = 0; k < n && lut.length; k++) {
@@ -19551,7 +19578,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       }
       for (const k of ['madeira', 'pedra', 'peixe', 'frutas']) t.stock[k] = Math.floor((t.stock[k] || 0) * 0.85);
     }
-    conta(par, x, y, 'Guerra entre ' + T.nome(x) + ' e ' + T.nome(y) + '. Morreram ' + mortos.join(', ') + '. Depois do sangue, os dois povos fizeram uma trégua de ' + C.TRIBO_TREGUA_D + ' dias, mas não esquecem.', 'warn');
+    conta(par, x, y, 'Guerra entre ' + T.nome(x) + ' e ' + T.nome(y) + '. ' + (mortos.length ? 'Morreram ' + mortos.join(', ') + '. ' : '') + (seguros.length ? 'O castelo de ' + seguros.join(' e de ') + ' segurou o ataque. ' : '') + 'Depois do sangue, os dois povos fizeram uma trégua de ' + C.TRIBO_TREGUA_D + ' dias, mas não esquecem.', 'warn');
   }
 
   // ---------- o que Deus faz pela relação ----------
@@ -21240,10 +21267,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   const PLANK = ['#4e2e22', '#733e39', '#9a5e42', '#b86f50', '#d49a6a'];
   const STONE = ['#262b44', '#3a4466', '#5a6988', '#8b9bb4', '#c0cbdc'];
   // 0.27: o telhado de cada idade (troca as cinco cores do sapê): sapê trançado, tabuinha, telha de barro
-  const ERA_TETO = { 2: ['#4a3420', '#765236', '#9c7642', '#c09a58', '#dabd7c'], 3: PLANK, 4: ['#4a1a1c', '#7c2a26', '#a8443a', '#c8634c', '#e08a6a'] };
+  const ERA_TETO = { 2: ['#4a3420', '#765236', '#9c7642', '#c09a58', '#dabd7c'], 3: PLANK, 4: ['#4a1a1c', '#7c2a26', '#a8443a', '#c8634c', '#e08a6a'],
+    5: ['#20222e', '#343a4e', '#4c5670', '#6c7890', '#94a0b4'] };   // 0.29: a ardósia da Idade Média
   const eraCache = new WeakMap();
   A.eraImg = function (img, era) {
-    const to = ERA_TETO[Math.min(4, era)];
+    const to = ERA_TETO[Math.min(5, era)];
     if (!to || !img || !img.getContext) return img;
     let m = eraCache.get(img);
     if (!m) { m = {}; eraCache.set(img, m); }
@@ -22066,6 +22094,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       { k: P.ink2, s: P.mist, d: P.bark }],
     torre: [['...kkkk...', '..kyyyyk..', '.kkkkkkkk.', '..kwwwwk..', '..kssssk..', '..ksddsk..', '..kssssk..', '.ksssssk..', '.kssssssk.', 'kkkkkkkkkk'],
       { k: P.ink2, s: P.mist, y: P.tan, w: P.wood, d: P.ink }],
+    // 0.29: o castelo e o moinho
+    castelo: [['k.k.rr.k.k', 'kkk.kk.kkk', 'ksk.kk.ksk', 'kskkkkkksk', 'kssssssssk', 'ksssddsssk', 'kssdddsssk', 'kssdddsssk', 'kkkkkkkkkk', '..........'],
+      { k: P.ink2, s: P.mist, d: P.bark, r: P.red }],
+    moinho: [['k.......k.', '.k.....k..', '..k...k...', '...kkk....', '..kyyyk...', '...kwk....', '..kssk....', '..kssk....', '.ksddsk...', '.kkkkkk...'],
+      { k: P.ink2, s: P.mist, y: P.tan, w: P.parch, d: P.ink }],
     aqueduto: [['..........', 'kkkkkkkkkk', 'kbbbbbbbbk', 'kkkkkkkkkk', 'ks.ssk.ssk', 'k...k...sk', 'ks..ks..sk', 'ks..ks..sk', 'kk..kk..kk', '..........'],
       { k: P.ink2, s: P.mist, b: P.sky }],
     escola: [['..........', '.kkkk.kkkk', '.kwwk.kwwk', '.kwlkkklwk', '.kwwwkwwwk', '.kwlwkwlwk', '.kwwwkwwwk', '.kkkkkkkkk', '..........', '..........'],
@@ -23118,8 +23151,41 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     rect7(b, 33, 0, 37, 2, '#c8423a');   // a bandeira
     return b.canvas();
   }
+  // 0.29: o castelo (64 x 64, 4 x 4 passos): duas torres com ameias, o corpo, a torre de menagem atrás, o portão e a bandeira
+  function castelo() {
+    const W = 64, H = 64, b = new Buf(W, H);
+    stoneWall(b, 24, 6, 39, 25, 84);
+    for (let x = 24; x <= 39; x += 3) rect7(b, x, 3, x + 1, 5, STONE[3]);
+    line(b, 31, 0, 31, 5, PLANK[0]); rect7(b, 32, 0, 36, 2, '#b8424a'); rect7(b, 32, 2, 35, 2, '#7c2a26');
+    stoneWall(b, 0, 14, 13, 61, 81); stoneWall(b, 50, 14, 63, 61, 82);
+    stoneWall(b, 14, 26, 49, 61, 83);
+    for (const x0 of [0, 50]) for (let x = x0; x <= x0 + 13; x += 3) rect7(b, x, 11, x + 1, 13, STONE[3]);
+    for (let x = 14; x <= 49; x += 3) rect7(b, x, 23, x + 1, 25, STONE[3]);
+    for (let y = 44; y <= 61; y++) for (let x = 25; x <= 38; x++) {
+      const r = Math.hypot(x + 0.5 - 32, y - 49);
+      if (y < 49 && r > 7.2) continue;
+      b.set(x, y, (r > 6.2 && y < 49) || x === 25 || x === 38 ? STONE[4] : (x % 3 === 0 ? PLANK[1] : PLANK[2]));
+    }
+    for (let y = 50; y <= 61; y += 4) rect7(b, 26, y, 37, y, PLANK[0]);
+    windowAt(b, 5, 24, 3, 4); windowAt(b, 56, 24, 3, 4); windowAt(b, 30, 13, 3, 4); windowAt(b, 18, 34, 3, 4); windowAt(b, 43, 34, 3, 4);
+    for (let x = 0; x <= 63; x++) b.set(x, 62, STONE[0]);
+    return b.canvas();
+  }
+  // o moinho (32 x 48, 2 x 2 passos): a torre de pedra afinando, o chapéu de sapê e as quatro pás com pano
+  function moinho() {
+    const W = 32, H = 48, b = new Buf(W, H);
+    for (let y = 22; y <= 45; y++) { const hw = Math.round(6 + (y - 22) / 23 * 4); stoneWall(b, 16 - hw, y, 15 + hw, y, 90); }
+    thatch(b, 16, 13, 22, 2, 9, 191);
+    rect7(b, 14, 38, 17, 45, '#2b1d1a'); b.set(14, 38, STONE[1]); b.set(17, 38, STONE[1]);
+    windowAt(b, 14, 28, 3, 3);
+    for (let k = -13; k <= 13; k++) { b.set(16 + k, 16 + k, PLANK[1]); b.set(16 + k, 16 - k, PLANK[1]); }
+    for (let k = 3; k <= 12; k++) { b.set(16 + k, 15 + k, '#ead4aa'); b.set(16 - k, 17 - k, '#ead4aa'); b.set(15 + k, 16 - k, '#ead4aa'); b.set(17 - k, 16 + k, '#ead4aa'); }
+    rect7(b, 15, 15, 17, 17, PLANK[0]);
+    for (let x = 4; x <= 27; x++) b.set(x, 46, STONE[0]);
+    return b.canvas();
+  }
   A.cidadeSprites = function () {
-    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr() };
+    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho() };
     for (const k of ['escola', 'biblioteca', 'hospital', 'guarda', 'brigada', 'mercado']) out[k] = [null, instituicao(k, 1), instituicao(k, 2), instituicao(k, 3)];
     return out;
   };
@@ -26379,6 +26445,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       // Etapa 16: as instituições e as grandes obras (aparecem quando a sociedade pede)
       ['guarda', 'guarda'], ['brigada', 'brigada'], ['hospital', 'hospital'], ['escola', 'escola'], ['biblioteca', 'biblioteca'], ['mercado', 'mercado'],
       ['torre', 'torre'], ['templo', 'templo'], ['muralha', 'muralha'], ['aqueduto', 'aqueduto'], ['ponte', 'ponte'],
+      // 0.29: a Idade Média
+      ['moinho', 'moinho'], ['castelo', 'castelo'],
       // Etapa 18: os barcos
       ['canoa', 'canoa'], ['barco', 'barco'], ['navio', 'navio']];
     const SHORT = { barraca: 'Barraca', forno: 'Forno' };   // nome curto no botão (o painel fica em duas fileiras)
