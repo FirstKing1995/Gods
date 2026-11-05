@@ -57,9 +57,14 @@
   God.gain = function (S, n) {
     const g = S.god;
     if (!g || !(n > 0)) return;
-    g.poder += n;
+    // 0.26: o Poder guardado não passa do teto do nível (quem já tinha mais, de um save antigo, fica com o que tem);
+    // a glória conta tudo, porque é a fé que o povo deu
+    g.poder = Math.max(g.poder, Math.min(God.teto(S), g.poder + n));
     g.glory = (g.glory || 0) + n;
   };
+  God.teto = (S) => C.PODER_TETO[Math.max(1, Math.min(C.PODER_TETO.length - 1, (S.god && S.god.lv) || 1))];
+  // 0.26: a soma da fé (cada pessoa vale fé/100) rende inteira até PODER_RENDE; o que passa, rende cada vez menos
+  God.rende = (soma) => (soma <= C.PODER_RENDE ? soma : C.PODER_RENDE + Math.pow(soma - C.PODER_RENDE, C.PODER_EXP));
   // nas falas, depois que o povo dá um nome, "Deus" (e o "céu" a quem se fala) vira o nome
   God.named = function (S, text) {
     const n = S && S.god && S.god.name;
@@ -176,7 +181,7 @@
     // Poder nasce da fé do povo, e não tem teto (Etapa 6): guarde para os grandes atos
     let sum = 0;
     for (const p of S.people) if (p.alive) sum += p.fe / 100;
-    God.gain(S, sum * C.POWER_PER_FAITH_H * (dom(S, 'chama') ? DM().chamaPoder : 1));
+    God.gain(S, God.rende(sum) * C.POWER_PER_FAITH_H * (dom(S, 'chama') ? DM().chamaPoder : 1));
     g.auras = g.auras.filter((a) => a.until > S.t);
     if (G.Deus && g.pending) G.Deus.hourly(S);   // Etapa 11: níveis, estátuas, avisos
     if (S.safe) return;   // com o jogo fechado ninguém reza nem é ignorado

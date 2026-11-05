@@ -79,11 +79,21 @@
     4: (S) => D.call(S) + ' é agora o Deus Antigo: gerações inteiras rezam para o mesmo céu. Já dá para criar uma espécie nova.',
     5: (S) => D.call(S) + ' é o Deus Maior. Já dá para ensinar ao povo um saber de outra era.',
   };
+  // 0.26: os fiéis pedidos são uma parte do povo (de 7 anos para cima), ou o mínimo fixo do nível; e o mundo precisa
+  // ter vivido nx.anos anos
+  D.fieisPede = function (S, nx) {
+    if (!nx) return 0;
+    let n = 0;
+    for (const p of S.people) if (p.alive && !p.carriedBy && Fam().age(S, p) >= C.FIEL_AGE) n++;
+    return Math.max(nx.fieis, Math.ceil((nx.parte || 0) * n));
+  };
+  D.anosMundo = (S) => S.t / (C.YEAR_DAYS * DAY());
   function checkLevel(S) {
     const g = S.god, nx = D.next(S);
     if (!nx || g.glory < nx.glory) return false;
+    if (D.anosMundo(S) < (nx.anos || 0)) return false;
     const n = D.fieis(S);
-    if (n < nx.fieis) return false;
+    if (n < D.fieisPede(S, nx)) return false;
     g.lv++;
     chron(S, LEVEL_TXT[g.lv] ? LEVEL_TXT[g.lv](S, n) : 'Deus subiu ao nível ' + g.lv + '.');
     S.events.push({ k: 'godLevel', lv: g.lv });

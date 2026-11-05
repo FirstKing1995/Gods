@@ -1312,7 +1312,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.25.1',
+    VERSION: '0.26.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -1494,9 +1494,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         desc: 'Abrigo com cocho para os bichos de criação: 8 lugares (galinha e coelho ocupam meio; vaca, dois). De dia eles pastam em volta; de noite, dormem aqui.',
         up: [{ name: 'Curral grande', cost: { madeira: 10, tabuas: 6 }, work: 240, pen: { cap: 14 }, desc: 'Cercado maior, com abrigo de tábuas: 14 lugares.' }] },
       // Etapa 11: a estátua de Deus (nível 3). Pronta, Deus a consagra com um milagre próprio, que acontece sozinho
-      estatua: { name: 'Estátua', a: 'a', key: '', w: 2, h: 2, cost: { pedra: 30, madeira: 10 }, work: 480, god: { reach: 1, reza: 1 },
+      estatua: { name: 'Estátua', a: 'a', key: '', w: 2, h: 2, cost: { pedra: 90, madeira: 30 }, work: 900, god: { reach: 1, reza: 1 },   // 0.26: custava 30 de pedra e 10 de madeira, 480 de trabalho
         desc: 'A imagem de Deus em pedra. Consagrada, faz o milagre dela sozinho; quem tem fé reza ali de manhã.',
-        up: [{ name: 'Estátua com altar', cost: { pedra: 20, tabuas: 6 }, work: 360, god: { reach: 1.5, reza: 2 },
+        up: [{ name: 'Estátua com altar', cost: { pedra: 60, tabuas: 15 }, work: 720, god: { reach: 1.5, reza: 2 },
           desc: 'Um altar de pedra aos pés dela: o milagre da estátua vai metade mais longe, e quem reza ali ganha o dobro de fé.' },
         // Etapa 17: a grande estátua, que ficou da Etapa 16
         { name: 'Grande estátua', cost: { pedra: 90, tabuas: 20 }, work: 4800, god: { reach: 2.5, reza: 3 },
@@ -1624,6 +1624,18 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 
     // ---- Deus (Etapa 2) ----
     FAITH_START: 50, POWER_START: 15, POWER_PER_FAITH_H: 0.22,
+    // 0.26: a fé rende inteira até PODER_RENDE "pessoas de fé cheia"; acima disso, cada vez menos (o excedente vira
+    // excedente^PODER_EXP). Medido antes: com 30 pessoas, 9.500 de Poder por ano; com 700, vinte vezes mais
+    PODER_RENDE: 12, PODER_EXP: 0.7,
+    PODER_TETO: [0, 200, 400, 800, 1400, 2400],   // o Poder guardado não passa disso, por nível de Deus
+    // o estoque tem teto por recurso; cada armazém pronto soma ARMAZEM_TETO[nível] vezes o teto base
+    ESTOQUE_TETO: { madeira: 200, pedra: 200, argila: 150, tabuas: 150, fibra: 120, couro: 80, peixe: 220, frutas: 220, carne: 160, defumado: 160, seca: 160 },
+    ARMAZEM_TETO: [0, 1.5, 3],
+    ESTOQUE_POR_PESSOA: { peixe: 5, frutas: 5, carne: 3, defumado: 4, seca: 4 },   // a comida cabe mais quanto maior o povo
+    // o cardume: cada peixe pescado tira CARDUME_PEIXE dele; ele volta CARDUME_DIA por dia; a chance de fisgar vai de
+    // CARDUME_MIN (rio pescado demais) a 100% (rio cheio)
+    CARDUME_PEIXE: 0.004, CARDUME_DIA: 0.06, CARDUME_MIN: 0.3,
+    ROT_FIBRA: 0.01,   // a fibra guardada mofa e esgarça um pouco por dia
     PRAYER_HOURS: 12, PRAYER_COOLDOWN_H: 24, PRAYER_ANSWERED_COOLDOWN_H: 12,
     FAITH_ANSWER: 15, FAITH_ANSWER_SEEN: 6, FAITH_IGNORED: -8, FAITH_IGNORED_SEEN: -2,
     FAITH_MIRACLE_SEEN: 3, FAITH_DEATH: -8,
@@ -1764,7 +1776,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     THANKS: { nascimento: 6, primavera: 8, festa: 5, fartura: 4, descoberta: 4, oracao: 3, manha: 1, luto: 2 },
     // pequenos acontecimentos: chance por dia; lua cheia no dia 14 de cada 30
     SMALL_DAILY: 0.35, SMALL_FOOD: 3, SMALL_WOOD: 4, PE_WALK: 0.7, MOON_DAYS: 30, MOON_DAY: 14,
-    POWER_BAR: 100,                // a barra de Poder enche em 100 (o Poder não tem teto)
+    POWER_BAR: 100,                // (até a 0.25 a barra enchia em 100; desde a 0.26 ela mede até o teto do nível)
 
     // ---- Invenções (Etapa 8) ----
     // Uma árvore, não uma trilha: cada invenção abre quando o que ela pede já existe e aprende com o seu trabalho,
@@ -1886,12 +1898,14 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     // Medido em 20 anos em três mundos (0.11): quem atende as orações chega ao nível 2 com 0,6 a 0,7 ano, ao 3 com 3,5
     // a 4,1, ao 4 com 8 a 10 e ao 5 com 12 a 14; quem larga junta glória (a fé de cada hora rende), mas fica com 1 a 3
     // fiéis, e por isso no nível 1 ou 2.
+    // 0.26: na 0.25, com a vila maior das etapas 16 a 22, o nível 4 vinha no 1º ano e o 5 no 2º. Agora a glória pedida
+    // é maior, os fiéis são uma parte do povo (parte, ou o mínimo fixo) e cada nível pede um tempo de mundo (anos)
     GOD_LEVELS: [
-      { name: 'Espírito', glory: 0, fieis: 0 },
-      { name: 'Guardião', glory: 500, fieis: 2 },
-      { name: 'Deus do Povo', glory: 2500, fieis: 4 },
-      { name: 'Deus Antigo', glory: 8000, fieis: 7 },
-      { name: 'Deus Maior', glory: 20000, fieis: 10 },
+      { name: 'Espírito', glory: 0, fieis: 0, parte: 0, anos: 0 },
+      { name: 'Guardião', glory: 4000, fieis: 2, parte: 0.1, anos: 0.75 },
+      { name: 'Deus do Povo', glory: 22000, fieis: 4, parte: 0.2, anos: 3 },
+      { name: 'Deus Antigo', glory: 60000, fieis: 7, parte: 0.3, anos: 7 },
+      { name: 'Deus Maior', glory: 120000, fieis: 10, parte: 0.4, anos: 12 },
     ],
     FIEL_FE: 70, FIEL_AGE: 7,
     // cético que vê sinais demais se converte: CONVERTE_SINAIS sinais e fé de CONVERTE_FE para cima.
@@ -3311,6 +3325,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const alive = S.people.filter((p) => p.alive).length || 1;
     const ctx = S.ctx || (S.ctx = { bushFruit: 0 });
     ctx.alive = alive;
+    ctx.armazens = armazens(S);   // 0.26: quanto os armazéns somam ao teto do estoque
     ctx.hour = ck.hour;
     ctx.night = ck.hour >= 21 || ck.hour < 5;
     ctx.evening = ck.hour >= 19 && ck.hour < 21;
@@ -3531,6 +3546,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     lost += rot(S, 'carne', C.ROT_MEAT * rm * sal * Te.rotMult(S, 'carne'));
     lost += rot(S, 'defumado', C.ROT_DEFUMADO * rm);
     lost += rot(S, 'seca', C.ROT_SECA * rm);
+    if (S.stock.fibra) rot(S, 'fibra', C.ROT_FIBRA);   // 0.26: a fibra mofa (não conta como comida estragada)
+    Sim.aparaEstoque(S);
+    S.stats.cardume = Math.min(1, (S.stats.cardume === undefined ? 1 : S.stats.cardume) + C.CARDUME_DIA);   // 0.26: o rio se refaz
     // Etapa 10: o que vem da roça dura (feijão e milho secos quase não estragam); ovo e leite, pouco
     for (const k of ['feijao', 'milho', 'abobora', 'mandioca']) if (S.stock[k]) lost += rot(S, k, C.ROCA[k].rot * rm);
     if (S.stock.ovos) lost += rot(S, 'ovos', C.ROT_OVOS * rm);
@@ -3693,6 +3711,24 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     .filter((m) => !S.goals.some((g) => g.id === m.id));
   Sim.checkGoals = checkGoals;
   Sim.daily = (S) => daily(S);   // para os testes
+  // 0.26: o teto de cada recurso (o base, mais o que cada armazém pronto soma); sem teto, Infinity
+  Sim.teto = function (S, k) {
+    const base = C.ESTOQUE_TETO[k];
+    if (!base) return Infinity;
+    const ctx = S.ctx || {};
+    const m = ctx.armazens === undefined ? armazens(S) : ctx.armazens;
+    return Math.round((base + (C.ESTOQUE_POR_PESSOA[k] || 0) * (ctx.alive || 0)) * m);
+  };
+  function armazens(S) {
+    let m = 1;
+    for (const b of S.buildings) if (b.type === 'armazem' && b.built) m += C.ARMAZEM_TETO[Math.min(C.ARMAZEM_TETO.length - 1, Sim.def(b).lv || 1)] || 0;
+    return m;
+  }
+  Sim.cheio = (S, k) => (S.stock[k] || 0) >= Sim.teto(S, k);
+  // o que passa do teto se perde (fica no chão, estraga, ninguém tem onde guardar)
+  Sim.aparaEstoque = function (S) {
+    for (const k in C.ESTOQUE_TETO) { const t = Sim.teto(S, k); if (S.stock[k] > t) S.stock[k] = t; }
+  };
 
   function updateBuildings(S, dt) {
     for (const b of S.buildings) {
@@ -6713,6 +6749,16 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // ---------- movimento ----------
   function setPath(e, path) { e.path = path && path.length ? path : null; e.pathI = 0; }
   function face(e, dx, dy) { if (Math.abs(dx) > Math.abs(dy)) e.dir = dx > 0 ? 2 : 3; else if (dy) e.dir = dy > 0 ? 0 : 1; }
+  // 0.26: andando, olha para onde o caminho vai dois passos à frente e só troca de eixo com folga (em diagonal, o
+  // caminho em escadinha fazia o bicho virar de lado e de frente a cada passo)
+  function faceRumo(S, e) {
+    const w = S.world, j = e.path[Math.min(e.path.length - 1, e.pathI + 2)];
+    const dx = (j % w.W) + 0.5 - e.x, dy = ((j / w.W) | 0) + 0.5 - e.y, ax = Math.abs(dx), ay = Math.abs(dy);
+    if (ax < 1e-6 && ay < 1e-6) return;
+    const lado = e.dir === 2 || e.dir === 3;
+    if (lado ? ax * 1.6 >= ay : ay * 1.6 < ax) { if (ax > 1e-6) e.dir = dx > 0 ? 2 : 3; }
+    else if (ay > 1e-6) e.dir = dy > 0 ? 0 : 1;
+  }
   function move(S, e, dt, speed) {
     if (!e.path) return;
     const w = S.world;
@@ -6724,7 +6770,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       const dx = tx - e.x, dy = ty - e.y, d = Math.hypot(dx, dy);
       const cost = C.COST[w.tile[idx]] * (w.slow[idx] ? 2 : 1);
       const can = budget / cost;
-      if (d > 1e-6) face(e, dx, dy);
+      if (d > 1e-6) faceRumo(S, e);
       if (d <= can) { e.x = tx; e.y = ty; budget -= d * cost; e.pathI++; e.walk += d; }
       else { e.x += dx / d * can; e.y += dy / d * can; e.walk += can; budget = 0; }
     }
@@ -8553,6 +8599,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     } else if (c.k === 'agua') S.stock.agua = Math.min(Tech.waterCap(S), S.stock.agua + c.n);
     else S.stock[c.k] += c.n;
     if (c.fibra) { S.stock.fibra += c.fibra; S.stats.fibraGot = (S.stats.fibraGot || 0) + c.fibra; }   // embira da casca (Etapa 7) e lã (Etapa 10)
+    if (c.k !== 'obra') Sim.aparaEstoque(S);   // 0.26: o que não cabe se perde
     if (c.nobre || c.ouro) G.Regioes.trouxe(S, p, c);   // Etapa 17: madeira nobre e ouro do veio
     if (c.k === 'frutas' || c.k === 'peixe') { const got = S.stats.got || (S.stats.got = {}); got[c.k] = (got[c.k] || 0) + c.n; }   // missões do Ato 1
     if (c.k !== 'obra' && c.k !== 'caca' && c.k !== 'cria') Sim.float(S, p.x, p.y - 0.6, '+' + c.n + ' ' + RES_LABEL[c.k] + (c.fibra ? ' +' + c.fibra + ' fibra' : '') + (c.nobre ? ' +' + c.nobre + ' nobre' : '') + (c.ouro ? ' +1 ouro' : ''));
@@ -9724,8 +9771,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
               ch *= G.Narr.fishMult(S);   // seca e nevasca espantam, piracema enche o rio
               ch *= Tech.fishMult(S, p);   // anzol
               if (G.Mar && S.mar) ch *= G.Mar.pescaMult(S);   // Etapa 18: a canoa e o barco
+              const cd = S.stats.cardume === undefined ? 1 : S.stats.cardume;
+              ch *= C.CARDUME_MIN + (1 - C.CARDUME_MIN) * cd;   // 0.26: o rio pescado demais rende menos
               if (S.rng.next() < ch) {
                 a.caught++;
+                S.stats.cardume = Math.max(0, (S.stats.cardume === undefined ? 1 : S.stats.cardume) - C.CARDUME_PEIXE);
                 p.carry = { k: 'peixe', n: a.caught };
                 say(S, p, 'peixe', 0.5);
                 if (a.water >= 0) S.events.push({ k: 'splash', x: a.water % w.W, y: (a.water / w.W) | 0 });
@@ -10577,6 +10627,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     return 1;
   }
 
+  // 0.26: o trabalho e o recurso que ele enche (se está no teto, ninguém sai para buscar)
+  const CHEIO = { madeira: 'madeira', pedra: 'pedra', pesca: 'peixe', frutas: 'frutas', argila: 'argila' };
   function scoreList(S, p) {
     // Etapa 21: o corpo possuído faz o que você manda (as urgências do corpo ainda passam na frente, em urgentNeed)
     // de noite, o corpo dorme como qualquer corpo (é aí que o filho abençoado pode ser concebido, com o par de sempre)
@@ -10585,6 +10637,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const add = (type, s, extra) => {
       if (!(s > 0)) return;
       if (p.fail[type] && p.fail[type] > S.t) return;
+      if (CHEIO[type] && Sim.cheio(S, CHEIO[type])) return;   // 0.26: o depósito disso está cheio
       const o = { type, score: s + (S.rng.next() * 4 - 2) };
       if (extra) Object.assign(o, extra);
       out.push(o);
@@ -10944,9 +10997,14 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   God.gain = function (S, n) {
     const g = S.god;
     if (!g || !(n > 0)) return;
-    g.poder += n;
+    // 0.26: o Poder guardado não passa do teto do nível (quem já tinha mais, de um save antigo, fica com o que tem);
+    // a glória conta tudo, porque é a fé que o povo deu
+    g.poder = Math.max(g.poder, Math.min(God.teto(S), g.poder + n));
     g.glory = (g.glory || 0) + n;
   };
+  God.teto = (S) => C.PODER_TETO[Math.max(1, Math.min(C.PODER_TETO.length - 1, (S.god && S.god.lv) || 1))];
+  // 0.26: a soma da fé (cada pessoa vale fé/100) rende inteira até PODER_RENDE; o que passa, rende cada vez menos
+  God.rende = (soma) => (soma <= C.PODER_RENDE ? soma : C.PODER_RENDE + Math.pow(soma - C.PODER_RENDE, C.PODER_EXP));
   // nas falas, depois que o povo dá um nome, "Deus" (e o "céu" a quem se fala) vira o nome
   God.named = function (S, text) {
     const n = S && S.god && S.god.name;
@@ -11063,7 +11121,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     // Poder nasce da fé do povo, e não tem teto (Etapa 6): guarde para os grandes atos
     let sum = 0;
     for (const p of S.people) if (p.alive) sum += p.fe / 100;
-    God.gain(S, sum * C.POWER_PER_FAITH_H * (dom(S, 'chama') ? DM().chamaPoder : 1));
+    God.gain(S, God.rende(sum) * C.POWER_PER_FAITH_H * (dom(S, 'chama') ? DM().chamaPoder : 1));
     g.auras = g.auras.filter((a) => a.until > S.t);
     if (G.Deus && g.pending) G.Deus.hourly(S);   // Etapa 11: níveis, estátuas, avisos
     if (S.safe) return;   // com o jogo fechado ninguém reza nem é ignorado
@@ -11450,11 +11508,21 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     4: (S) => D.call(S) + ' é agora o Deus Antigo: gerações inteiras rezam para o mesmo céu. Já dá para criar uma espécie nova.',
     5: (S) => D.call(S) + ' é o Deus Maior. Já dá para ensinar ao povo um saber de outra era.',
   };
+  // 0.26: os fiéis pedidos são uma parte do povo (de 7 anos para cima), ou o mínimo fixo do nível; e o mundo precisa
+  // ter vivido nx.anos anos
+  D.fieisPede = function (S, nx) {
+    if (!nx) return 0;
+    let n = 0;
+    for (const p of S.people) if (p.alive && !p.carriedBy && Fam().age(S, p) >= C.FIEL_AGE) n++;
+    return Math.max(nx.fieis, Math.ceil((nx.parte || 0) * n));
+  };
+  D.anosMundo = (S) => S.t / (C.YEAR_DAYS * DAY());
   function checkLevel(S) {
     const g = S.god, nx = D.next(S);
     if (!nx || g.glory < nx.glory) return false;
+    if (D.anosMundo(S) < (nx.anos || 0)) return false;
     const n = D.fieis(S);
-    if (n < nx.fieis) return false;
+    if (n < D.fieisPede(S, nx)) return false;
     g.lv++;
     chron(S, LEVEL_TXT[g.lv] ? LEVEL_TXT[g.lv](S, n) : 'Deus subiu ao nível ' + g.lv + '.');
     S.events.push({ k: 'godLevel', lv: g.lv });
@@ -26507,7 +26575,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   function paintGod() {
     const g = S.god; if (!g) return;
     $('#poder-num').textContent = Math.floor(g.poder);
-    $('#poder-bar').style.width = Math.min(100, g.poder / C.POWER_BAR * 100) + '%';
+    $('#poder-bar').style.width = Math.min(100, g.poder / G.God.teto(S) * 100) + '%';   // 0.26: até o teto do nível
     $('#align-mark').style.left = ((g.align + 100) / 2) + '%';
     // Etapa 11: o nome, o nível e o que falta para o próximo
     const Dz = G.Deus;
@@ -26515,7 +26583,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       const lv = Dz.level(S), def = Dz.levelDef(lv), nx = Dz.next(S);
       setText($('#deus-title'), g.name || 'Deus');
       setText($('#deus-sub'), (g.name ? g.epithet + ' · ' : '') + def.name + ', nível ' + lv);
-      setText($('#deus-next'), nx ? 'Nível ' + (lv + 1) + ': glória ' + fmtN(g.glory) + '/' + fmtN(nx.glory) + ' · fiéis ' + Dz.fieis(S) + '/' + nx.fieis : 'Níveis, dons e grandes atos');
+      setText($('#deus-next'), nx ? 'Nível ' + (lv + 1) + ': glória ' + fmtN(g.glory) + '/' + fmtN(nx.glory) + ' · fiéis ' + Dz.fieis(S) + '/' + Dz.fieisPede(S, nx) : 'Níveis, dons e grandes atos');
       const bd2 = $('#badge-dom'), pend = !!Dz.pending(S) || !!(G.Memoria && G.Memoria.pending(S)) || !!(G.Soc && S.soc && (S.soc.pedidos.length || G.Soc.pendInfo(S)));
       if (bd2.hidden === pend) bd2.hidden = !pend;
       $('#btn-deus').classList.toggle('pend', pend);
@@ -26986,17 +27054,19 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const lv = Dz.level(S), nx = Dz.next(S), fi = Dz.fieis(S);
     const ladder = C.GOD_LEVELS.map((L, i) => {
       const n = i + 1, st = n < lv ? 'done' : n === lv ? 'on' : '';
-      const req = n === 1 ? 'o começo' : 'glória ' + fmtN(L.glory) + ' · ' + L.fieis + ' fiéis';
+      const req = n === 1 ? 'o começo' : 'glória ' + fmtN(L.glory) + ' · ' + (L.parte ? Math.round(L.parte * 100) + '% do povo fiel' : L.fieis + ' fiéis') + ' · ' + String(L.anos).replace('.', ',') + (L.anos === 1 ? ' ano' : ' anos') + ' de mundo';
       return `<li class="${st}"><span class="lvn">${n}</span><div><b>${esc(L.name)}</b> <span class="small muted">${req}</span><span class="small">${esc(LEVEL_GIFT[n])}</span></div></li>`;
     }).join('');
     let prog = '';
     if (nx) {
-      const gf = Math.min(1, g.glory / nx.glory), ff = Math.min(1, fi / Math.max(1, nx.fieis));
+      const pede = Dz.fieisPede(S, nx), anos = Dz.anosMundo(S);
+      const gf = Math.min(1, g.glory / nx.glory), ff = Math.min(1, fi / Math.max(1, pede)), tf = Math.min(1, anos / Math.max(0.01, nx.anos || 0.01));
       const lack = [];
       if (g.glory < nx.glory) lack.push('glória: atenda as orações, e a fé do povo rende Poder todo dia');
-      if (fi < nx.fieis) lack.push('fiéis: gente de 7 anos ou mais com fé 70; o cético só conta depois de convertido');
-      prog = `<div class="lvprog"><span class="small">Para o nível ${lv + 1} (${esc(nx.name)}): glória ${fmtN(g.glory)} de ${fmtN(nx.glory)} · fiéis ${fi} de ${nx.fieis}</span>
-        <div class="bar poder"><i style="width:${Math.round(Math.min(gf, ff) * 100)}%"></i></div>${lack.length ? `<span class="small muted">Falta ${esc(lack.join('; falta '))}.</span>` : '<span class="small muted">Tudo pronto: o nível chega na próxima hora.</span>'}</div>`;
+      if (fi < pede) lack.push('fiéis: gente de 7 anos ou mais com fé 70; o cético só conta depois de convertido');
+      if (anos < (nx.anos || 0)) lack.push('tempo: o mundo precisa de ' + String(nx.anos).replace('.', ',') + ' anos (está com ' + anos.toFixed(1).replace('.', ',') + ')');
+      prog = `<div class="lvprog"><span class="small">Para o nível ${lv + 1} (${esc(nx.name)}): glória ${fmtN(g.glory)} de ${fmtN(nx.glory)} · fiéis ${fi} de ${pede}</span>
+        <div class="bar poder"><i style="width:${Math.round(Math.min(gf, ff, tf) * 100)}%"></i></div>${lack.length ? `<span class="small muted">Falta ${esc(lack.join('; falta '))}.</span>` : '<span class="small muted">Tudo pronto: o nível chega na próxima hora.</span>'}</div>`;
     } else prog = '<p class="small">Você chegou ao nível mais alto.</p>';
     const pend = Dz.pending(S);
     const dons = g.dons.length ? g.dons.map((id) => { const d = Dz.DONS[id]; return `<li><img class="ico" src="${ic(d.icon)}" alt=""><div><b>${esc(d.name)}</b><span class="small">${esc(d.desc)}</span></div></li>`; }).join('') : '<li class="none small muted">Nenhum ainda: cada nível novo traz um dom para escolher.</li>';

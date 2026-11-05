@@ -144,6 +144,16 @@
   // ---------- movimento ----------
   function setPath(e, path) { e.path = path && path.length ? path : null; e.pathI = 0; }
   function face(e, dx, dy) { if (Math.abs(dx) > Math.abs(dy)) e.dir = dx > 0 ? 2 : 3; else if (dy) e.dir = dy > 0 ? 0 : 1; }
+  // 0.26: andando, olha para onde o caminho vai dois passos à frente e só troca de eixo com folga (em diagonal, o
+  // caminho em escadinha fazia o bicho virar de lado e de frente a cada passo)
+  function faceRumo(S, e) {
+    const w = S.world, j = e.path[Math.min(e.path.length - 1, e.pathI + 2)];
+    const dx = (j % w.W) + 0.5 - e.x, dy = ((j / w.W) | 0) + 0.5 - e.y, ax = Math.abs(dx), ay = Math.abs(dy);
+    if (ax < 1e-6 && ay < 1e-6) return;
+    const lado = e.dir === 2 || e.dir === 3;
+    if (lado ? ax * 1.6 >= ay : ay * 1.6 < ax) { if (ax > 1e-6) e.dir = dx > 0 ? 2 : 3; }
+    else if (ay > 1e-6) e.dir = dy > 0 ? 0 : 1;
+  }
   function move(S, e, dt, speed) {
     if (!e.path) return;
     const w = S.world;
@@ -155,7 +165,7 @@
       const dx = tx - e.x, dy = ty - e.y, d = Math.hypot(dx, dy);
       const cost = C.COST[w.tile[idx]] * (w.slow[idx] ? 2 : 1);
       const can = budget / cost;
-      if (d > 1e-6) face(e, dx, dy);
+      if (d > 1e-6) faceRumo(S, e);
       if (d <= can) { e.x = tx; e.y = ty; budget -= d * cost; e.pathI++; e.walk += d; }
       else { e.x += dx / d * can; e.y += dy / d * can; e.walk += can; budget = 0; }
     }

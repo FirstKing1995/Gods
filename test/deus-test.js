@@ -105,10 +105,12 @@ if (isMainThread) {
     check('fiel é quem tem fé 70 ou mais', D.fieis(S) === 1);
     const baby = F.makeBaby(S, a, b, 'F', 'Nenê'); S.people.push(baby); baby.fe = 90;
     check('bebê no colo não conta', D.fieis(S) === 1);
-    S.god.glory = 499; b.fe = 80;
+    const anosAntes = C.GOD_LEVELS.map((L) => L.anos);
+    for (const L of C.GOD_LEVELS) L.anos = 0;   // 0.26: aqui só glória e fiéis; o tempo de mundo tem o teste dele
+    S.god.glory = C.GOD_LEVELS[1].glory - 1; b.fe = 80;
     D.hourly(S);
     check('glória abaixo de ' + C.GOD_LEVELS[1].glory + ': fica no 1', D.level(S) === 1);
-    S.god.glory = 600; b.fe = 60;
+    S.god.glory = C.GOD_LEVELS[1].glory + 100; b.fe = 60;
     D.hourly(S);
     check('com glória mas um fiel só: fica no 1', D.level(S) === 1);
     b.fe = 75; S.events.length = 0;
@@ -134,6 +136,20 @@ if (isMainThread) {
     check('a mesma oferta no mesmo mundo', S3.god.pending.find((q) => q.k === 'dom').offer.join() === offers[0].join());
     const S4 = godWorld(9001, 1); S4.god.glory = 1e6; D.hourly(S4);
     check('outro mundo, outra oferta (quase sempre)', S4.god.pending.find((q) => q.k === 'dom').offer.join() !== offers[0].join(), S4.god.pending.find((q) => q.k === 'dom').offer.join());
+    C.GOD_LEVELS.forEach((L, i) => { L.anos = anosAntes[i]; });
+    // 0.26: o tempo de mundo: com glória e fiéis de sobra, um mundo novo não passa do nível 1 antes de 0,75 ano
+    const S7 = godWorld(31, 1); S7.god.glory = 1e6; S7.t = 10 * DAYM; D.hourly(S7);
+    check('0.26: mundo de 10 dias não sobe de nível, nem com glória de sobra', D.level(S7) === 1);
+    S7.t = Math.ceil(C.GOD_LEVELS[1].anos * Y) + DAYM; D.hourly(S7);
+    check('0.26: com o tempo do nível 2, sobe', D.level(S7) === 2);
+    // 0.26: os fiéis pedidos são uma parte do povo
+    for (let k = 0; k < 40; k++) { const q = Sim.makePerson(S7, k % 2 ? 'M' : 'F', null, 25); S7.people.push(q); }
+    check('0.26: com 40 adultos a mais, o nível 3 pede ' + Math.ceil(C.GOD_LEVELS[2].parte * 42) + ' fiéis ou mais', D.fieisPede(S7, C.GOD_LEVELS[2]) >= Math.ceil(C.GOD_LEVELS[2].parte * 40));
+    // 0.26: o Poder tem teto por nível
+    S7.god.poder = 0; God.gain(S7, 1e6);
+    check('0.26: o Poder guardado para no teto do nível', S7.god.poder === God.teto(S7), S7.god.poder);
+    check('0.26: a fé de muita gente rende cada vez menos', God.rende(500) < 500 / 4 && God.rende(10) === 10, God.rende(500).toFixed(1));
+    for (const L of C.GOD_LEVELS) L.anos = 0;   // o resto das unidades segue sem a trava do tempo
     // escolher o dom
     const q = S2.god.pending.find((x) => x.k === 'dom');
     const outside = D.DOM_ORDER.find((id) => q.offer.indexOf(id) < 0);
@@ -163,7 +179,7 @@ if (isMainThread) {
     check('só atendendo orações: O que Ouve', D.epithetFor(S) === 'O que Ouve');
     // ganha o nome no nível 2; quem começou é quem tem mais fé
     const [a, b] = S.people;
-    a.fe = 95; b.fe = 80; S.god.glory = 600; S.god.deeds = { raio: 2 };
+    a.fe = 95; b.fe = 80; S.god.glory = C.GOD_LEVELS[1].glory + 100; S.god.deeds = { raio: 2 };
     D.hourly(S);
     const nm = S.god.name;
     check('quem começou a chamar pelo nome é quem mais reza', S.god.namedBy === a.name && S.chron.some((c) => c.god && c.text.indexOf(nm) >= 0 && c.text.indexOf(a.name) >= 0), S.god.namedBy);
@@ -224,6 +240,7 @@ if (isMainThread) {
     b.prayer = null; b.prayCool = 0;
     God.cry(S, b, 'lobos');
     check('Ouvido Atento: a oração espera o dobro', b.prayer && b.prayer.until - S.t === 2 * 60 * 2);
+    S.god.poder = 0;   // 0.26: abaixo do teto, para o agradecimento aparecer inteiro
     const pp = S.god.poder;
     God.answerKind(S, ['lobos']);
     check('e o agradecimento dá o dobro de Poder', S.god.poder - pp === C.THANKS.oracao * 2);

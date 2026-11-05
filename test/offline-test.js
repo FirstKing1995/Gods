@@ -125,7 +125,7 @@ const ms = () => Date.now();
   check('300 dias: todo mundo cinco anos mais velho', c2.people.slice(0, age2.length).every((p, i) => !p.alive || F.age(c2, p) === age2[i] + 5));
   check('300 dias: nasce gente', r2.born >= 1 && alive(c2).length > n2, r2.born + ' nascimentos');
   check('300 dias: a comida não zera nem explode', c2.ctx.foodDays >= 10 && c2.ctx.foodDays <= 150, c2.ctx.foodDays.toFixed(1) + ' dias de comida');
-  check('300 dias: o Poder de Deus anda', c2.god.poder > poder2 + 100, Math.round(poder2) + ' → ' + Math.round(c2.god.poder));
+  check('300 dias: o Poder de Deus anda (até o teto do nível, desde a 0.26)', c2.god.poder > poder2 + 100 || c2.god.poder >= G.God.teto(c2), Math.round(poder2) + ' → ' + Math.round(c2.god.poder));
   const skillB = alive(c2).reduce((a, p) => a + Object.values(p.skills).reduce((x, y) => x + y, 0), 0);
   check('300 dias: as habilidades crescem', skillB > skillA(skill2), Math.round(skill2) + ' → ' + Math.round(skillB));
   function skillA(v) { return v * 1.05; }

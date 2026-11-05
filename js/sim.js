@@ -811,6 +811,7 @@
     const alive = S.people.filter((p) => p.alive).length || 1;
     const ctx = S.ctx || (S.ctx = { bushFruit: 0 });
     ctx.alive = alive;
+    ctx.armazens = armazens(S);   // 0.26: quanto os armazéns somam ao teto do estoque
     ctx.hour = ck.hour;
     ctx.night = ck.hour >= 21 || ck.hour < 5;
     ctx.evening = ck.hour >= 19 && ck.hour < 21;
@@ -1031,6 +1032,9 @@
     lost += rot(S, 'carne', C.ROT_MEAT * rm * sal * Te.rotMult(S, 'carne'));
     lost += rot(S, 'defumado', C.ROT_DEFUMADO * rm);
     lost += rot(S, 'seca', C.ROT_SECA * rm);
+    if (S.stock.fibra) rot(S, 'fibra', C.ROT_FIBRA);   // 0.26: a fibra mofa (não conta como comida estragada)
+    Sim.aparaEstoque(S);
+    S.stats.cardume = Math.min(1, (S.stats.cardume === undefined ? 1 : S.stats.cardume) + C.CARDUME_DIA);   // 0.26: o rio se refaz
     // Etapa 10: o que vem da roça dura (feijão e milho secos quase não estragam); ovo e leite, pouco
     for (const k of ['feijao', 'milho', 'abobora', 'mandioca']) if (S.stock[k]) lost += rot(S, k, C.ROCA[k].rot * rm);
     if (S.stock.ovos) lost += rot(S, 'ovos', C.ROT_OVOS * rm);
@@ -1193,6 +1197,24 @@
     .filter((m) => !S.goals.some((g) => g.id === m.id));
   Sim.checkGoals = checkGoals;
   Sim.daily = (S) => daily(S);   // para os testes
+  // 0.26: o teto de cada recurso (o base, mais o que cada armazém pronto soma); sem teto, Infinity
+  Sim.teto = function (S, k) {
+    const base = C.ESTOQUE_TETO[k];
+    if (!base) return Infinity;
+    const ctx = S.ctx || {};
+    const m = ctx.armazens === undefined ? armazens(S) : ctx.armazens;
+    return Math.round((base + (C.ESTOQUE_POR_PESSOA[k] || 0) * (ctx.alive || 0)) * m);
+  };
+  function armazens(S) {
+    let m = 1;
+    for (const b of S.buildings) if (b.type === 'armazem' && b.built) m += C.ARMAZEM_TETO[Math.min(C.ARMAZEM_TETO.length - 1, Sim.def(b).lv || 1)] || 0;
+    return m;
+  }
+  Sim.cheio = (S, k) => (S.stock[k] || 0) >= Sim.teto(S, k);
+  // o que passa do teto se perde (fica no chão, estraga, ninguém tem onde guardar)
+  Sim.aparaEstoque = function (S) {
+    for (const k in C.ESTOQUE_TETO) { const t = Sim.teto(S, k); if (S.stock[k] > t) S.stock[k] = t; }
+  };
 
   function updateBuildings(S, dt) {
     for (const b of S.buildings) {
