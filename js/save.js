@@ -72,7 +72,7 @@
   }
   Save.serialize = function (S) {
     const w = S.world, objD = [], extra = [], holy = [];
-    for (let i = 0; i < w.objs.length; i++) {
+    for (let i = 0; i < w.objs.length && !S.base; i++) {   // 0.28: a tribo de fora não leva o mapa (é o da primeira)
       const o = w.objs[i];
       if (i < w.genCount) {
         // 0.16: só o que mudou desde a geração (árvore de pé e pedra inteira são como nasceram e não vão)
@@ -98,8 +98,8 @@
       v: 1, game: 'genesis', seed: S.seed, size: w.W, gen: w.gen || 1, t: S.t, rng: S.rng.s, camp: S.camp, siteLabel: S.siteLabel,
       stock: S.stock, vontades: S.vontades, nextPid: S.nextPid, nextBid: S.nextBid,
       chron: S.chron, goals: S.goals, stats: S.stats, over: S.over, arrived: S.arrived,
-      people, buildings: S.buildings, objD, graves: extra, holy, god: S.god, seen: packSeen(S.seen), narr: packNarr(S.narr),
-      tech: S.tech || null, fauna: packFauna(S.fauna), opts: S.opts || null, life: packLife(S.life),
+      people, buildings: S.buildings, objD, graves: extra, holy, god: S.base ? null : S.god, seen: S.base ? null : packSeen(S.seen), narr: packNarr(S.narr),
+      tech: S.tech || null, fauna: S.base ? null : packFauna(S.fauna), opts: S.opts || null, life: packLife(S.life),
       obras: G.Obras ? G.Obras.pack(S) : null, campo: G.Campo ? G.Campo.pack(S) : null,
       goalsPhase: S.goalsPhase || 1, era: S.era || '', famInit: !!S.famInit, savedAt: G.Net ? G.Net.now() : Date.now(),
       hist: S.hist ? { day: S.hist.day, s: S.hist.s, n: S.hist.n } : null,   // a memória da aldeia (0.12), para o jogo fechado
@@ -115,15 +115,19 @@
       ia: S.ia || null,   // 0.25: o que a IA já escreveu (nomes, histórias das obras) e o que já viu
       visita: S.visita || null,   // Etapa 22: a abertura do mundo e os recados já aplicados
       povo: S.povo || null,   // 0.16: o nome e o título do lugar
+      tribo: S.tribo || null,   // 0.28: as tribos (a primeira leva as outras e a relação entre elas)
+      rel: S.base ? null : S.rel || null,
+      outras: S.base || !S.outras ? null : S.outras.map((B) => Save.serialize(B)),
     };
   };
 
-  Save.deserialize = function (d) {
+  Save.deserialize = function (d, base) {
     if (!d || d.v !== 1 || d.game !== 'genesis') return null;
-    const w = G.W.generate(d.seed, d.size || C.MAP, d.gen || 1);   // 0.18: o save de antes refaz o mundo sem regiões, como era
+    // 0.28: a tribo de fora (base = a primeira) mora no mapa da primeira
+    const w = base ? base.world : G.W.generate(d.seed, d.size || C.MAP, d.gen || 1);   // 0.18: o save de antes refaz o mundo sem regiões, como era
     const K = ['gone', 'tree', 'stump', 'rock', 'bush'];
     // 0.16: só o que mudou desde a geração (no mapa enorme, a lista inteira pesava demais)
-    if (d.objD) for (let j = 0; j + 3 < d.objD.length; j += 4) {
+    if (d.objD && !base) for (let j = 0; j + 3 < d.objD.length; j += 4) {
       const o = w.objs[d.objD[j]];
       if (!o) continue;
       const k = K[d.objD[j + 1]] || 'gone', a = d.objD[j + 2], b = d.objD[j + 3];
@@ -134,7 +138,7 @@
       else if (k === 'bush') { o.fruit = a; o.grow = b / 100; }
       G.W.refreshBlock(w, o.y * w.W + o.x);
     }
-    for (let i = 0; d.objs && i < w.genCount && i * 3 < d.objs.length; i++) {
+    for (let i = 0; d.objs && !base && i < w.genCount && i * 3 < d.objs.length; i++) {
       const o = w.objs[i], c = d.objs[i * 3], a = d.objs[i * 3 + 1], b = d.objs[i * 3 + 2];
       const k = K[c] || 'gone';
       if (k === 'gone') { G.W.removeObj(w, o); continue; }
@@ -144,8 +148,8 @@
       else if (k === 'bush') { o.fruit = a; o.grow = b / 100; }
       G.W.refreshBlock(w, o.y * w.W + o.x);
     }
-    for (const g of d.graves || []) { const o = G.W.addObj(w, 'grave', g.x, g.y, { name: g.name }); for (const f of ['pid', 't', 'r', 'vel', 'laje', 'fl', 'of']) if (g[f]) o[f] = g[f]; }
-    for (const h of d.holy || []) { const o = G.W.addObj(w, 'bush', h[0], h[1], { v: h[2], fruit: h[3], grow: h[4] / 100, holy: 1 }); G.W.refreshBlock(w, h[1] * w.W + h[0]); }
+    if (!base) for (const g of d.graves || []) { const o = G.W.addObj(w, 'grave', g.x, g.y, { name: g.name }); for (const f of ['pid', 't', 'r', 'vel', 'laje', 'fl', 'of']) if (g[f]) o[f] = g[f]; }
+    if (!base) for (const h of d.holy || []) { const o = G.W.addObj(w, 'bush', h[0], h[1], { v: h[2], fruit: h[3], grow: h[4] / 100, holy: 1 }); G.W.refreshBlock(w, h[1] * w.W + h[0]); }
     for (const b of d.buildings) {
       for (let dy = 0; dy < b.h; dy++) for (let dx = 0; dx < b.w; dx++) {
         const i = (b.y + dy) * w.W + b.x + dx;
@@ -156,10 +160,10 @@
       v: 1, seed: d.seed, world: w, t: d.t, rng: new G.RNG(d.rng), camp: d.camp, siteLabel: d.siteLabel,
       stock: d.stock, vontades: d.vontades, people: d.people, buildings: d.buildings,
       nextPid: d.nextPid, nextBid: d.nextBid, chron: d.chron, events: [], goals: d.goals, stats: d.stats,
-      over: d.over, arrived: d.arrived, god: d.god || null, narr: d.narr || null, savedAt: d.savedAt || 0,
-      tech: d.tech || null, fauna: d.fauna || null, opts: d.opts || null, life: d.life || null,
+      over: d.over, arrived: d.arrived, god: base ? base.god : d.god || null, narr: d.narr || null, savedAt: d.savedAt || 0,
+      tech: d.tech || null, fauna: base ? base.fauna : d.fauna || null, opts: d.opts || null, life: d.life || null,
       obras: d.obras || null, campo: d.campo || null,
-      seen: unpackSeen(d.seen, w.W * w.H),
+      seen: base ? base.seen : unpackSeen(d.seen, w.W * w.H),
       goalsPhase: d.goalsPhase || 1, era: d.era || '', famInit: !!d.famInit,
       hist: d.hist ? { day: -2, s: d.hist.s || [null, null, null, null], n: d.hist.n || [0, 0, 0, 0] } : null,
       povos: d.povos || null,
@@ -174,13 +178,16 @@
       ia: d.ia || null,
       visita: d.visita || null,
       povo: d.povo || null,
+      tribo: d.tribo || null,
     };
+    if (base) { S.base = base; S.rel = base.rel; } else S.rel = d.rel || null;
     for (const p of S.people) {
       p.path = null; p.pathI = 0; p.act = null; p.px = p.x; p.py = p.y; p.fail = {}; p.stuck = false;
       p.sleeping = false; p.inTent = 0;
       // quem estava em trabalho de parto volta direto para ele (a ação é recriada pela IA)
     }
     G.Sim.init(S);
+    if (!base && d.outras && d.outras.length) S.outras = d.outras.map((x) => Save.deserialize(x, S)).filter(Boolean);
     return S;
   };
 
