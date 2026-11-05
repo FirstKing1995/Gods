@@ -562,10 +562,11 @@
   const STONE = ['#262b44', '#3a4466', '#5a6988', '#8b9bb4', '#c0cbdc'];
   // 0.27: o telhado de cada idade (troca as cinco cores do sapê): sapê trançado, tabuinha, telha de barro
   const ERA_TETO = { 2: ['#4a3420', '#765236', '#9c7642', '#c09a58', '#dabd7c'], 3: PLANK, 4: ['#4a1a1c', '#7c2a26', '#a8443a', '#c8634c', '#e08a6a'],
-    5: ['#20222e', '#343a4e', '#4c5670', '#6c7890', '#94a0b4'] };   // 0.29: a ardósia da Idade Média
+    5: ['#20222e', '#343a4e', '#4c5670', '#6c7890', '#94a0b4'],   // 0.29: a ardósia da Idade Média
+    6: ['#4a2418', '#7e3a22', '#b0582e', '#d27a3e', '#ecaa62'] };   // 0.30: a telha nova de olaria, mais clara e alaranjada
   const eraCache = new WeakMap();
   A.eraImg = function (img, era) {
-    const to = ERA_TETO[Math.min(5, era)];
+    const to = ERA_TETO[Math.min(6, era)];
     if (!to || !img || !img.getContext) return img;
     let m = eraCache.get(img);
     if (!m) { m = {}; eraCache.set(img, m); }
@@ -579,8 +580,8 @@
     const para = to.map((h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
     for (let i = 0; i < px.length; i += 4) {
       if (!px[i + 3]) continue;
-      // a cor mais perto do sapê (o acabamento de luz e contorno mexe um pouco nas cores), com folga de 30
-      let kb = -1, db = 30 * 30;
+      // a cor mais perto do sapê (o acabamento de luz e contorno mexe um pouco nas cores), com folga de 16
+      let kb = -1, db = 16 * 16;   // 0.30: folga 16 (com 30, a tábua da madeira também mudava de cor)
       for (let k = 0; k < de.length; k++) { const dr = px[i] - de[k][0], dg = px[i + 1] - de[k][1], dbb = px[i + 2] - de[k][2], dd = dr * dr + dg * dg + dbb * dbb; if (dd < db) { db = dd; kb = k; } }
       if (kb >= 0) { px[i] = para[kb][0]; px[i + 1] = para[kb][1]; px[i + 2] = para[kb][2]; }
     }
@@ -1388,6 +1389,11 @@
       { k: P.ink2, s: P.mist, d: P.bark }],
     torre: [['...kkkk...', '..kyyyyk..', '.kkkkkkkk.', '..kwwwwk..', '..kssssk..', '..ksddsk..', '..kssssk..', '.ksssssk..', '.kssssssk.', 'kkkkkkkkkk'],
       { k: P.ink2, s: P.mist, y: P.tan, w: P.wood, d: P.ink }],
+    // 0.30: o porto e o galeão
+    porto: [['..........', '.kk....k..', '.kk...kk..', 'kkkkkkkkkk', 'kwwwwwwwwk', 'kkkkkkkkkk', 'k.ss.ss.sk', 'k.ss.ss.sk', '.bbbbbbbb.', '..........'],
+      { k: P.ink2, w: P.wood, s: P.mist, b: P.sky }],
+    galeao: [['....k.....', '...kwk.k..', '..kwwwkwk.', 'k.kwwwkwk.', 'kwkwwwkwkk', 'kwk.k..k.k', 'kkkkkkkkkk', '.kddddddk.', '..kkkkkk..', '.bbbbbbbb.'],
+      { k: P.ink2, w: P.parch, d: P.bark, b: P.sky }],
     // 0.29: o castelo e o moinho
     castelo: [['k.k.rr.k.k', 'kkk.kk.kkk', 'ksk.kk.ksk', 'kskkkkkksk', 'kssssssssk', 'ksssddsssk', 'kssdddsssk', 'kssdddsssk', 'kkkkkkkkkk', '..........'],
       { k: P.ink2, s: P.mist, d: P.bark, r: P.red }],
@@ -2445,6 +2451,28 @@
     rect7(b, 33, 0, 37, 2, '#c8423a');   // a bandeira
     return b.canvas();
   }
+  // 0.30: o porto (64 x 32, 4 x 2 passos): cais de pedra, o tablado de tábua sobre a água, caixotes, estacas e o guindaste
+  function portoSpr() {
+    const W = 64, H = 32, b = new Buf(W, H);
+    stoneWall(b, 0, 14, 63, 25, 95);
+    for (let y = 9; y <= 14; y++) for (let x = 0; x <= 63; x++) b.set(x, y, (x % 6 === 0 ? PLANK[0] : (y === 9 ? PLANK[4] : PLANK[2])));
+    for (const x of [3, 18, 33, 48, 61]) { rect7(b, x, 14, x + 1, 30, PLANK[0]); b.set(x, 13, PLANK[1]); }
+    for (const [x, y] of [[6, 4], [12, 5], [40, 4]]) { rect7(b, x, y, x + 4, y + 4, PLANK[2]); rect7(b, x, y, x + 4, y, PLANK[4]); b.set(x + 2, y + 2, PLANK[0]); }
+    line(b, 54, 0, 54, 9, PLANK[0]); line(b, 54, 0, 46, 3, PLANK[1]); line(b, 46, 3, 46, 7, '#b8a888');
+    rect7(b, 44, 7, 48, 9, PLANK[1]);
+    return b.canvas();
+  }
+  // o galeão (64 x 52): casco comprido, três mastros com velas e a bandeira no mais alto
+  function galeaoSpr() {
+    const b = new Buf(64, 52);
+    casco(b, 1, 62, 38, 49);
+    for (let x = 8; x <= 56; x += 6) b.set(x, 43, P.ink);
+    vela(b, 14, 12, 34, 6, ['#a89a82', '#d8ccb4', '#ead4aa']);
+    vela(b, 32, 3, 34, 8, ['#a89a82', '#d8ccb4', '#ead4aa']);
+    vela(b, 50, 12, 34, 6, ['#a89a82', '#d8ccb4', '#ead4aa']);
+    rect7(b, 33, 0, 38, 2, '#c8423a');
+    return b.canvas();
+  }
   // 0.29: o castelo (64 x 64, 4 x 4 passos): duas torres com ameias, o corpo, a torre de menagem atrás, o portão e a bandeira
   function castelo() {
     const W = 64, H = 64, b = new Buf(W, H);
@@ -2479,7 +2507,7 @@
     return b.canvas();
   }
   A.cidadeSprites = function () {
-    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho() };
+    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr() };
     for (const k of ['escola', 'biblioteca', 'hospital', 'guarda', 'brigada', 'mercado']) out[k] = [null, instituicao(k, 1), instituicao(k, 2), instituicao(k, 3)];
     return out;
   };

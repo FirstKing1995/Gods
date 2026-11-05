@@ -171,6 +171,8 @@
       ['torre', 'torre'], ['templo', 'templo'], ['muralha', 'muralha'], ['aqueduto', 'aqueduto'], ['ponte', 'ponte'],
       // 0.29: a Idade Média
       ['moinho', 'moinho'], ['castelo', 'castelo'],
+      // 0.30: as Navegações
+      ['porto', 'porto'], ['galeao', 'galeao'],
       // Etapa 18: os barcos
       ['canoa', 'canoa'], ['barco', 'barco'], ['navio', 'navio']];
     const SHORT = { barraca: 'Barraca', forno: 'Forno' };   // nome curto no botão (o painel fica em duas fileiras)
@@ -986,7 +988,7 @@
       </div>`;
     }
     const st = el.querySelector('#bstatus'); if (st) st.textContent = buildingStatus(b, d, job);
-    const ex = el.querySelector('#bextra'); if (ex) setHTML(ex, b.built ? (b.type === 'estatua' ? estatuaHTML(b) : b.type === 'cemiterio' ? cemHTML() : b.type === 'navio' ? marHTML(b) : campoHTML(b)) : '');
+    const ex = el.querySelector('#bextra'); if (ex) setHTML(ex, b.built ? (b.type === 'estatua' ? estatuaHTML(b) : b.type === 'cemiterio' ? cemHTML() : b.type === 'navio' || b.type === 'galeao' ? marHTML(b) : campoHTML(b)) : '');
   }
   function costText(cost) {
     const parts = Object.keys(cost || {}).map((k) => cost[k] + ' de ' + (MAT_WORD[k] || k));
@@ -1410,7 +1412,7 @@
     const opts = (a, b2, sel) => Array.from({ length: b2 - a + 1 }, (_, k) => a + k).map((n) => '<option value="' + n + '"' + (n === sel ? ' selected' : '') + '>' + n + '</option>').join('');
     const comidas = [30, 60, 90, 120].map((n) => '<option value="' + n + '"' + (n === 60 ? ' selected' : '') + '>' + n + '</option>').join('');
     return sec('Expedição', '<p class="small muted">Sai pela beira do mundo e volta em uma ou duas estações com o que achou, ou não volta. Mais gente e mais comida, menos perigo. Vão os adultos que mais pescam.</p>' +
-      '<div class="mar-form"><label>Vão <select id="mar-n">' + opts(C.MAR_TRIPULACAO[0], C.MAR_TRIPULACAO[1], 5) + '</select></label> <label>Comida <select id="mar-comida">' + comidas + '</select></label>' +
+      '<div class="mar-form"><label>Vão <select id="mar-n">' + opts(C.MAR_TRIPULACAO[0], G.Mar.tripMax(S), 5) + '</select></label> <label>Comida <select id="mar-comida">' + comidas + '</select></label>' +
       ' <button type="button" class="btn btn-small btn-gold" data-act="partir">Partir</button></div>' +
       (inf.terras.length ? '<p class="small muted">Terras já achadas: ' + inf.terras.map((t) => esc(t.nome)).join(', ') + '. Veja no mapa do mundo (tecla M).</p>' : ''));
   }

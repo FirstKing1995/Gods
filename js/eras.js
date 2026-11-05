@@ -24,6 +24,8 @@
     { nome: 'Idade dos Reinos', curto: 'reinos', escrita: true, magia: 'circulos', gente: 80, marco: ['templo', 'muralha'], txt: 'A aldeia virou reino: lei escrita, obra grande e quem governa. Começou a Idade dos Reinos.' },
     // 0.29: a Idade Média (o conselho chega a ela pelas estrelas)
     { nome: 'Idade Média', curto: 'castelos e moinhos', escrita: true, magia: 'estrelas', gente: 120, marco: ['moinho', 'castelo'], txt: 'O moinho gira e a pedra dos castelos sobe: começou a Idade Média.', txtM: 'As mais velhas aprenderam a ler as estrelas e o tempo das coisas: começou, do jeito do conselho, a Idade Média.' },
+    // 0.30: a Idade das Navegações (o conselho chega a ela pelas marés)
+    { nome: 'Idade das Navegações', curto: 'navegações e comércio', escrita: true, magia: 'mares', gente: 160, marco: ['porto', 'galeao'], txt: 'Velas grandes saem do porto e voltam cheias: começou a Idade das Navegações.', txtM: 'As mais velhas cantam para o mar, e o mar escuta: começou, do jeito do conselho, a Idade das Navegações.' },
   ];
   E.init = function (S) {
     const e = S.eras || (S.eras = {});
@@ -101,13 +103,14 @@
     runas: { nome: 'Runas', de: 'das runas', txt: 'As mais velhas gravaram runas nas pedras das casas: a pedra aquece, e quem dorme sente 4 °C a mais.' },
     ervas: { nome: 'Ervas', de: 'das ervas', txt: 'O conselho juntou o saber das ervas e dos cantos: a febre pesa bem menos, e a saúde volta mais depressa.' },
     circulos: { nome: 'Círculos', de: 'dos círculos', txt: 'Círculos de pedra em volta da roça: a terra rende 20% mais.' },
+    mares: { nome: 'Marés', de: 'das marés', txt: 'As mais velhas aprenderam o canto das marés: o navio sai na hora certa e o mar leva bem menos gente.' },   // 0.30
     estrelas: { nome: 'Estrelas', de: 'das estrelas', txt: 'As mais velhas leem as estrelas: sabem quando vem a chuva e a geada, e a praga pega a roça pela metade.' },   // 0.29
   };
   E.MAGIA = MAGIA;
   // o conselho aprende um saber por idade (a partir da Pedra Polida), em vez de esperar o metal
   function magia(S) {
     if (E.ordem(S) !== 'conselho') return;
-    const ordem = ['runas', 'ervas', 'circulos', 'estrelas'], e = S.eras;
+    const ordem = ['runas', 'ervas', 'circulos', 'estrelas', 'mares'], e = S.eras;
     for (let k = 0; k < ordem.length; k++) {
       const id = ordem[k];
       if (e.magia[id]) continue;
@@ -121,6 +124,7 @@
   // 0.29: o moinho (qualquer um pronto) faz toda a roça render mais
   E.rocaMult = (S) => (E.temMagia(S, 'circulos') ? 1.2 : 1) * (S.buildings.some((b) => b.type === 'moinho' && b.built) ? C.MOINHO_ROCA : 1);
   E.temCastelo = (S) => S.buildings.some((b) => b.type === 'castelo' && b.built);
+  E.temPorto = (S) => S.buildings.some((b) => b.type === 'porto' && b.built);   // 0.30
 
   // ---------- o desafio de cada idade ----------
   const pronto = (S, k) => !(S.eras.prox[k] > S.t);
@@ -162,6 +166,15 @@
       Sim().chron(S, 'A Grande Peste chegou pela trilha: ' + n + (n === 1 ? ' pessoa caiu' : ' pessoas caíram') + ' de febre de uma vez. Quem tem casa de cura sofre menos.');
       return;
     }
+    // 0.30: Navegações: os piratas (velas estranhas na costa); a torre de vigia vê antes, e o povo esconde tudo
+    if (id >= 6 && pronto(S, 'piratas') && S.buildings.some((b) => (b.type === 'porto' || b.type === 'navio' || b.type === 'galeao') && b.built) && r < C.ERA_PIRATAS / C.YEAR_DAYS) {
+      S.eras.prox.piratas = S.t + 2 * YEAR(); S.stats.piratas = (S.stats.piratas || 0) + 1;
+      if (S.buildings.some((b) => b.type === 'torre' && b.built)) { Sim().chron(S, 'Velas estranhas apareceram na costa. A torre de vigia viu de longe, o povo escondeu tudo, e os piratas foram embora com as mãos vazias.'); return; }
+      const levou = [];
+      for (const k of ['peixe', 'carne', 'defumado', 'frutas', 'sal', 'ferro', 'ouro', 'tabuas']) { const n = Math.floor((S.stock[k] || 0) * C.PIRATAS_LEVA); if (n > 0) { S.stock[k] -= n; levou.push(n + ' de ' + ((G.AI && G.AI.RES_LABEL && G.AI.RES_LABEL[k]) || k)); } }
+      Sim().chron(S, 'Piratas desceram de noite pela praia e levaram ' + (levou.length ? levou.join(', ') : 'o pouco que acharam') + '. Uma torre de vigia teria visto as velas antes.');
+      return;
+    }
     // ferro: a fome da cidade grande (a cidade cresce mais que a roça)
     if (id >= 3 && vivos(S) >= 60 && S.ctx.foodDays < 4 && pronto(S, 'fome')) {
       S.eras.prox.fome = S.t + YEAR(); S.stats.fomesCidade++;
@@ -189,7 +202,7 @@
   // 0.27: quando o povo muda de idade, as construções vão sendo refeitas no jeito novo, poucas por dia (as mais antigas
   // primeiro). O jeito aparece no telhado: sapê até a Pedra Polida, sapê trançado no Bronze, tabuinha no Ferro, telha
   // de barro nos Reinos
-  const REFORMA_TXT = { 2: 'trançam o sapê novo, mais firme', 3: 'trocam o sapê por tabuinhas de madeira', 4: 'cobrem os telhados com telha de barro', 5: 'cobrem os telhados de ardósia' };
+  const REFORMA_TXT = { 2: 'trançam o sapê novo, mais firme', 3: 'trocam o sapê por tabuinhas de madeira', 4: 'cobrem os telhados com telha de barro', 5: 'cobrem os telhados de ardósia', 6: 'pintam as paredes e cobrem com telha nova de olaria' };
   function reforma(S) {
     const idade = S.eras.idade || 0;
     if (idade < 2) return;

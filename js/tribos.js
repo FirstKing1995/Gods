@@ -150,7 +150,8 @@
   function troca(par, x, y) {
     const kx = sobra(x), ky = sobra(y);
     if (!kx || !ky) return;
-    const nx = Math.min(25, Math.floor(x.stock[kx] * 0.15)), ny = Math.min(25, Math.floor(y.stock[ky] * 0.15));
+    const m = G.Eras && G.Eras.temPorto && G.Eras.temPorto(x) && G.Eras.temPorto(y) ? 2 : 1;   // 0.30: de porto a porto, a troca rende o dobro
+    const nx = Math.min(25 * m, Math.floor(x.stock[kx] * 0.15 * m)), ny = Math.min(25 * m, Math.floor(y.stock[ky] * 0.15 * m));
     if (nx < 2 || ny < 2) return;
     x.stock[kx] -= nx; y.stock[kx] = (y.stock[kx] || 0) + nx;
     y.stock[ky] -= ny; x.stock[ky] = (x.stock[ky] || 0) + ny;
