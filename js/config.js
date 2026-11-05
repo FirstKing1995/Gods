@@ -3,7 +3,7 @@
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.28.0',
+    VERSION: '0.29.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -204,6 +204,11 @@
         desc: 'A casa de Deus, de pedra e de muitas mãos. Quem tem fé reza ali de manhã e ganha o dobro de fé; a festa e o rito ficam maiores perto dele.' },
       muralha: { name: 'Muralha', a: 'a', key: '', w: 3, h: 2, cost: { pedra: 200, madeira: 40 }, work: 30000, grande: true, wall: { r: 16 },
         desc: 'Um anel de pedra em volta do centro, com portão. Lobo e onça não entram, e ninguém leva a comida guardada lá dentro.' },
+      // 0.29: a Idade Média. O moinho (obra comum) e o castelo (grande obra)
+      moinho: { name: 'Moinho', a: 'o', key: '', w: 2, h: 2, cost: { madeira: 50, pedra: 40, tabuas: 30 }, work: 2400, need: 'roca',
+        desc: 'Pás que o vento gira e a mó que mói o grão: toda a roça da aldeia rende 25% mais.' },
+      castelo: { name: 'Castelo', a: 'o', key: '', w: 4, h: 4, cost: { pedra: 180, madeira: 60, tabuas: 60 }, work: 42000, grande: true,
+        desc: 'Torres, ameias e portão. Na guerra entre tribos, ninguém daqui morre; a vila de fora não leva a comida; e o malfeito cai 20%.' },
       torre: { name: 'Torre de vigia', a: 'a', key: '', w: 2, h: 2, cost: { pedra: 80, tabuas: 40, madeira: 30 }, work: 18000, grande: true, watch: { r: 24 },
         desc: 'Do alto se vê longe: a névoa se abre em volta dela, o bicho que vem chegando é avisado antes e o malfeito da noite tem testemunha.' },
       aqueduto: { name: 'Aqueduto', a: 'o', key: '', w: 4, h: 2, cost: { pedra: 180, argila: 60, tabuas: 20 }, work: 33000, grande: true, need: 'ceramica', water: { h: 3 },
@@ -327,7 +332,7 @@
     ESTOQUE_POR_PESSOA: { peixe: 18, frutas: 15, carne: 10, defumado: 25, seca: 25 },
     // o cardume: cada peixe pescado tira CARDUME_PEIXE dele; ele volta CARDUME_DIA por dia; a chance de fisgar vai de
     // CARDUME_MIN (rio pescado demais) a 100% (rio cheio)
-    CARDUME_PEIXE: 0.004, CARDUME_DIA: 0.06, CARDUME_MIN: 0.3,
+    CARDUME_PEIXE: 0.0015, CARDUME_DIA: 0.08, CARDUME_MIN: 0.55,   // 0.28.1: era 0.004, 0.06 e 0.3 (as vilas sem ajuda passavam fome)
     ROT_FIBRA: 0.01,   // a fibra guardada mofa e esgarça um pouco por dia
     PRAYER_HOURS: 12, PRAYER_COOLDOWN_H: 24, PRAYER_ANSWERED_COOLDOWN_H: 12,
     FAITH_ANSWER: 15, FAITH_ANSWER_SEEN: 6, FAITH_IGNORED: -8, FAITH_IGNORED_SEEN: -2,
@@ -619,6 +624,8 @@
     // 0.27: a reforma das construções quando o povo muda de idade: por dia, REFORMA_DIA (fração) das que estão no
     // jeito antigo passam para o novo (no mínimo uma)
     REFORMA_DIA: 0.08,
+    // 0.29: a Idade Média
+    MOINHO_ROCA: 1.25, CASTELO_CRIME: 0.8, ERA_PESTE: 0.5, PESTE_PARTE: 0.2, ESTRELAS_PRAGA: 0.5,
     // 0.28: as tribos. Nasce no nível TRIBO_NIVEL de Deus, por TRIBO_CUSTO de Poder, a TRIBO_DIST passos ou mais da outra
     // (até TRIBO_MAX tribos). Elas se conhecem quando alguém chega a TRIBO_VE passos do acampamento da outra, ou quando
     // caçadores se cruzam (mais fácil com os acampamentos a menos de TRIBO_CRUZA passos)

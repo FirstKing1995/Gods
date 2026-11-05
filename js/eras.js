@@ -22,6 +22,8 @@
     { nome: 'Idade do Bronze', curto: 'bronze', disc: ['mineracao'], magia: 'runas', gente: 25, marco: ['mina', 'estatua'], txt: 'Do fundo da serra sai o primeiro metal: começou a Idade do Bronze.', txtM: 'As runas gravadas na pedra fazem o que o metal faria: começou, do jeito do conselho, a Idade do Bronze.' },
     { nome: 'Idade do Ferro', curto: 'ferro', disc: ['metalurgia'], magia: 'ervas', gente: 45, marco: ['ferraria', 'escola'], txt: 'O ferro bate na bigorna: começou a Idade do Ferro.', txtM: 'As ervas e os cantos curam e fortalecem sem forja nenhuma: começou, do jeito do conselho, a Idade do Ferro.' },
     { nome: 'Idade dos Reinos', curto: 'reinos', escrita: true, magia: 'circulos', gente: 80, marco: ['templo', 'muralha'], txt: 'A aldeia virou reino: lei escrita, obra grande e quem governa. Começou a Idade dos Reinos.' },
+    // 0.29: a Idade Média (o conselho chega a ela pelas estrelas)
+    { nome: 'Idade Média', curto: 'castelos e moinhos', escrita: true, magia: 'estrelas', gente: 120, marco: ['moinho', 'castelo'], txt: 'O moinho gira e a pedra dos castelos sobe: começou a Idade Média.', txtM: 'As mais velhas aprenderam a ler as estrelas e o tempo das coisas: começou, do jeito do conselho, a Idade Média.' },
   ];
   E.init = function (S) {
     const e = S.eras || (S.eras = {});
@@ -86,7 +88,7 @@
   }
   E.ordem = (S) => (S.eras ? S.eras.ordem : '');
   // os efeitos de cada ordem (ganchos pequenos, chamados de onde a coisa acontece)
-  E.crimeMult = (S) => (E.ordem(S) === 'reino' ? 0.85 : 1);
+  E.crimeMult = (S) => (E.ordem(S) === 'reino' ? 0.85 : 1) * (E.temCastelo && E.temCastelo(S) ? C.CASTELO_CRIME : 1);   // 0.29: o castelo
   E.trocaMult = (S) => (E.ordem(S) === 'reino' ? 1.3 : 1);
   E.xp = (S) => (E.ordem(S) === 'guildas' ? 1.15 : 1);
   E.cacaMult = (S) => (E.ordem(S) === 'clas' ? 1.25 : 1);
@@ -99,12 +101,13 @@
     runas: { nome: 'Runas', de: 'das runas', txt: 'As mais velhas gravaram runas nas pedras das casas: a pedra aquece, e quem dorme sente 4 °C a mais.' },
     ervas: { nome: 'Ervas', de: 'das ervas', txt: 'O conselho juntou o saber das ervas e dos cantos: a febre pesa bem menos, e a saúde volta mais depressa.' },
     circulos: { nome: 'Círculos', de: 'dos círculos', txt: 'Círculos de pedra em volta da roça: a terra rende 20% mais.' },
+    estrelas: { nome: 'Estrelas', de: 'das estrelas', txt: 'As mais velhas leem as estrelas: sabem quando vem a chuva e a geada, e a praga pega a roça pela metade.' },   // 0.29
   };
   E.MAGIA = MAGIA;
   // o conselho aprende um saber por idade (a partir da Pedra Polida), em vez de esperar o metal
   function magia(S) {
     if (E.ordem(S) !== 'conselho') return;
-    const ordem = ['runas', 'ervas', 'circulos'], e = S.eras;
+    const ordem = ['runas', 'ervas', 'circulos', 'estrelas'], e = S.eras;
     for (let k = 0; k < ordem.length; k++) {
       const id = ordem[k];
       if (e.magia[id]) continue;
@@ -115,7 +118,9 @@
   E.temMagia = (S, id) => !!(S.eras && S.eras.magia[id]);
   E.calorCasa = (S) => (E.temMagia(S, 'runas') ? C.RUNAS_HEAT : 0);
   E.febreMult = (S) => (E.temMagia(S, 'ervas') ? 0.6 : 1);
-  E.rocaMult = (S) => (E.temMagia(S, 'circulos') ? 1.2 : 1);
+  // 0.29: o moinho (qualquer um pronto) faz toda a roça render mais
+  E.rocaMult = (S) => (E.temMagia(S, 'circulos') ? 1.2 : 1) * (S.buildings.some((b) => b.type === 'moinho' && b.built) ? C.MOINHO_ROCA : 1);
+  E.temCastelo = (S) => S.buildings.some((b) => b.type === 'castelo' && b.built);
 
   // ---------- o desafio de cada idade ----------
   const pronto = (S, k) => !(S.eras.prox[k] > S.t);
@@ -128,7 +133,8 @@
     if (id >= 1 && pronto(S, 'praga') && r < C.ERA_PRAGA / C.YEAR_DAYS) {
       const rocas = S.buildings.filter((b) => b.type === 'roca' && b.built && b.farm && b.farm.st === 'crescendo');
       if (rocas.length) {
-        for (const b of rocas) b.farm.lost = Math.min(0.95, (b.farm.lost || 0) + 0.5);
+        const pega = 0.5 * (E.temMagia(S, 'estrelas') ? C.ESTRELAS_PRAGA : 1);   // 0.29: quem lê as estrelas planta na hora certa
+        for (const b of rocas) b.farm.lost = Math.min(0.95, (b.farm.lost || 0) + pega);
         S.eras.prox.praga = S.t + 2 * YEAR(); S.stats.pragas++;
         Sim().chron(S, 'Uma praga de lagarta desceu na roça: ' + (rocas.length > 1 ? 'as ' + rocas.length + ' roças vão render' : 'a roça vai render') + ' a metade.');
         return;
@@ -138,13 +144,22 @@
     const v = S.soc && S.soc.vila;
     if (id >= 2 && v && !v.fim && (v.laco || 0) < 0 && pronto(S, 'guerra') && r < C.ERA_GUERRA / C.YEAR_DAYS) {
       S.eras.prox.guerra = S.t + 2 * YEAR(); S.stats.guerras++;
-      if (G.Cidade && S.buildings.some((b) => b.type === 'muralha' && b.built)) { Sim().chron(S, 'Gente d' + (v.art || 'e') + ' ' + v.nome + ' veio armada, mas parou na muralha e voltou.'); return; }
+      if (G.Cidade && S.buildings.some((b) => (b.type === 'muralha' || b.type === 'castelo') && b.built)) { Sim().chron(S, 'Gente d' + (v.art || 'e') + ' ' + v.nome + ' veio armada, mas parou ' + (E.temCastelo(S) ? 'no castelo' : 'na muralha') + ' e voltou.'); return; }
       let levou = 0;
       for (const k of ['peixe', 'carne', 'frutas', 'milho', 'feijao', 'mandioca', 'defumado', 'seca']) { const n = Math.floor((S.stock[k] || 0) * 0.2); S.stock[k] -= n; levou += n; }
       const feridos = S.people.filter((p) => p.alive && !p.fora && Fam().age(S, p) >= 16).sort(() => S.rng.next() - 0.5).slice(0, 1 + Math.floor(S.rng.next() * 3));
       for (const p of feridos) { p.needs.saude = Math.max(5, p.needs.saude - 40); }
       v.laco = Math.max(-100, (v.laco || 0) - 10);
       Sim().chron(S, 'Guerra: gente d' + (v.art || 'e') + ' ' + v.nome + ' atacou de noite e levou ' + levou + ' de comida. ' + Sim().listNames(feridos) + (feridos.length > 1 ? ' saíram feridos.' : ' saiu ferido.'));
+      return;
+    }
+    // 0.29: Idade Média: a Grande Peste (uma onda de febre pela trilha; o hospital encurta, as ervas aliviam)
+    if (id >= 5 && G.Cidade && G.Cidade.adoece && S.cidade && pronto(S, 'peste') && r < C.ERA_PESTE / C.YEAR_DAYS) {
+      const pode = S.people.filter((p) => p.alive && !p.fora && !p.sick && !(p.imune > S.t));
+      const n = Math.max(1, Math.round(pode.length * C.PESTE_PARTE));
+      for (let k = 0; k < n && pode.length; k++) G.Cidade.adoece(S, pode.splice(Math.floor(S.rng.next() * pode.length), 1)[0]);
+      S.eras.prox.peste = S.t + 3 * YEAR(); S.stats.pestes = (S.stats.pestes || 0) + 1;
+      Sim().chron(S, 'A Grande Peste chegou pela trilha: ' + n + (n === 1 ? ' pessoa caiu' : ' pessoas caíram') + ' de febre de uma vez. Quem tem casa de cura sofre menos.');
       return;
     }
     // ferro: a fome da cidade grande (a cidade cresce mais que a roça)
@@ -174,7 +189,7 @@
   // 0.27: quando o povo muda de idade, as construções vão sendo refeitas no jeito novo, poucas por dia (as mais antigas
   // primeiro). O jeito aparece no telhado: sapê até a Pedra Polida, sapê trançado no Bronze, tabuinha no Ferro, telha
   // de barro nos Reinos
-  const REFORMA_TXT = { 2: 'trançam o sapê novo, mais firme', 3: 'trocam o sapê por tabuinhas de madeira', 4: 'cobrem os telhados com telha de barro' };
+  const REFORMA_TXT = { 2: 'trançam o sapê novo, mais firme', 3: 'trocam o sapê por tabuinhas de madeira', 4: 'cobrem os telhados com telha de barro', 5: 'cobrem os telhados de ardósia' };
   function reforma(S) {
     const idade = S.eras.idade || 0;
     if (idade < 2) return;

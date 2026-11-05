@@ -561,10 +561,11 @@
   const PLANK = ['#4e2e22', '#733e39', '#9a5e42', '#b86f50', '#d49a6a'];
   const STONE = ['#262b44', '#3a4466', '#5a6988', '#8b9bb4', '#c0cbdc'];
   // 0.27: o telhado de cada idade (troca as cinco cores do sapê): sapê trançado, tabuinha, telha de barro
-  const ERA_TETO = { 2: ['#4a3420', '#765236', '#9c7642', '#c09a58', '#dabd7c'], 3: PLANK, 4: ['#4a1a1c', '#7c2a26', '#a8443a', '#c8634c', '#e08a6a'] };
+  const ERA_TETO = { 2: ['#4a3420', '#765236', '#9c7642', '#c09a58', '#dabd7c'], 3: PLANK, 4: ['#4a1a1c', '#7c2a26', '#a8443a', '#c8634c', '#e08a6a'],
+    5: ['#20222e', '#343a4e', '#4c5670', '#6c7890', '#94a0b4'] };   // 0.29: a ardósia da Idade Média
   const eraCache = new WeakMap();
   A.eraImg = function (img, era) {
-    const to = ERA_TETO[Math.min(4, era)];
+    const to = ERA_TETO[Math.min(5, era)];
     if (!to || !img || !img.getContext) return img;
     let m = eraCache.get(img);
     if (!m) { m = {}; eraCache.set(img, m); }
@@ -1387,6 +1388,11 @@
       { k: P.ink2, s: P.mist, d: P.bark }],
     torre: [['...kkkk...', '..kyyyyk..', '.kkkkkkkk.', '..kwwwwk..', '..kssssk..', '..ksddsk..', '..kssssk..', '.ksssssk..', '.kssssssk.', 'kkkkkkkkkk'],
       { k: P.ink2, s: P.mist, y: P.tan, w: P.wood, d: P.ink }],
+    // 0.29: o castelo e o moinho
+    castelo: [['k.k.rr.k.k', 'kkk.kk.kkk', 'ksk.kk.ksk', 'kskkkkkksk', 'kssssssssk', 'ksssddsssk', 'kssdddsssk', 'kssdddsssk', 'kkkkkkkkkk', '..........'],
+      { k: P.ink2, s: P.mist, d: P.bark, r: P.red }],
+    moinho: [['k.......k.', '.k.....k..', '..k...k...', '...kkk....', '..kyyyk...', '...kwk....', '..kssk....', '..kssk....', '.ksddsk...', '.kkkkkk...'],
+      { k: P.ink2, s: P.mist, y: P.tan, w: P.parch, d: P.ink }],
     aqueduto: [['..........', 'kkkkkkkkkk', 'kbbbbbbbbk', 'kkkkkkkkkk', 'ks.ssk.ssk', 'k...k...sk', 'ks..ks..sk', 'ks..ks..sk', 'kk..kk..kk', '..........'],
       { k: P.ink2, s: P.mist, b: P.sky }],
     escola: [['..........', '.kkkk.kkkk', '.kwwk.kwwk', '.kwlkkklwk', '.kwwwkwwwk', '.kwlwkwlwk', '.kwwwkwwwk', '.kkkkkkkkk', '..........', '..........'],
@@ -2439,8 +2445,41 @@
     rect7(b, 33, 0, 37, 2, '#c8423a');   // a bandeira
     return b.canvas();
   }
+  // 0.29: o castelo (64 x 64, 4 x 4 passos): duas torres com ameias, o corpo, a torre de menagem atrás, o portão e a bandeira
+  function castelo() {
+    const W = 64, H = 64, b = new Buf(W, H);
+    stoneWall(b, 24, 6, 39, 25, 84);
+    for (let x = 24; x <= 39; x += 3) rect7(b, x, 3, x + 1, 5, STONE[3]);
+    line(b, 31, 0, 31, 5, PLANK[0]); rect7(b, 32, 0, 36, 2, '#b8424a'); rect7(b, 32, 2, 35, 2, '#7c2a26');
+    stoneWall(b, 0, 14, 13, 61, 81); stoneWall(b, 50, 14, 63, 61, 82);
+    stoneWall(b, 14, 26, 49, 61, 83);
+    for (const x0 of [0, 50]) for (let x = x0; x <= x0 + 13; x += 3) rect7(b, x, 11, x + 1, 13, STONE[3]);
+    for (let x = 14; x <= 49; x += 3) rect7(b, x, 23, x + 1, 25, STONE[3]);
+    for (let y = 44; y <= 61; y++) for (let x = 25; x <= 38; x++) {
+      const r = Math.hypot(x + 0.5 - 32, y - 49);
+      if (y < 49 && r > 7.2) continue;
+      b.set(x, y, (r > 6.2 && y < 49) || x === 25 || x === 38 ? STONE[4] : (x % 3 === 0 ? PLANK[1] : PLANK[2]));
+    }
+    for (let y = 50; y <= 61; y += 4) rect7(b, 26, y, 37, y, PLANK[0]);
+    windowAt(b, 5, 24, 3, 4); windowAt(b, 56, 24, 3, 4); windowAt(b, 30, 13, 3, 4); windowAt(b, 18, 34, 3, 4); windowAt(b, 43, 34, 3, 4);
+    for (let x = 0; x <= 63; x++) b.set(x, 62, STONE[0]);
+    return b.canvas();
+  }
+  // o moinho (32 x 48, 2 x 2 passos): a torre de pedra afinando, o chapéu de sapê e as quatro pás com pano
+  function moinho() {
+    const W = 32, H = 48, b = new Buf(W, H);
+    for (let y = 22; y <= 45; y++) { const hw = Math.round(6 + (y - 22) / 23 * 4); stoneWall(b, 16 - hw, y, 15 + hw, y, 90); }
+    thatch(b, 16, 13, 22, 2, 9, 191);
+    rect7(b, 14, 38, 17, 45, '#2b1d1a'); b.set(14, 38, STONE[1]); b.set(17, 38, STONE[1]);
+    windowAt(b, 14, 28, 3, 3);
+    for (let k = -13; k <= 13; k++) { b.set(16 + k, 16 + k, PLANK[1]); b.set(16 + k, 16 - k, PLANK[1]); }
+    for (let k = 3; k <= 12; k++) { b.set(16 + k, 15 + k, '#ead4aa'); b.set(16 - k, 17 - k, '#ead4aa'); b.set(15 + k, 16 - k, '#ead4aa'); b.set(17 - k, 16 + k, '#ead4aa'); }
+    rect7(b, 15, 15, 17, 17, PLANK[0]);
+    for (let x = 4; x <= 27; x++) b.set(x, 46, STONE[0]);
+    return b.canvas();
+  }
   A.cidadeSprites = function () {
-    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr() };
+    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho() };
     for (const k of ['escola', 'biblioteca', 'hospital', 'guarda', 'brigada', 'mercado']) out[k] = [null, instituicao(k, 1), instituicao(k, 2), instituicao(k, 3)];
     return out;
   };

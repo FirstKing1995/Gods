@@ -169,6 +169,8 @@
       // Etapa 16: as instituições e as grandes obras (aparecem quando a sociedade pede)
       ['guarda', 'guarda'], ['brigada', 'brigada'], ['hospital', 'hospital'], ['escola', 'escola'], ['biblioteca', 'biblioteca'], ['mercado', 'mercado'],
       ['torre', 'torre'], ['templo', 'templo'], ['muralha', 'muralha'], ['aqueduto', 'aqueduto'], ['ponte', 'ponte'],
+      // 0.29: a Idade Média
+      ['moinho', 'moinho'], ['castelo', 'castelo'],
       // Etapa 18: os barcos
       ['canoa', 'canoa'], ['barco', 'barco'], ['navio', 'navio']];
     const SHORT = { barraca: 'Barraca', forno: 'Forno' };   // nome curto no botão (o painel fica em duas fileiras)

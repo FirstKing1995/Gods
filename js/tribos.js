@@ -193,7 +193,9 @@
   }
   function guerra(par, x, y) {
     const mortos = [];
+    const seguros = [];
     for (const t of [x, y]) {
+      if (G.Eras && G.Eras.temCastelo && G.Eras.temCastelo(t)) { seguros.push(T.nome(t)); continue; }   // 0.29: o castelo segura
       const n = vivos(t).length > 40 ? 2 : 1;
       const lut = vivos(t).filter((p) => !p.carriedBy && G.Family.age(t, p) >= 16).sort((a, b) => a.id - b.id);
       for (let k = 0; k < n && lut.length; k++) {
@@ -205,7 +207,7 @@
       }
       for (const k of ['madeira', 'pedra', 'peixe', 'frutas']) t.stock[k] = Math.floor((t.stock[k] || 0) * 0.85);
     }
-    conta(par, x, y, 'Guerra entre ' + T.nome(x) + ' e ' + T.nome(y) + '. Morreram ' + mortos.join(', ') + '. Depois do sangue, os dois povos fizeram uma trégua de ' + C.TRIBO_TREGUA_D + ' dias, mas não esquecem.', 'warn');
+    conta(par, x, y, 'Guerra entre ' + T.nome(x) + ' e ' + T.nome(y) + '. ' + (mortos.length ? 'Morreram ' + mortos.join(', ') + '. ' : '') + (seguros.length ? 'O castelo de ' + seguros.join(' e de ') + ' segurou o ataque. ' : '') + 'Depois do sangue, os dois povos fizeram uma trégua de ' + C.TRIBO_TREGUA_D + ' dias, mas não esquecem.', 'warn');
   }
 
   // ---------- o que Deus faz pela relação ----------
