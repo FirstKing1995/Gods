@@ -311,6 +311,7 @@
     if (p.needs.energia < 15) mult *= 0.8;
     if (S.ck.season === 3) mult /= C.SNOW_SLOW;
     mult *= G.Narr.walkMult(S);   // nevasca: neve pelos joelhos
+    if (G.Eras && G.Eras.walkMult) mult *= G.Eras.walkMult(S);   // 0.33: o bonde
     if (p.carry && p.carry.n >= 6) mult *= 0.92;
     let budget = dt / C.WALK_MIN_PER_TILE * mult, guard = 0;
     while (budget > 1e-6 && p.path && p.pathI < p.path.length && guard++ < 24) {

@@ -509,6 +509,7 @@
     for (let i = glows.length - 1; i >= 0; i--) { const g = glows[i]; g.life -= dt; g.x += g.vx * dt; g.y += g.vy * dt; if (g.life <= 0) glows.splice(i, 1); }
     for (const b of S.buildings) {
       // moquém armado: fumaça fina
+      if (b.type === 'usina' && b.built && Math.random() < dt * 4) spawn({ x: b.x * TS + 9 + (Math.random() < 0.5 ? 0 : 8) + Math.random() * 3, y: b.y * TS - 2, vx: 2 + Math.random() * 3, vy: -8 - Math.random() * 4, g: 0, life: 3, col: 'smoke' });   // 0.33: as chaminés da usina
       if (b.type === 'fabrica' && b.built && Math.random() < dt * 4) spawn({ x: b.x * TS + 38 + Math.random() * 4, y: b.y * TS - 20, vx: 2 + Math.random() * 3, vy: -8 - Math.random() * 4, g: 0, life: 3.2, col: 'smoke' });   // 0.32: a chaminé da fábrica
       if (b.type === 'moquem' && b.batch && Math.random() < dt * 3) spawn({ x: b.x * TS + 6 + Math.random() * 5, y: b.y * TS + 2, vx: (Math.random() - 0.5) * 3, vy: -7 - Math.random() * 4, g: 0, life: 2.6, col: 'smoke' });
       // casa de pedra com gente dentro no frio: fumaça na chaminé (Etapa 7)
@@ -525,7 +526,7 @@
   // ---------- helpers de desenho ----------
   // 0.31: as obras sem telhado de sapê (madeira, pedra, barco) não mudam de cor com a idade: a tábua e o sapê têm cores
   // parecidas demais para separar pela cor, então quem decide é o tipo da obra
-  const SEM_TELHADO = { porto: 1, galeao: 1, navio: 1, barco: 1, canoa: 1, ponte: 1, jirau: 1, moquem: 1, curral: 1, roca: 1, fogueira: 1, estatua: 1, cemiterio: 1, mina: 1, aqueduto: 1, muralha: 1, castelo: 1, arsenal: 1, universidade: 1, fabrica: 1, estacao: 1 };
+  const SEM_TELHADO = { porto: 1, galeao: 1, navio: 1, barco: 1, canoa: 1, ponte: 1, jirau: 1, moquem: 1, curral: 1, roca: 1, fogueira: 1, estatua: 1, cemiterio: 1, mina: 1, aqueduto: 1, muralha: 1, castelo: 1, arsenal: 1, universidade: 1, fabrica: 1, estacao: 1, usina: 1, bonde: 1 };
   let eraObra = 0;   // 0.27: a idade da construção que está sendo desenhada (o telhado muda de cor)
   function blit(img, wx, wy, alpha) {
     if (eraObra >= 2) img = A.eraImg(img, eraObra);
@@ -1956,11 +1957,29 @@
         lctx.beginPath(); lctx.arc(cx, cy, r * f, 0, Math.PI * 2); lctx.fill();
       }
     }
+    // 0.33: com luz elétrica, cada casa acende à noite (só as que aparecem na tela)
+    const acesas = G.Eras && G.Eras.temLuz && G.Eras.temLuz(S) ? S.buildings.filter((b) => {
+      if (!b.built || SEM_TELHADO[b.type]) return false;
+      const cx = (b.x + b.w / 2) * TS * sc + ox, cy = (b.y + b.h / 2) * TS * sc + oy, r = TS * sc * 3;
+      return cx + r >= 0 && cx - r <= W && cy + r >= 0 && cy - r <= H;
+    }) : [];
+    for (const b of acesas) {
+      const cx = ((b.x + b.w / 2) * TS * sc + ox) / 4, cy = ((b.y + b.h / 2) * TS * sc + oy) / 4, r = TS * sc * 2.6 / 4;
+      for (const [f, al] of [[1.0, 0.3], [0.6, 0.65]]) { lctx.fillStyle = 'rgba(0,0,0,' + al + ')'; lctx.beginPath(); lctx.arc(cx, cy, r * f, 0, Math.PI * 2); lctx.fill(); }
+    }
     // quem está com fogo por perto tem pouca luz própria; céu estrelado fica para depois
     ctx.save();
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(light, 0, 0, W, H);
     ctx.globalCompositeOperation = 'lighter';
+    for (const b of acesas) {   // 0.33: o brilho amarelo da lâmpada
+      const cx = (b.x + b.w / 2) * TS * sc + ox, cy = (b.y + b.h / 2) * TS * sc + oy, r = TS * sc * 1.9;
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      g.addColorStop(0, 'rgba(250,214,120,' + (0.2 * dark / 0.64).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(250,214,120,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+    }
     for (const b of fires) {
       const cx = (b.x + 0.5) * TS * sc + ox, cy = (b.y + 0.4) * TS * sc + oy;
       const r = TS * sc * (G.Sim.def(b).fire.r - 1.8);
