@@ -1313,7 +1313,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.30.0',
+    VERSION: '0.31.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -1514,6 +1514,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         desc: 'A casa de Deus, de pedra e de muitas mãos. Quem tem fé reza ali de manhã e ganha o dobro de fé; a festa e o rito ficam maiores perto dele.' },
       muralha: { name: 'Muralha', a: 'a', key: '', w: 3, h: 2, cost: { pedra: 200, madeira: 40 }, work: 30000, grande: true, wall: { r: 16 },
         desc: 'Um anel de pedra em volta do centro, com portão. Lobo e onça não entram, e ninguém leva a comida guardada lá dentro.' },
+      // 0.31: a Pólvora e a Imprensa. A imprensa e o arsenal (obras comuns) e a universidade (grande obra)
+      imprensa: { name: 'Imprensa', a: 'a', key: '', w: 2, h: 2, cost: { tabuas: 40, pedra: 20 }, extra: { ferro: 4 }, work: 3000,
+        desc: 'A prensa de parafuso e as letras de metal: o que se descobre vira papel e corre a aldeia. O povo aprende as descobertas 40% mais depressa. Pede 4 de ferro.' },
+      universidade: { name: 'Universidade', a: 'a', key: '', w: 4, h: 3, cost: { pedra: 180, tabuas: 80, madeira: 40 }, work: 40000, grande: true,
+        desc: 'Salas, pátio e a torre do relógio: o povo aprende 30% mais depressa, e a cada 15 dias os estudiosos adiantam a descoberta da vez.' },
+      arsenal: { name: 'Arsenal', a: 'o', key: '', w: 2, h: 2, cost: { pedra: 60, tabuas: 20 }, extra: { ferro: 8, carvao: 10 }, work: 3000,
+        desc: 'A pólvora guardada e as armas de fogo. Na guerra entre tribos, quem tem arsenal perde menos e o outro perde mais; os piratas não desembarcam. Pede 8 de ferro e 10 de carvão.' },
       // 0.30: as Navegações. O porto (grande obra, na beira do mar) e o galeão (o navio grande)
       porto: { name: 'Porto', a: 'o', key: '', w: 4, h: 2, cost: { pedra: 120, tabuas: 80, madeira: 40 }, work: 20000, grande: true, env: 'mar',
         desc: 'Cais de pedra e de tábua, guindaste e armazém de carga. As viagens ficam bem menos perigosas, as colônias mandam metade a mais, e a cada 10 dias um barco de fora troca o que sobra por sal, ferro e ouro.' },
@@ -1942,6 +1949,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     // 0.29: a Idade Média
     MOINHO_ROCA: 1.25, CASTELO_CRIME: 0.8, ERA_PESTE: 0.5, PESTE_PARTE: 0.2, ESTRELAS_PRAGA: 0.5,
     // 0.30: as Navegações
+    // 0.31: a Pólvora e a Imprensa
+    IMPRENSA_PRAT: 1.4, UNIV_PRAT: 1.3, UNIV_HORAS: 12, UNIV_D: 15, CANTOS_PRAT: 1.3, ERA_REVOLTA: 0.5, REVOLTA_DESC: 10,
     GALEAO_GENTE: 16, GALEAO_CARGA: 1.5, PORTO_PERIGO: 0.5, PORTO_CARGA: 1.5, MARES_PERIGO: 0.6, COMERCIO_D: 10, ERA_PIRATAS: 0.6, PIRATAS_LEVA: 0.15,
     // 0.28: as tribos. Nasce no nível TRIBO_NIVEL de Deus, por TRIBO_CUSTO de Poder, a TRIBO_DIST passos ou mais da outra
     // (até TRIBO_MAX tribos). Elas se conhecem quando alguém chega a TRIBO_VE passos do acampamento da outra, ou quando
@@ -5690,7 +5699,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const w = TEACH[open][key];
     if (!w) return;
     const sabio = G.Deus && G.Deus.poderPerto && G.Deus.poderPerto(S, p.x, p.y, 'sabedoria', C.ESC_SABIO_R) ? C.ESC_SABIO : 1;   // 0.27: a Sabedoria
-    T.addPractice(S, open, w * dt / 60 * (G.Deus ? G.Deus.pratMult(S) : 1) * sabio, p);   // a escrita (Etapa 11) apressa
+    const era = G.Eras && G.Eras.pratMult ? G.Eras.pratMult(S) : 1;   // 0.31: a imprensa, a universidade, os cantos
+    T.addPractice(S, open, w * dt / 60 * (G.Deus ? G.Deus.pratMult(S) : 1) * sabio * era, p);   // a escrita (Etapa 11) apressa
   };
   T.addPractice = function (S, id, h, p) {
     const t = S.tech;
@@ -18050,7 +18060,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   const Sim = () => G.Sim, Fam = () => G.Family;
   const DAY = () => C.DAY_MIN;
 
-  const GRANDES = ['templo', 'muralha', 'torre', 'aqueduto', 'ponte', 'castelo', 'porto'];   // 0.30: o porto   // a ponte de pedra veio com a Etapa 17; o castelo, com a 0.29
+  const GRANDES = ['templo', 'muralha', 'torre', 'aqueduto', 'ponte', 'castelo', 'porto', 'universidade'];   // 0.31: a universidade   // 0.30: o porto   // a ponte de pedra veio com a Etapa 17; o castelo, com a 0.29
   const INST = ['guarda', 'brigada', 'hospital', 'escola', 'biblioteca', 'mercado'];   // a ordem em que o líder olha
   Ci.GRANDES = GRANDES; Ci.INST = INST;
   Ci.isCidade = (t) => GRANDES.indexOf(t) >= 0 || INST.indexOf(t) >= 0;
@@ -18091,6 +18101,10 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     mercado: (S) => (S.soc && S.soc.vila && !S.soc.vila.fim ? '' : 'pede uma vila de fora para trocar'),
     // 0.29: a Idade Média (os dois chegam com os Reinos; o castelo pede uma cidade)
     moinho: (S) => (G.Eras && G.Eras.idade(S) >= 4 ? '' : 'chega com a Idade dos Reinos'),
+    // 0.31: a Pólvora e a Imprensa (chegam com as Navegações)
+    imprensa: (S) => (!(G.Eras && G.Eras.idade(S) >= 6) ? 'chega com a Idade das Navegações' : S.buildings.some((b) => b.type === 'biblioteca' && b.built) ? '' : 'pede uma estante pronta'),
+    universidade: (S) => (!(G.Eras && G.Eras.idade(S) >= 6) ? 'chega com a Idade das Navegações' : !S.buildings.some((b) => b.type === 'escola' && b.built) ? 'pede uma roda de ensino pronta' : vivos(S) >= 100 ? '' : 'pede uma cidade de 100 pessoas'),
+    arsenal: (S) => (!(G.Eras && G.Eras.idade(S) >= 6) ? 'chega com a Idade das Navegações' : S.buildings.some((b) => b.type === 'ferraria' && b.built) ? '' : 'pede uma ferraria pronta'),
     // 0.30: as Navegações (chegam com a Idade Média; o galeão pede o porto)
     porto: (S) => (G.Eras && G.Eras.idade(S) >= 5 ? '' : 'chega com a Idade Média'),
     galeao: (S) => (!(G.Eras && G.Eras.idade(S) >= 5) ? 'chega com a Idade Média' : S.buildings.some((b) => b.type === 'porto' && b.built) ? '' : 'pede um porto pronto'),
@@ -18906,6 +18920,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     { nome: 'Idade Média', curto: 'castelos e moinhos', escrita: true, magia: 'estrelas', gente: 120, marco: ['moinho', 'castelo'], txt: 'O moinho gira e a pedra dos castelos sobe: começou a Idade Média.', txtM: 'As mais velhas aprenderam a ler as estrelas e o tempo das coisas: começou, do jeito do conselho, a Idade Média.' },
     // 0.30: a Idade das Navegações (o conselho chega a ela pelas marés)
     { nome: 'Idade das Navegações', curto: 'navegações e comércio', escrita: true, magia: 'mares', gente: 160, marco: ['porto', 'galeao'], txt: 'Velas grandes saem do porto e voltam cheias: começou a Idade das Navegações.', txtM: 'As mais velhas cantam para o mar, e o mar escuta: começou, do jeito do conselho, a Idade das Navegações.' },
+    // 0.31: a Idade da Pólvora e da Imprensa (o conselho chega a ela pelos cantos)
+    { nome: 'Idade da Pólvora e da Imprensa', curto: 'pólvora e imprensa', escrita: true, magia: 'cantos', gente: 200, marco: ['imprensa', 'universidade'], txt: 'A prensa imprime o que se sabe e a pólvora troveja: começou a Idade da Pólvora e da Imprensa.', txtM: 'As mais velhas cantam tudo o que sabem, e ninguém esquece mais nada: começou, do jeito do conselho, a Idade da Pólvora e da Imprensa.' },
   ];
   E.init = function (S) {
     const e = S.eras || (S.eras = {});
@@ -18983,6 +18999,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     runas: { nome: 'Runas', de: 'das runas', txt: 'As mais velhas gravaram runas nas pedras das casas: a pedra aquece, e quem dorme sente 4 °C a mais.' },
     ervas: { nome: 'Ervas', de: 'das ervas', txt: 'O conselho juntou o saber das ervas e dos cantos: a febre pesa bem menos, e a saúde volta mais depressa.' },
     circulos: { nome: 'Círculos', de: 'dos círculos', txt: 'Círculos de pedra em volta da roça: a terra rende 20% mais.' },
+    cantos: { nome: 'Cantos', de: 'dos cantos', txt: 'O conselho canta tudo o que se sabe, de boca em boca: o povo aprende as descobertas 30% mais depressa.' },   // 0.31
     mares: { nome: 'Marés', de: 'das marés', txt: 'As mais velhas aprenderam o canto das marés: o navio sai na hora certa e o mar leva bem menos gente.' },   // 0.30
     estrelas: { nome: 'Estrelas', de: 'das estrelas', txt: 'As mais velhas leem as estrelas: sabem quando vem a chuva e a geada, e a praga pega a roça pela metade.' },   // 0.29
   };
@@ -18990,7 +19007,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // o conselho aprende um saber por idade (a partir da Pedra Polida), em vez de esperar o metal
   function magia(S) {
     if (E.ordem(S) !== 'conselho') return;
-    const ordem = ['runas', 'ervas', 'circulos', 'estrelas', 'mares'], e = S.eras;
+    const ordem = ['runas', 'ervas', 'circulos', 'estrelas', 'mares', 'cantos'], e = S.eras;
     for (let k = 0; k < ordem.length; k++) {
       const id = ordem[k];
       if (e.magia[id]) continue;
@@ -19005,6 +19022,10 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   E.rocaMult = (S) => (E.temMagia(S, 'circulos') ? 1.2 : 1) * (S.buildings.some((b) => b.type === 'moinho' && b.built) ? C.MOINHO_ROCA : 1);
   E.temCastelo = (S) => S.buildings.some((b) => b.type === 'castelo' && b.built);
   E.temPorto = (S) => S.buildings.some((b) => b.type === 'porto' && b.built);   // 0.30
+  // 0.31: o que apressa o aprendizado (a imprensa, a universidade e os cantos do conselho) e o arsenal
+  const tem = (S, k) => S.buildings.some((b) => b.type === k && b.built);
+  E.temArsenal = (S) => tem(S, 'arsenal');
+  E.pratMult = (S) => (tem(S, 'imprensa') ? C.IMPRENSA_PRAT : 1) * (tem(S, 'universidade') ? C.UNIV_PRAT : 1) * (E.temMagia(S, 'cantos') ? C.CANTOS_PRAT : 1);
 
   // ---------- o desafio de cada idade ----------
   const pronto = (S, k) => !(S.eras.prox[k] > S.t);
@@ -19046,9 +19067,18 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       Sim().chron(S, 'A Grande Peste chegou pela trilha: ' + n + (n === 1 ? ' pessoa caiu' : ' pessoas caíram') + ' de febre de uma vez. Quem tem casa de cura sofre menos.');
       return;
     }
+    // 0.31: Pólvora e Imprensa: a Revolta dos Panfletos (a palavra impressa corre, e o povo se agita); a guarda acalma
+    if (id >= 7 && pronto(S, 'revolta') && r < C.ERA_REVOLTA / C.YEAR_DAYS) {
+      S.eras.prox.revolta = S.t + 2 * YEAR(); S.stats.revoltas = (S.stats.revoltas || 0) + 1;
+      if (G.Cidade && G.Cidade.nivel && G.Cidade.nivel(S, 'guarda')) { Sim().chron(S, 'Folhas impressas apareceram nas portas, chamando o povo contra quem manda. A guarda recolheu os papéis e conversou na praça: a raiva passou.'); return; }
+      if (G.Soc && G.Soc.addDesc) for (const p of S.people) if (p.alive && !p.fora) G.Soc.addDesc(S, p, C.REVOLTA_DESC, 'humor');
+      Sim().chron(S, 'Folhas impressas apareceram nas portas, chamando o povo contra quem manda. A praça encheu de gente brava. Uma guarda teria acalmado.');
+      return;
+    }
     // 0.30: Navegações: os piratas (velas estranhas na costa); a torre de vigia vê antes, e o povo esconde tudo
     if (id >= 6 && pronto(S, 'piratas') && S.buildings.some((b) => (b.type === 'porto' || b.type === 'navio' || b.type === 'galeao') && b.built) && r < C.ERA_PIRATAS / C.YEAR_DAYS) {
       S.eras.prox.piratas = S.t + 2 * YEAR(); S.stats.piratas = (S.stats.piratas || 0) + 1;
+      if (E.temArsenal(S)) { Sim().chron(S, 'Velas estranhas apareceram na costa. Do arsenal saiu o trovão da pólvora, e os piratas viraram o barco antes de chegar à praia.'); return; }   // 0.31
       if (S.buildings.some((b) => b.type === 'torre' && b.built)) { Sim().chron(S, 'Velas estranhas apareceram na costa. A torre de vigia viu de longe, o povo escondeu tudo, e os piratas foram embora com as mãos vazias.'); return; }
       const levou = [];
       for (const k of ['peixe', 'carne', 'defumado', 'frutas', 'sal', 'ferro', 'ouro', 'tabuas']) { const n = Math.floor((S.stock[k] || 0) * C.PIRATAS_LEVA); if (n > 0) { S.stock[k] -= n; levou.push(n + ' de ' + ((G.AI && G.AI.RES_LABEL && G.AI.RES_LABEL[k]) || k)); } }
@@ -19078,11 +19108,21 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     magia(S);
     desafios(S);
     reforma(S);
+    estudos(S);
   };
+  // 0.31: a cada UNIV_D dias, os estudiosos da universidade adiantam a descoberta da vez
+  function estudos(S) {
+    if (S.safe || S.resumido || !tem(S, 'universidade') || S.ck.day % C.UNIV_D !== 0) return;
+    const aberta = G.Tech && G.Tech.open ? G.Tech.open(S) : null;
+    if (!aberta) return;
+    G.Tech.addPractice(S, aberta, C.UNIV_HORAS, null);
+    S.stats.estudos = (S.stats.estudos || 0) + 1;
+    if (S.stats.estudos === 1) Sim().chron(S, 'Os primeiros estudiosos da universidade passaram a noite com os livros: a descoberta que o povo procura chegou mais perto.');
+  }
   // 0.27: quando o povo muda de idade, as construções vão sendo refeitas no jeito novo, poucas por dia (as mais antigas
   // primeiro). O jeito aparece no telhado: sapê até a Pedra Polida, sapê trançado no Bronze, tabuinha no Ferro, telha
   // de barro nos Reinos
-  const REFORMA_TXT = { 2: 'trançam o sapê novo, mais firme', 3: 'trocam o sapê por tabuinhas de madeira', 4: 'cobrem os telhados com telha de barro', 5: 'cobrem os telhados de ardósia', 6: 'pintam as paredes e cobrem com telha nova de olaria' };
+  const REFORMA_TXT = { 2: 'trançam o sapê novo, mais firme', 3: 'trocam o sapê por tabuinhas de madeira', 4: 'cobrem os telhados com telha de barro', 5: 'cobrem os telhados de ardósia', 6: 'pintam as paredes e cobrem com telha nova de olaria', 7: 'erguem sobrados de tijolo com telhado escuro' };
   function reforma(S) {
     const idade = S.eras.idade || 0;
     if (idade < 2) return;
@@ -19607,7 +19647,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const seguros = [];
     for (const t of [x, y]) {
       if (G.Eras && G.Eras.temCastelo && G.Eras.temCastelo(t)) { seguros.push(T.nome(t)); continue; }   // 0.29: o castelo segura
-      const n = vivos(t).length > 40 ? 2 : 1;
+      const outro = t === x ? y : x, polv = (k) => G.Eras && G.Eras.temArsenal && G.Eras.temArsenal(k);   // 0.31: a pólvora
+      const n = Math.max(polv(t) ? 0 : 1, (vivos(t).length > 40 ? 2 : 1) - (polv(t) ? 1 : 0) + (polv(outro) ? 1 : 0));
       const lut = vivos(t).filter((p) => !p.carriedBy && G.Family.age(t, p) >= 16).sort((a, b) => a.id - b.id);
       for (let k = 0; k < n && lut.length; k++) {
         const p = lut.splice(Math.floor(sorte(par) * lut.length), 1)[0];
@@ -21309,10 +21350,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // 0.27: o telhado de cada idade (troca as cinco cores do sapê): sapê trançado, tabuinha, telha de barro
   const ERA_TETO = { 2: ['#4a3420', '#765236', '#9c7642', '#c09a58', '#dabd7c'], 3: PLANK, 4: ['#4a1a1c', '#7c2a26', '#a8443a', '#c8634c', '#e08a6a'],
     5: ['#20222e', '#343a4e', '#4c5670', '#6c7890', '#94a0b4'],   // 0.29: a ardósia da Idade Média
-    6: ['#4a2418', '#7e3a22', '#b0582e', '#d27a3e', '#ecaa62'] };   // 0.30: a telha nova de olaria, mais clara e alaranjada
+    6: ['#4a2418', '#7e3a22', '#b0582e', '#d27a3e', '#ecaa62'],   // 0.30: a telha nova de olaria, mais clara e alaranjada
+    7: ['#2e1c22', '#4c2a32', '#6e3a40', '#8e5450', '#b07a6a'] };   // 0.31: o telhado escuro dos sobrados
   const eraCache = new WeakMap();
   A.eraImg = function (img, era) {
-    const to = ERA_TETO[Math.min(6, era)];
+    const to = ERA_TETO[Math.min(7, era)];
     if (!to || !img || !img.getContext) return img;
     let m = eraCache.get(img);
     if (!m) { m = {}; eraCache.set(img, m); }
@@ -21326,8 +21368,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const para = to.map((h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
     for (let i = 0; i < px.length; i += 4) {
       if (!px[i + 3]) continue;
-      // a cor mais perto do sapê (o acabamento de luz e contorno mexe um pouco nas cores), com folga de 16
-      let kb = -1, db = 16 * 16;   // 0.30: folga 16 (com 30, a tábua da madeira também mudava de cor)
+      // a cor mais perto do sapê (o acabamento de luz e contorno mexe um pouco nas cores), com folga de 30
+      let kb = -1, db = 30 * 30;   // 0.31: a madeira das obras sem telhado não passa por aqui (render.js, SEM_TELHADO)
       for (let k = 0; k < de.length; k++) { const dr = px[i] - de[k][0], dg = px[i + 1] - de[k][1], dbb = px[i + 2] - de[k][2], dd = dr * dr + dg * dg + dbb * dbb; if (dd < db) { db = dd; kb = k; } }
       if (kb >= 0) { px[i] = para[kb][0]; px[i + 1] = para[kb][1]; px[i + 2] = para[kb][2]; }
     }
@@ -22135,6 +22177,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       { k: P.ink2, s: P.mist, d: P.bark }],
     torre: [['...kkkk...', '..kyyyyk..', '.kkkkkkkk.', '..kwwwwk..', '..kssssk..', '..ksddsk..', '..kssssk..', '.ksssssk..', '.kssssssk.', 'kkkkkkkkkk'],
       { k: P.ink2, s: P.mist, y: P.tan, w: P.wood, d: P.ink }],
+    // 0.31: a imprensa, a universidade e o arsenal
+    imprensa: [['...kkkk...', '..kyyyyk..', '.kkkkkkkk.', '.krrrrrrk.', '.kwwkrrrk.', '.kwwkrddk.', '.krrrrddk.', '.kkkkkkkk.', '..........', '..........'],
+      { k: P.ink2, y: P.tan, r: P.wood, w: P.parch, d: P.ink }],
+    universidade: [['....kk....', '...kwwk...', '..kkkkkk..', '.kkkkkkkk.', 'kkkkkkkkkk', 'ks.s.s.s.k', 'ks.s.s.s.k', 'ks.sdds.sk', 'kkkkkkkkkk', '..........'],
+      { k: P.ink2, s: P.mist, w: P.parch, d: P.ink }],
+    arsenal: [['k.k.k.k.k.', 'kkkkkkkkkk', 'ksssssssk.', 'kssddsssk.', 'kssddssskk', 'kkkkkkkkk.', '..kkkkk...', '.k.....k..', '..........', '..........'],
+      { k: P.ink2, s: P.mist, d: P.ink }],
     // 0.30: o porto e o galeão
     porto: [['..........', '.kk....k..', '.kk...kk..', 'kkkkkkkkkk', 'kwwwwwwwwk', 'kkkkkkkkkk', 'k.ss.ss.sk', 'k.ss.ss.sk', '.bbbbbbbb.', '..........'],
       { k: P.ink2, w: P.wood, s: P.mist, b: P.sky }],
@@ -23197,6 +23246,52 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     rect7(b, 33, 0, 37, 2, '#c8423a');   // a bandeira
     return b.canvas();
   }
+  // 0.31: a imprensa (32 x 36): sobrado de tijolo, a prensa de parafuso na janela grande e o varal de folhas
+  const TIJOLO = ['#3e1e1c', '#6a2e26', '#8e4232', '#ae5a42', '#c87a5a'];
+  function tijolos(b, x0, y0, x1, y1) {
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      const linha = (y - y0) % 3 === 2, junta = ((x + ((Math.floor((y - y0) / 3) % 2) * 2)) % 5) === 0;
+      b.set(x, y, linha || junta ? TIJOLO[1] : TIJOLO[(x * 7 + y * 3) % 2 ? 2 : 3]);
+    }
+  }
+  function imprensaSpr() {
+    const b = new Buf(32, 36);
+    tijolos(b, 2, 12, 29, 33);
+    thatch(b, 16, 1, 12, 3, 16, 233);
+    rect7(b, 6, 18, 17, 27, '#2b1d1a'); rect7(b, 7, 19, 16, 26, '#6e5a44');
+    line(b, 11, 19, 11, 24, PLANK[0]); rect7(b, 8, 24, 14, 25, PLANK[1]); rect7(b, 9, 20, 13, 21, '#a8a8b8');
+    rect7(b, 21, 24, 25, 33, '#2b1d1a');
+    for (let x = 19; x <= 28; x += 3) { b.set(x, 17, '#f4f0e6'); b.set(x, 18, '#f4f0e6'); b.set(x + 1, 17, '#f4f0e6'); }
+    line(b, 18, 16, 29, 16, PLANK[0]);
+    for (let x = 2; x <= 29; x++) b.set(x, 34, TIJOLO[0]);
+    return b.canvas();
+  }
+  // a universidade (64 x 52, 4 x 3 passos): o corpo de pedra com colunas, o frontão e a torre do relógio no meio
+  function universidadeSpr() {
+    const b = new Buf(64, 52);
+    stoneWall(b, 2, 22, 61, 49, 97);
+    for (let x = 6; x <= 58; x += 8) { rect7(b, x, 26, x + 2, 48, STONE[4]); rect7(b, x, 26, x, 48, STONE[3]); }
+    rect7(b, 0, 20, 63, 22, STONE[2]); rect7(b, 0, 20, 63, 20, STONE[4]);
+    for (let y = 12; y <= 19; y++) { const hw = Math.round((y - 12) / 7 * 30); rect7(b, 32 - hw, y, 31 + hw, y, y === 19 ? STONE[1] : STONE[3]); }
+    stoneWall(b, 26, 0, 37, 14, 98);
+    for (let y = 3; y <= 9; y++) for (let x = 28; x <= 35; x++) if (Math.hypot(x + 0.5 - 32, y + 0.5 - 6) <= 3.6) b.set(x, y, Math.hypot(x + 0.5 - 32, y + 0.5 - 6) > 2.8 ? STONE[0] : '#f4f0e6');
+    line(b, 32, 6, 32, 4, P.ink); line(b, 32, 6, 34, 6, P.ink);
+    rect7(b, 28, 36, 35, 49, '#2b1d1a'); rect7(b, 28, 36, 35, 36, STONE[1]);
+    for (const x of [12, 20, 42, 50]) windowAt(b, x, 30, 3, 5);
+    for (let x = 0; x <= 63; x++) b.set(x, 50, STONE[0]);
+    return b.canvas();
+  }
+  // o arsenal (32 x 32): casa baixa de pedra, porta de ferro, barris de pólvora e um canhão na frente
+  function arsenalSpr() {
+    const b = new Buf(32, 32);
+    stoneWall(b, 2, 10, 29, 27, 99);
+    for (let x = 2; x <= 29; x += 3) rect7(b, x, 7, x + 1, 9, STONE[3]);
+    rect7(b, 12, 17, 19, 27, '#3a3a44'); for (let y = 18; y <= 26; y += 3) rect7(b, 12, y, 19, y, '#24242c');
+    for (const x of [4, 23]) { rect7(b, x, 21, x + 4, 27, PLANK[1]); rect7(b, x, 23, x + 4, 23, '#3a3a44'); rect7(b, x, 21, x + 4, 21, PLANK[3]); }
+    rect7(b, 9, 28, 22, 29, '#24242c'); rect7(b, 20, 27, 26, 28, '#3a3a44');
+    for (const x of [11, 19]) { rect7(b, x, 29, x + 2, 31, PLANK[0]); b.set(x + 1, 30, PLANK[2]); }
+    return b.canvas();
+  }
   // 0.30: o porto (64 x 32, 4 x 2 passos): cais de pedra, o tablado de tábua sobre a água, caixotes, estacas e o guindaste
   function portoSpr() {
     const W = 64, H = 32, b = new Buf(W, H);
@@ -23253,7 +23348,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     return b.canvas();
   }
   A.cidadeSprites = function () {
-    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr() };
+    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr(), imprensa: imprensaSpr(), universidade: universidadeSpr(), arsenal: arsenalSpr() };
     for (const k of ['escola', 'biblioteca', 'hospital', 'guarda', 'brigada', 'mercado']) out[k] = [null, instituicao(k, 1), instituicao(k, 2), instituicao(k, 3)];
     return out;
   };
@@ -23879,6 +23974,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   }
 
   // ---------- helpers de desenho ----------
+  // 0.31: as obras sem telhado de sapê (madeira, pedra, barco) não mudam de cor com a idade: a tábua e o sapê têm cores
+  // parecidas demais para separar pela cor, então quem decide é o tipo da obra
+  const SEM_TELHADO = { porto: 1, galeao: 1, navio: 1, barco: 1, canoa: 1, ponte: 1, jirau: 1, moquem: 1, curral: 1, roca: 1, fogueira: 1, estatua: 1, cemiterio: 1, mina: 1, aqueduto: 1, muralha: 1, castelo: 1, arsenal: 1, universidade: 1 };
   let eraObra = 0;   // 0.27: a idade da construção que está sendo desenhada (o telhado muda de cor)
   function blit(img, wx, wy, alpha) {
     if (eraObra >= 2) img = A.eraImg(img, eraObra);
@@ -24514,7 +24612,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // a figura da obra no nível dela (Etapa 7): casas, oficinas, armazém
   function houseImg(d) { const S2 = A.spr; return d.lv >= 3 && d.kind ? S2.house[d.kind] : S2.house[d.lv >= 2 ? 2 : 1]; }
   function drawBuilding(S, b, now, row, part) {
-    eraObra = b.built ? b.era || 0 : 0;
+    eraObra = b.built && !SEM_TELHADO[b.type] ? b.era || 0 : 0;
     try { drawBuilding0(S, b, now, row, part); } finally { eraObra = 0; }
   }
   function drawBuilding0(S, b, now, row, part) {
@@ -26517,6 +26615,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       ['moinho', 'moinho'], ['castelo', 'castelo'],
       // 0.30: as Navegações
       ['porto', 'porto'], ['galeao', 'galeao'],
+      // 0.31: a Pólvora e a Imprensa
+      ['imprensa', 'imprensa'], ['universidade', 'universidade'], ['arsenal', 'arsenal'],
       // Etapa 18: os barcos
       ['canoa', 'canoa'], ['barco', 'barco'], ['navio', 'navio']];
     const SHORT = { barraca: 'Barraca', forno: 'Forno' };   // nome curto no botão (o painel fica em duas fileiras)

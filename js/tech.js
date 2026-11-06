@@ -117,7 +117,8 @@
     const w = TEACH[open][key];
     if (!w) return;
     const sabio = G.Deus && G.Deus.poderPerto && G.Deus.poderPerto(S, p.x, p.y, 'sabedoria', C.ESC_SABIO_R) ? C.ESC_SABIO : 1;   // 0.27: a Sabedoria
-    T.addPractice(S, open, w * dt / 60 * (G.Deus ? G.Deus.pratMult(S) : 1) * sabio, p);   // a escrita (Etapa 11) apressa
+    const era = G.Eras && G.Eras.pratMult ? G.Eras.pratMult(S) : 1;   // 0.31: a imprensa, a universidade, os cantos
+    T.addPractice(S, open, w * dt / 60 * (G.Deus ? G.Deus.pratMult(S) : 1) * sabio * era, p);   // a escrita (Etapa 11) apressa
   };
   T.addPractice = function (S, id, h, p) {
     const t = S.tech;

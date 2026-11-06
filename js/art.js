@@ -563,10 +563,11 @@
   // 0.27: o telhado de cada idade (troca as cinco cores do sapê): sapê trançado, tabuinha, telha de barro
   const ERA_TETO = { 2: ['#4a3420', '#765236', '#9c7642', '#c09a58', '#dabd7c'], 3: PLANK, 4: ['#4a1a1c', '#7c2a26', '#a8443a', '#c8634c', '#e08a6a'],
     5: ['#20222e', '#343a4e', '#4c5670', '#6c7890', '#94a0b4'],   // 0.29: a ardósia da Idade Média
-    6: ['#4a2418', '#7e3a22', '#b0582e', '#d27a3e', '#ecaa62'] };   // 0.30: a telha nova de olaria, mais clara e alaranjada
+    6: ['#4a2418', '#7e3a22', '#b0582e', '#d27a3e', '#ecaa62'],   // 0.30: a telha nova de olaria, mais clara e alaranjada
+    7: ['#2e1c22', '#4c2a32', '#6e3a40', '#8e5450', '#b07a6a'] };   // 0.31: o telhado escuro dos sobrados
   const eraCache = new WeakMap();
   A.eraImg = function (img, era) {
-    const to = ERA_TETO[Math.min(6, era)];
+    const to = ERA_TETO[Math.min(7, era)];
     if (!to || !img || !img.getContext) return img;
     let m = eraCache.get(img);
     if (!m) { m = {}; eraCache.set(img, m); }
@@ -580,8 +581,8 @@
     const para = to.map((h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
     for (let i = 0; i < px.length; i += 4) {
       if (!px[i + 3]) continue;
-      // a cor mais perto do sapê (o acabamento de luz e contorno mexe um pouco nas cores), com folga de 16
-      let kb = -1, db = 16 * 16;   // 0.30: folga 16 (com 30, a tábua da madeira também mudava de cor)
+      // a cor mais perto do sapê (o acabamento de luz e contorno mexe um pouco nas cores), com folga de 30
+      let kb = -1, db = 30 * 30;   // 0.31: a madeira das obras sem telhado não passa por aqui (render.js, SEM_TELHADO)
       for (let k = 0; k < de.length; k++) { const dr = px[i] - de[k][0], dg = px[i + 1] - de[k][1], dbb = px[i + 2] - de[k][2], dd = dr * dr + dg * dg + dbb * dbb; if (dd < db) { db = dd; kb = k; } }
       if (kb >= 0) { px[i] = para[kb][0]; px[i + 1] = para[kb][1]; px[i + 2] = para[kb][2]; }
     }
@@ -1389,6 +1390,13 @@
       { k: P.ink2, s: P.mist, d: P.bark }],
     torre: [['...kkkk...', '..kyyyyk..', '.kkkkkkkk.', '..kwwwwk..', '..kssssk..', '..ksddsk..', '..kssssk..', '.ksssssk..', '.kssssssk.', 'kkkkkkkkkk'],
       { k: P.ink2, s: P.mist, y: P.tan, w: P.wood, d: P.ink }],
+    // 0.31: a imprensa, a universidade e o arsenal
+    imprensa: [['...kkkk...', '..kyyyyk..', '.kkkkkkkk.', '.krrrrrrk.', '.kwwkrrrk.', '.kwwkrddk.', '.krrrrddk.', '.kkkkkkkk.', '..........', '..........'],
+      { k: P.ink2, y: P.tan, r: P.wood, w: P.parch, d: P.ink }],
+    universidade: [['....kk....', '...kwwk...', '..kkkkkk..', '.kkkkkkkk.', 'kkkkkkkkkk', 'ks.s.s.s.k', 'ks.s.s.s.k', 'ks.sdds.sk', 'kkkkkkkkkk', '..........'],
+      { k: P.ink2, s: P.mist, w: P.parch, d: P.ink }],
+    arsenal: [['k.k.k.k.k.', 'kkkkkkkkkk', 'ksssssssk.', 'kssddsssk.', 'kssddssskk', 'kkkkkkkkk.', '..kkkkk...', '.k.....k..', '..........', '..........'],
+      { k: P.ink2, s: P.mist, d: P.ink }],
     // 0.30: o porto e o galeão
     porto: [['..........', '.kk....k..', '.kk...kk..', 'kkkkkkkkkk', 'kwwwwwwwwk', 'kkkkkkkkkk', 'k.ss.ss.sk', 'k.ss.ss.sk', '.bbbbbbbb.', '..........'],
       { k: P.ink2, w: P.wood, s: P.mist, b: P.sky }],
@@ -2451,6 +2459,52 @@
     rect7(b, 33, 0, 37, 2, '#c8423a');   // a bandeira
     return b.canvas();
   }
+  // 0.31: a imprensa (32 x 36): sobrado de tijolo, a prensa de parafuso na janela grande e o varal de folhas
+  const TIJOLO = ['#3e1e1c', '#6a2e26', '#8e4232', '#ae5a42', '#c87a5a'];
+  function tijolos(b, x0, y0, x1, y1) {
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      const linha = (y - y0) % 3 === 2, junta = ((x + ((Math.floor((y - y0) / 3) % 2) * 2)) % 5) === 0;
+      b.set(x, y, linha || junta ? TIJOLO[1] : TIJOLO[(x * 7 + y * 3) % 2 ? 2 : 3]);
+    }
+  }
+  function imprensaSpr() {
+    const b = new Buf(32, 36);
+    tijolos(b, 2, 12, 29, 33);
+    thatch(b, 16, 1, 12, 3, 16, 233);
+    rect7(b, 6, 18, 17, 27, '#2b1d1a'); rect7(b, 7, 19, 16, 26, '#6e5a44');
+    line(b, 11, 19, 11, 24, PLANK[0]); rect7(b, 8, 24, 14, 25, PLANK[1]); rect7(b, 9, 20, 13, 21, '#a8a8b8');
+    rect7(b, 21, 24, 25, 33, '#2b1d1a');
+    for (let x = 19; x <= 28; x += 3) { b.set(x, 17, '#f4f0e6'); b.set(x, 18, '#f4f0e6'); b.set(x + 1, 17, '#f4f0e6'); }
+    line(b, 18, 16, 29, 16, PLANK[0]);
+    for (let x = 2; x <= 29; x++) b.set(x, 34, TIJOLO[0]);
+    return b.canvas();
+  }
+  // a universidade (64 x 52, 4 x 3 passos): o corpo de pedra com colunas, o frontão e a torre do relógio no meio
+  function universidadeSpr() {
+    const b = new Buf(64, 52);
+    stoneWall(b, 2, 22, 61, 49, 97);
+    for (let x = 6; x <= 58; x += 8) { rect7(b, x, 26, x + 2, 48, STONE[4]); rect7(b, x, 26, x, 48, STONE[3]); }
+    rect7(b, 0, 20, 63, 22, STONE[2]); rect7(b, 0, 20, 63, 20, STONE[4]);
+    for (let y = 12; y <= 19; y++) { const hw = Math.round((y - 12) / 7 * 30); rect7(b, 32 - hw, y, 31 + hw, y, y === 19 ? STONE[1] : STONE[3]); }
+    stoneWall(b, 26, 0, 37, 14, 98);
+    for (let y = 3; y <= 9; y++) for (let x = 28; x <= 35; x++) if (Math.hypot(x + 0.5 - 32, y + 0.5 - 6) <= 3.6) b.set(x, y, Math.hypot(x + 0.5 - 32, y + 0.5 - 6) > 2.8 ? STONE[0] : '#f4f0e6');
+    line(b, 32, 6, 32, 4, P.ink); line(b, 32, 6, 34, 6, P.ink);
+    rect7(b, 28, 36, 35, 49, '#2b1d1a'); rect7(b, 28, 36, 35, 36, STONE[1]);
+    for (const x of [12, 20, 42, 50]) windowAt(b, x, 30, 3, 5);
+    for (let x = 0; x <= 63; x++) b.set(x, 50, STONE[0]);
+    return b.canvas();
+  }
+  // o arsenal (32 x 32): casa baixa de pedra, porta de ferro, barris de pólvora e um canhão na frente
+  function arsenalSpr() {
+    const b = new Buf(32, 32);
+    stoneWall(b, 2, 10, 29, 27, 99);
+    for (let x = 2; x <= 29; x += 3) rect7(b, x, 7, x + 1, 9, STONE[3]);
+    rect7(b, 12, 17, 19, 27, '#3a3a44'); for (let y = 18; y <= 26; y += 3) rect7(b, 12, y, 19, y, '#24242c');
+    for (const x of [4, 23]) { rect7(b, x, 21, x + 4, 27, PLANK[1]); rect7(b, x, 23, x + 4, 23, '#3a3a44'); rect7(b, x, 21, x + 4, 21, PLANK[3]); }
+    rect7(b, 9, 28, 22, 29, '#24242c'); rect7(b, 20, 27, 26, 28, '#3a3a44');
+    for (const x of [11, 19]) { rect7(b, x, 29, x + 2, 31, PLANK[0]); b.set(x + 1, 30, PLANK[2]); }
+    return b.canvas();
+  }
   // 0.30: o porto (64 x 32, 4 x 2 passos): cais de pedra, o tablado de tábua sobre a água, caixotes, estacas e o guindaste
   function portoSpr() {
     const W = 64, H = 32, b = new Buf(W, H);
@@ -2507,7 +2561,7 @@
     return b.canvas();
   }
   A.cidadeSprites = function () {
-    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr() };
+    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr(), imprensa: imprensaSpr(), universidade: universidadeSpr(), arsenal: arsenalSpr() };
     for (const k of ['escola', 'biblioteca', 'hospital', 'guarda', 'brigada', 'mercado']) out[k] = [null, instituicao(k, 1), instituicao(k, 2), instituicao(k, 3)];
     return out;
   };

@@ -522,6 +522,9 @@
   }
 
   // ---------- helpers de desenho ----------
+  // 0.31: as obras sem telhado de sapê (madeira, pedra, barco) não mudam de cor com a idade: a tábua e o sapê têm cores
+  // parecidas demais para separar pela cor, então quem decide é o tipo da obra
+  const SEM_TELHADO = { porto: 1, galeao: 1, navio: 1, barco: 1, canoa: 1, ponte: 1, jirau: 1, moquem: 1, curral: 1, roca: 1, fogueira: 1, estatua: 1, cemiterio: 1, mina: 1, aqueduto: 1, muralha: 1, castelo: 1, arsenal: 1, universidade: 1 };
   let eraObra = 0;   // 0.27: a idade da construção que está sendo desenhada (o telhado muda de cor)
   function blit(img, wx, wy, alpha) {
     if (eraObra >= 2) img = A.eraImg(img, eraObra);
@@ -1157,7 +1160,7 @@
   // a figura da obra no nível dela (Etapa 7): casas, oficinas, armazém
   function houseImg(d) { const S2 = A.spr; return d.lv >= 3 && d.kind ? S2.house[d.kind] : S2.house[d.lv >= 2 ? 2 : 1]; }
   function drawBuilding(S, b, now, row, part) {
-    eraObra = b.built ? b.era || 0 : 0;
+    eraObra = b.built && !SEM_TELHADO[b.type] ? b.era || 0 : 0;
     try { drawBuilding0(S, b, now, row, part); } finally { eraObra = 0; }
   }
   function drawBuilding0(S, b, now, row, part) {
