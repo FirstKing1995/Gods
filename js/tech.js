@@ -241,7 +241,8 @@
   };
   // Etapa 11: o peixe criado por Deus, o carrinho de mão (a roda) e a Sentinela
   T.fishMult = (S, p) => (T.known(S, 'anzol') && T.hasTool(S, p) ? ganho(S, p, 'anzol', 1, C.ANZOL_FISH) : 1) * (T.known(S, 'rede') ? ganho(S, p, 'rede', 1, C.REDE_FISH) : 1) * (G.Deus && G.Deus.species(S, 'peixe') ? C.PEIXE_FISH : 1);
-  T.carryMult = (S, p) => (T.known(S, 'cestos') ? ganho(S, p, 'cestos', 1, C.CESTO_CARRY) : 1) * (G.Deus && G.Deus.saber(S, 'roda') ? C.RODA_CARRY : 1);   // com p (Etapa 15): o domínio dos cestos
+  T.carryMult = (S, p) => (T.known(S, 'cestos') ? ganho(S, p, 'cestos', 1, C.CESTO_CARRY) : 1) * (G.Deus && G.Deus.saber(S, 'roda') ? C.RODA_CARRY : 1) *
+    (G.Eras && G.Eras.temEstacao && G.Eras.temEstacao(S) ? C.ESTACAO_CARGA : 1);   // 0.32: os carrinhos da estação   // com p (Etapa 15): o domínio dos cestos
   T.biteMult = (S, p) => (T.known(S, 'lanca') && T.hasTool(S, p) ? C.LANCA_BITE * (p.tool.fe ? C.FERRO_BITE : 1) : 1) * (G.Deus && G.Deus.dom(S, 'sentinela') ? C.DOM.sentinelaBite : 1) *
     (p.sangue && G.Povos ? G.Povos.bite(p) : 1);   // Etapa 12: a lança de ferro e as garras do povo-fera
   T.coldMult = (p, S) => (p.roupa ? (S && T.known(S, 'agulha') ? C.AGULHA_COLD : C.ROUPA_COLD) : 1);   // costurada com agulha, mais quente

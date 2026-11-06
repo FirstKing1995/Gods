@@ -361,8 +361,9 @@
   O.costOf = (k) => (G.Minas && G.Minas.isForge(k) ? G.Minas.costOf(k) : k === 'tabuas' ? { madeira: C.TABUA_WOOD } : k === 'mantas' ? { fibra: C.MANTA_FIBRA } : k === 'redes' ? { fibra: C.REDE_FIBRA } : k === 'roupas' ? C.ROUPA_COST : C.TOOL_COST);
   O.minutesOf = function (S, k, b) {
     if (G.Minas && G.Minas.isForge(k)) return G.Minas.minutesOf(S, k, b);   // Etapa 12
-    if (k === 'tabuas') return C.TABUA_MIN / (b ? def(b).shop.speed : 1);
-    if (k === 'mantas' || k === 'redes') return C.TECIDO_MIN / (b ? def(b).shop.speed : 1);
+    const era = G.Eras && G.Eras.oficioMult ? G.Eras.oficioMult(S) : 1;   // 0.32: a fábrica, a seiva, a greve
+    if (k === 'tabuas') return C.TABUA_MIN / (b ? def(b).shop.speed : 1) / era;
+    if (k === 'mantas' || k === 'redes') return C.TECIDO_MIN / (b ? def(b).shop.speed : 1) / era;
     return C.OFICIO_MIN * (k === 'roupas' ? 1.5 : 1);
   };
   O.make = function (S, k, n) {

@@ -28,6 +28,8 @@
     { nome: 'Idade das Navegações', curto: 'navegações e comércio', escrita: true, magia: 'mares', gente: 160, marco: ['porto', 'galeao'], txt: 'Velas grandes saem do porto e voltam cheias: começou a Idade das Navegações.', txtM: 'As mais velhas cantam para o mar, e o mar escuta: começou, do jeito do conselho, a Idade das Navegações.' },
     // 0.31: a Idade da Pólvora e da Imprensa (o conselho chega a ela pelos cantos)
     { nome: 'Idade da Pólvora e da Imprensa', curto: 'pólvora e imprensa', escrita: true, magia: 'cantos', gente: 200, marco: ['imprensa', 'universidade'], txt: 'A prensa imprime o que se sabe e a pólvora troveja: começou a Idade da Pólvora e da Imprensa.', txtM: 'As mais velhas cantam tudo o que sabem, e ninguém esquece mais nada: começou, do jeito do conselho, a Idade da Pólvora e da Imprensa.' },
+    // 0.32: a Revolução Industrial (o conselho chega a ela pela seiva)
+    { nome: 'Revolução Industrial', curto: 'vapor e fábricas', escrita: true, magia: 'seiva', gente: 260, marco: ['fabrica', 'estacao'], txt: 'A chaminé fuma e o trem apita: começou a Revolução Industrial.', txtM: 'As mais velhas falam com a seiva das árvores, e as oficinas trabalham como se tivessem máquina: começou, do jeito do conselho, a Revolução Industrial.' },
   ];
   E.init = function (S) {
     const e = S.eras || (S.eras = {});
@@ -105,6 +107,7 @@
     runas: { nome: 'Runas', de: 'das runas', txt: 'As mais velhas gravaram runas nas pedras das casas: a pedra aquece, e quem dorme sente 4 °C a mais.' },
     ervas: { nome: 'Ervas', de: 'das ervas', txt: 'O conselho juntou o saber das ervas e dos cantos: a febre pesa bem menos, e a saúde volta mais depressa.' },
     circulos: { nome: 'Círculos', de: 'dos círculos', txt: 'Círculos de pedra em volta da roça: a terra rende 20% mais.' },
+    seiva: { nome: 'Seiva', de: 'da seiva', txt: 'O conselho aprendeu a falar com a seiva: a madeira, a fibra e o ferro obedecem, e as oficinas trabalham 30% mais depressa.' },   // 0.32
     cantos: { nome: 'Cantos', de: 'dos cantos', txt: 'O conselho canta tudo o que se sabe, de boca em boca: o povo aprende as descobertas 30% mais depressa.' },   // 0.31
     mares: { nome: 'Marés', de: 'das marés', txt: 'As mais velhas aprenderam o canto das marés: o navio sai na hora certa e o mar leva bem menos gente.' },   // 0.30
     estrelas: { nome: 'Estrelas', de: 'das estrelas', txt: 'As mais velhas leem as estrelas: sabem quando vem a chuva e a geada, e a praga pega a roça pela metade.' },   // 0.29
@@ -113,7 +116,7 @@
   // o conselho aprende um saber por idade (a partir da Pedra Polida), em vez de esperar o metal
   function magia(S) {
     if (E.ordem(S) !== 'conselho') return;
-    const ordem = ['runas', 'ervas', 'circulos', 'estrelas', 'mares', 'cantos'], e = S.eras;
+    const ordem = ['runas', 'ervas', 'circulos', 'estrelas', 'mares', 'cantos', 'seiva'], e = S.eras;
     for (let k = 0; k < ordem.length; k++) {
       const id = ordem[k];
       if (e.magia[id]) continue;
@@ -131,6 +134,9 @@
   // 0.31: o que apressa o aprendizado (a imprensa, a universidade e os cantos do conselho) e o arsenal
   const tem = (S, k) => S.buildings.some((b) => b.type === k && b.built);
   E.temArsenal = (S) => tem(S, 'arsenal');
+  // 0.32: a fábrica e a seiva apressam as oficinas; a greve, enquanto dura, faz o contrário
+  E.oficioMult = (S) => (tem(S, 'fabrica') ? C.FABRICA_OFICIO : 1) * (E.temMagia(S, 'seiva') ? C.SEIVA_OFICIO : 1) * (S.eras && S.eras.greve > S.t ? C.GREVE_OFICIO : 1);
+  E.temEstacao = (S) => tem(S, 'estacao');
   E.pratMult = (S) => (tem(S, 'imprensa') ? C.IMPRENSA_PRAT : 1) * (tem(S, 'universidade') ? C.UNIV_PRAT : 1) * (E.temMagia(S, 'cantos') ? C.CANTOS_PRAT : 1);
 
   // ---------- o desafio de cada idade ----------
@@ -171,6 +177,15 @@
       for (let k = 0; k < n && pode.length; k++) G.Cidade.adoece(S, pode.splice(Math.floor(S.rng.next() * pode.length), 1)[0]);
       S.eras.prox.peste = S.t + 3 * YEAR(); S.stats.pestes = (S.stats.pestes || 0) + 1;
       Sim().chron(S, 'A Grande Peste chegou pela trilha: ' + n + (n === 1 ? ' pessoa caiu' : ' pessoas caíram') + ' de febre de uma vez. Quem tem casa de cura sofre menos.');
+      return;
+    }
+    // 0.32: Revolução Industrial: a Greve (com a fábrica, os operários param por uns dias); no jeito da assembleia ou das
+    // guildas, quem trabalha tem voz e a greve não chega
+    if (id >= 8 && tem(S, 'fabrica') && pronto(S, 'greve') && r < C.ERA_GREVE / C.YEAR_DAYS) {
+      S.eras.prox.greve = S.t + 2 * YEAR(); S.stats.greves = (S.stats.greves || 0) + 1;
+      if (E.ordem(S) === 'assembleia' || E.ordem(S) === 'guildas') { Sim().chron(S, 'Os operários da fábrica reclamaram das horas. Na roda ' + (E.ordem(S) === 'guildas' ? 'das guildas' : 'da assembleia') + ', foram ouvidos, e ninguém parou.'); return; }
+      S.eras.greve = S.t + C.GREVE_D * DAY();
+      Sim().chron(S, 'Greve: os operários cruzaram os braços na porta da fábrica. Por ' + C.GREVE_D + ' dias, as oficinas trabalham pela metade.');
       return;
     }
     // 0.31: Pólvora e Imprensa: a Revolta dos Panfletos (a palavra impressa corre, e o povo se agita); a guarda acalma
@@ -228,7 +243,7 @@
   // 0.27: quando o povo muda de idade, as construções vão sendo refeitas no jeito novo, poucas por dia (as mais antigas
   // primeiro). O jeito aparece no telhado: sapê até a Pedra Polida, sapê trançado no Bronze, tabuinha no Ferro, telha
   // de barro nos Reinos
-  const REFORMA_TXT = { 2: 'trançam o sapê novo, mais firme', 3: 'trocam o sapê por tabuinhas de madeira', 4: 'cobrem os telhados com telha de barro', 5: 'cobrem os telhados de ardósia', 6: 'pintam as paredes e cobrem com telha nova de olaria', 7: 'erguem sobrados de tijolo com telhado escuro' };
+  const REFORMA_TXT = { 2: 'trançam o sapê novo, mais firme', 3: 'trocam o sapê por tabuinhas de madeira', 4: 'cobrem os telhados com telha de barro', 5: 'cobrem os telhados de ardósia', 6: 'pintam as paredes e cobrem com telha nova de olaria', 7: 'erguem sobrados de tijolo com telhado escuro', 8: 'trocam a telha por chapa de zinco' };
   function reforma(S) {
     const idade = S.eras.idade || 0;
     if (idade < 2) return;

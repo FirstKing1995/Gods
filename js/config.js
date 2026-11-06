@@ -3,7 +3,7 @@
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.31.0',
+    VERSION: '0.32.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -204,6 +204,11 @@
         desc: 'A casa de Deus, de pedra e de muitas mãos. Quem tem fé reza ali de manhã e ganha o dobro de fé; a festa e o rito ficam maiores perto dele.' },
       muralha: { name: 'Muralha', a: 'a', key: '', w: 3, h: 2, cost: { pedra: 200, madeira: 40 }, work: 30000, grande: true, wall: { r: 16 },
         desc: 'Um anel de pedra em volta do centro, com portão. Lobo e onça não entram, e ninguém leva a comida guardada lá dentro.' },
+      // 0.32: a Revolução Industrial. A fábrica (obra comum) e a estação de trem (grande obra)
+      fabrica: { name: 'Fábrica', a: 'a', key: '', w: 3, h: 3, cost: { pedra: 100, tabuas: 60 }, extra: { ferro: 12, carvao: 20 }, work: 5000,
+        desc: 'Máquina a vapor, correias e a chaminé alta: as oficinas (marcenaria, tecelagem, ferraria) fazem tudo 50% mais depressa. Pede 12 de ferro e 20 de carvão.' },
+      estacao: { name: 'Estação de trem', a: 'a', key: '', w: 4, h: 2, cost: { pedra: 140, tabuas: 80, madeira: 40 }, extra: { ferro: 20 }, work: 30000, grande: true,
+        desc: 'Os trilhos, a plataforma e a máquina que apita: com os carrinhos, cada um carrega metade a mais por viagem. Duas tribos com estação se conhecem na hora e trocam mais vezes. Pede 20 de ferro.' },
       // 0.31: a Pólvora e a Imprensa. A imprensa e o arsenal (obras comuns) e a universidade (grande obra)
       imprensa: { name: 'Imprensa', a: 'a', key: '', w: 2, h: 2, cost: { tabuas: 40, pedra: 20 }, extra: { ferro: 4 }, work: 3000,
         desc: 'A prensa de parafuso e as letras de metal: o que se descobre vira papel e corre a aldeia. O povo aprende as descobertas 40% mais depressa. Pede 4 de ferro.' },
@@ -639,6 +644,8 @@
     // 0.29: a Idade Média
     MOINHO_ROCA: 1.25, CASTELO_CRIME: 0.8, ERA_PESTE: 0.5, PESTE_PARTE: 0.2, ESTRELAS_PRAGA: 0.5,
     // 0.30: as Navegações
+    // 0.32: a Revolução Industrial
+    FABRICA_OFICIO: 1.5, SEIVA_OFICIO: 1.3, ESTACAO_CARGA: 1.5, ERA_GREVE: 0.5, GREVE_D: 5, GREVE_OFICIO: 0.5,
     // 0.31: a Pólvora e a Imprensa
     IMPRENSA_PRAT: 1.4, UNIV_PRAT: 1.3, UNIV_HORAS: 12, UNIV_D: 15, CANTOS_PRAT: 1.3, ERA_REVOLTA: 0.5, REVOLTA_DESC: 10,
     GALEAO_GENTE: 16, GALEAO_CARGA: 1.5, PORTO_PERIGO: 0.5, PORTO_CARGA: 1.5, MARES_PERIGO: 0.6, COMERCIO_D: 10, ERA_PIRATAS: 0.6, PIRATAS_LEVA: 0.15,

@@ -10,7 +10,7 @@
   const Sim = () => G.Sim, Fam = () => G.Family;
   const DAY = () => C.DAY_MIN;
 
-  const GRANDES = ['templo', 'muralha', 'torre', 'aqueduto', 'ponte', 'castelo', 'porto', 'universidade'];   // 0.31: a universidade   // 0.30: o porto   // a ponte de pedra veio com a Etapa 17; o castelo, com a 0.29
+  const GRANDES = ['templo', 'muralha', 'torre', 'aqueduto', 'ponte', 'castelo', 'porto', 'universidade', 'estacao'];   // 0.32: a estação   // 0.31: a universidade   // 0.30: o porto   // a ponte de pedra veio com a Etapa 17; o castelo, com a 0.29
   const INST = ['guarda', 'brigada', 'hospital', 'escola', 'biblioteca', 'mercado'];   // a ordem em que o líder olha
   Ci.GRANDES = GRANDES; Ci.INST = INST;
   Ci.isCidade = (t) => GRANDES.indexOf(t) >= 0 || INST.indexOf(t) >= 0;
@@ -51,6 +51,9 @@
     mercado: (S) => (S.soc && S.soc.vila && !S.soc.vila.fim ? '' : 'pede uma vila de fora para trocar'),
     // 0.29: a Idade Média (os dois chegam com os Reinos; o castelo pede uma cidade)
     moinho: (S) => (G.Eras && G.Eras.idade(S) >= 4 ? '' : 'chega com a Idade dos Reinos'),
+    // 0.32: a Revolução Industrial (chega com a Pólvora e a Imprensa; a fábrica pede a ferraria)
+    fabrica: (S) => (!(G.Eras && G.Eras.idade(S) >= 7) ? 'chega com a Idade da Pólvora e da Imprensa' : S.buildings.some((b) => b.type === 'ferraria' && b.built) ? '' : 'pede uma ferraria pronta'),
+    estacao: (S) => (!(G.Eras && G.Eras.idade(S) >= 7) ? 'chega com a Idade da Pólvora e da Imprensa' : vivos(S) >= 120 ? '' : 'pede uma cidade de 120 pessoas'),
     // 0.31: a Pólvora e a Imprensa (chegam com as Navegações)
     imprensa: (S) => (!(G.Eras && G.Eras.idade(S) >= 6) ? 'chega com a Idade das Navegações' : S.buildings.some((b) => b.type === 'biblioteca' && b.built) ? '' : 'pede uma estante pronta'),
     universidade: (S) => (!(G.Eras && G.Eras.idade(S) >= 6) ? 'chega com a Idade das Navegações' : !S.buildings.some((b) => b.type === 'escola' && b.built) ? 'pede uma roda de ensino pronta' : vivos(S) >= 100 ? '' : 'pede uma cidade de 100 pessoas'),
