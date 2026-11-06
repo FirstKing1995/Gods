@@ -509,6 +509,7 @@
     for (let i = glows.length - 1; i >= 0; i--) { const g = glows[i]; g.life -= dt; g.x += g.vx * dt; g.y += g.vy * dt; if (g.life <= 0) glows.splice(i, 1); }
     for (const b of S.buildings) {
       // moquém armado: fumaça fina
+      if (b.type === 'fabrica' && b.built && Math.random() < dt * 4) spawn({ x: b.x * TS + 38 + Math.random() * 4, y: b.y * TS - 20, vx: 2 + Math.random() * 3, vy: -8 - Math.random() * 4, g: 0, life: 3.2, col: 'smoke' });   // 0.32: a chaminé da fábrica
       if (b.type === 'moquem' && b.batch && Math.random() < dt * 3) spawn({ x: b.x * TS + 6 + Math.random() * 5, y: b.y * TS + 2, vx: (Math.random() - 0.5) * 3, vy: -7 - Math.random() * 4, g: 0, life: 2.6, col: 'smoke' });
       // casa de pedra com gente dentro no frio: fumaça na chaminé (Etapa 7)
       if (b.kind === 'pedra' && b.built && S.temp < 14 && Math.random() < dt * 2.5 && FX && FX.tent.has(b.id)) {
@@ -524,7 +525,7 @@
   // ---------- helpers de desenho ----------
   // 0.31: as obras sem telhado de sapê (madeira, pedra, barco) não mudam de cor com a idade: a tábua e o sapê têm cores
   // parecidas demais para separar pela cor, então quem decide é o tipo da obra
-  const SEM_TELHADO = { porto: 1, galeao: 1, navio: 1, barco: 1, canoa: 1, ponte: 1, jirau: 1, moquem: 1, curral: 1, roca: 1, fogueira: 1, estatua: 1, cemiterio: 1, mina: 1, aqueduto: 1, muralha: 1, castelo: 1, arsenal: 1, universidade: 1 };
+  const SEM_TELHADO = { porto: 1, galeao: 1, navio: 1, barco: 1, canoa: 1, ponte: 1, jirau: 1, moquem: 1, curral: 1, roca: 1, fogueira: 1, estatua: 1, cemiterio: 1, mina: 1, aqueduto: 1, muralha: 1, castelo: 1, arsenal: 1, universidade: 1, fabrica: 1, estacao: 1 };
   let eraObra = 0;   // 0.27: a idade da construção que está sendo desenhada (o telhado muda de cor)
   function blit(img, wx, wy, alpha) {
     if (eraObra >= 2) img = A.eraImg(img, eraObra);

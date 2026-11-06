@@ -186,7 +186,7 @@
     return out;
   };
   M.costOf = (k) => (k === 'ferro' ? C.FERRO_COST : k === 'joias' ? { prata: 1 } : k === 'joiasOuro' ? { ouro: 1 } : null);
-  M.minutesOf = (S, k, b) => (k === 'ferro' ? C.FERRO_MIN : C.JOIA_MIN) / (b ? def(b).shop.speed : 1);
+  M.minutesOf = (S, k, b) => (k === 'ferro' ? C.FERRO_MIN : C.JOIA_MIN) / (b ? def(b).shop.speed : 1) / (G.Eras && G.Eras.oficioMult ? G.Eras.oficioMult(S) : 1);   // 0.32: a fábrica
   M.make = function (S, k, n) {
     const st = S.stats, Sm = Sim();
     if (k === 'ferro') {

@@ -564,10 +564,11 @@
   const ERA_TETO = { 2: ['#4a3420', '#765236', '#9c7642', '#c09a58', '#dabd7c'], 3: PLANK, 4: ['#4a1a1c', '#7c2a26', '#a8443a', '#c8634c', '#e08a6a'],
     5: ['#20222e', '#343a4e', '#4c5670', '#6c7890', '#94a0b4'],   // 0.29: a ardósia da Idade Média
     6: ['#4a2418', '#7e3a22', '#b0582e', '#d27a3e', '#ecaa62'],   // 0.30: a telha nova de olaria, mais clara e alaranjada
-    7: ['#2e1c22', '#4c2a32', '#6e3a40', '#8e5450', '#b07a6a'] };   // 0.31: o telhado escuro dos sobrados
+    7: ['#2e1c22', '#4c2a32', '#6e3a40', '#8e5450', '#b07a6a'],   // 0.31: o telhado escuro dos sobrados
+    8: ['#2a2e34', '#3e444c', '#58606a', '#78828c', '#a4adb6'] };   // 0.32: a chapa de zinco
   const eraCache = new WeakMap();
   A.eraImg = function (img, era) {
-    const to = ERA_TETO[Math.min(7, era)];
+    const to = ERA_TETO[Math.min(8, era)];
     if (!to || !img || !img.getContext) return img;
     let m = eraCache.get(img);
     if (!m) { m = {}; eraCache.set(img, m); }
@@ -1390,6 +1391,11 @@
       { k: P.ink2, s: P.mist, d: P.bark }],
     torre: [['...kkkk...', '..kyyyyk..', '.kkkkkkkk.', '..kwwwwk..', '..kssssk..', '..ksddsk..', '..kssssk..', '.ksssssk..', '.kssssssk.', 'kkkkkkkkkk'],
       { k: P.ink2, s: P.mist, y: P.tan, w: P.wood, d: P.ink }],
+    // 0.32: a fábrica e a estação
+    fabrica: [['......kk..', '......kk..', 'k..k..kk..', 'kk.kk.kk..', 'kkkkkkkkkk', 'krrrrrrrrk', 'krwwrwwrrk', 'krrrrddrrk', 'kkkkkkkkkk', '..........'],
+      { k: P.ink2, r: P.wood, w: P.yellow, d: P.ink }],
+    estacao: [['...kkk....', '..kwwwk...', '.kkkkkkk..', '.krrrrrk..', '.krrdrrkkk', '.krrdrrkkk', 'kkkkkkkkkk', 'm.m.m.m.m.', 'kkkkkkkkkk', '..........'],
+      { k: P.ink2, r: P.wood, w: P.parch, d: P.ink, m: P.mist }],
     // 0.31: a imprensa, a universidade e o arsenal
     imprensa: [['...kkkk...', '..kyyyyk..', '.kkkkkkkk.', '.krrrrrrk.', '.kwwkrrrk.', '.kwwkrddk.', '.krrrrddk.', '.kkkkkkkk.', '..........', '..........'],
       { k: P.ink2, y: P.tan, r: P.wood, w: P.parch, d: P.ink }],
@@ -2459,6 +2465,31 @@
     rect7(b, 33, 0, 37, 2, '#c8423a');   // a bandeira
     return b.canvas();
   }
+  // 0.32: a fábrica (48 x 52, 3 x 3 passos): galpão de tijolo com telhado em dentes de serra e a chaminé alta
+  function fabricaSpr() {
+    const b = new Buf(48, 52);
+    tijolos(b, 2, 24, 45, 49);
+    for (let k = 0; k < 4; k++) { const x0 = 2 + k * 11; for (let y = 14; y <= 23; y++) { const w = Math.round((y - 14) / 9 * 10); rect7(b, x0, y, x0 + w, y, y === 14 ? '#a4adb6' : '#58606a'); b.set(x0 + w, y, '#2a2e34'); } rect7(b, x0, 14, x0, 23, '#9ab8c8'); }
+    tijolos(b, 36, 0, 41, 24); rect7(b, 35, 0, 42, 1, '#3e1e1c');
+    for (const x of [6, 17, 28]) { rect7(b, x, 30, x + 5, 37, '#2b2b34'); rect7(b, x + 1, 31, x + 4, 36, '#e8b04a'); line(b, x + 2, 31, x + 2, 36, '#2b2b34'); }
+    rect7(b, 18, 41, 27, 49, '#2b1d1a');
+    for (let x = 2; x <= 45; x++) b.set(x, 50, TIJOLO[0]);
+    return b.canvas();
+  }
+  // a estação (64 x 36, 4 x 2 passos): a plataforma coberta, o relógio, os trilhos e a locomotiva
+  function estacaoSpr() {
+    const b = new Buf(64, 36);
+    for (let x = 0; x <= 63; x++) { b.set(x, 30, '#58606a'); b.set(x, 33, '#58606a'); if (x % 4 === 0) rect7(b, x, 29, x + 1, 34, PLANK[0]); }
+    tijolos(b, 4, 10, 37, 27);
+    for (let y = 4; y <= 10; y++) { const hw = Math.round((y - 4) / 6 * 18); rect7(b, 21 - hw, y, 20 + hw, y, y === 10 ? '#3e444c' : '#78828c'); }
+    for (let y = 2; y <= 6; y++) for (let x = 18; x <= 23; x++) if (Math.hypot(x + 0.5 - 21, y + 0.5 - 4.5) <= 2.6) b.set(x, y, Math.hypot(x + 0.5 - 21, y + 0.5 - 4.5) > 1.9 ? '#2a2e34' : '#f4f0e6');
+    for (const x of [8, 26]) windowAt(b, x, 15, 4, 5);
+    rect7(b, 17, 18, 23, 27, '#2b1d1a');
+    rect7(b, 42, 18, 58, 27, '#2a2e34'); rect7(b, 43, 19, 49, 23, '#3e444c'); rect7(b, 51, 13, 54, 18, '#2a2e34'); rect7(b, 50, 12, 55, 13, '#58606a');
+    windowAt(b, 44, 19, 3, 3); for (const x of [44, 50, 56]) { rect7(b, x - 1, 27, x + 1, 29, '#1f1a24'); b.set(x, 28, '#a4adb6'); }
+    rect7(b, 58, 22, 61, 27, '#c8423a');
+    return b.canvas();
+  }
   // 0.31: a imprensa (32 x 36): sobrado de tijolo, a prensa de parafuso na janela grande e o varal de folhas
   const TIJOLO = ['#3e1e1c', '#6a2e26', '#8e4232', '#ae5a42', '#c87a5a'];
   function tijolos(b, x0, y0, x1, y1) {
@@ -2561,7 +2592,7 @@
     return b.canvas();
   }
   A.cidadeSprites = function () {
-    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr(), imprensa: imprensaSpr(), universidade: universidadeSpr(), arsenal: arsenalSpr() };
+    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr(), imprensa: imprensaSpr(), universidade: universidadeSpr(), arsenal: arsenalSpr(), fabrica: fabricaSpr(), estacao: estacaoSpr() };
     for (const k of ['escola', 'biblioteca', 'hospital', 'guarda', 'brigada', 'mercado']) out[k] = [null, instituicao(k, 1), instituicao(k, 2), instituicao(k, 3)];
     return out;
   };

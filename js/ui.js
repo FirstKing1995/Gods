@@ -175,6 +175,8 @@
       ['porto', 'porto'], ['galeao', 'galeao'],
       // 0.31: a Pólvora e a Imprensa
       ['imprensa', 'imprensa'], ['universidade', 'universidade'], ['arsenal', 'arsenal'],
+      // 0.32: a Revolução Industrial
+      ['fabrica', 'fabrica'], ['estacao', 'estacao'],
       // Etapa 18: os barcos
       ['canoa', 'canoa'], ['barco', 'barco'], ['navio', 'navio']];
     const SHORT = { barraca: 'Barraca', forno: 'Forno' };   // nome curto no botão (o painel fica em duas fileiras)

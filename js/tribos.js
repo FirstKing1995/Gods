@@ -104,6 +104,7 @@
     for (let i = 0; i < ts.length; i++) for (let j = i + 1; j < ts.length; j++) {
       const x = ts[i], y = ts[j], par = T.par(A, x, y);
       if (par.contato || !vivos(x).length || !vivos(y).length) continue;
+      if (G.Eras && G.Eras.temEstacao && G.Eras.temEstacao(x) && G.Eras.temEstacao(y)) { encontro(A, par, x, y, 'Os trilhos dos dois povos se encontraram no meio do caminho, e o primeiro trem levou gente de um lado ao outro.'); continue; }   // 0.32
       const p = perto(x, y, C.TRIBO_VE) || perto(y, x, C.TRIBO_VE);
       if (p) encontro(A, par, x, y, p.name + ' chegou perto de onde vive ' + (x.people.indexOf(p) >= 0 ? T.nome(y) : T.nome(x)) + '.');
     }
@@ -138,7 +139,8 @@
   const desde = (A, par, k) => (A.t - (par.ult[k] || -1e9)) / DAY();
   function acontece(A, par, x, y) {
     const v = par.v;
-    if (v >= 25 && desde(A, par, 'troca') >= 5 && sorte(par) < 0.5) { troca(par, x, y); par.ult.troca = A.t; par.v += 2; return; }
+    const trem = G.Eras && G.Eras.temEstacao && G.Eras.temEstacao(x) && G.Eras.temEstacao(y);   // 0.32: de trem, troca-se mais vezes
+    if (v >= 25 && desde(A, par, 'troca') >= (trem ? 3 : 5) && sorte(par) < 0.5) { troca(par, x, y); par.ult.troca = A.t; par.v += 2; return; }
     if (v >= 55 && desde(A, par, 'muda') >= 12 && sorte(par) < 0.4 && muda(par, x, y)) { par.ult.muda = A.t; par.v += 5; return; }
     if ((par.tregua || 0) > A.t) return;   // na trégua, ninguém rouba nem guerreia
     if (v <= -25 && desde(A, par, 'roubo') >= C.TRIBO_ROUBO_D && sorte(par) < 0.35) { roubo(par, x, y); par.ult.roubo = A.t; par.v -= 4; return; }

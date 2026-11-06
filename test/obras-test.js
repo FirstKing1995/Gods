@@ -77,7 +77,9 @@ if (isMainThread) {
   // ===================== toda obra evolui =====================
   {
     const types = Object.keys(C.BUILD);
-    check('toda obra tem pelo menos uma melhoria (as grandes obras e os barcos não têm níveis)', types.every((t) => C.BUILD[t].grande || C.BUILD[t].boat || (C.BUILD[t].up && C.BUILD[t].up.length >= 1)), types.join(', '));
+    const DE_ERA = ['moinho', 'imprensa', 'arsenal', 'fabrica'];   // 0.29 a 0.32: as obras de cada era não têm níveis (a era é o nível delas)
+    const sem = types.filter((t) => !(C.BUILD[t].grande || C.BUILD[t].boat || DE_ERA.indexOf(t) >= 0 || (C.BUILD[t].up && C.BUILD[t].up.length >= 1)));
+    check('toda obra tem pelo menos uma melhoria (as grandes obras, os barcos e as obras de era não têm níveis)', !sem.length, sem.join(', '));
     const f2 = Sim.defOf('fogueira', 2), f3 = Sim.defOf('fogueira', 3);
     check('fogueira de pedras: lenha dura mais, chuva quase não apaga, mais lugares no calor', f2.fire.burn > C.BUILD.fogueira.fire.burn && f2.fire.rain < 1 && f2.fire.seats === 6 && f2.fire.r === 6, JSON.stringify(f2.fire));
     check('fogueira do centro: histórias para 16, que ensinam mais, e festa que aproxima mais', f3.fire.listen === 16 && f3.fire.story > 1 && f3.fire.party > 1 && f3.max, JSON.stringify(f3.fire));
