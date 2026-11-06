@@ -105,6 +105,7 @@
       const x = ts[i], y = ts[j], par = T.par(A, x, y);
       if (par.contato || !vivos(x).length || !vivos(y).length) continue;
       if (G.Eras && G.Eras.temEstacao && G.Eras.temEstacao(x) && G.Eras.temEstacao(y)) { encontro(A, par, x, y, 'Os trilhos dos dois povos se encontraram no meio do caminho, e o primeiro trem levou gente de um lado ao outro.'); continue; }   // 0.32
+      if (G.Eras && G.Eras.temRadio && G.Eras.temRadio(x) && G.Eras.temRadio(y)) { encontro(A, par, x, y, 'Girando o botão do rádio, alguém ouviu uma voz de longe: era o outro povo.'); continue; }   // 0.34
       const p = perto(x, y, C.TRIBO_VE) || perto(y, x, C.TRIBO_VE);
       if (p) encontro(A, par, x, y, p.name + ' chegou perto de onde vive ' + (x.people.indexOf(p) >= 0 ? T.nome(y) : T.nome(x)) + '.');
     }

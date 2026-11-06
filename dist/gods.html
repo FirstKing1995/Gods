@@ -1322,7 +1322,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.33.0',
+    VERSION: '0.34.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -1523,6 +1523,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         desc: 'A casa de Deus, de pedra e de muitas mãos. Quem tem fé reza ali de manhã e ganha o dobro de fé; a festa e o rito ficam maiores perto dele.' },
       muralha: { name: 'Muralha', a: 'a', key: '', w: 3, h: 2, cost: { pedra: 200, madeira: 40 }, work: 30000, grande: true, wall: { r: 16 },
         desc: 'Um anel de pedra em volta do centro, com portão. Lobo e onça não entram, e ninguém leva a comida guardada lá dentro.' },
+      // 0.34: a Era Moderna. O rádio e a garagem (obras comuns) e o hospital geral (grande obra)
+      radio: { name: 'Rádio', a: 'o', key: '', w: 2, h: 2, cost: { pedra: 60, tabuas: 40 }, extra: { ferro: 10 }, work: 4000,
+        desc: 'A antena alta e a voz que chega em toda casa: o malfeito cai 20%, e a Grande Crise não vira revolta. Duas tribos com rádio se conhecem na hora. Pede a usina e 10 de ferro.' },
+      garagem: { name: 'Garagem de motores', a: 'a', key: '', w: 3, h: 2, cost: { pedra: 90, tabuas: 50 }, extra: { ferro: 18, carvao: 15 }, work: 5000,
+        desc: 'Caminhão a motor na porta: cada um carrega 30% mais por viagem. Pede a usina, 18 de ferro e 15 de carvão.' },
+      hospitalgeral: { name: 'Hospital geral', a: 'o', key: '', w: 4, h: 3, cost: { pedra: 220, tabuas: 100 }, extra: { ferro: 20 }, work: 38000, grande: true,
+        desc: 'Enfermarias, vacina e médico de plantão: a febre pesa a metade, e a Grande Peste perde a força. Pede 20 de ferro.' },
       // 0.33: a Era Elétrica. A usina (obra comum) e o bonde (grande obra)
       usina: { name: 'Usina elétrica', a: 'a', key: '', w: 3, h: 2, cost: { pedra: 120, tabuas: 50 }, extra: { ferro: 14, carvao: 30 }, work: 6000,
         desc: 'O carvão vira luz: as casas acendem à noite. Com luz, o povo estuda até tarde (aprende as descobertas 20% mais depressa) e reclama menos. Pede a fábrica, 14 de ferro e 30 de carvão.' },
@@ -1968,6 +1975,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     // 0.29: a Idade Média
     MOINHO_ROCA: 1.25, CASTELO_CRIME: 0.8, ERA_PESTE: 0.5, PESTE_PARTE: 0.2, ESTRELAS_PRAGA: 0.5,
     // 0.30: as Navegações
+    // 0.34: a Era Moderna
+    RADIO_CRIME: 0.8, GARAGEM_CARGA: 1.3, HGERAL_FEBRE: 0.5, ERA_CRISE: 0.5, CRISE_D: 6, CRISE_OFICIO: 0.7, CRISE_DESC: 10,
     // 0.33: a Era Elétrica
     USINA_PRAT: 1.2, USINA_DESC: 0.85, BONDE_ANDA: 1.25, ERA_APAGAO: 0.5, APAGAO_D: 4, APAGAO_CARVAO: 15, APAGAO_OFICIO: 0.75,
     FAUNA_PRESO: 3,   // 0.33: tentativas sem achar caminho até o bicho sair do bolsão onde ficou
@@ -5848,7 +5857,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // Etapa 11: o peixe criado por Deus, o carrinho de mão (a roda) e a Sentinela
   T.fishMult = (S, p) => (T.known(S, 'anzol') && T.hasTool(S, p) ? ganho(S, p, 'anzol', 1, C.ANZOL_FISH) : 1) * (T.known(S, 'rede') ? ganho(S, p, 'rede', 1, C.REDE_FISH) : 1) * (G.Deus && G.Deus.species(S, 'peixe') ? C.PEIXE_FISH : 1);
   T.carryMult = (S, p) => (T.known(S, 'cestos') ? ganho(S, p, 'cestos', 1, C.CESTO_CARRY) : 1) * (G.Deus && G.Deus.saber(S, 'roda') ? C.RODA_CARRY : 1) *
-    (G.Eras && G.Eras.temEstacao && G.Eras.temEstacao(S) ? C.ESTACAO_CARGA : 1);   // 0.32: os carrinhos da estação   // com p (Etapa 15): o domínio dos cestos
+    (G.Eras && G.Eras.temEstacao && G.Eras.temEstacao(S) ? C.ESTACAO_CARGA : 1) * (G.Eras && G.Eras.cargaMult ? G.Eras.cargaMult(S) : 1);   // 0.34: os motores   // 0.32: os carrinhos da estação   // com p (Etapa 15): o domínio dos cestos
   T.biteMult = (S, p) => (T.known(S, 'lanca') && T.hasTool(S, p) ? C.LANCA_BITE * (p.tool.fe ? C.FERRO_BITE : 1) : 1) * (G.Deus && G.Deus.dom(S, 'sentinela') ? C.DOM.sentinelaBite : 1) *
     (p.sangue && G.Povos ? G.Povos.bite(p) : 1);   // Etapa 12: a lança de ferro e as garras do povo-fera
   T.coldMult = (p, S) => (p.roupa ? (S && T.known(S, 'agulha') ? C.AGULHA_COLD : C.ROUPA_COLD) : 1);   // costurada com agulha, mais quente
@@ -18107,7 +18116,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   const Sim = () => G.Sim, Fam = () => G.Family;
   const DAY = () => C.DAY_MIN;
 
-  const GRANDES = ['templo', 'muralha', 'torre', 'aqueduto', 'ponte', 'castelo', 'porto', 'universidade', 'estacao', 'bonde'];   // 0.33: o bonde   // 0.32: a estação   // 0.31: a universidade   // 0.30: o porto   // a ponte de pedra veio com a Etapa 17; o castelo, com a 0.29
+  const GRANDES = ['templo', 'muralha', 'torre', 'aqueduto', 'ponte', 'castelo', 'porto', 'universidade', 'estacao', 'bonde', 'hospitalgeral'];   // 0.34: o hospital geral   // 0.33: o bonde   // 0.32: a estação   // 0.31: a universidade   // 0.30: o porto   // a ponte de pedra veio com a Etapa 17; o castelo, com a 0.29
   const INST = ['guarda', 'brigada', 'hospital', 'escola', 'biblioteca', 'mercado'];   // a ordem em que o líder olha
   Ci.GRANDES = GRANDES; Ci.INST = INST;
   Ci.isCidade = (t) => GRANDES.indexOf(t) >= 0 || INST.indexOf(t) >= 0;
@@ -18148,6 +18157,10 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     mercado: (S) => (S.soc && S.soc.vila && !S.soc.vila.fim ? '' : 'pede uma vila de fora para trocar'),
     // 0.29: a Idade Média (os dois chegam com os Reinos; o castelo pede uma cidade)
     moinho: (S) => (G.Eras && G.Eras.idade(S) >= 4 ? '' : 'chega com a Idade dos Reinos'),
+    // 0.34: a Era Moderna (chega com a Era Elétrica; o rádio e a garagem pedem a usina)
+    radio: (S) => (!(G.Eras && G.Eras.idade(S) >= 9) ? 'chega com a Era Elétrica' : S.buildings.some((b) => b.type === 'usina' && b.built) || (G.Eras && G.Eras.temMagia(S, 'raio')) ? '' : 'pede uma usina pronta'),
+    garagem: (S) => (!(G.Eras && G.Eras.idade(S) >= 9) ? 'chega com a Era Elétrica' : S.buildings.some((b) => b.type === 'usina' && b.built) || (G.Eras && G.Eras.temMagia(S, 'raio')) ? '' : 'pede uma usina pronta'),
+    hospitalgeral: (S) => (!(G.Eras && G.Eras.idade(S) >= 9) ? 'chega com a Era Elétrica' : vivos(S) >= 220 ? '' : 'pede uma cidade de 220 pessoas'),
     // 0.33: a Era Elétrica (chega com a Revolução Industrial; a usina pede a fábrica)
     usina: (S) => (!(G.Eras && G.Eras.idade(S) >= 8) ? 'chega com a Revolução Industrial' : S.buildings.some((b) => b.type === 'fabrica' && b.built) ? '' : 'pede uma fábrica pronta'),
     bonde: (S) => (!(G.Eras && G.Eras.idade(S) >= 8) ? 'chega com a Revolução Industrial' : vivos(S) >= 160 ? '' : 'pede uma cidade de 160 pessoas'),
@@ -18979,6 +18992,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     { nome: 'Revolução Industrial', curto: 'vapor e fábricas', escrita: true, magia: 'seiva', gente: 260, marco: ['fabrica', 'estacao'], txt: 'A chaminé fuma e o trem apita: começou a Revolução Industrial.', txtM: 'As mais velhas falam com a seiva das árvores, e as oficinas trabalham como se tivessem máquina: começou, do jeito do conselho, a Revolução Industrial.' },
     // 0.33: a Era Elétrica (o conselho chega a ela pelo relâmpago)
     { nome: 'Era Elétrica', curto: 'luz e cidade grande', escrita: true, magia: 'raio', gente: 330, marco: ['usina', 'bonde'], txt: 'A cidade acendeu de noite e o bonde corre no trilho: começou a Era Elétrica.', txtM: 'As mais velhas guardaram o relâmpago em vasos de barro, e as casas acenderam sem fio nenhum: começou, do jeito do conselho, a Era Elétrica.' },
+    // 0.34: a Era Moderna (o conselho chega a ela pelo eco)
+    { nome: 'Era Moderna', curto: 'motor, rádio e hospital', escrita: true, magia: 'eco', gente: 420, marco: ['radio', 'hospitalgeral'], txt: 'A voz do rádio entra em todas as casas e o motor corre na estrada: começou a Era Moderna.', txtM: 'As mais velhas falam baixo na beira do rio, e o eco leva a voz delas a toda casa: começou, do jeito do conselho, a Era Moderna.' },
   ];
   E.init = function (S) {
     const e = S.eras || (S.eras = {});
@@ -19043,7 +19058,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   }
   E.ordem = (S) => (S.eras ? S.eras.ordem : '');
   // os efeitos de cada ordem (ganchos pequenos, chamados de onde a coisa acontece)
-  E.crimeMult = (S) => (E.ordem(S) === 'reino' ? 0.85 : 1) * (E.temCastelo && E.temCastelo(S) ? C.CASTELO_CRIME : 1);   // 0.29: o castelo
+  E.crimeMult = (S) => (E.ordem(S) === 'reino' ? 0.85 : 1) * (E.temCastelo && E.temCastelo(S) ? C.CASTELO_CRIME : 1) * (E.temRadio(S) ? C.RADIO_CRIME : 1);   // 0.29: o castelo   // 0.34: o rádio
   E.trocaMult = (S) => (E.ordem(S) === 'reino' ? 1.3 : 1);
   E.xp = (S) => (E.ordem(S) === 'guildas' ? 1.15 : 1);
   E.cacaMult = (S) => (E.ordem(S) === 'clas' ? 1.25 : 1);
@@ -19056,6 +19071,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     runas: { nome: 'Runas', de: 'das runas', txt: 'As mais velhas gravaram runas nas pedras das casas: a pedra aquece, e quem dorme sente 4 °C a mais.' },
     ervas: { nome: 'Ervas', de: 'das ervas', txt: 'O conselho juntou o saber das ervas e dos cantos: a febre pesa bem menos, e a saúde volta mais depressa.' },
     circulos: { nome: 'Círculos', de: 'dos círculos', txt: 'Círculos de pedra em volta da roça: a terra rende 20% mais.' },
+    eco: { nome: 'Eco', de: 'do eco', txt: 'O conselho aprendeu a falar com o eco: a voz das mais velhas chega a toda casa, o malfeito cai 20% e duas tribos se conhecem de longe.' },   // 0.34
     raio: { nome: 'Relâmpago', de: 'do relâmpago', txt: 'O conselho aprendeu a guardar o relâmpago em vasos de barro: as casas acendem à noite, o povo estuda até tarde e reclama menos.' },   // 0.33
     seiva: { nome: 'Seiva', de: 'da seiva', txt: 'O conselho aprendeu a falar com a seiva: a madeira, a fibra e o ferro obedecem, e as oficinas trabalham 30% mais depressa.' },   // 0.32
     cantos: { nome: 'Cantos', de: 'dos cantos', txt: 'O conselho canta tudo o que se sabe, de boca em boca: o povo aprende as descobertas 30% mais depressa.' },   // 0.31
@@ -19066,7 +19082,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // o conselho aprende um saber por idade (a partir da Pedra Polida), em vez de esperar o metal
   function magia(S) {
     if (E.ordem(S) !== 'conselho') return;
-    const ordem = ['runas', 'ervas', 'circulos', 'estrelas', 'mares', 'cantos', 'seiva', 'raio'], e = S.eras;
+    const ordem = ['runas', 'ervas', 'circulos', 'estrelas', 'mares', 'cantos', 'seiva', 'raio', 'eco'], e = S.eras;
     for (let k = 0; k < ordem.length; k++) {
       const id = ordem[k];
       if (e.magia[id]) continue;
@@ -19076,7 +19092,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   }
   E.temMagia = (S, id) => !!(S.eras && S.eras.magia[id]);
   E.calorCasa = (S) => (E.temMagia(S, 'runas') ? C.RUNAS_HEAT : 0);
-  E.febreMult = (S) => (E.temMagia(S, 'ervas') ? 0.6 : 1);
+  E.febreMult = (S) => (E.temMagia(S, 'ervas') ? 0.6 : 1) * (S.buildings.some((b) => b.type === 'hospitalgeral' && b.built) ? C.HGERAL_FEBRE : 1);   // 0.34: o hospital geral
   // 0.29: o moinho (qualquer um pronto) faz toda a roça render mais
   E.rocaMult = (S) => (E.temMagia(S, 'circulos') ? 1.2 : 1) * (S.buildings.some((b) => b.type === 'moinho' && b.built) ? C.MOINHO_ROCA : 1);
   E.temCastelo = (S) => S.buildings.some((b) => b.type === 'castelo' && b.built);
@@ -19085,8 +19101,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   const tem = (S, k) => S.buildings.some((b) => b.type === k && b.built);
   E.temArsenal = (S) => tem(S, 'arsenal');
   // 0.32: a fábrica e a seiva apressam as oficinas; a greve, enquanto dura, faz o contrário
-  E.oficioMult = (S) => (tem(S, 'fabrica') ? C.FABRICA_OFICIO : 1) * (E.temMagia(S, 'seiva') ? C.SEIVA_OFICIO : 1) * (S.eras && S.eras.greve > S.t ? C.GREVE_OFICIO : 1) * (S.eras && S.eras.apagao > S.t ? C.APAGAO_OFICIO : 1);
+  E.oficioMult = (S) => (tem(S, 'fabrica') ? C.FABRICA_OFICIO : 1) * (E.temMagia(S, 'seiva') ? C.SEIVA_OFICIO : 1) * (S.eras && S.eras.greve > S.t ? C.GREVE_OFICIO : 1) * (S.eras && S.eras.apagao > S.t ? C.APAGAO_OFICIO : 1) * (S.eras && S.eras.crise > S.t ? C.CRISE_OFICIO : 1);
   E.temEstacao = (S) => tem(S, 'estacao');
+  // 0.34: o rádio (ou o eco do conselho) e os motores da garagem
+  E.temRadio = (S) => tem(S, 'radio') || E.temMagia(S, 'eco');
+  E.cargaMult = (S) => (tem(S, 'garagem') ? C.GARAGEM_CARGA : 1);
   // 0.33: a luz nas casas vem da usina (some no apagão) ou do relâmpago do conselho; o bonde apressa o passo de todos
   E.temLuz = (S) => !!(S.eras && (E.temMagia(S, 'raio') || (tem(S, 'usina') && !(S.eras.apagao > S.t))));
   E.walkMult = (S) => (tem(S, 'bonde') ? C.BONDE_ANDA : 1);
@@ -19130,6 +19149,16 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       for (let k = 0; k < n && pode.length; k++) G.Cidade.adoece(S, pode.splice(Math.floor(S.rng.next() * pode.length), 1)[0]);
       S.eras.prox.peste = S.t + 3 * YEAR(); S.stats.pestes = (S.stats.pestes || 0) + 1;
       Sim().chron(S, 'A Grande Peste chegou pela trilha: ' + n + (n === 1 ? ' pessoa caiu' : ' pessoas caíram') + ' de febre de uma vez. Quem tem casa de cura sofre menos.');
+      return;
+    }
+    // 0.34: Era Moderna: a Grande Crise (o dinheiro some e as oficinas perdem o ritmo). Com mercado, a vila troca o que tem
+    // e atravessa sem parar; sem ele, as oficinas caem por uns dias, e sem rádio o povo ainda se revolta
+    if (id >= 10 && pronto(S, 'crise') && r < C.ERA_CRISE / C.YEAR_DAYS) {
+      S.eras.prox.crise = S.t + 3 * YEAR(); S.stats.crises = (S.stats.crises || 0) + 1;
+      if (G.Cidade && G.Cidade.nivel && G.Cidade.nivel(S, 'mercado')) { Sim().chron(S, 'A Grande Crise chegou: o dinheiro de fora perdeu o valor. Na banca do mercado, o povo trocou o que tinha, e a vila atravessou sem parar.'); return; }
+      S.eras.crise = S.t + C.CRISE_D * DAY();
+      if (!E.temRadio(S) && G.Soc && G.Soc.addDesc) for (const p of S.people) if (p.alive && !p.fora) G.Soc.addDesc(S, p, C.CRISE_DESC, 'humor');
+      Sim().chron(S, 'A Grande Crise chegou: o dinheiro de fora perdeu o valor. Por ' + C.CRISE_D + ' dias, as oficinas perdem o ritmo. ' + (E.temRadio(S) ? 'A voz no rádio acalmou o povo.' : 'Sem uma voz que acalme, a praça encheu de gente brava.') + ' Um mercado teria segurado.');
       return;
     }
     // 0.33: Era Elétrica: o Apagão (a usina fica sem carvão). Com carvão guardado, os foguistas gastam e a luz nem pisca;
@@ -19205,7 +19234,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // 0.27: quando o povo muda de idade, as construções vão sendo refeitas no jeito novo, poucas por dia (as mais antigas
   // primeiro). O jeito aparece no telhado: sapê até a Pedra Polida, sapê trançado no Bronze, tabuinha no Ferro, telha
   // de barro nos Reinos
-  const REFORMA_TXT = { 2: 'trançam o sapê novo, mais firme', 3: 'trocam o sapê por tabuinhas de madeira', 4: 'cobrem os telhados com telha de barro', 5: 'cobrem os telhados de ardósia', 6: 'pintam as paredes e cobrem com telha nova de olaria', 7: 'erguem sobrados de tijolo com telhado escuro', 8: 'trocam a telha por chapa de zinco', 9: 'cobrem com telha francesa e puxam os fios da luz' };
+  const REFORMA_TXT = { 2: 'trançam o sapê novo, mais firme', 3: 'trocam o sapê por tabuinhas de madeira', 4: 'cobrem os telhados com telha de barro', 5: 'cobrem os telhados de ardósia', 6: 'pintam as paredes e cobrem com telha nova de olaria', 7: 'erguem sobrados de tijolo com telhado escuro', 8: 'trocam a telha por chapa de zinco', 9: 'cobrem com telha francesa e puxam os fios da luz', 10: 'trocam a telha por laje de concreto' };
   function reforma(S) {
     const idade = S.eras.idade || 0;
     if (idade < 2) return;
@@ -19638,6 +19667,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       const x = ts[i], y = ts[j], par = T.par(A, x, y);
       if (par.contato || !vivos(x).length || !vivos(y).length) continue;
       if (G.Eras && G.Eras.temEstacao && G.Eras.temEstacao(x) && G.Eras.temEstacao(y)) { encontro(A, par, x, y, 'Os trilhos dos dois povos se encontraram no meio do caminho, e o primeiro trem levou gente de um lado ao outro.'); continue; }   // 0.32
+      if (G.Eras && G.Eras.temRadio && G.Eras.temRadio(x) && G.Eras.temRadio(y)) { encontro(A, par, x, y, 'Girando o botão do rádio, alguém ouviu uma voz de longe: era o outro povo.'); continue; }   // 0.34
       const p = perto(x, y, C.TRIBO_VE) || perto(y, x, C.TRIBO_VE);
       if (p) encontro(A, par, x, y, p.name + ' chegou perto de onde vive ' + (x.people.indexOf(p) >= 0 ? T.nome(y) : T.nome(x)) + '.');
     }
@@ -21438,10 +21468,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     6: ['#4a2418', '#7e3a22', '#b0582e', '#d27a3e', '#ecaa62'],   // 0.30: a telha nova de olaria, mais clara e alaranjada
     7: ['#2e1c22', '#4c2a32', '#6e3a40', '#8e5450', '#b07a6a'],   // 0.31: o telhado escuro dos sobrados
     8: ['#2a2e34', '#3e444c', '#58606a', '#78828c', '#a4adb6'],   // 0.32: a chapa de zinco
-    9: ['#3a1412', '#6a2620', '#94402e', '#b86244', '#d68c68'] };   // 0.33: a telha francesa
+    9: ['#3a1412', '#6a2620', '#94402e', '#b86244', '#d68c68'],   // 0.33: a telha francesa
+    10: ['#3c3e42', '#5c5e60', '#808180', '#a4a39e', '#c8c6be'] };   // 0.34: a laje de concreto
   const eraCache = new WeakMap();
   A.eraImg = function (img, era) {
-    const to = ERA_TETO[Math.min(9, era)];
+    const to = ERA_TETO[Math.min(10, era)];
     if (!to || !img || !img.getContext) return img;
     let m = eraCache.get(img);
     if (!m) { m = {}; eraCache.set(img, m); }
@@ -22264,6 +22295,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       { k: P.ink2, s: P.mist, d: P.bark }],
     torre: [['...kkkk...', '..kyyyyk..', '.kkkkkkkk.', '..kwwwwk..', '..kssssk..', '..ksddsk..', '..kssssk..', '.ksssssk..', '.kssssssk.', 'kkkkkkkkkk'],
       { k: P.ink2, s: P.mist, y: P.tan, w: P.wood, d: P.ink }],
+    // 0.34: o rádio, a garagem e o hospital geral
+    radio: [['....rr....', '....kk....', '...k..k...', '...kkkk...', '..k....k..', '..kkkkkk..', '.kssssssk.', '.kswwsdsk.', '.kssssdsk.', 'kkkkkkkkkk'],
+      { k: P.ink2, r: P.red, s: P.mist, w: P.yellow, d: P.ink }],
+    garagem: [['..........', '.kkkkkkkk.', 'kssssssssk', 'kddddddddk', 'kdkkkkkkdk', 'kdkrrrrkdk', 'kdkrwwrkdk', 'kdkkkkkkdk', 'kddkddkddk', 'kkkkkkkkkk'],
+      { k: P.ink2, s: P.silver, d: P.mist, r: P.red, w: P.parch }],
+    hospitalgeral: [['..........', 'kkkkkkkkkk', 'kssssssssk', 'ksk.ss.ksk', 'kskkkkkksk', 'kssskksssk', 'ksskddkssk', 'ksskddkssk', 'kssskksssk', 'kkkkkkkkkk'],
+      { k: P.ink2, s: P.parch, d: P.ink }],
     // 0.33: a usina e o bonde
     usina: [['.kk...kk..', '.kk...kk..', '.kk..y.k..', 'kkkkkyykkk', 'krrrryyrrk', 'krwwrryyrk', 'krrrrrryrk', 'krrddrrrrk', 'kkkkkkkkkk', '..........'],
       { k: P.ink2, r: P.wood, w: P.yellow, y: P.gold, d: P.ink }],
@@ -23343,6 +23381,42 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     rect7(b, 33, 0, 37, 2, '#c8423a');   // a bandeira
     return b.canvas();
   }
+  // 0.34: o rádio (32 x 44, 2 x 2 passos): a casinha de concreto, a sala com a janela acesa e a antena alta em treliça
+  const CONCRETO = ['#3c3e42', '#5c5e60', '#808180', '#a4a39e', '#c8c6be'];
+  function parede(b, x0, y0, x1, y1) { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) b.set(x, y, y === y0 ? CONCRETO[4] : y === y1 ? CONCRETO[1] : (x + y * 3) % 11 === 0 ? CONCRETO[2] : CONCRETO[3]); }
+  function radioSpr() {
+    const b = new Buf(32, 44);
+    parede(b, 3, 26, 28, 41); rect7(b, 2, 24, 29, 25, CONCRETO[0]);
+    for (let y = 2; y <= 24; y++) { const hw = Math.round((y - 2) / 22 * 5); b.set(21 - hw, y, '#58606a'); b.set(21 + hw, y, '#58606a'); if (y % 4 === 0) rect7(b, 21 - hw, y, 21 + hw, y, '#78828c'); if (y % 4 === 2) { b.set(21, y, '#58606a'); } }
+    rect7(b, 20, 0, 22, 1, '#c8423a');
+    rect7(b, 6, 30, 15, 36, '#2b2b34'); rect7(b, 7, 31, 14, 35, '#f0d060'); line(b, 10, 31, 10, 35, '#2b2b34');
+    rect7(b, 20, 32, 25, 41, '#2b1d1a');
+    for (let x = 3; x <= 28; x++) b.set(x, 42, CONCRETO[0]);
+    return b.canvas();
+  }
+  // a garagem (48 x 36, 3 x 2 passos): o galpão de concreto, o portão aberto e o caminhão vermelho na porta
+  function garagemSpr() {
+    const b = new Buf(48, 36);
+    parede(b, 2, 8, 45, 33); rect7(b, 1, 6, 46, 7, CONCRETO[0]);
+    rect7(b, 6, 14, 31, 33, '#2b2b34'); for (let x = 6; x <= 31; x++) b.set(x, 14, '#58606a');
+    for (let y = 16; y <= 18; y += 2) for (let x = 7; x <= 30; x++) b.set(x, y, '#3e444c');
+    rect7(b, 36, 14, 42, 21, '#2b2b34'); rect7(b, 37, 15, 41, 20, '#c8e0f0');
+    rect7(b, 10, 22, 25, 30, '#b03a30'); rect7(b, 26, 18, 35, 30, '#c8423a'); rect7(b, 29, 20, 34, 24, '#c8e0f0'); rect7(b, 10, 22, 25, 22, '#d86a58');
+    for (const x of [14, 30]) { rect7(b, x - 3, 29, x + 3, 34, '#1f1a24'); rect7(b, x - 1, 31, x + 1, 32, '#a4adb6'); }
+    for (let x = 2; x <= 45; x++) b.set(x, 35, CONCRETO[0]);
+    return b.canvas();
+  }
+  // o hospital geral (64 x 52, 4 x 3 passos): prédio branco de dois andares, fileiras de janelas e a placa com o H
+  function hospitalGeralSpr() {
+    const b = new Buf(64, 52);
+    for (let y = 8; y <= 49; y++) for (let x = 3; x <= 60; x++) b.set(x, y, y === 8 ? '#f8f4ea' : (x + y * 3) % 13 === 0 ? '#d4d0c4' : '#e8e4d8');
+    rect7(b, 2, 6, 61, 7, CONCRETO[1]);
+    for (const y of [14, 27]) { for (const x of [7, 16, 25, 34, 43, 52]) { rect7(b, x, y, x + 5, y + 7, '#3e444c'); rect7(b, x + 1, y + 1, x + 4, y + 6, '#9ac8e0'); } for (let x = 3; x <= 60; x++) b.set(x, y + 10, '#c8c4b8'); }
+    rect7(b, 26, 38, 37, 49, '#3e444c'); rect7(b, 27, 39, 31, 49, '#9ac8e0'); rect7(b, 33, 39, 36, 49, '#9ac8e0');
+    rect7(b, 24, 0, 39, 6, '#2e6a4a'); rect7(b, 28, 1, 29, 5, '#f4f0e6'); rect7(b, 34, 1, 35, 5, '#f4f0e6'); rect7(b, 30, 3, 33, 3, '#f4f0e6');
+    for (let x = 3; x <= 60; x++) b.set(x, 50, CONCRETO[0]);
+    return b.canvas();
+  }
   // 0.33: a usina (48 x 36, 3 x 2 passos): o galpão de tijolo, as duas chaminés, os isoladores e o fio que sai para a cidade
   function usinaSpr() {
     const b = new Buf(48, 36);
@@ -23498,7 +23572,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     return b.canvas();
   }
   A.cidadeSprites = function () {
-    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr(), imprensa: imprensaSpr(), universidade: universidadeSpr(), arsenal: arsenalSpr(), fabrica: fabricaSpr(), estacao: estacaoSpr(), usina: usinaSpr(), bonde: bondeSpr() };
+    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr(), imprensa: imprensaSpr(), universidade: universidadeSpr(), arsenal: arsenalSpr(), fabrica: fabricaSpr(), estacao: estacaoSpr(), usina: usinaSpr(), bonde: bondeSpr(), radio: radioSpr(), garagem: garagemSpr(), hospitalgeral: hospitalGeralSpr() };
     for (const k of ['escola', 'biblioteca', 'hospital', 'guarda', 'brigada', 'mercado']) out[k] = [null, instituicao(k, 1), instituicao(k, 2), instituicao(k, 3)];
     return out;
   };
@@ -24128,7 +24202,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // ---------- helpers de desenho ----------
   // 0.31: as obras sem telhado de sapê (madeira, pedra, barco) não mudam de cor com a idade: a tábua e o sapê têm cores
   // parecidas demais para separar pela cor, então quem decide é o tipo da obra
-  const SEM_TELHADO = { porto: 1, galeao: 1, navio: 1, barco: 1, canoa: 1, ponte: 1, jirau: 1, moquem: 1, curral: 1, roca: 1, fogueira: 1, estatua: 1, cemiterio: 1, mina: 1, aqueduto: 1, muralha: 1, castelo: 1, arsenal: 1, universidade: 1, fabrica: 1, estacao: 1, usina: 1, bonde: 1 };
+  const SEM_TELHADO = { porto: 1, galeao: 1, navio: 1, barco: 1, canoa: 1, ponte: 1, jirau: 1, moquem: 1, curral: 1, roca: 1, fogueira: 1, estatua: 1, cemiterio: 1, mina: 1, aqueduto: 1, muralha: 1, castelo: 1, arsenal: 1, universidade: 1, fabrica: 1, estacao: 1, usina: 1, bonde: 1, radio: 1, garagem: 1, hospitalgeral: 1 };
   let eraObra = 0;   // 0.27: a idade da construção que está sendo desenhada (o telhado muda de cor)
   function blit(img, wx, wy, alpha) {
     if (eraObra >= 2) img = A.eraImg(img, eraObra);
@@ -26787,6 +26861,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       ['porto', 'porto'], ['galeao', 'galeao'],
       // 0.31: a Pólvora e a Imprensa
       ['imprensa', 'imprensa'], ['universidade', 'universidade'], ['arsenal', 'arsenal'],
+      // 0.34: a Era Moderna
+      ['radio', 'radio'], ['garagem', 'garagem'], ['hospitalgeral', 'hospitalgeral'],
       // 0.33: a Era Elétrica
       ['usina', 'usina'], ['bonde', 'bonde'],
       // 0.32: a Revolução Industrial

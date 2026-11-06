@@ -175,6 +175,8 @@
       ['porto', 'porto'], ['galeao', 'galeao'],
       // 0.31: a Pólvora e a Imprensa
       ['imprensa', 'imprensa'], ['universidade', 'universidade'], ['arsenal', 'arsenal'],
+      // 0.34: a Era Moderna
+      ['radio', 'radio'], ['garagem', 'garagem'], ['hospitalgeral', 'hospitalgeral'],
       // 0.33: a Era Elétrica
       ['usina', 'usina'], ['bonde', 'bonde'],
       // 0.32: a Revolução Industrial
