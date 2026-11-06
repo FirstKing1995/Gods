@@ -3,7 +3,7 @@
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.33.0',
+    VERSION: '0.34.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -204,6 +204,13 @@
         desc: 'A casa de Deus, de pedra e de muitas mãos. Quem tem fé reza ali de manhã e ganha o dobro de fé; a festa e o rito ficam maiores perto dele.' },
       muralha: { name: 'Muralha', a: 'a', key: '', w: 3, h: 2, cost: { pedra: 200, madeira: 40 }, work: 30000, grande: true, wall: { r: 16 },
         desc: 'Um anel de pedra em volta do centro, com portão. Lobo e onça não entram, e ninguém leva a comida guardada lá dentro.' },
+      // 0.34: a Era Moderna. O rádio e a garagem (obras comuns) e o hospital geral (grande obra)
+      radio: { name: 'Rádio', a: 'o', key: '', w: 2, h: 2, cost: { pedra: 60, tabuas: 40 }, extra: { ferro: 10 }, work: 4000,
+        desc: 'A antena alta e a voz que chega em toda casa: o malfeito cai 20%, e a Grande Crise não vira revolta. Duas tribos com rádio se conhecem na hora. Pede a usina e 10 de ferro.' },
+      garagem: { name: 'Garagem de motores', a: 'a', key: '', w: 3, h: 2, cost: { pedra: 90, tabuas: 50 }, extra: { ferro: 18, carvao: 15 }, work: 5000,
+        desc: 'Caminhão a motor na porta: cada um carrega 30% mais por viagem. Pede a usina, 18 de ferro e 15 de carvão.' },
+      hospitalgeral: { name: 'Hospital geral', a: 'o', key: '', w: 4, h: 3, cost: { pedra: 220, tabuas: 100 }, extra: { ferro: 20 }, work: 38000, grande: true,
+        desc: 'Enfermarias, vacina e médico de plantão: a febre pesa a metade, e a Grande Peste perde a força. Pede 20 de ferro.' },
       // 0.33: a Era Elétrica. A usina (obra comum) e o bonde (grande obra)
       usina: { name: 'Usina elétrica', a: 'a', key: '', w: 3, h: 2, cost: { pedra: 120, tabuas: 50 }, extra: { ferro: 14, carvao: 30 }, work: 6000,
         desc: 'O carvão vira luz: as casas acendem à noite. Com luz, o povo estuda até tarde (aprende as descobertas 20% mais depressa) e reclama menos. Pede a fábrica, 14 de ferro e 30 de carvão.' },
@@ -649,6 +656,8 @@
     // 0.29: a Idade Média
     MOINHO_ROCA: 1.25, CASTELO_CRIME: 0.8, ERA_PESTE: 0.5, PESTE_PARTE: 0.2, ESTRELAS_PRAGA: 0.5,
     // 0.30: as Navegações
+    // 0.34: a Era Moderna
+    RADIO_CRIME: 0.8, GARAGEM_CARGA: 1.3, HGERAL_FEBRE: 0.5, ERA_CRISE: 0.5, CRISE_D: 6, CRISE_OFICIO: 0.7, CRISE_DESC: 10,
     // 0.33: a Era Elétrica
     USINA_PRAT: 1.2, USINA_DESC: 0.85, BONDE_ANDA: 1.25, ERA_APAGAO: 0.5, APAGAO_D: 4, APAGAO_CARVAO: 15, APAGAO_OFICIO: 0.75,
     FAUNA_PRESO: 3,   // 0.33: tentativas sem achar caminho até o bicho sair do bolsão onde ficou

@@ -32,6 +32,8 @@
     { nome: 'Revolução Industrial', curto: 'vapor e fábricas', escrita: true, magia: 'seiva', gente: 260, marco: ['fabrica', 'estacao'], txt: 'A chaminé fuma e o trem apita: começou a Revolução Industrial.', txtM: 'As mais velhas falam com a seiva das árvores, e as oficinas trabalham como se tivessem máquina: começou, do jeito do conselho, a Revolução Industrial.' },
     // 0.33: a Era Elétrica (o conselho chega a ela pelo relâmpago)
     { nome: 'Era Elétrica', curto: 'luz e cidade grande', escrita: true, magia: 'raio', gente: 330, marco: ['usina', 'bonde'], txt: 'A cidade acendeu de noite e o bonde corre no trilho: começou a Era Elétrica.', txtM: 'As mais velhas guardaram o relâmpago em vasos de barro, e as casas acenderam sem fio nenhum: começou, do jeito do conselho, a Era Elétrica.' },
+    // 0.34: a Era Moderna (o conselho chega a ela pelo eco)
+    { nome: 'Era Moderna', curto: 'motor, rádio e hospital', escrita: true, magia: 'eco', gente: 420, marco: ['radio', 'hospitalgeral'], txt: 'A voz do rádio entra em todas as casas e o motor corre na estrada: começou a Era Moderna.', txtM: 'As mais velhas falam baixo na beira do rio, e o eco leva a voz delas a toda casa: começou, do jeito do conselho, a Era Moderna.' },
   ];
   E.init = function (S) {
     const e = S.eras || (S.eras = {});
@@ -96,7 +98,7 @@
   }
   E.ordem = (S) => (S.eras ? S.eras.ordem : '');
   // os efeitos de cada ordem (ganchos pequenos, chamados de onde a coisa acontece)
-  E.crimeMult = (S) => (E.ordem(S) === 'reino' ? 0.85 : 1) * (E.temCastelo && E.temCastelo(S) ? C.CASTELO_CRIME : 1);   // 0.29: o castelo
+  E.crimeMult = (S) => (E.ordem(S) === 'reino' ? 0.85 : 1) * (E.temCastelo && E.temCastelo(S) ? C.CASTELO_CRIME : 1) * (E.temRadio(S) ? C.RADIO_CRIME : 1);   // 0.29: o castelo   // 0.34: o rádio
   E.trocaMult = (S) => (E.ordem(S) === 'reino' ? 1.3 : 1);
   E.xp = (S) => (E.ordem(S) === 'guildas' ? 1.15 : 1);
   E.cacaMult = (S) => (E.ordem(S) === 'clas' ? 1.25 : 1);
@@ -109,6 +111,7 @@
     runas: { nome: 'Runas', de: 'das runas', txt: 'As mais velhas gravaram runas nas pedras das casas: a pedra aquece, e quem dorme sente 4 °C a mais.' },
     ervas: { nome: 'Ervas', de: 'das ervas', txt: 'O conselho juntou o saber das ervas e dos cantos: a febre pesa bem menos, e a saúde volta mais depressa.' },
     circulos: { nome: 'Círculos', de: 'dos círculos', txt: 'Círculos de pedra em volta da roça: a terra rende 20% mais.' },
+    eco: { nome: 'Eco', de: 'do eco', txt: 'O conselho aprendeu a falar com o eco: a voz das mais velhas chega a toda casa, o malfeito cai 20% e duas tribos se conhecem de longe.' },   // 0.34
     raio: { nome: 'Relâmpago', de: 'do relâmpago', txt: 'O conselho aprendeu a guardar o relâmpago em vasos de barro: as casas acendem à noite, o povo estuda até tarde e reclama menos.' },   // 0.33
     seiva: { nome: 'Seiva', de: 'da seiva', txt: 'O conselho aprendeu a falar com a seiva: a madeira, a fibra e o ferro obedecem, e as oficinas trabalham 30% mais depressa.' },   // 0.32
     cantos: { nome: 'Cantos', de: 'dos cantos', txt: 'O conselho canta tudo o que se sabe, de boca em boca: o povo aprende as descobertas 30% mais depressa.' },   // 0.31
@@ -119,7 +122,7 @@
   // o conselho aprende um saber por idade (a partir da Pedra Polida), em vez de esperar o metal
   function magia(S) {
     if (E.ordem(S) !== 'conselho') return;
-    const ordem = ['runas', 'ervas', 'circulos', 'estrelas', 'mares', 'cantos', 'seiva', 'raio'], e = S.eras;
+    const ordem = ['runas', 'ervas', 'circulos', 'estrelas', 'mares', 'cantos', 'seiva', 'raio', 'eco'], e = S.eras;
     for (let k = 0; k < ordem.length; k++) {
       const id = ordem[k];
       if (e.magia[id]) continue;
@@ -129,7 +132,7 @@
   }
   E.temMagia = (S, id) => !!(S.eras && S.eras.magia[id]);
   E.calorCasa = (S) => (E.temMagia(S, 'runas') ? C.RUNAS_HEAT : 0);
-  E.febreMult = (S) => (E.temMagia(S, 'ervas') ? 0.6 : 1);
+  E.febreMult = (S) => (E.temMagia(S, 'ervas') ? 0.6 : 1) * (S.buildings.some((b) => b.type === 'hospitalgeral' && b.built) ? C.HGERAL_FEBRE : 1);   // 0.34: o hospital geral
   // 0.29: o moinho (qualquer um pronto) faz toda a roça render mais
   E.rocaMult = (S) => (E.temMagia(S, 'circulos') ? 1.2 : 1) * (S.buildings.some((b) => b.type === 'moinho' && b.built) ? C.MOINHO_ROCA : 1);
   E.temCastelo = (S) => S.buildings.some((b) => b.type === 'castelo' && b.built);
@@ -138,8 +141,11 @@
   const tem = (S, k) => S.buildings.some((b) => b.type === k && b.built);
   E.temArsenal = (S) => tem(S, 'arsenal');
   // 0.32: a fábrica e a seiva apressam as oficinas; a greve, enquanto dura, faz o contrário
-  E.oficioMult = (S) => (tem(S, 'fabrica') ? C.FABRICA_OFICIO : 1) * (E.temMagia(S, 'seiva') ? C.SEIVA_OFICIO : 1) * (S.eras && S.eras.greve > S.t ? C.GREVE_OFICIO : 1) * (S.eras && S.eras.apagao > S.t ? C.APAGAO_OFICIO : 1);
+  E.oficioMult = (S) => (tem(S, 'fabrica') ? C.FABRICA_OFICIO : 1) * (E.temMagia(S, 'seiva') ? C.SEIVA_OFICIO : 1) * (S.eras && S.eras.greve > S.t ? C.GREVE_OFICIO : 1) * (S.eras && S.eras.apagao > S.t ? C.APAGAO_OFICIO : 1) * (S.eras && S.eras.crise > S.t ? C.CRISE_OFICIO : 1);
   E.temEstacao = (S) => tem(S, 'estacao');
+  // 0.34: o rádio (ou o eco do conselho) e os motores da garagem
+  E.temRadio = (S) => tem(S, 'radio') || E.temMagia(S, 'eco');
+  E.cargaMult = (S) => (tem(S, 'garagem') ? C.GARAGEM_CARGA : 1);
   // 0.33: a luz nas casas vem da usina (some no apagão) ou do relâmpago do conselho; o bonde apressa o passo de todos
   E.temLuz = (S) => !!(S.eras && (E.temMagia(S, 'raio') || (tem(S, 'usina') && !(S.eras.apagao > S.t))));
   E.walkMult = (S) => (tem(S, 'bonde') ? C.BONDE_ANDA : 1);
@@ -183,6 +189,16 @@
       for (let k = 0; k < n && pode.length; k++) G.Cidade.adoece(S, pode.splice(Math.floor(S.rng.next() * pode.length), 1)[0]);
       S.eras.prox.peste = S.t + 3 * YEAR(); S.stats.pestes = (S.stats.pestes || 0) + 1;
       Sim().chron(S, 'A Grande Peste chegou pela trilha: ' + n + (n === 1 ? ' pessoa caiu' : ' pessoas caíram') + ' de febre de uma vez. Quem tem casa de cura sofre menos.');
+      return;
+    }
+    // 0.34: Era Moderna: a Grande Crise (o dinheiro some e as oficinas perdem o ritmo). Com mercado, a vila troca o que tem
+    // e atravessa sem parar; sem ele, as oficinas caem por uns dias, e sem rádio o povo ainda se revolta
+    if (id >= 10 && pronto(S, 'crise') && r < C.ERA_CRISE / C.YEAR_DAYS) {
+      S.eras.prox.crise = S.t + 3 * YEAR(); S.stats.crises = (S.stats.crises || 0) + 1;
+      if (G.Cidade && G.Cidade.nivel && G.Cidade.nivel(S, 'mercado')) { Sim().chron(S, 'A Grande Crise chegou: o dinheiro de fora perdeu o valor. Na banca do mercado, o povo trocou o que tinha, e a vila atravessou sem parar.'); return; }
+      S.eras.crise = S.t + C.CRISE_D * DAY();
+      if (!E.temRadio(S) && G.Soc && G.Soc.addDesc) for (const p of S.people) if (p.alive && !p.fora) G.Soc.addDesc(S, p, C.CRISE_DESC, 'humor');
+      Sim().chron(S, 'A Grande Crise chegou: o dinheiro de fora perdeu o valor. Por ' + C.CRISE_D + ' dias, as oficinas perdem o ritmo. ' + (E.temRadio(S) ? 'A voz no rádio acalmou o povo.' : 'Sem uma voz que acalme, a praça encheu de gente brava.') + ' Um mercado teria segurado.');
       return;
     }
     // 0.33: Era Elétrica: o Apagão (a usina fica sem carvão). Com carvão guardado, os foguistas gastam e a luz nem pisca;
@@ -258,7 +274,7 @@
   // 0.27: quando o povo muda de idade, as construções vão sendo refeitas no jeito novo, poucas por dia (as mais antigas
   // primeiro). O jeito aparece no telhado: sapê até a Pedra Polida, sapê trançado no Bronze, tabuinha no Ferro, telha
   // de barro nos Reinos
-  const REFORMA_TXT = { 2: 'trançam o sapê novo, mais firme', 3: 'trocam o sapê por tabuinhas de madeira', 4: 'cobrem os telhados com telha de barro', 5: 'cobrem os telhados de ardósia', 6: 'pintam as paredes e cobrem com telha nova de olaria', 7: 'erguem sobrados de tijolo com telhado escuro', 8: 'trocam a telha por chapa de zinco', 9: 'cobrem com telha francesa e puxam os fios da luz' };
+  const REFORMA_TXT = { 2: 'trançam o sapê novo, mais firme', 3: 'trocam o sapê por tabuinhas de madeira', 4: 'cobrem os telhados com telha de barro', 5: 'cobrem os telhados de ardósia', 6: 'pintam as paredes e cobrem com telha nova de olaria', 7: 'erguem sobrados de tijolo com telhado escuro', 8: 'trocam a telha por chapa de zinco', 9: 'cobrem com telha francesa e puxam os fios da luz', 10: 'trocam a telha por laje de concreto' };
   function reforma(S) {
     const idade = S.eras.idade || 0;
     if (idade < 2) return;

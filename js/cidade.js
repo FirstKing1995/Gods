@@ -10,7 +10,7 @@
   const Sim = () => G.Sim, Fam = () => G.Family;
   const DAY = () => C.DAY_MIN;
 
-  const GRANDES = ['templo', 'muralha', 'torre', 'aqueduto', 'ponte', 'castelo', 'porto', 'universidade', 'estacao', 'bonde'];   // 0.33: o bonde   // 0.32: a estação   // 0.31: a universidade   // 0.30: o porto   // a ponte de pedra veio com a Etapa 17; o castelo, com a 0.29
+  const GRANDES = ['templo', 'muralha', 'torre', 'aqueduto', 'ponte', 'castelo', 'porto', 'universidade', 'estacao', 'bonde', 'hospitalgeral'];   // 0.34: o hospital geral   // 0.33: o bonde   // 0.32: a estação   // 0.31: a universidade   // 0.30: o porto   // a ponte de pedra veio com a Etapa 17; o castelo, com a 0.29
   const INST = ['guarda', 'brigada', 'hospital', 'escola', 'biblioteca', 'mercado'];   // a ordem em que o líder olha
   Ci.GRANDES = GRANDES; Ci.INST = INST;
   Ci.isCidade = (t) => GRANDES.indexOf(t) >= 0 || INST.indexOf(t) >= 0;
@@ -51,6 +51,10 @@
     mercado: (S) => (S.soc && S.soc.vila && !S.soc.vila.fim ? '' : 'pede uma vila de fora para trocar'),
     // 0.29: a Idade Média (os dois chegam com os Reinos; o castelo pede uma cidade)
     moinho: (S) => (G.Eras && G.Eras.idade(S) >= 4 ? '' : 'chega com a Idade dos Reinos'),
+    // 0.34: a Era Moderna (chega com a Era Elétrica; o rádio e a garagem pedem a usina)
+    radio: (S) => (!(G.Eras && G.Eras.idade(S) >= 9) ? 'chega com a Era Elétrica' : S.buildings.some((b) => b.type === 'usina' && b.built) || (G.Eras && G.Eras.temMagia(S, 'raio')) ? '' : 'pede uma usina pronta'),
+    garagem: (S) => (!(G.Eras && G.Eras.idade(S) >= 9) ? 'chega com a Era Elétrica' : S.buildings.some((b) => b.type === 'usina' && b.built) || (G.Eras && G.Eras.temMagia(S, 'raio')) ? '' : 'pede uma usina pronta'),
+    hospitalgeral: (S) => (!(G.Eras && G.Eras.idade(S) >= 9) ? 'chega com a Era Elétrica' : vivos(S) >= 220 ? '' : 'pede uma cidade de 220 pessoas'),
     // 0.33: a Era Elétrica (chega com a Revolução Industrial; a usina pede a fábrica)
     usina: (S) => (!(G.Eras && G.Eras.idade(S) >= 8) ? 'chega com a Revolução Industrial' : S.buildings.some((b) => b.type === 'fabrica' && b.built) ? '' : 'pede uma fábrica pronta'),
     bonde: (S) => (!(G.Eras && G.Eras.idade(S) >= 8) ? 'chega com a Revolução Industrial' : vivos(S) >= 160 ? '' : 'pede uma cidade de 160 pessoas'),

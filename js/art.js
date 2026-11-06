@@ -566,10 +566,11 @@
     6: ['#4a2418', '#7e3a22', '#b0582e', '#d27a3e', '#ecaa62'],   // 0.30: a telha nova de olaria, mais clara e alaranjada
     7: ['#2e1c22', '#4c2a32', '#6e3a40', '#8e5450', '#b07a6a'],   // 0.31: o telhado escuro dos sobrados
     8: ['#2a2e34', '#3e444c', '#58606a', '#78828c', '#a4adb6'],   // 0.32: a chapa de zinco
-    9: ['#3a1412', '#6a2620', '#94402e', '#b86244', '#d68c68'] };   // 0.33: a telha francesa
+    9: ['#3a1412', '#6a2620', '#94402e', '#b86244', '#d68c68'],   // 0.33: a telha francesa
+    10: ['#3c3e42', '#5c5e60', '#808180', '#a4a39e', '#c8c6be'] };   // 0.34: a laje de concreto
   const eraCache = new WeakMap();
   A.eraImg = function (img, era) {
-    const to = ERA_TETO[Math.min(9, era)];
+    const to = ERA_TETO[Math.min(10, era)];
     if (!to || !img || !img.getContext) return img;
     let m = eraCache.get(img);
     if (!m) { m = {}; eraCache.set(img, m); }
@@ -1392,6 +1393,13 @@
       { k: P.ink2, s: P.mist, d: P.bark }],
     torre: [['...kkkk...', '..kyyyyk..', '.kkkkkkkk.', '..kwwwwk..', '..kssssk..', '..ksddsk..', '..kssssk..', '.ksssssk..', '.kssssssk.', 'kkkkkkkkkk'],
       { k: P.ink2, s: P.mist, y: P.tan, w: P.wood, d: P.ink }],
+    // 0.34: o rádio, a garagem e o hospital geral
+    radio: [['....rr....', '....kk....', '...k..k...', '...kkkk...', '..k....k..', '..kkkkkk..', '.kssssssk.', '.kswwsdsk.', '.kssssdsk.', 'kkkkkkkkkk'],
+      { k: P.ink2, r: P.red, s: P.mist, w: P.yellow, d: P.ink }],
+    garagem: [['..........', '.kkkkkkkk.', 'kssssssssk', 'kddddddddk', 'kdkkkkkkdk', 'kdkrrrrkdk', 'kdkrwwrkdk', 'kdkkkkkkdk', 'kddkddkddk', 'kkkkkkkkkk'],
+      { k: P.ink2, s: P.silver, d: P.mist, r: P.red, w: P.parch }],
+    hospitalgeral: [['..........', 'kkkkkkkkkk', 'kssssssssk', 'ksk.ss.ksk', 'kskkkkkksk', 'kssskksssk', 'ksskddkssk', 'ksskddkssk', 'kssskksssk', 'kkkkkkkkkk'],
+      { k: P.ink2, s: P.parch, d: P.ink }],
     // 0.33: a usina e o bonde
     usina: [['.kk...kk..', '.kk...kk..', '.kk..y.k..', 'kkkkkyykkk', 'krrrryyrrk', 'krwwrryyrk', 'krrrrrryrk', 'krrddrrrrk', 'kkkkkkkkkk', '..........'],
       { k: P.ink2, r: P.wood, w: P.yellow, y: P.gold, d: P.ink }],
@@ -2471,6 +2479,42 @@
     rect7(b, 33, 0, 37, 2, '#c8423a');   // a bandeira
     return b.canvas();
   }
+  // 0.34: o rádio (32 x 44, 2 x 2 passos): a casinha de concreto, a sala com a janela acesa e a antena alta em treliça
+  const CONCRETO = ['#3c3e42', '#5c5e60', '#808180', '#a4a39e', '#c8c6be'];
+  function parede(b, x0, y0, x1, y1) { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) b.set(x, y, y === y0 ? CONCRETO[4] : y === y1 ? CONCRETO[1] : (x + y * 3) % 11 === 0 ? CONCRETO[2] : CONCRETO[3]); }
+  function radioSpr() {
+    const b = new Buf(32, 44);
+    parede(b, 3, 26, 28, 41); rect7(b, 2, 24, 29, 25, CONCRETO[0]);
+    for (let y = 2; y <= 24; y++) { const hw = Math.round((y - 2) / 22 * 5); b.set(21 - hw, y, '#58606a'); b.set(21 + hw, y, '#58606a'); if (y % 4 === 0) rect7(b, 21 - hw, y, 21 + hw, y, '#78828c'); if (y % 4 === 2) { b.set(21, y, '#58606a'); } }
+    rect7(b, 20, 0, 22, 1, '#c8423a');
+    rect7(b, 6, 30, 15, 36, '#2b2b34'); rect7(b, 7, 31, 14, 35, '#f0d060'); line(b, 10, 31, 10, 35, '#2b2b34');
+    rect7(b, 20, 32, 25, 41, '#2b1d1a');
+    for (let x = 3; x <= 28; x++) b.set(x, 42, CONCRETO[0]);
+    return b.canvas();
+  }
+  // a garagem (48 x 36, 3 x 2 passos): o galpão de concreto, o portão aberto e o caminhão vermelho na porta
+  function garagemSpr() {
+    const b = new Buf(48, 36);
+    parede(b, 2, 8, 45, 33); rect7(b, 1, 6, 46, 7, CONCRETO[0]);
+    rect7(b, 6, 14, 31, 33, '#2b2b34'); for (let x = 6; x <= 31; x++) b.set(x, 14, '#58606a');
+    for (let y = 16; y <= 18; y += 2) for (let x = 7; x <= 30; x++) b.set(x, y, '#3e444c');
+    rect7(b, 36, 14, 42, 21, '#2b2b34'); rect7(b, 37, 15, 41, 20, '#c8e0f0');
+    rect7(b, 10, 22, 25, 30, '#b03a30'); rect7(b, 26, 18, 35, 30, '#c8423a'); rect7(b, 29, 20, 34, 24, '#c8e0f0'); rect7(b, 10, 22, 25, 22, '#d86a58');
+    for (const x of [14, 30]) { rect7(b, x - 3, 29, x + 3, 34, '#1f1a24'); rect7(b, x - 1, 31, x + 1, 32, '#a4adb6'); }
+    for (let x = 2; x <= 45; x++) b.set(x, 35, CONCRETO[0]);
+    return b.canvas();
+  }
+  // o hospital geral (64 x 52, 4 x 3 passos): prédio branco de dois andares, fileiras de janelas e a placa com o H
+  function hospitalGeralSpr() {
+    const b = new Buf(64, 52);
+    for (let y = 8; y <= 49; y++) for (let x = 3; x <= 60; x++) b.set(x, y, y === 8 ? '#f8f4ea' : (x + y * 3) % 13 === 0 ? '#d4d0c4' : '#e8e4d8');
+    rect7(b, 2, 6, 61, 7, CONCRETO[1]);
+    for (const y of [14, 27]) { for (const x of [7, 16, 25, 34, 43, 52]) { rect7(b, x, y, x + 5, y + 7, '#3e444c'); rect7(b, x + 1, y + 1, x + 4, y + 6, '#9ac8e0'); } for (let x = 3; x <= 60; x++) b.set(x, y + 10, '#c8c4b8'); }
+    rect7(b, 26, 38, 37, 49, '#3e444c'); rect7(b, 27, 39, 31, 49, '#9ac8e0'); rect7(b, 33, 39, 36, 49, '#9ac8e0');
+    rect7(b, 24, 0, 39, 6, '#2e6a4a'); rect7(b, 28, 1, 29, 5, '#f4f0e6'); rect7(b, 34, 1, 35, 5, '#f4f0e6'); rect7(b, 30, 3, 33, 3, '#f4f0e6');
+    for (let x = 3; x <= 60; x++) b.set(x, 50, CONCRETO[0]);
+    return b.canvas();
+  }
   // 0.33: a usina (48 x 36, 3 x 2 passos): o galpão de tijolo, as duas chaminés, os isoladores e o fio que sai para a cidade
   function usinaSpr() {
     const b = new Buf(48, 36);
@@ -2626,7 +2670,7 @@
     return b.canvas();
   }
   A.cidadeSprites = function () {
-    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr(), imprensa: imprensaSpr(), universidade: universidadeSpr(), arsenal: arsenalSpr(), fabrica: fabricaSpr(), estacao: estacaoSpr(), usina: usinaSpr(), bonde: bondeSpr() };
+    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr(), imprensa: imprensaSpr(), universidade: universidadeSpr(), arsenal: arsenalSpr(), fabrica: fabricaSpr(), estacao: estacaoSpr(), usina: usinaSpr(), bonde: bondeSpr(), radio: radioSpr(), garagem: garagemSpr(), hospitalgeral: hospitalGeralSpr() };
     for (const k of ['escola', 'biblioteca', 'hospital', 'guarda', 'brigada', 'mercado']) out[k] = [null, instituicao(k, 1), instituicao(k, 2), instituicao(k, 3)];
     return out;
   };
