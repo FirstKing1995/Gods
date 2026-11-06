@@ -565,10 +565,11 @@
     5: ['#20222e', '#343a4e', '#4c5670', '#6c7890', '#94a0b4'],   // 0.29: a ardósia da Idade Média
     6: ['#4a2418', '#7e3a22', '#b0582e', '#d27a3e', '#ecaa62'],   // 0.30: a telha nova de olaria, mais clara e alaranjada
     7: ['#2e1c22', '#4c2a32', '#6e3a40', '#8e5450', '#b07a6a'],   // 0.31: o telhado escuro dos sobrados
-    8: ['#2a2e34', '#3e444c', '#58606a', '#78828c', '#a4adb6'] };   // 0.32: a chapa de zinco
+    8: ['#2a2e34', '#3e444c', '#58606a', '#78828c', '#a4adb6'],   // 0.32: a chapa de zinco
+    9: ['#3a1412', '#6a2620', '#94402e', '#b86244', '#d68c68'] };   // 0.33: a telha francesa
   const eraCache = new WeakMap();
   A.eraImg = function (img, era) {
-    const to = ERA_TETO[Math.min(8, era)];
+    const to = ERA_TETO[Math.min(9, era)];
     if (!to || !img || !img.getContext) return img;
     let m = eraCache.get(img);
     if (!m) { m = {}; eraCache.set(img, m); }
@@ -1391,6 +1392,11 @@
       { k: P.ink2, s: P.mist, d: P.bark }],
     torre: [['...kkkk...', '..kyyyyk..', '.kkkkkkkk.', '..kwwwwk..', '..kssssk..', '..ksddsk..', '..kssssk..', '.ksssssk..', '.kssssssk.', 'kkkkkkkkkk'],
       { k: P.ink2, s: P.mist, y: P.tan, w: P.wood, d: P.ink }],
+    // 0.33: a usina e o bonde
+    usina: [['.kk...kk..', '.kk...kk..', '.kk..y.k..', 'kkkkkyykkk', 'krrrryyrrk', 'krwwrryyrk', 'krrrrrryrk', 'krrddrrrrk', 'kkkkkkkkkk', '..........'],
+      { k: P.ink2, r: P.wood, w: P.yellow, y: P.gold, d: P.ink }],
+    bonde: [['kkkkkkkkkk', '....k.....', '..kkkkkk..', '.kyyyyyyk.', '.kwwywwyk.', '.kyyyyyyk.', '.kkkkkkkk.', '..k....k..', 'mmmmmmmmmm', '..........'],
+      { k: P.ink2, y: P.gold, w: P.parch, m: P.mist }],
     // 0.32: a fábrica e a estação
     fabrica: [['......kk..', '......kk..', 'k..k..kk..', 'kk.kk.kk..', 'kkkkkkkkkk', 'krrrrrrrrk', 'krwwrwwrrk', 'krrrrddrrk', 'kkkkkkkkkk', '..........'],
       { k: P.ink2, r: P.wood, w: P.yellow, d: P.ink }],
@@ -2465,6 +2471,34 @@
     rect7(b, 33, 0, 37, 2, '#c8423a');   // a bandeira
     return b.canvas();
   }
+  // 0.33: a usina (48 x 36, 3 x 2 passos): o galpão de tijolo, as duas chaminés, os isoladores e o fio que sai para a cidade
+  function usinaSpr() {
+    const b = new Buf(48, 36);
+    tijolos(b, 2, 12, 45, 33);
+    for (let y = 8; y <= 12; y++) { const hw = Math.round((y - 8) / 4 * 23); rect7(b, 23 - hw, y, 23 + hw, y, y === 12 ? '#3e444c' : '#78828c'); }
+    for (const x of [7, 15]) { tijolos(b, x, 0, x + 4, 12); rect7(b, x - 1, 0, x + 5, 1, '#3e1e1c'); }
+    for (const x of [6, 17, 28]) { rect7(b, x, 17, x + 6, 25, '#2b2b34'); rect7(b, x + 1, 18, x + 5, 24, '#f0d060'); line(b, x + 3, 18, x + 3, 24, '#2b2b34'); }
+    rect7(b, 37, 24, 43, 33, '#2b1d1a'); rect7(b, 38, 25, 42, 26, '#58606a');
+    line(b, 41, 2, 41, 11, '#58606a'); rect7(b, 37, 3, 45, 3, '#58606a'); for (const x of [37, 41, 45]) { b.set(x, 2, '#f4f0e6'); b.set(x, 1, '#c8d4e0'); }
+    const raio = ['#f0d060', '#f8e888']; line(b, 30, 2, 27, 5, raio[0]); line(b, 27, 5, 30, 5, raio[1]); line(b, 30, 5, 27, 8, raio[0]);
+    for (let x = 2; x <= 45; x++) b.set(x, 34, TIJOLO[0]);
+    return b.canvas();
+  }
+  // o bonde (64 x 36, 4 x 2 passos): a rua de paralelepípedo com o trilho, o poste com o fio e o carro amarelo
+  function bondeSpr() {
+    const b = new Buf(64, 36);
+    for (let y = 26; y <= 35; y++) for (let x = 0; x <= 63; x++) b.set(x, y, (x + (y % 2) * 2) % 4 === 0 || y % 3 === 2 ? '#4c5670' : '#6c7890');
+    for (let x = 0; x <= 63; x++) { b.set(x, 29, '#2a2e34'); b.set(x, 33, '#2a2e34'); }
+    for (const x of [4, 59]) { rect7(b, x, 2, x + 1, 26, '#3e444c'); rect7(b, x - 2, 2, x + 3, 3, '#2a2e34'); rect7(b, x - 3, 4, x - 2, 5, '#f0d060'); }
+    for (let x = 4; x <= 60; x++) b.set(x, 5, '#2a2e34');
+    line(b, 30, 5, 34, 11, '#2a2e34');
+    rect7(b, 16, 12, 49, 13, '#58606a');
+    rect7(b, 15, 14, 50, 27, '#d8a830'); rect7(b, 15, 24, 50, 27, '#a87820'); rect7(b, 15, 14, 50, 14, '#f0d060');
+    for (const x of [18, 25, 33, 40]) { rect7(b, x, 16, x + 5, 21, '#2b2b34'); rect7(b, x + 1, 17, x + 4, 20, '#c8e0f0'); }
+    rect7(b, 47, 16, 49, 23, '#6a2e26');
+    for (const x of [21, 44]) { rect7(b, x - 2, 27, x + 2, 31, '#1f1a24'); b.set(x, 29, '#a4adb6'); }
+    return b.canvas();
+  }
   // 0.32: a fábrica (48 x 52, 3 x 3 passos): galpão de tijolo com telhado em dentes de serra e a chaminé alta
   function fabricaSpr() {
     const b = new Buf(48, 52);
@@ -2592,7 +2626,7 @@
     return b.canvas();
   }
   A.cidadeSprites = function () {
-    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr(), imprensa: imprensaSpr(), universidade: universidadeSpr(), arsenal: arsenalSpr(), fabrica: fabricaSpr(), estacao: estacaoSpr() };
+    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr(), imprensa: imprensaSpr(), universidade: universidadeSpr(), arsenal: arsenalSpr(), fabrica: fabricaSpr(), estacao: estacaoSpr(), usina: usinaSpr(), bonde: bondeSpr() };
     for (const k of ['escola', 'biblioteca', 'hospital', 'guarda', 'brigada', 'mercado']) out[k] = [null, instituicao(k, 1), instituicao(k, 2), instituicao(k, 3)];
     return out;
   };

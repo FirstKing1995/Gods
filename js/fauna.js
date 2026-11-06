@@ -178,7 +178,26 @@
       const x = h.x + rint(S, -C.FAUNA_HOME_R, C.FAUNA_HOME_R), y = h.y + rint(S, -C.FAUNA_HOME_R, C.FAUNA_HOME_R);
       if (!tileOk(w, x, y)) continue;
       const path = W.findPath(w, here, y * w.W + x, 60, 1);
-      if (path) { setPath(e, path); return true; }
+      if (path) { setPath(e, path); return path.length > 0; }   // 0.33: o caminho vazio (o alvo era o próprio lugar) não é andar
+    }
+    return false;
+  }
+  // 0.33: o bicho que ficou num bolsão (a ave pousou no meio da mata fechada, a árvore cresceu, a obra cercou) não achava
+  // caminho nunca mais e ficava parado para sempre: nos mundos velhos, eles se acumulavam. Depois de umas tentativas, ele
+  // sai dali: a ave voa, o de chão reaparece no pasto de casa. Só em lugar de onde se chega à volta do ninho.
+  function soltar(S, e, h) {
+    const w = S.world, R = C.FAUNA_HOME_R;
+    for (let k = 0; k < 40; k++) {
+      const x = h.x + rint(S, -R, R), y = h.y + rint(S, -R, R);
+      if (!tileOk(w, x, y)) continue;
+      const a = h.x + rint(S, -R, R), b = h.y + rint(S, -R, R);
+      if (!tileOk(w, a, b)) continue;
+      const path = W.findPath(w, y * w.W + x, b * w.W + a, 60, 1);
+      if (!path || !path.length) continue;
+      e.preso = 0;
+      if (F.spec(e).bird) { e.fly = { x: x + 0.5, y: y + 0.5 }; e.path = null; e.state = 'fuga'; e.wait = 0; S.events.push({ k: 'birdsUp', x: e.x, y: e.y }); }
+      else { e.x = e.px = x + 0.5; e.y = e.py = y + 0.5; e.path = null; e.pathI = 0; }
+      return true;
     }
     return false;
   }
@@ -367,7 +386,8 @@
       e.wait -= dt;
       const h = F.herdOf(S, e);
       if (e.wait > 0 || !h) continue;
-      wander(S, e, h);
+      if (wander(S, e, h)) e.preso = 0;
+      else if ((e.preso = (e.preso || 0) + 1) >= C.FAUNA_PRESO) soltar(S, e, h);   // 0.33
       e.wait = rint(S, 30, 150);
     }
     if (f.ents.some((e) => e.gone)) f.ents = f.ents.filter((e) => !e.gone);

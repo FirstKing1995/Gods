@@ -3,7 +3,7 @@
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.32.0',
+    VERSION: '0.33.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -204,6 +204,11 @@
         desc: 'A casa de Deus, de pedra e de muitas mãos. Quem tem fé reza ali de manhã e ganha o dobro de fé; a festa e o rito ficam maiores perto dele.' },
       muralha: { name: 'Muralha', a: 'a', key: '', w: 3, h: 2, cost: { pedra: 200, madeira: 40 }, work: 30000, grande: true, wall: { r: 16 },
         desc: 'Um anel de pedra em volta do centro, com portão. Lobo e onça não entram, e ninguém leva a comida guardada lá dentro.' },
+      // 0.33: a Era Elétrica. A usina (obra comum) e o bonde (grande obra)
+      usina: { name: 'Usina elétrica', a: 'a', key: '', w: 3, h: 2, cost: { pedra: 120, tabuas: 50 }, extra: { ferro: 14, carvao: 30 }, work: 6000,
+        desc: 'O carvão vira luz: as casas acendem à noite. Com luz, o povo estuda até tarde (aprende as descobertas 20% mais depressa) e reclama menos. Pede a fábrica, 14 de ferro e 30 de carvão.' },
+      bonde: { name: 'Bonde', a: 'o', key: '', w: 4, h: 2, cost: { pedra: 160, tabuas: 80 }, extra: { ferro: 24 }, work: 34000, grande: true,
+        desc: 'Trilho na rua, fio no alto e um carro amarelo que atravessa a cidade: o povo todo anda 25% mais depressa. Pede 24 de ferro.' },
       // 0.32: a Revolução Industrial. A fábrica (obra comum) e a estação de trem (grande obra)
       fabrica: { name: 'Fábrica', a: 'a', key: '', w: 3, h: 3, cost: { pedra: 100, tabuas: 60 }, extra: { ferro: 12, carvao: 20 }, work: 5000,
         desc: 'Máquina a vapor, correias e a chaminé alta: as oficinas (marcenaria, tecelagem, ferraria) fazem tudo 50% mais depressa. Pede 12 de ferro e 20 de carvão.' },
@@ -644,6 +649,9 @@
     // 0.29: a Idade Média
     MOINHO_ROCA: 1.25, CASTELO_CRIME: 0.8, ERA_PESTE: 0.5, PESTE_PARTE: 0.2, ESTRELAS_PRAGA: 0.5,
     // 0.30: as Navegações
+    // 0.33: a Era Elétrica
+    USINA_PRAT: 1.2, USINA_DESC: 0.85, BONDE_ANDA: 1.25, ERA_APAGAO: 0.5, APAGAO_D: 4, APAGAO_CARVAO: 15, APAGAO_OFICIO: 0.75,
+    FAUNA_PRESO: 3,   // 0.33: tentativas sem achar caminho até o bicho sair do bolsão onde ficou
     // 0.32: a Revolução Industrial
     FABRICA_OFICIO: 1.5, SEIVA_OFICIO: 1.3, ESTACAO_CARGA: 1.5, ERA_GREVE: 0.5, GREVE_D: 5, GREVE_OFICIO: 0.5,
     // 0.31: a Pólvora e a Imprensa
