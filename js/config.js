@@ -3,7 +3,7 @@
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.30.0',
+    VERSION: '0.31.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -204,6 +204,13 @@
         desc: 'A casa de Deus, de pedra e de muitas mãos. Quem tem fé reza ali de manhã e ganha o dobro de fé; a festa e o rito ficam maiores perto dele.' },
       muralha: { name: 'Muralha', a: 'a', key: '', w: 3, h: 2, cost: { pedra: 200, madeira: 40 }, work: 30000, grande: true, wall: { r: 16 },
         desc: 'Um anel de pedra em volta do centro, com portão. Lobo e onça não entram, e ninguém leva a comida guardada lá dentro.' },
+      // 0.31: a Pólvora e a Imprensa. A imprensa e o arsenal (obras comuns) e a universidade (grande obra)
+      imprensa: { name: 'Imprensa', a: 'a', key: '', w: 2, h: 2, cost: { tabuas: 40, pedra: 20 }, extra: { ferro: 4 }, work: 3000,
+        desc: 'A prensa de parafuso e as letras de metal: o que se descobre vira papel e corre a aldeia. O povo aprende as descobertas 40% mais depressa. Pede 4 de ferro.' },
+      universidade: { name: 'Universidade', a: 'a', key: '', w: 4, h: 3, cost: { pedra: 180, tabuas: 80, madeira: 40 }, work: 40000, grande: true,
+        desc: 'Salas, pátio e a torre do relógio: o povo aprende 30% mais depressa, e a cada 15 dias os estudiosos adiantam a descoberta da vez.' },
+      arsenal: { name: 'Arsenal', a: 'o', key: '', w: 2, h: 2, cost: { pedra: 60, tabuas: 20 }, extra: { ferro: 8, carvao: 10 }, work: 3000,
+        desc: 'A pólvora guardada e as armas de fogo. Na guerra entre tribos, quem tem arsenal perde menos e o outro perde mais; os piratas não desembarcam. Pede 8 de ferro e 10 de carvão.' },
       // 0.30: as Navegações. O porto (grande obra, na beira do mar) e o galeão (o navio grande)
       porto: { name: 'Porto', a: 'o', key: '', w: 4, h: 2, cost: { pedra: 120, tabuas: 80, madeira: 40 }, work: 20000, grande: true, env: 'mar',
         desc: 'Cais de pedra e de tábua, guindaste e armazém de carga. As viagens ficam bem menos perigosas, as colônias mandam metade a mais, e a cada 10 dias um barco de fora troca o que sobra por sal, ferro e ouro.' },
@@ -632,6 +639,8 @@
     // 0.29: a Idade Média
     MOINHO_ROCA: 1.25, CASTELO_CRIME: 0.8, ERA_PESTE: 0.5, PESTE_PARTE: 0.2, ESTRELAS_PRAGA: 0.5,
     // 0.30: as Navegações
+    // 0.31: a Pólvora e a Imprensa
+    IMPRENSA_PRAT: 1.4, UNIV_PRAT: 1.3, UNIV_HORAS: 12, UNIV_D: 15, CANTOS_PRAT: 1.3, ERA_REVOLTA: 0.5, REVOLTA_DESC: 10,
     GALEAO_GENTE: 16, GALEAO_CARGA: 1.5, PORTO_PERIGO: 0.5, PORTO_CARGA: 1.5, MARES_PERIGO: 0.6, COMERCIO_D: 10, ERA_PIRATAS: 0.6, PIRATAS_LEVA: 0.15,
     // 0.28: as tribos. Nasce no nível TRIBO_NIVEL de Deus, por TRIBO_CUSTO de Poder, a TRIBO_DIST passos ou mais da outra
     // (até TRIBO_MAX tribos). Elas se conhecem quando alguém chega a TRIBO_VE passos do acampamento da outra, ou quando

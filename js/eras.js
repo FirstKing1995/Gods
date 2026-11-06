@@ -26,6 +26,8 @@
     { nome: 'Idade Média', curto: 'castelos e moinhos', escrita: true, magia: 'estrelas', gente: 120, marco: ['moinho', 'castelo'], txt: 'O moinho gira e a pedra dos castelos sobe: começou a Idade Média.', txtM: 'As mais velhas aprenderam a ler as estrelas e o tempo das coisas: começou, do jeito do conselho, a Idade Média.' },
     // 0.30: a Idade das Navegações (o conselho chega a ela pelas marés)
     { nome: 'Idade das Navegações', curto: 'navegações e comércio', escrita: true, magia: 'mares', gente: 160, marco: ['porto', 'galeao'], txt: 'Velas grandes saem do porto e voltam cheias: começou a Idade das Navegações.', txtM: 'As mais velhas cantam para o mar, e o mar escuta: começou, do jeito do conselho, a Idade das Navegações.' },
+    // 0.31: a Idade da Pólvora e da Imprensa (o conselho chega a ela pelos cantos)
+    { nome: 'Idade da Pólvora e da Imprensa', curto: 'pólvora e imprensa', escrita: true, magia: 'cantos', gente: 200, marco: ['imprensa', 'universidade'], txt: 'A prensa imprime o que se sabe e a pólvora troveja: começou a Idade da Pólvora e da Imprensa.', txtM: 'As mais velhas cantam tudo o que sabem, e ninguém esquece mais nada: começou, do jeito do conselho, a Idade da Pólvora e da Imprensa.' },
   ];
   E.init = function (S) {
     const e = S.eras || (S.eras = {});
@@ -103,6 +105,7 @@
     runas: { nome: 'Runas', de: 'das runas', txt: 'As mais velhas gravaram runas nas pedras das casas: a pedra aquece, e quem dorme sente 4 °C a mais.' },
     ervas: { nome: 'Ervas', de: 'das ervas', txt: 'O conselho juntou o saber das ervas e dos cantos: a febre pesa bem menos, e a saúde volta mais depressa.' },
     circulos: { nome: 'Círculos', de: 'dos círculos', txt: 'Círculos de pedra em volta da roça: a terra rende 20% mais.' },
+    cantos: { nome: 'Cantos', de: 'dos cantos', txt: 'O conselho canta tudo o que se sabe, de boca em boca: o povo aprende as descobertas 30% mais depressa.' },   // 0.31
     mares: { nome: 'Marés', de: 'das marés', txt: 'As mais velhas aprenderam o canto das marés: o navio sai na hora certa e o mar leva bem menos gente.' },   // 0.30
     estrelas: { nome: 'Estrelas', de: 'das estrelas', txt: 'As mais velhas leem as estrelas: sabem quando vem a chuva e a geada, e a praga pega a roça pela metade.' },   // 0.29
   };
@@ -110,7 +113,7 @@
   // o conselho aprende um saber por idade (a partir da Pedra Polida), em vez de esperar o metal
   function magia(S) {
     if (E.ordem(S) !== 'conselho') return;
-    const ordem = ['runas', 'ervas', 'circulos', 'estrelas', 'mares'], e = S.eras;
+    const ordem = ['runas', 'ervas', 'circulos', 'estrelas', 'mares', 'cantos'], e = S.eras;
     for (let k = 0; k < ordem.length; k++) {
       const id = ordem[k];
       if (e.magia[id]) continue;
@@ -125,6 +128,10 @@
   E.rocaMult = (S) => (E.temMagia(S, 'circulos') ? 1.2 : 1) * (S.buildings.some((b) => b.type === 'moinho' && b.built) ? C.MOINHO_ROCA : 1);
   E.temCastelo = (S) => S.buildings.some((b) => b.type === 'castelo' && b.built);
   E.temPorto = (S) => S.buildings.some((b) => b.type === 'porto' && b.built);   // 0.30
+  // 0.31: o que apressa o aprendizado (a imprensa, a universidade e os cantos do conselho) e o arsenal
+  const tem = (S, k) => S.buildings.some((b) => b.type === k && b.built);
+  E.temArsenal = (S) => tem(S, 'arsenal');
+  E.pratMult = (S) => (tem(S, 'imprensa') ? C.IMPRENSA_PRAT : 1) * (tem(S, 'universidade') ? C.UNIV_PRAT : 1) * (E.temMagia(S, 'cantos') ? C.CANTOS_PRAT : 1);
 
   // ---------- o desafio de cada idade ----------
   const pronto = (S, k) => !(S.eras.prox[k] > S.t);
@@ -166,9 +173,18 @@
       Sim().chron(S, 'A Grande Peste chegou pela trilha: ' + n + (n === 1 ? ' pessoa caiu' : ' pessoas caíram') + ' de febre de uma vez. Quem tem casa de cura sofre menos.');
       return;
     }
+    // 0.31: Pólvora e Imprensa: a Revolta dos Panfletos (a palavra impressa corre, e o povo se agita); a guarda acalma
+    if (id >= 7 && pronto(S, 'revolta') && r < C.ERA_REVOLTA / C.YEAR_DAYS) {
+      S.eras.prox.revolta = S.t + 2 * YEAR(); S.stats.revoltas = (S.stats.revoltas || 0) + 1;
+      if (G.Cidade && G.Cidade.nivel && G.Cidade.nivel(S, 'guarda')) { Sim().chron(S, 'Folhas impressas apareceram nas portas, chamando o povo contra quem manda. A guarda recolheu os papéis e conversou na praça: a raiva passou.'); return; }
+      if (G.Soc && G.Soc.addDesc) for (const p of S.people) if (p.alive && !p.fora) G.Soc.addDesc(S, p, C.REVOLTA_DESC, 'humor');
+      Sim().chron(S, 'Folhas impressas apareceram nas portas, chamando o povo contra quem manda. A praça encheu de gente brava. Uma guarda teria acalmado.');
+      return;
+    }
     // 0.30: Navegações: os piratas (velas estranhas na costa); a torre de vigia vê antes, e o povo esconde tudo
     if (id >= 6 && pronto(S, 'piratas') && S.buildings.some((b) => (b.type === 'porto' || b.type === 'navio' || b.type === 'galeao') && b.built) && r < C.ERA_PIRATAS / C.YEAR_DAYS) {
       S.eras.prox.piratas = S.t + 2 * YEAR(); S.stats.piratas = (S.stats.piratas || 0) + 1;
+      if (E.temArsenal(S)) { Sim().chron(S, 'Velas estranhas apareceram na costa. Do arsenal saiu o trovão da pólvora, e os piratas viraram o barco antes de chegar à praia.'); return; }   // 0.31
       if (S.buildings.some((b) => b.type === 'torre' && b.built)) { Sim().chron(S, 'Velas estranhas apareceram na costa. A torre de vigia viu de longe, o povo escondeu tudo, e os piratas foram embora com as mãos vazias.'); return; }
       const levou = [];
       for (const k of ['peixe', 'carne', 'defumado', 'frutas', 'sal', 'ferro', 'ouro', 'tabuas']) { const n = Math.floor((S.stock[k] || 0) * C.PIRATAS_LEVA); if (n > 0) { S.stock[k] -= n; levou.push(n + ' de ' + ((G.AI && G.AI.RES_LABEL && G.AI.RES_LABEL[k]) || k)); } }
@@ -198,11 +214,21 @@
     magia(S);
     desafios(S);
     reforma(S);
+    estudos(S);
   };
+  // 0.31: a cada UNIV_D dias, os estudiosos da universidade adiantam a descoberta da vez
+  function estudos(S) {
+    if (S.safe || S.resumido || !tem(S, 'universidade') || S.ck.day % C.UNIV_D !== 0) return;
+    const aberta = G.Tech && G.Tech.open ? G.Tech.open(S) : null;
+    if (!aberta) return;
+    G.Tech.addPractice(S, aberta, C.UNIV_HORAS, null);
+    S.stats.estudos = (S.stats.estudos || 0) + 1;
+    if (S.stats.estudos === 1) Sim().chron(S, 'Os primeiros estudiosos da universidade passaram a noite com os livros: a descoberta que o povo procura chegou mais perto.');
+  }
   // 0.27: quando o povo muda de idade, as construções vão sendo refeitas no jeito novo, poucas por dia (as mais antigas
   // primeiro). O jeito aparece no telhado: sapê até a Pedra Polida, sapê trançado no Bronze, tabuinha no Ferro, telha
   // de barro nos Reinos
-  const REFORMA_TXT = { 2: 'trançam o sapê novo, mais firme', 3: 'trocam o sapê por tabuinhas de madeira', 4: 'cobrem os telhados com telha de barro', 5: 'cobrem os telhados de ardósia', 6: 'pintam as paredes e cobrem com telha nova de olaria' };
+  const REFORMA_TXT = { 2: 'trançam o sapê novo, mais firme', 3: 'trocam o sapê por tabuinhas de madeira', 4: 'cobrem os telhados com telha de barro', 5: 'cobrem os telhados de ardósia', 6: 'pintam as paredes e cobrem com telha nova de olaria', 7: 'erguem sobrados de tijolo com telhado escuro' };
   function reforma(S) {
     const idade = S.eras.idade || 0;
     if (idade < 2) return;

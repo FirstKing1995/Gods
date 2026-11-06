@@ -197,7 +197,8 @@
     const seguros = [];
     for (const t of [x, y]) {
       if (G.Eras && G.Eras.temCastelo && G.Eras.temCastelo(t)) { seguros.push(T.nome(t)); continue; }   // 0.29: o castelo segura
-      const n = vivos(t).length > 40 ? 2 : 1;
+      const outro = t === x ? y : x, polv = (k) => G.Eras && G.Eras.temArsenal && G.Eras.temArsenal(k);   // 0.31: a pólvora
+      const n = Math.max(polv(t) ? 0 : 1, (vivos(t).length > 40 ? 2 : 1) - (polv(t) ? 1 : 0) + (polv(outro) ? 1 : 0));
       const lut = vivos(t).filter((p) => !p.carriedBy && G.Family.age(t, p) >= 16).sort((a, b) => a.id - b.id);
       for (let k = 0; k < n && lut.length; k++) {
         const p = lut.splice(Math.floor(sorte(par) * lut.length), 1)[0];
