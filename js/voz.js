@@ -34,6 +34,8 @@
     if (n.calor < 35) corpo.push('com frio'); if (n.saude < 50) corpo.push(o('fraco', 'fraca') + ' de saúde'); if (p.sick) corpo.push('com febre');
     if (p.preg && p.preg.known) corpo.push('grávida');
     if (corpo.length) out.push('O corpo: ' + corpo.join(', ') + '.');
+    if (G.Rpg && G.Rpg.de(p)) out.push('É ' + G.Rpg.nome(p).toLowerCase() + ', nível ' + p.rpg.nv + ' de força' + (p.rpg.lenda ? ', e o povo a chama de ' + p.rpg.lenda : '') + '.');   // 0.36
+    if (G.Isekai && G.Isekai.de(p) && p.outro.falou) out.push('Nasceu lembrando de outra vida, em outro mundo: ' + p.outro.mundo + '. Fala disso com naturalidade, mas não sabe explicar.');   // 0.40
     if (p.traits.length) out.push('Jeito: ' + p.traits.map((t) => t + (Sim.TRAIT_DESC[t] && !/\d/.test(Sim.TRAIT_DESC[t]) ? ' (' + Sim.TRAIT_DESC[t].replace(/\.$/, '') + ')' : '')).join('; ') + '.');   // sem os números do jogo
     // a família (vivos e mortos), sem inventar ninguém
     const fam = {};

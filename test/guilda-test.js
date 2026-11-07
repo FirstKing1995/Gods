@@ -1,7 +1,7 @@
 // Gods · testes da 0.37: a taberna, a guilda, as missões, os ranks e o que Deus pode fazer.
 // Uso: node test/guilda-test.js
 globalThis.G = globalThis.G || {};
-for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'sociedade', 'gente', 'cidade', 'regioes', 'mar', 'eras', 'avatar', 'visita', 'tribos', 'rpg', 'guilda', 'save', 'offline']) require('../js/' + f + '.js');
+for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'sociedade', 'gente', 'cidade', 'regioes', 'mar', 'eras', 'avatar', 'visita', 'tribos', 'rpg', 'guilda', 'isekai', 'save', 'offline']) require('../js/' + f + '.js');
 G.CFG.WORLD_GEN = 1;
 const { W, Sim, CFG: C, Rpg: R, Guilda: Gu, Save, Cidade: Ci, Family: F, Eras: E, Soc: So } = G;
 const DAY = C.DAY_MIN;

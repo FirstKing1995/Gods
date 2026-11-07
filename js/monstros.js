@@ -15,6 +15,7 @@
     goblin: { name: 'Goblin', art: 'um goblin', pl: 'Os goblins', de: 'de goblins', covil: 'Toca dos goblins', hp: 2, forca: 0.7, pack: [3, 6], min: 0, ouro: 1 },
     esqueleto: { name: 'Esqueleto', art: 'um esqueleto', pl: 'Os esqueletos', de: 'de esqueletos', covil: 'Cripta esquecida', hp: 3, forca: 1, pack: [3, 5], min: 5, ouro: 1 },
     aranha: { name: 'Aranha gigante', art: 'uma aranha gigante', pl: 'As aranhas gigantes', de: 'de aranhas', fem: 1, covil: 'Ninho de aranhas', hp: 3, forca: 1.2, pack: [2, 4], min: 5, ouro: 0 },
+    dragao: { name: 'Dragão', art: 'o dragão', pl: 'O dragão', de: 'de dragão', covil: 'Ninho do dragão', hp: 160, forca: 3, pack: [1, 1], min: 9999, ouro: 0, boss: 1, verbo: 'vem' },
     ogro: { name: 'Ogro', art: 'um ogro', pl: 'Os ogros', de: 'de ogros', covil: 'Caverna do ogro', hp: 7, forca: 2, pack: [1, 2], min: 10, ouro: 3 },
   };
   function sorte(S, sal) {
@@ -53,6 +54,7 @@
     m.covis.push(c);
     S.stats.covis = (S.stats.covis || 0) + 1;
     const T = Mo.TIPOS[k];
+    if (T.boss) return c;   // 0.40: o dragão tem a crônica dele
     if (S.stats.covis === 1) Sim().chron(S, 'Quem foi longe voltou contando: há um covil no mato, ' + T.covil.toLowerCase() + '. À noite, sai coisa de lá. Até agora, ninguém foi ver de perto.');
     else if (!S.safe) Sim().toast(S, 'Apareceu um covil no mapa: ' + T.covil + '.', 'warn');
     return c;
@@ -86,11 +88,13 @@
     }
   };
   Mo.bando = function (S, c) {
-    const T = Mo.TIPOS[c.m], n = T.pack[0] + Math.floor(sorte(S, c.id * 5) * (T.pack[1] - T.pack[0] + 1)) + (c.nv - 1);
+    const T = Mo.TIPOS[c.m], n = T.pack[0] + Math.floor(sorte(S, c.id * 5) * (T.pack[1] - T.pack[0] + 1)) + (T.boss ? 0 : c.nv - 1);
     c.ataque = S.t + (C.COVIL_RAID[0] + sorte(S, c.id * 7) * (C.COVIL_RAID[1] - C.COVIL_RAID[0])) * DAY() * (G.Guilda && G.Guilda.temGuilda(S) ? 1 : C.COVIL_SEM_GUILDA);
     const made = G.Narr.spawnMonstros(S, c.m, n);
     if (!made) return 0;
+    if (T.boss) for (const e of S.narr.ents) if (e.m === c.m && !e.gone) { e.cov = c.id; if (c.hp) e.hp = c.hp; }   // 0.40: a ferida do dragão não fecha entre uma descida e outra
     c.bandos++; S.stats.bandos = (S.stats.bandos || 0) + 1;
+    if (G.Isekai) G.Isekai.aoDescer(S, c);   // 0.40: o dragão chega queimando
     if (S.stats.bandos === 1) Sim().chron(S, 'Pela primeira vez, ' + T.pl.toLowerCase() + ' vieram até a vila. O povo correu para o fogo.');
     Mo.chamaHerois(S);
     return made;
@@ -112,11 +116,13 @@
     const principal = dano === undefined;   // 0.39: o golpe que espirra não espirra de novo
     e.hp = (e.hp === undefined ? T.hp : e.hp) - (principal && G.Magia ? G.Magia.dano(p) : dano || 1);
     if (principal && G.Magia) G.Magia.espalha(S, e, p);
+    if (T.boss && e.cov) { const c0 = Mo.covil(S, e.cov); if (c0) c0.hp = Math.max(1, e.hp); }
     if (a) a.fought = (a.fought || 0) + 1;
     if (e.hp > 0) return 'acertou';
     e.gone = true;
     if (a) a.killed++;
     S.stats.monstros = (S.stats.monstros || 0) + 1;
+    if (T.boss && G.Isekai) { G.Isekai.lenda(S, p); return 'morto'; }   // 0.40
     if (R()) R().ganha(S, p, 6 + T.hp * 2, 'luta');
     if (T.ouro && S.stock.ouro !== undefined && sorte(S, e.id) < 0.25) { S.stock.ouro += T.ouro; Sm.float(S, e.x, e.y, '+' + T.ouro + ' ouro'); }
     if (S.stats.monstros === 1) Sm.chron(S, p.name + ' enfrentou ' + T.art + ' e derrubou. O povo ficou olhando, e no outro dia todo mundo queria aprender a lutar.');

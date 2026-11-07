@@ -102,7 +102,7 @@
   function parte(S, m, grupo, sonho) {
     const g = S.guilda, T = Gu.TIPOS[m.tipo];
     const dias = T.dias[0] + sorte(S, m.id * 11) * (T.dias[1] - T.dias[0]);
-    const forca = grupo.reduce((a, p) => a + p.rpg.nv, 0);
+    const forca = grupo.reduce((a, p) => a + p.rpg.nv + (G.Isekai && G.Isekai.tem(p, 'sorte') ? 15 : 0), 0);   // 0.40: a sorte de outro mundo
     g.quadro = g.quadro.filter((x) => x !== m);
     const ida = { id: m.id, tipo: m.tipo, covil: m.covil || 0, nv: m.nv || 0, nome: m.nome || '', t0: S.t, volta: S.t + dias * DAY(), ids: grupo.map((p) => p.id), nomes: grupo.map((p) => p.name), forca, sonho: sonho ? 1 : 0 };
     for (const p of grupo) { So().sair(S, p, 'missao'); p.away.vila = 0; p.away.mar = 1; p.away.missao = 1; }
@@ -130,7 +130,7 @@
     volta.forEach((p, k) => {
       So().voltar(S, p, cx + (k % 3), cy + Math.floor(k / 3));
       if (!ok) p.needs.saude = Math.max(25, p.needs.saude - 40);
-      R().ganha(S, p, (ok ? 10 : 3) * (Gu.rankM(ida) + 1), 'luta');
+      R().ganha(S, p, (ok ? 15 : 4) * (Gu.rankM(ida) + 1), 'luta');
       Sm.say(S, p, ok ? 'Voltamos!' : 'Foi por pouco.', true);
     });
     if (G.Soc && G.Soc.reindex) G.Soc.reindex(S);

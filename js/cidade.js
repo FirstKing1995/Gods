@@ -337,6 +337,14 @@
     if (casas.length < C.FOGO_ACASO_CASAS || S.rng.next() >= C.FOGO_ACASO) return;
     c.faisca = S.t + (10 + S.rng.next() * 7) * 60;
   }
+  // 0.40: pôr fogo numa obra de fora (o dragão)
+  Ci.queima = function (S, b) {
+    const c = S.cidade;
+    if (!c || !S.soc || b.fogo) return false;
+    b.fogo = S.t; S.soc.arde = 1; c.fogos++;
+    if (!S.safe) S.events.push({ k: 'soc', ev: 'fogo', on: true, bid: b.id, x: b.x + b.w / 2, y: b.y + b.h / 2 });
+    return true;
+  };
   function faiscaHora(S) {
     const c = S.cidade;
     if (!c.faisca || S.t < c.faisca) return;

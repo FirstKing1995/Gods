@@ -109,6 +109,7 @@
     const r = p.rpg || (p.rpg = { por: {} });
     r.por = r.por || {};
     if (por) r.por[por] = (r.por[por] || 0) + n;
+    if (G.Isekai) n *= G.Isekai.xp(p);   // 0.40: quem veio de outro mundo
     if (r.cls) { r.xp += n; sobe(S, p); return; }
     r.xp0 = (r.xp0 || 0) + n;
     if (r.xp0 >= 30 && adulto(S, p) && herois(S).length < teto(S)) R.desperta(S, p);

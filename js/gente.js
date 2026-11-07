@@ -344,6 +344,7 @@
     if (mem(S, p, 'aprendeuCom')) add(26, 'Aprendi uma coisa nova hoje.', 'Alguém ensinou.', 'aprendeu');
     if (mem(S, p, 'nasceuFilho')) add(48, 'Meu filho nasceu. Não cabe em mim.', 'Um filho nasceu.', 'filho');
     if (mem(S, p, 'novoPar')) add(40, 'Acho que tô apaixonad' + oa(p) + '.', 'Tem um par novo.', 'novoPar');
+    if (G.Isekai && G.Isekai.de(p) && p.outro.falou) add(14, 'Lembro de ' + p.outro.mundo + '.', 'Veio de outro mundo.', 'outro');   // 0.40
     // o gosto e o dia
     if (S.ck.season === g.estacao) add(10, 'Adoro ' + Ge.EST[g.estacao] + '.', 'É a estação de que mais gosta.', 'estacao');
     if (p.fe >= 85) add(12, 'Sinto que alguém olha por nós.', 'Fé ' + Math.round(p.fe) + '.', 'fe');

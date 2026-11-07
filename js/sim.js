@@ -1090,6 +1090,7 @@
     if (G.Guilda) G.Guilda.daily(S);   // 0.37: as missões
     if (G.Monstros) G.Monstros.daily(S);   // 0.38: os covis
     if (G.Magia) G.Magia.daily(S);   // 0.39: quem acorda, quem cura
+    if (G.Isekai) G.Isekai.daily(S);   // 0.40: o dragão e as almas
     if (G.Eras) G.Eras.daily(S);   // Etapas 19 e 20: a idade, o rumo, a magia, o desafio de cada idade
     if (G.Avatar) G.Avatar.daily(S);   // Etapa 21: o abençoado (a pergunta, o líder nato)
     if (G.Life) G.Life.daily(S);

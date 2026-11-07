@@ -463,12 +463,13 @@
     for (const e of wolves) { const d = Math.hypot(e.x - cx, e.y - cy); if (d < bd) { bd = d; hit = e; } }
     if (!hit && !wolves.some((e) => Math.hypot(e.x - cx, e.y - cy) < 6)) return null;
     const a = n.active.lobos;
-    if (hit) { hit.gone = true; if (a) a.killed++; }
-    for (const e of wolves) if (!e.gone) goAway(S, e);
+    if (hit && hit.m && G.Monstros.TIPOS[hit.m].boss) { hit.hp = Math.max(1, hit.hp - C.DRAGAO_RAIO); if (hit.cov) { const c0 = G.Monstros.covil(S, hit.cov); if (c0) c0.hp = hit.hp; } hit = null; }   // 0.40: no dragão, o raio só machuca
+    else if (hit) { hit.gone = true; if (a) a.killed++; }
+    for (const e of wolves) if (!e.gone && !(e.m && G.Monstros.TIPOS[e.m].boss)) goAway(S, e);
     G.God.answerKind(S, ['lobos']);
     G.God.align(S, 2);
     for (const p of alive(S)) if (Math.hypot(p.x - cx, p.y - cy) < 10) { G.God.faith(S, p, 3); Sim().addMem(S, p, 'viuMilagre'); }
-    return hit ? 'O raio abateu um lobo. A matilha fugiu.' : 'O trovão espantou os lobos.';
+    return hit ? 'O raio abateu um lobo. A matilha fugiu.' : a && a.monstro ? 'O raio caiu no meio deles.' : 'O trovão espantou os lobos.';
   };
 
   // ---------- entidades: lobos e viajantes ----------
@@ -613,7 +614,7 @@
     if (!spot || n.active.lobos) return 0;
     for (let i = 0; i < pack; i++) newEnt(S, 'lobo', spot.x, spot.y, { home: spot.i, bites: 0, fur: 0, ring: S.rng.next() * Math.PI * 2, m, hp: T.hp });
     n.active.lobos = { t0: S.t, pack, bites: 0, stolen: 0, killed: 0, fought: 0, hurt: [], monstro: m };
-    Sim().toast(S, T.pl + ' vêm pela noite! São ' + pack + '.', 'bad');
+    Sim().toast(S, T.boss ? T.pl + ' desceu da serra!' : T.pl + ' vêm pela noite! São ' + pack + '.', 'bad');
     S.events.push({ k: 'narr', ev: 'lobos', on: true });
     return pack;
   };
