@@ -286,6 +286,7 @@
     $('#inspector').addEventListener('click', (e) => {
       const b = e.target.closest('[data-act]'); if (!b || !S) return;
       if (b.dataset.act === 'ia-conversa' && G.Ia) { G.Ia.conversa(S, S.people.find((q) => q.id === UI.sel.person)); return; }   // 0.25
+      if (b.dataset.act === 'rpg-bencao' && G.Rpg) { const q = S.people.find((x) => x.id === UI.sel.person), wh = G.Rpg.bencaoWhy(S, q); if (wh) UI.toast('Agora não: ' + wh + '.', 'warn'); else G.Rpg.abencoa(S, q); UI.update(0, true); return; }   // 0.36
       if (b.dataset.act === 'voz' && G.Voz) { G.Voz.abrir(S, S.people.find((q) => q.id === UI.sel.person)); return; }   // 0.24
       if (b.dataset.act === 'av-possuir' && G.Avatar) { const r = G.Avatar.possuir(S, UI.sel.person); if (!r.ok) UI.toast('Agora não: ' + r.why + '.', 'warn'); else if (UI.hooks.follow) UI.hooks.follow(UI.sel.person); return; }   // Etapa 21
       if (b.dataset.act === 'av-soltar' && G.Avatar) { G.Avatar.soltar(S); return; }
@@ -907,6 +908,7 @@
         tracos: `<div class="chips">${indoleChips(p)}${p.traits.map((t) => `<span class="chip" title="${esc(Sim.TRAIT_DESC[t])}">${esc(t)}</span>`).join('')}${criadoChip(p)}</div>`,
         soc: socLine(p) + avatarLine(p),   // Etapa 14: a pena, o descontentamento, o que só Deus viu; Etapa 21: o avatar
         povo: povoChips(p),   // Etapa 12: o povo da pessoa e os dons dela
+        rpg: rpgHTML(p),   // 0.36: profissão, classe, nível, habilidades
         posses: p.alive ? gear(p) : '',
         barras: p.alive ? `<div class="needs">${needs}</div>` : '',
         familia: fam ? sec('Família', `<div class="kv fam">${fam}</div>`) : '',
@@ -1154,6 +1156,30 @@
   function feel(t) { return t >= 30 ? 'com calor' : t >= C.COMFORT ? 'confortável' : t >= 8 ? 'com frio' : t >= 0 ? 'com muito frio' : 'congelando'; }
   // ferramenta e roupa de quem está no inspetor
   // Etapa 12: o povo de alguém e os dons (com a fraqueza, de quem é do povo inteiro). Num mundo só de humanos, nada
+  // 0.36: a profissão e a classe na ficha
+  function rpgHTML(p) {
+    const Rp = G.Rpg;
+    if (!Rp || !p.alive) return '';
+    const prof = Rp.profissao(p), r = Rp.de(p), why = Rp.bencaoWhy(S, p);
+    let h = prof ? `<span class="chip" title="O trabalho em que é melhor">${esc(prof)}</span>` : '';
+    if (r) {
+      const c = Rp.CLASSES[r.cls];
+      h += `<span class="chip dom" title="${esc(c.desc)}"><b style="color:${c.cor}">${esc(Rp.nome(p))}</b> · nível ${r.nv}</span>`;
+      h += r.habs.map((k) => `<span class="chip" title="${esc(Rp.HABS[k].desc)}">${esc(Rp.HABS[k].name)}</span>`).join('');
+    }
+    const pct = r && r.nv < Rp.NIVEL_MAX ? Math.floor(r.xp / Rp.pede(r.nv) * 100) : 0;
+    const barra = r && r.nv < Rp.NIVEL_MAX ? `<div class="bar" title="Até o nível ${r.nv + 1}"><i style="width:${pct}%"></i></div>` : '';
+    const adulto = G.Family.age(S, p) >= 16;
+    const btn = adulto ? `<button type="button" class="btn btn-small" data-act="rpg-bencao"${why ? ' disabled' : ''} title="${esc(why ? 'Agora não: ' + why : r ? 'Empurra o nível de força' : 'Desperta a força desta pessoa')}">${r ? 'Abençoar' : 'Despertar'} (${Rp.BENCAO} de Poder)</button>` : '';
+    return h || btn ? `<div class="chips">${h}${btn}</div>${barra}` : '';
+  }
+  // 0.36: os heróis do povo, do mais forte para o menos forte
+  function heroisHTML() {
+    const Rp = G.Rpg, l = Rp.herois(S);
+    const linha = (p) => { const c = Rp.CLASSES[p.rpg.cls]; return `<li class="povo-row"><img class="ico ico-lg" src="${ic(G.Povos.iconOf(p))}" alt=""><div><b><a href="#" data-gact="heroi" data-pid="${p.id}">${esc(p.name)}</a></b> <span class="small" style="color:${c.cor}">${esc(Rp.nome(p))}</span> <span class="small ttl">nível ${p.rpg.nv}</span><div class="chips">${p.rpg.habs.map((k) => `<span class="chip" title="${esc(Rp.HABS[k].desc)}">${esc(Rp.HABS[k].name)}</span>`).join('')}</div></div></li>`; };
+    return `<p class="small">Quem luta, caça e anda longe pode despertar uma classe. O nível de força sobe com o que a pessoa faz, e na ficha de qualquer adulto você pode abençoar.</p>` +
+      `<ul class="donlist povolist">${l.length ? l.map(linha).join('') : '<li class="none small muted">Ninguém despertou ainda.</li>'}</ul>`;
+  }
   function povoChips(p) {
     const Pv = G.Povos;
     if (!Pv || !(S.povos && (S.povos.mixed || p.sangue))) return '';
@@ -1238,7 +1264,7 @@
     document.querySelectorAll('#modal-deus [data-gtab]').forEach((b) => { b.classList.toggle('on', b.dataset.gtab === deusTab); b.setAttribute('aria-selected', b.dataset.gtab === deusTab ? 'true' : 'false'); });
     $('#deus-mtitle').textContent = g.name ? g.name + ', ' + g.epithet : 'Deus';
     $('#deus-poder').textContent = fmtN(g.poder) + ' de Poder · glória ' + fmtN(g.glory);
-    $('#deus-body').innerHTML = deusTab === 'escolhidos' ? escolhidosHTML(Dz, g) : deusTab === 'atos' ? atosHTML(Dz, g) : deusTab === 'povos' && G.Povos ? povosHTML(Dz, g) : deusTab === 'memoria' && G.Memoria && S.memoria ? memoriaHTML(Dz) : deusTab === 'sociedade' && G.Soc && S.soc ? sociedadeHTML(Dz) : deusTab === 'tribos' && G.Tribos ? tribosHTML() : nivelHTML(Dz, g);
+    $('#deus-body').innerHTML = deusTab === 'escolhidos' ? escolhidosHTML(Dz, g) : deusTab === 'atos' ? atosHTML(Dz, g) : deusTab === 'povos' && G.Povos ? povosHTML(Dz, g) : deusTab === 'memoria' && G.Memoria && S.memoria ? memoriaHTML(Dz) : deusTab === 'sociedade' && G.Soc && S.soc ? sociedadeHTML(Dz) : deusTab === 'tribos' && G.Tribos ? tribosHTML() : deusTab === 'herois' && G.Rpg ? heroisHTML() : nivelHTML(Dz, g);
     $('#modal-deus').hidden = false;
   };
   // 0.28: as tribos (fazer nascer outra, olhar por cada uma, a relação entre elas e o que Deus faz por ela)
@@ -1266,9 +1292,9 @@
   function povosHTML(Dz, g) {
     const Pv = G.Povos, P = S.povos;
     const row = (k) => {
-      const d = Pv.DEF[k], n = Pv.count(S, k), why = k === 'humano' ? null : Pv.callWhy(S, k);
+      const d = Pv.DEF[k], n = Pv.count(S, k), why = Pv.callWhy(S, k);
       const dons = d.dons.map((x) => `<span class="chip dom" title="${esc(Pv.DONS[x].desc)}">${esc(Pv.DONS[x].name)}</span>`).join('') + (d.fraq ? `<span class="chip fraq" title="${esc(Pv.FRAQ[d.fraq].desc)}">${esc(Pv.FRAQ[d.fraq].name)}</span>` : '');
-      const call = k === 'humano' ? '' : `<button type="button" class="btn btn-small" data-gact="chamar" data-k="${k}"${why ? ' disabled' : ''} title="${esc(why ? 'Agora não: ' + why : 'Uma caravana sai na manhã seguinte')}">Chamar (${C.POVO_CALL} de Poder)</button>${why ? `<span class="small muted">Agora não: ${esc(why)}.</span>` : ''}`;
+      const call = `<button type="button" class="btn btn-small" data-gact="chamar" data-k="${k}"${why ? ' disabled' : ''} title="${esc(why ? 'Agora não: ' + why : 'Uma caravana sai na manhã seguinte')}">Chamar (${C.POVO_CALL} de Poder)</button>${why ? `<span class="small muted">Agora não: ${esc(why)}.</span>` : ''}`;
       return `<li class="povo-row"><img class="ico ico-lg" src="${ic(d.icon)}" alt=""><div><b>${esc(d.name)}</b> <span class="small ttl">${esc(d.alias)}</span><span class="small">${esc(d.desc)}</span>
         <span class="small st">${esc(Pv.status(S, k))}</span><div class="chips">${dons}</div>${call ? `<div class="povo-call">${call}</div>` : ''}</div></li>`;
     };
@@ -1863,6 +1889,7 @@
       }
       if (a === 'vervila') { const v = S.soc.vila; $('#modal-deus').hidden = true; if (v) UI.hooks.center((v.x + 0.5) * C.TILE, (v.y + 0.5) * C.TILE); return; }
     }
+    if (a === 'heroi') { e.preventDefault(); $('#modal-deus').hidden = true; UI.select(+b.dataset.pid, 0, true); return; }   // 0.36
     if (a === 'chamar' && G.Povos) {   // Etapa 12
       const why = G.Povos.callWhy(S, b.dataset.k);
       if (why) { UI.toast('Agora não: ' + why + '.', 'warn'); return; }
@@ -2111,20 +2138,28 @@
       const n = C.NARRADORES[k];
       return `<label class="narr-opt"><input type="radio" name="narr" value="${k}"${k === C.NARR_DEFAULT ? ' checked' : ''}><b>${esc(n.name)}</b><span>${esc(n.desc)}</span></label>`;
     }).join('');
+    // 0.36: o povo do casal: humanos vêm marcados; trocar de povo sorteia os nomes dele
+    const Pv = G.Povos;
+    $('#raca-opts').innerHTML = Pv.ORDER.map((k) => {
+      const d = Pv.DEF[k];
+      return `<label class="narr-opt"><input type="radio" name="raca" value="${k}"${k === 'humano' ? ' checked' : ''}><b><img class="ico" src="${ic(d.icon)}" alt=""> ${esc(d.name)}</b><span>${esc(d.desc)}</span></label>`;
+    }).join('');
+    const form = $('#form-names');
+    const raca = () => { const r = form.querySelector('input[name="raca"]:checked'); return r ? r.value : 'humano'; };
+    const pool = (sx) => { const k = raca(), N = Pv.NAMES[k]; return N ? N[sx] : sx === 'F' ? Sim.namePool.FEM : Sim.namePool.MASC; };
     $('#modal-names').hidden = false;
     const roll = (e) => {
       const t = e.target.closest('[data-roll]'); if (!t) return;
-      const pool = t.dataset.roll === 'F' ? Sim.namePool.FEM : Sim.namePool.MASC;
-      (t.dataset.roll === 'F' ? f : m).value = rng.pick(pool);
+      (t.dataset.roll === 'F' ? f : m).value = rng.pick(pool(t.dataset.roll));
     };
-    const form = $('#form-names');
     form.onclick = roll;
+    form.onchange = (e) => { if (e.target.name === 'raca') { f.value = rng.pick(pool('F')); m.value = rng.pick(pool('M')); } };
     form.onsubmit = (e) => {
       e.preventDefault();
       const nf = f.value.trim() || a, nm = m.value.trim() || b;
       const pick = form.querySelector('input[name="narr"]:checked');
       $('#modal-names').hidden = true;
-      cb([nf, nm], pick ? pick.value : C.NARR_DEFAULT);
+      cb([nf, nm], pick ? pick.value : C.NARR_DEFAULT, raca());
     };
     $('#btn-names-back').onclick = () => { $('#modal-names').hidden = true; if (back) back(); };
     setTimeout(() => f.focus(), 50);

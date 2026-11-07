@@ -1586,6 +1586,8 @@
       const hy = top - 2 + dy + Math.round(Math.sin(now / 400) * 0.5);
       rect(wx - 2, hy, 4, 1, col); rect(wx - 3, hy + 1, 1, 1, col); rect(wx + 2, hy + 1, 1, 1, col);
     }
+    // 0.36: quem já tem força leva uma estrelinha na cor da classe
+    if (G.Rpg && p.rpg && p.rpg.cls && p.rpg.nv >= 5 && !p.escolhido && !kid) { const col = G.Rpg.CLASSES[p.rpg.cls].cor, hy = top - 3 + dy; rect(wx - 1, hy + 1, 3, 1, col); rect(wx, hy, 1, 3, col); }
     // Etapa 14: o cocar do líder, a marca de Deus na testa, e o olho sobre quem vai fazer o que não deve (você vê tudo)
     if (S.soc && !kid) {
       if (S.soc.lider === p.id) { const hy = top - 2 + dy; rect(wx - 2, hy + 1, 1, 1, '#e43b44'); rect(wx - 1, hy, 1, 2, '#feae34'); rect(wx, hy - 1, 1, 3, '#fee761'); rect(wx + 1, hy, 1, 2, '#feae34'); rect(wx + 2, hy + 1, 1, 1, '#e43b44'); }

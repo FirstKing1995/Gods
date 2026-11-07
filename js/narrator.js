@@ -939,9 +939,13 @@
     used.add(name);
     return name;
   }
-  N.visitorData = (S, sex, age, role, used) => visitorData(S, sex, age, role, used);   // Etapa 12: as caravanas dos povos
-  function visitorData(S, sex, age, role, used) {
-    return { sex, name: freeName(S, sex, used), age, traits: Sim().pickTraits(S.rng), look: Sim().makeLook(S.rng, sex), role };
+  N.visitorData = (S, sex, age, role, used, raca) => visitorData(S, sex, age, role, used, raca);   // Etapa 12: as caravanas dos povos
+  // 0.36: raca = o povo de quem chega; sem dizer, é o povo que fundou o mundo (quem pede abrigo num mundo de elfos é elfo)
+  function visitorData(S, sex, age, role, used, raca) {
+    const pd = { sex, name: freeName(S, sex, used), age, traits: Sim().pickTraits(S.rng), look: Sim().makeLook(S.rng, sex), role };
+    const k = raca || S.raca;
+    if (k && k !== 'humano' && G.Povos) { pd.name = G.Povos.pickName(S, k, sex, used); pd.povo = k; pd.look = G.Povos.lookOf(S, k, sex, pd.look); }
+    return pd;
   }
   // o sexo que falta entre os adultos sem par (sangue novo para os casais que virão)
   function balanceSex(S) {

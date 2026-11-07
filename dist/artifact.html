@@ -643,7 +643,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 @keyframes pendPulse { 50% { box-shadow: inset 0 0 0 2px var(--gold-hi), inset 0 -4px 0 rgba(0, 0, 0, 0.25), 0 0 10px rgba(254, 231, 97, 0.35); } }
 @media (prefers-reduced-motion: reduce) { .deus-more.pend { animation: none; } }
 .deus-card { width: min(560px, 100%); max-height: calc(100% - 32px); overflow: auto; }
-.deus-tabs { margin: 2px 0 6px; }
+.deus-tabs { margin: 2px 0 6px; flex-wrap: wrap; }
 .deus-tabs button { font: inherit; font-size: 14px; color: var(--text); }
 .deus-body { display: grid; gap: 10px; }
 .deus-body h3 { font-size: 14px; color: var(--gold-hi); margin-top: 6px; }
@@ -881,6 +881,10 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     <label for="name-m">Ele</label>
     <div class="name-row"><input id="name-m" maxlength="14" autocomplete="off" required><button type="button" class="btn btn-small" data-roll="M">Sortear</button></div>
     <fieldset class="narr-pick">
+      <legend>De que povo eles são</legend>
+      <div id="raca-opts" class="narr-opts" role="radiogroup" aria-label="Povo"></div>
+    </fieldset>
+    <fieldset class="narr-pick">
       <legend>Narrador: quem conta esta história</legend>
       <div id="narr-opts" class="narr-opts" role="radiogroup" aria-label="Narrador"></div>
     </fieldset>
@@ -1004,6 +1008,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       <button type="button" role="tab" data-gtab="escolhidos">Escolhidos</button>
       <button type="button" role="tab" data-gtab="atos">Grandes atos</button>
       <button type="button" role="tab" data-gtab="povos">Povos</button>
+      <button type="button" role="tab" data-gtab="herois">Heróis</button>
       <button type="button" role="tab" data-gtab="memoria">Memória</button>
       <button type="button" role="tab" data-gtab="sociedade">Sociedade</button>
       <button type="button" role="tab" data-gtab="tribos">Tribos</button>
@@ -1313,7 +1318,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.35.0',
+    VERSION: '0.36.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -2946,7 +2951,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     }
   }
 
-  Sim.newGame = function (seed, site, names, world) {
+  Sim.newGame = function (seed, site, names, world, raca) {
     const w = world || G.W.generate(seed);
     const S = {
       v: 1, seed: seed >>> 0, world: w, t: C.START_HOUR * 60,
@@ -2963,9 +2968,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const [nf, nm] = names || Sim.randomNames(S.rng);
     const a = makePerson(S, 'F', nf, S.rng.int(19, 24));
     const b = makePerson(S, 'M', nm, S.rng.int(20, 26));
+    // 0.36: o povo que funda o mundo (sem escolha, humanos, e o sorteio do mundo fica como sempre foi)
+    if (raca && raca !== 'humano' && G.Povos && G.Povos.DEF[raca]) { S.raca = raca; G.Povos.make(S, a, raca); G.Povos.make(S, b, raca); }
     S.people.push(a, b);
     arrive(S, [a, b]);
     Sim.init(S);
+    if (S.raca && S.povos) { S.povos.st[S.raca] = { state: 'aqui', n: 0, at: S.t }; G.Povos.recount(S); }
     return S;
   };
 
@@ -3664,6 +3672,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (G.Cidade) G.Cidade.daily(S);   // Etapa 16: quem serve, a aula, a estante, a febre, a faísca, a feira
     if (G.Regioes) G.Regioes.daily(S);   // Etapa 17: o sal que chegou
     if (G.Mar) G.Mar.daily(S);   // Etapa 18: a volta da expedição, a carga do barco, as colônias
+    if (G.Rpg) G.Rpg.daily(S);   // 0.36: heróis
     if (G.Eras) G.Eras.daily(S);   // Etapas 19 e 20: a idade, o rumo, a magia, o desafio de cada idade
     if (G.Avatar) G.Avatar.daily(S);   // Etapa 21: o abençoado (a pergunta, o líder nato)
     if (G.Life) G.Life.daily(S);
@@ -4040,7 +4049,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   F.canWork = function (S, p, wk) {
     const st = F.stage(S, p);
     if (st === 'bebe' || p.labor || (p.rest && p.rest > S.t)) return false;   // resguardo depois do parto
-    if (p.sangue && G.Povos && !G.Povos.canWork(p, wk)) return false;   // Etapa 12: elfo não derruba árvore, anão não pesca
+    if (p.sangue && G.Povos && !G.Povos.canWork(p, wk, S)) return false;   // Etapa 12: elfo não derruba árvore, anão não pesca
     if (st === 'crianca') return F.age(S, p) >= C.CHILD_HELP_AGE && (wk === 'frutas' || wk === 'agua' || wk === 'criacao');   // Etapa 10: ovos e ração
     if (st === 'idoso' && F.bodyAge(S, p) >= C.OLD_HEAVY_AGE && OLD_HEAVY.has(wk)) return false;   // 0.16: o corpo já não aguenta
     return true;
@@ -5861,7 +5870,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // Etapa 11: o peixe criado por Deus, o carrinho de mão (a roda) e a Sentinela
   T.fishMult = (S, p) => (T.known(S, 'anzol') && T.hasTool(S, p) ? ganho(S, p, 'anzol', 1, C.ANZOL_FISH) : 1) * (T.known(S, 'rede') ? ganho(S, p, 'rede', 1, C.REDE_FISH) : 1) * (G.Deus && G.Deus.species(S, 'peixe') ? C.PEIXE_FISH : 1);
   T.carryMult = (S, p) => (T.known(S, 'cestos') ? ganho(S, p, 'cestos', 1, C.CESTO_CARRY) : 1) * (G.Deus && G.Deus.saber(S, 'roda') ? C.RODA_CARRY : 1) *
-    (G.Eras && G.Eras.temEstacao && G.Eras.temEstacao(S) ? C.ESTACAO_CARGA : 1) * (G.Eras && G.Eras.cargaMult ? G.Eras.cargaMult(S) : 1);   // 0.34: os motores   // 0.32: os carrinhos da estação   // com p (Etapa 15): o domínio dos cestos
+    (G.Eras && G.Eras.temEstacao && G.Eras.temEstacao(S) ? C.ESTACAO_CARGA : 1) * (G.Eras && G.Eras.cargaMult ? G.Eras.cargaMult(S) : 1) * (p && G.Rpg ? G.Rpg.cargaMult(p) : 1);   // 0.34: os motores   // 0.32: os carrinhos da estação   // com p (Etapa 15): o domínio dos cestos
   T.biteMult = (S, p) => (T.known(S, 'lanca') && T.hasTool(S, p) ? C.LANCA_BITE * (p.tool.fe ? C.FERRO_BITE : 1) : 1) * (G.Deus && G.Deus.dom(S, 'sentinela') ? C.DOM.sentinelaBite : 1) *
     (p.sangue && G.Povos ? G.Povos.bite(p) : 1);   // Etapa 12: a lança de ferro e as garras do povo-fera
   T.coldMult = (p, S) => (p.roupa ? (S && T.known(S, 'agulha') ? C.AGULHA_COLD : C.ROUPA_COLD) : 1);   // costurada com agulha, mais quente
@@ -6965,6 +6974,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       if (!p.alive || p.carriedBy || p.inTent || p.sleeping || G.Family.age(S, p) < 7) return false;
       if (p.sangue && G.Povos && G.Povos.has(p, 'faro')) return false;   // Etapa 12: o faro chega sem ser notado
       if (p.escolhido && p.escolhido.power === 'caca') return false;   // 0.27: o bicho não foge do Caçador
+      if (G.Rpg && G.Rpg.tem(p, 'passoLeve')) return false;   // 0.36
       return Math.abs(p.x - e.x) <= r && Math.abs(p.y - e.y) <= r && Math.hypot(p.x - e.x, p.y - e.y) <= r;
     };
     // 0.14: olha só os cantos do mapa em volta do bicho (o retrato do povo por passo, da IA), não o povo inteiro
@@ -7208,7 +7218,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const Sm = Sim(), sev = G.Narr ? G.Narr.kind(S).sev : 1;
     if (S.t < (p.biteCool || 0)) return;
     p.biteCool = S.t + C.LOBO_BITE_MIN;
-    const hurt = dmg * sev * (Tech().biteMult ? Tech().biteMult(S, p) : 1);   // com a lança na mão, pega menos
+    const hurt = dmg * sev * (Tech().biteMult ? Tech().biteMult(S, p) : 1) * (G.Rpg ? G.Rpg.mordida(p) : 1);   // com a lança na mão, pega menos   // 0.36: e quem tem força sofre menos
+    if (G.Rpg) G.Rpg.ganha(S, p, 2, 'luta');
     p.needs.saude -= hurt;
     const cause = kind === 'jacare' ? 'jacare' : 'bicho';
     p.dmg[cause] = (p.dmg[cause] || 0) + hurt;
@@ -7228,12 +7239,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // revidar: quem foi atacado e tem a lança na mão tenta acertar na hora
   B.fightBack = function (S, p, tgt) {
     if (!B.armed(S, p) || p.needs.saude <= 0 || B.over(S, tgt)) return false;
-    if (!S.rng.chance(B.hitChance(S, p) * 0.8)) { Sim().say(S, p, 'Sai daqui!', true); return false; }
+    if (!(G.Rpg && G.Rpg.tem(p, 'revide')) && !S.rng.chance(B.hitChance(S, p) * 0.8)) { Sim().say(S, p, 'Sai daqui!', true); return false; }
     B.strike(S, p, tgt, true);
     return true;
   };
   B.hitChance = (S, p) => C.LUTA_HIT + C.CACA_HIT_LVL * G.AI.lvl(p, 'caca') + (Tech().known(S, 'arco') ? C.ARCO_HIT * (G.Gente ? 0.5 + 0.5 * G.Gente.dom(S, p, 'arco') : 1) : 0) +   // Etapa 15: pelo domínio
-    (p.tool && p.tool.fe ? C.FERRO_LUTA : 0) + (p.sangue && G.Povos ? G.Povos.lutaHit(p) : 0);   // Etapa 12: a lança de ferro e as garras
+    (p.tool && p.tool.fe ? C.FERRO_LUTA : 0) + (p.sangue && G.Povos ? G.Povos.lutaHit(p) : 0) + (G.Rpg ? G.Rpg.acerto(p, false) : 0);   // Etapa 12: a lança de ferro e as garras
 
   // um golpe (lança) ou uma flechada, já decidido que acertou (sure) ou jogando a chance
   B.strike = function (S, p, tgt, sure) {
@@ -7245,6 +7256,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (!sure && !S.rng.chance(B.hitChance(S, p))) { Sim().say(S, p, S.rng.pick(['Errei!', 'Quase!', 'Mais uma!']), false); return 'errou'; }
     S.events.push({ k: 'hit', x: e.x, y: e.y });
     p.skills.caca = (p.skills.caca || 0) + 0.5;
+    if (G.Rpg) G.Rpg.ganha(S, p, 4, 'luta');
     S.stats.fightHits = (S.stats.fightHits || 0) + 1;
     Sim().addMem(S, p, 'lutou');
     if (tgt.kind === 'narr') return G.Narr.hitEnt(S, e, p);
@@ -8739,6 +8751,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (S.ck.season === 3) mult /= C.SNOW_SLOW;
     mult *= G.Narr.walkMult(S);   // nevasca: neve pelos joelhos
     if (G.Eras && G.Eras.walkMult) mult *= G.Eras.walkMult(S);   // 0.33: o bonde
+    if (G.Rpg) mult *= G.Rpg.passo(p);   // 0.36: pé ligeiro
     if (p.carry && p.carry.n >= 6) mult *= 0.92;
     let budget = dt / C.WALK_MIN_PER_TILE * mult, guard = 0;
     while (budget > 1e-6 && p.path && p.pathI < p.path.length && guard++ < 24) {
@@ -10070,7 +10083,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 
   // caça (lança): escolhe uma capivara, chega perto, arremessa; acertou, carneia e leva carne e couro.
   // Com o arco e flecha (Etapa 8), atira de longe, acerta mais e a flecha não espanta o bando
-  const cacaR = (S, p) => (G.Inv ? G.Inv.cacaR(S) : C.CACA_R) + (p && p.sangue && G.Povos ? G.Povos.cacaReach(p) : 0);   // o olho de arqueiro alcança mais (Etapa 12)
+  const cacaR = (S, p) => (G.Inv ? G.Inv.cacaR(S) : C.CACA_R) + (p && p.sangue && G.Povos ? G.Povos.cacaReach(p) : 0) + (p && G.Rpg ? G.Rpg.alcance(p) : 0);   // o olho de arqueiro alcança mais (Etapa 12)
   // a presa caiu: vai até ela para carnear
   function toCut(S, p, a, e) {
     const w = S.world, ex = Math.floor(e.x), ey = Math.floor(e.y);
@@ -10139,8 +10152,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         const bow = !!(G.Inv && Tech.known(S, 'arco'));
         S.events.push({ k: 'throw', x1: p.x, y1: p.y - 0.4, x2: e.x, y2: e.y, bow });
         const bando = Fa.alive(S).filter((o) => o !== e && o.h === e.h && Math.hypot(o.x - e.x, o.y - e.y) < 7);
-        if (S.rng.next() < C.CACA_HIT + C.CACA_HIT_LVL * lvl(p, 'caca') + (G.Inv ? G.Inv.cacaHit(S) * (G.Gente ? 0.5 + 0.5 * G.Gente.dom(S, p, 'arco') : 1) : 0) + (p.sangue && G.Povos ? G.Povos.cacaHit(p) : 0)) {   // Etapa 15: o arco rende pelo domínio
+        if (S.rng.next() < C.CACA_HIT + C.CACA_HIT_LVL * lvl(p, 'caca') + (G.Inv ? G.Inv.cacaHit(S) * (G.Gente ? 0.5 + 0.5 * G.Gente.dom(S, p, 'arco') : 1) : 0) + (p.sangue && G.Povos ? G.Povos.cacaHit(p) : 0) + (G.Rpg ? G.Rpg.acerto(p, true) : 0)) {   // Etapa 15: o arco rende pelo domínio
           S.events.push({ k: 'hit', x: e.x, y: e.y });
+          if (G.Rpg) G.Rpg.ganha(S, p, 3, 'caca');   // 0.36
           const r = Fa.hit ? Fa.hit(S, e, p) : (Fa.kill(S, e), 'morto');   // bicho grande pede mais de um acerto
           if (r === 'morto') {
             if (bow) S.stats.arrowKills = (S.stats.arrowKills || 0) + 1;
@@ -10174,7 +10188,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         if (!S.stats.firstHunt) { S.stats.firstHunt = true; Sim.chron(S, p.name + ' voltou da primeira caçada com ' + C.BICHOS[sp].art + ' nas costas.'); }
         else if (hb[sp] === 1) { Sim.chron(S, p.name + ' caçou ' + C.BICHOS[sp].art + ' pela primeira vez.'); Sim.addMem(S, p, 'cacouNovo'); }   // Etapa 9: cada bicho novo entra na Crônica
         const y = Fa.yieldOf ? Fa.yieldOf(S, sp) : G.Inv ? G.Inv.cacaYield(S) : { carne: C.CACA_CARNE, couro: C.CACA_COURO };   // com a faca, carneia melhor
-        const faro = p.sangue && G.Povos ? G.Povos.cacaMeat(p) : 0;   // Etapa 12: o faro tira mais carne
+        const faro = (p.sangue && G.Povos ? G.Povos.cacaMeat(p) : 0) + (G.Rpg ? G.Rpg.carne(p) : 0);   // Etapa 12: o faro tira mais carne
         p.carry = { k: 'caca', carne: y.carne + faro, couro: y.couro, n: y.carne + faro + y.couro, sp };
         a.stage = 'haul';
         return toCamp(S, p) ? RUN : FAIL;
@@ -13170,9 +13184,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     used.add(name);
     return name;
   }
-  N.visitorData = (S, sex, age, role, used) => visitorData(S, sex, age, role, used);   // Etapa 12: as caravanas dos povos
-  function visitorData(S, sex, age, role, used) {
-    return { sex, name: freeName(S, sex, used), age, traits: Sim().pickTraits(S.rng), look: Sim().makeLook(S.rng, sex), role };
+  N.visitorData = (S, sex, age, role, used, raca) => visitorData(S, sex, age, role, used, raca);   // Etapa 12: as caravanas dos povos
+  // 0.36: raca = o povo de quem chega; sem dizer, é o povo que fundou o mundo (quem pede abrigo num mundo de elfos é elfo)
+  function visitorData(S, sex, age, role, used, raca) {
+    const pd = { sex, name: freeName(S, sex, used), age, traits: Sim().pickTraits(S.rng), look: Sim().makeLook(S.rng, sex), role };
+    const k = raca || S.raca;
+    if (k && k !== 'humano' && G.Povos) { pd.name = G.Povos.pickName(S, k, sex, used); pd.povo = k; pd.look = G.Povos.lookOf(S, k, sex, pd.look); }
+    return pd;
   }
   // o sexo que falta entre os adultos sem par (sangue novo para os casais que virão)
   function balanceSex(S) {
@@ -13440,6 +13458,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 
   Pv.ORDER = ['humano', 'elfo', 'anao', 'fera'];
   Pv.OUTROS = ['elfo', 'anao', 'fera'];
+  Pv.outros = (S) => (S && S.raca ? Pv.ORDER.filter((k) => k !== S.raca) : Pv.OUTROS.slice());   // 0.36: quem é de fora depende de quem fundou
   // old: a idade em que a velhice chega · fert: filhos · walk: passo · cold: quanto o frio pega · fome · carry: carga
   // trait: o traço da aparência (p.look) · terr: o terreno de onde vêm
   Pv.DEF = {
@@ -13472,8 +13491,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     ponte: { name: 'Ponte', icon: 'meio', desc: 'Filho de dois povos: todo dia aproxima um pouco os povos dos pais.' },
   };
   Pv.FRAQ = {
-    arvore: { name: 'Não derruba árvore', desc: 'Um elfo não corta madeira.' },
-    seco: { name: 'Pé no seco', desc: 'Um anão não pesca.' },
+    arvore: { name: 'Não derruba árvore', desc: 'Um elfo não corta madeira, a não ser que só haja elfos no mundo dele.' },
+    seco: { name: 'Pé no seco', desc: 'Um anão não pesca, a não ser que só haja anões no mundo dele.' },
     fome: { name: 'Fome de bicho', desc: 'Come 40% mais.' },
   };
   // nomes de cada povo (inventados para o jogo)
@@ -13552,10 +13571,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   Pv.count = (S, kind) => (S.povos && S.povos.n ? S.povos.n[kind] || 0 : kind === 'humano' ? S.people.filter((p) => p.alive).length : 0);
 
   // ---------- o que os dons e o corpo mudam ----------
-  Pv.canWork = function (p, wk) {
-    const f = Pv.fraqOf(p);
-    if (f === 'arvore' && wk === 'madeira') return false;
-    if (f === 'seco' && wk === 'pesca') return false;
+  // 0.36: a fraqueza vale enquanto há quem faça por eles: um povo sozinho no mundo aprende a se virar
+  Pv.canWork = function (p, wk, S) {
+    const f = Pv.fraqOf(p), n = S && S.povos && S.povos.n;
+    const so = (k) => !!n && (n.humano + n.elfo + n.anao + n.fera + n.meio) === (n[k] || 0);
+    if (f === 'arvore' && wk === 'madeira') return so('elfo');
+    if (f === 'seco' && wk === 'pesca') return so('anao');
     return true;
   };
   // velocidade num trabalho (só para quem tem sangue de outro povo; 'forja' é o Ofício na ferraria)
@@ -13731,12 +13752,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       if (t === T.MOUNTAIN) mount++; else if (!G.IS_WATER[t]) grass++;
     }
     for (const o of w.objs) if (Math.abs(o.x - cx) < R && Math.abs(o.y - cy) < R) { if (o.k === 'tree' || o.k === 'stump') tree++; else if (o.k === 'rock') rock++; }
-    return { elfo: tree / 14, anao: mount / 6 + rock / 5, fera: grass / 55 - tree / 40 };
+    return { elfo: tree / 14, anao: mount / 6 + rock / 5, fera: grass / 55 - tree / 40, humano: 3 };
   }
   Pv.terrain = terrain;
   function nextKind(S) {
     const P = S.povos;
-    if (!P.order) { const t = terrain(S); P.order = Pv.OUTROS.slice().sort((a, b) => t[b] - t[a] || a.localeCompare(b)); }
+    if (!P.order) { const t = terrain(S); P.order = Pv.outros(S).sort((a, b) => t[b] - t[a] || a.localeCompare(b)); }
     for (const k of P.order) if (P.st[k].state === 'longe') return k;
     for (const k of P.order) if (P.st[k].state === 'recusado' && P.st[k].n < 2 && S.t >= P.st[k].at + C.POVO_VOLTA_D * DAY()) return k;
     return null;
@@ -13746,10 +13767,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   function members(S, kind) {
     const N = G.Narr, used = new Set(), r = S.rng;
     const mk = (sex, body, role) => {
-      const pd = N.visitorData(S, sex, Pv.realAge(kind, body), role, used);
-      pd.name = Pv.pickName(S, kind, sex, used);
-      pd.povo = kind; pd.look = Pv.lookOf(S, kind, sex, pd.look);
-      return pd;
+      return N.visitorData(S, sex, Pv.realAge(kind, body), role, used, kind);
     };
     const mom = mk('F', r.int(24, 34), 'mae'), dad = mk('M', r.int(24, 38), 'pai');
     const kid = mk(r.chance(0.5) ? 'F' : 'M', r.int(4, 12), 'filho');
@@ -13774,9 +13792,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     elfo: { seca: 15, frutas: 10 },
     anao: { ferro: 3, minerio: 4, carvao: 4 },
     fera: { carne: 16, couro: 6 },
+    humano: { madeira: 20, peixe: 12 },   // 0.36
   };
   // o que trazem (long: com o que ensinam, para a janela de quem pede para ficar)
   Pv.giftText = function (kind, long) {
+    if (kind === 'humano') return 'lenha cortada e peixe salgado' + (long ? ', e mãos para qualquer trabalho' : '');
     return kind === 'anao' ? (long ? 'a mineração e a metalurgia, ' : '') + 'três ferramentas de ferro, minério e carvão' :
       kind === 'elfo' ? 'cestos de fruta seca e fruta fresca' + (long ? ' e, para quem já usa a lança, o arco' : '') : 'carne de caça e couro curtido';
   };
@@ -13814,7 +13834,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // Deus chama um povo (nível 2, POVO_CALL de Poder): a caravana sai na manhã seguinte
   Pv.callWhy = function (S, kind) {
     const P = S.povos, g = S.god;
-    if (!P || !Pv.DEF[kind] || kind === 'humano') return 'povo desconhecido';
+    if (!P || !Pv.DEF[kind]) return 'povo desconhecido';
     if (!G.Deus || G.Deus.level(S) < C.POVO_CALL_LV) return 'chega no nível ' + C.POVO_CALL_LV + ' de Deus';
     if (P.st[kind].state === 'vindo' || P.due) return 'já há uma caravana a caminho';
     if (G.Narr && G.Narr.pending(S)) return 'há viajantes esperando resposta';
@@ -13835,7 +13855,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   Pv.init = function (S) {
     const P = S.povos || (S.povos = { conv: {}, st: {}, next: 0, order: null, due: null, called: false });
     P.conv = P.conv || {}; P.st = P.st || {};
-    for (const k of Pv.OUTROS) P.st[k] = P.st[k] || { state: 'longe', n: 0, at: 0 };
+    for (const k of Pv.ORDER) P.st[k] = P.st[k] || { state: 'longe', n: 0, at: 0 };   // 0.36: os humanos também vêm de caravana
     P.uni = P.uni || {}; P.day = P.day || {};
     for (const k in P.conv) if (P.conv[k] >= 100 && !P.uni[k]) P.uni[k] = S.t;
     recount(S);
@@ -13902,14 +13922,14 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     p_acolher: (S) => (S.stats.povosAcolhidos || 0) > 0,
     p_casal: (S) => (S.stats.casaisMistos || 0) > 0,
     p_hibrido: (S) => (S.stats.mesticos || 0) > 0,
-    p_tres: (S) => !!S.povos && Pv.OUTROS.every((k) => S.povos.st[k].state === 'aqui' && Pv.count(S, k) > 0),
+    p_tres: (S) => !!S.povos && Pv.outros(S).every((k) => S.povos.st[k].state === 'aqui' && Pv.count(S, k) > 0),
     p_uniao: (S) => (S.stats.unioes || 0) > 0,
   };
   // para a interface: o estado de cada povo numa frase
   Pv.status = function (S, kind) {
     const P = S.povos, n = Pv.count(S, kind);
-    if (kind === 'humano') return n + (n === 1 ? ' pessoa' : ' pessoas');
     const st = P ? P.st[kind] : null;
+    if (kind === 'humano' && n && !(st && st.state === 'vindo')) return n + (n === 1 ? ' pessoa' : ' pessoas');
     if (!st) return '';
     if (st.state === 'aqui') return n ? n + ' na aldeia' : 'Já moraram aqui, mas não resta ninguém';
     if (st.state === 'vindo') return 'Uma caravana vem a caminho';
@@ -19829,6 +19849,154 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   };
 })(globalThis.G = globalThis.G || {});
 
+/* ---- js/rpg.js ---- */
+/* Gods · 0.36: o começo do RPG. Você segue como Deus; quem vira herói é o povo. Cada um tem uma profissão (o trabalho em
+   que é melhor), e quem luta, caça ou anda longe pode despertar uma classe: guerreiro, arqueiro, caçador ou explorador.
+   A classe tem nível de força, que sobe com o que a pessoa faz, e habilidades que chegam nos níveis 5, 12 e 25. Deus
+   pode abençoar alguém: desperta quem ainda não despertou e empurra o nível de quem já despertou.
+   Nada aqui gasta o S.rng: o sorteio é próprio, para o mundo de sempre seguir igual onde não há herói. Sem DOM. */
+(function (G) {
+  'use strict';
+  const C = G.CFG;
+  const R = G.Rpg = {};
+  const Sim = () => G.Sim, Fam = () => G.Family;
+
+  R.CLASSES = {
+    guerreiro: { name: 'Guerreiro', nameF: 'Guerreira', cor: '#e43b44', desc: 'Fica na frente quando o bicho vem. Acerta mais e sofre menos.', habs: ['golpe', 'couraca', 'revide'] },
+    arqueiro: { name: 'Arqueiro', nameF: 'Arqueira', cor: '#63c74d', desc: 'Olho treinado e mão firme. Acerta de longe, antes de o bicho chegar.', habs: ['certeiro', 'longo', 'veloz'] },
+    cacador: { name: 'Caçador', nameF: 'Caçadora', cor: '#feae34', desc: 'Lê o rastro e o vento. O bicho não o percebe, e rende mais carne.', habs: ['rastro', 'passoLeve', 'carneada'] },
+    explorador: { name: 'Explorador', nameF: 'Exploradora', cor: '#2ce8f5', desc: 'Conhece todo caminho. Anda mais depressa, carrega mais e sempre volta com alguma coisa.', habs: ['passada', 'carga', 'achador'] },
+  };
+  R.HABS = {
+    golpe: { name: 'Golpe firme', desc: 'Acerta 10% mais na luta.' },
+    couraca: { name: 'Couro grosso', desc: 'A mordida dói 25% menos.' },
+    revide: { name: 'Revide certo', desc: 'Quem morde sempre leva o troco, se ele estiver armado.' },
+    certeiro: { name: 'Certeiro', desc: 'Acerta 10% mais na caça e na luta.' },
+    longo: { name: 'Tiro longo', desc: 'Caça de 2 passos mais longe.' },
+    veloz: { name: 'Pé ligeiro', desc: 'Anda 10% mais depressa.' },
+    rastro: { name: 'Lê o rastro', desc: 'Acerta 10% mais na caça.' },
+    passoLeve: { name: 'Passo leve', desc: 'O bicho arisco não foge dele.' },
+    carneada: { name: 'Mão de carneador', desc: 'Cada bicho rende mais carne.' },
+    passada: { name: 'Passada longa', desc: 'Anda 10% mais depressa.' },
+    carga: { name: 'Costas fortes', desc: 'Carrega 15% mais por viagem.' },
+    achador: { name: 'Achador', desc: 'Volta e meia acha sal, minério ou ouro pelo caminho.' },
+  };
+  R.NIVEL_HAB = [5, 12, 25];
+  R.NIVEL_MAX = 60;
+  R.BENCAO = 40;   // o Poder que uma bênção custa
+  const PROF = {
+    coleta: ['Coletor', 'Coletora'], pesca: ['Pescador', 'Pescadora'], madeira: ['Lenhador', 'Lenhadora'], pedra: ['Pedreiro', 'Pedreira'],
+    caca: ['Caçador', 'Caçadora'], construcao: ['Construtor', 'Construtora'], oficio: ['Artesão', 'Artesã'], roca: ['Lavrador', 'Lavradora'],
+    criacao: ['Criador', 'Criadora'], mina: ['Mineiro', 'Mineira'], cura: ['Curandeiro', 'Curandeira'], ervas: ['Erveiro', 'Erveira'],
+  };
+  // ---------- sorteio próprio ----------
+  function sorte(S, p, sal) {
+    let x = (Math.imul(p.id | 0, 2654435761) ^ Math.imul(Math.floor(S.t / 60), 40503) ^ Math.imul(sal | 0, 69069)) >>> 0;
+    x ^= x >>> 13; x = Math.imul(x, 1597334677) >>> 0; x ^= x >>> 15;
+    return (x >>> 0) / 4294967296;
+  }
+  // ---------- quem é quem ----------
+  const adulto = (S, p) => p.alive && !p.fora && !p.carriedBy && Fam().age(S, p) >= 16;
+  R.de = (p) => (p && p.rpg && p.rpg.cls ? p.rpg : null);
+  R.tem = (p, h) => !!(p && p.rpg && p.rpg.habs && p.rpg.habs.indexOf(h) >= 0);
+  R.nome = (p) => { const r = R.de(p); if (!r) return ''; const c = R.CLASSES[r.cls]; return p.sex === 'F' ? c.nameF : c.name; };
+  R.nivel = (p) => { const r = R.de(p); return r ? r.nv : 0; };
+  R.pede = (nv) => Math.round(10 * Math.pow(nv, 1.6));   // o xp de um nível ao próximo
+  // a profissão: o trabalho em que a pessoa é melhor (só depois que ela já é boa em alguma coisa)
+  R.profissao = function (p) {
+    let top = '', v = 0;
+    for (const k in p.skills) if (PROF[k] && p.skills[k] > v) { v = p.skills[k]; top = k; }
+    const lv = top && G.AI ? G.AI.lvl(p, top) : 0;
+    if (!top || lv < 1) return '';
+    const nome = PROF[top][p.sex === 'F' ? 1 : 0];
+    return lv >= 8 ? 'Mestre ' + nome.toLowerCase() : lv >= 4 ? nome : 'Aprendiz de ' + PROF[top][0].toLowerCase();
+  };
+  // ---------- o despertar ----------
+  // a classe vem do que a pessoa faz e do povo dela; empate, do sorteio dela mesma
+  function classeDe(S, p) {
+    const o = (p.rpg && p.rpg.por) || {}, povo = G.Povos ? G.Povos.of(p) : 'humano';
+    const peso = { guerreiro: (o.luta || 0) + (povo === 'anao' ? 8 : 0), arqueiro: (o.caca || 0) * 0.5 + (povo === 'elfo' ? 10 : 0) + (G.Tech && G.Tech.known(S, 'arco') ? 5 : 0), cacador: (o.caca || 0) + (povo === 'fera' ? 8 : 0), explorador: (o.anda || 0) };
+    let best = 'explorador', bv = -1;
+    for (const k in peso) { const v = peso[k] + sorte(S, p, k.length) * 3; if (v > bv) { bv = v; best = k; } }
+    return best;
+  }
+  const herois = (S) => S.people.filter((p) => p.alive && R.de(p));
+  R.herois = (S) => herois(S).sort((a, b) => b.rpg.nv - a.rpg.nv || a.id - b.id);
+  const teto = (S) => Math.max(2, Math.ceil(S.people.filter((p) => p.alive).length * 0.25));   // nem todo mundo é herói
+  R.desperta = function (S, p, cls) {
+    if (R.de(p)) return false;
+    const r = p.rpg || (p.rpg = { por: {} });
+    r.cls = cls || classeDe(S, p); r.nv = 1; r.xp = r.xp0 || 0; r.habs = []; delete r.xp0; r.t = S.t;
+    const c = R.CLASSES[r.cls], nome = R.nome(p);
+    S.stats.herois = (S.stats.herois || 0) + 1;
+    if (S.stats.herois === 1) Sim().chron(S, p.name + ' despertou como ' + nome.toLowerCase() + ': é a primeira pessoa do povo a sentir a própria força crescer. ' + c.desc);
+    else if (!S.safe) Sim().toast(S, p.name + ' despertou como ' + nome.toLowerCase() + '.', 'good');
+    sobe(S, p);
+    return true;
+  };
+  function sobe(S, p) {
+    const r = p.rpg;
+    while (r.nv < R.NIVEL_MAX && r.xp >= R.pede(r.nv)) {
+      r.xp -= R.pede(r.nv); r.nv++;
+      const k = R.NIVEL_HAB.indexOf(r.nv);
+      if (k >= 0) {
+        const h = R.CLASSES[r.cls].habs[k];
+        if (r.habs.indexOf(h) < 0) r.habs.push(h);
+        if (!S.safe) Sim().toast(S, p.name + ' chegou ao nível ' + r.nv + ' e aprendeu: ' + R.HABS[h].name + '.', 'good');
+      }
+      if (r.nv === 25 || r.nv === 50) Sim().chron(S, p.name + ', ' + (p.sex === 'F' ? 'a ' : 'o ') + R.nome(p).toLowerCase() + ', chegou ao nível ' + r.nv + ' de força. O povo já conta histórias sobre o que ' + (p.sex === 'F' ? 'ela' : 'ele') + ' faz.');
+    }
+    if (r.nv >= R.NIVEL_MAX) r.xp = 0;
+  }
+  // a experiência: por = 'luta', 'caca' ou 'anda'. Quem ainda não despertou guarda; ao juntar bastante, desperta
+  R.ganha = function (S, p, n, por) {
+    if (!p || !p.alive) return;
+    const r = p.rpg || (p.rpg = { por: {} });
+    r.por = r.por || {};
+    if (por) r.por[por] = (r.por[por] || 0) + n;
+    if (r.cls) { r.xp += n; sobe(S, p); return; }
+    r.xp0 = (r.xp0 || 0) + n;
+    if (r.xp0 >= 30 && adulto(S, p) && herois(S).length < teto(S)) R.desperta(S, p);
+  };
+  // ---------- os efeitos (ganchos pequenos, chamados de onde a coisa acontece) ----------
+  R.acerto = (p, caca) => { const r = R.de(p); if (!r) return 0; return Math.min(0.2, r.nv * 0.006) + (R.tem(p, 'golpe') && !caca ? 0.1 : 0) + (R.tem(p, 'certeiro') ? 0.1 : 0) + (R.tem(p, 'rastro') && caca ? 0.1 : 0); };
+  R.mordida = (p) => { const r = R.de(p); if (!r) return 1; return (1 - Math.min(0.3, r.nv * 0.008)) * (R.tem(p, 'couraca') ? 0.75 : 1); };
+  R.passo = (p) => (R.tem(p, 'veloz') || R.tem(p, 'passada') ? 1.1 : 1);
+  R.cargaMult = (p) => (R.tem(p, 'carga') ? 1.15 : 1);
+  R.alcance = (p) => (R.tem(p, 'longo') ? 2 : 0);
+  R.carne = (p) => (R.tem(p, 'carneada') ? 2 : 0);
+  // ---------- o dia ----------
+  R.daily = function (S) {
+    if (S.resumido) return;
+    for (const p of S.people) {
+      if (!adulto(S, p)) continue;
+      const r = p.rpg;
+      if (r && r.cls === 'explorador') {
+        R.ganha(S, p, 2, 'anda');
+        if (R.tem(p, 'achador') && !S.safe && sorte(S, p, 7) < 0.04) { const k = ['sal', 'minerio', 'ouro'][Math.floor(sorte(S, p, 8) * 3)]; if (S.stock[k] !== undefined) { S.stock[k] += 1; Sim().toast(S, p.name + ' achou ' + (k === 'minerio' ? 'minério' : k) + ' pelo caminho.', 'good'); } }
+      } else if (r && r.cls) { if (sorte(S, p, 5) < 0.3) R.ganha(S, p, 1); }
+      else if (Fam().age(S, p) <= 40 && sorte(S, p, 3) < 0.004) R.ganha(S, p, 4, 'anda');   // de vez em quando, alguém sai para ver o que tem depois do morro
+    }
+  };
+  // ---------- Deus abençoa ----------
+  R.bencaoWhy = function (S, p) {
+    if (!S.god) return 'sem Deus';
+    if (!p || !adulto(S, p)) return 'só quem já é adulto';
+    if ((p.rpg && p.rpg.bencao) > S.t - C.DAY_MIN) return 'já foi abençoado hoje';
+    if (S.god.poder < R.BENCAO) return 'faltam ' + Math.ceil(R.BENCAO - S.god.poder) + ' de Poder';
+    return '';
+  };
+  R.abencoa = function (S, p) {
+    if (R.bencaoWhy(S, p)) return false;
+    S.god.poder -= R.BENCAO;
+    const r = p.rpg || (p.rpg = { por: {} });
+    r.bencao = S.t;
+    if (!r.cls) R.desperta(S, p);
+    else { r.xp += R.pede(r.nv); sobe(S, p); if (!S.safe) Sim().toast(S, p.name + ' sentiu a sua bênção: nível ' + r.nv + '.', 'good'); }
+    return true;
+  };
+})(globalThis.G = globalThis.G || {});
+
 /* ---- js/save.js ---- */
 /* Gods · save: seed + o que mudou. O mundo é regerado pela seed ao carregar. */
 (function (G) {
@@ -19947,6 +20115,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       ia: S.ia || null,   // 0.25: o que a IA já escreveu (nomes, histórias das obras) e o que já viu
       visita: S.visita || null,   // Etapa 22: a abertura do mundo e os recados já aplicados
       povo: S.povo || null,   // 0.16: o nome e o título do lugar
+      raca: S.raca || null,   // 0.36: o povo que fundou o mundo
       tribo: S.tribo || null,   // 0.28: as tribos (a primeira leva as outras e a relação entre elas)
       rel: S.base ? null : S.rel || null,
       outras: S.base || !S.outras ? null : S.outras.map((B) => Save.serialize(B)),
@@ -20011,6 +20180,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       visita: d.visita || null,
       povo: d.povo || null,
       tribo: d.tribo || null,
+      raca: d.raca || null,
     };
     if (base) { S.base = base; S.rel = base.rel; } else S.rel = d.rel || null;
     for (const p of S.people) {
@@ -25426,6 +25596,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       const hy = top - 2 + dy + Math.round(Math.sin(now / 400) * 0.5);
       rect(wx - 2, hy, 4, 1, col); rect(wx - 3, hy + 1, 1, 1, col); rect(wx + 2, hy + 1, 1, 1, col);
     }
+    // 0.36: quem já tem força leva uma estrelinha na cor da classe
+    if (G.Rpg && p.rpg && p.rpg.cls && p.rpg.nv >= 5 && !p.escolhido && !kid) { const col = G.Rpg.CLASSES[p.rpg.cls].cor, hy = top - 3 + dy; rect(wx - 1, hy + 1, 3, 1, col); rect(wx, hy, 1, 3, col); }
     // Etapa 14: o cocar do líder, a marca de Deus na testa, e o olho sobre quem vai fazer o que não deve (você vê tudo)
     if (S.soc && !kid) {
       if (S.soc.lider === p.id) { const hy = top - 2 + dy; rect(wx - 2, hy + 1, 1, 1, '#e43b44'); rect(wx - 1, hy, 1, 2, '#feae34'); rect(wx, hy - 1, 1, 3, '#fee761'); rect(wx + 1, hy, 1, 2, '#feae34'); rect(wx + 2, hy + 1, 1, 1, '#e43b44'); }
@@ -27163,6 +27335,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     $('#inspector').addEventListener('click', (e) => {
       const b = e.target.closest('[data-act]'); if (!b || !S) return;
       if (b.dataset.act === 'ia-conversa' && G.Ia) { G.Ia.conversa(S, S.people.find((q) => q.id === UI.sel.person)); return; }   // 0.25
+      if (b.dataset.act === 'rpg-bencao' && G.Rpg) { const q = S.people.find((x) => x.id === UI.sel.person), wh = G.Rpg.bencaoWhy(S, q); if (wh) UI.toast('Agora não: ' + wh + '.', 'warn'); else G.Rpg.abencoa(S, q); UI.update(0, true); return; }   // 0.36
       if (b.dataset.act === 'voz' && G.Voz) { G.Voz.abrir(S, S.people.find((q) => q.id === UI.sel.person)); return; }   // 0.24
       if (b.dataset.act === 'av-possuir' && G.Avatar) { const r = G.Avatar.possuir(S, UI.sel.person); if (!r.ok) UI.toast('Agora não: ' + r.why + '.', 'warn'); else if (UI.hooks.follow) UI.hooks.follow(UI.sel.person); return; }   // Etapa 21
       if (b.dataset.act === 'av-soltar' && G.Avatar) { G.Avatar.soltar(S); return; }
@@ -27784,6 +27957,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         tracos: `<div class="chips">${indoleChips(p)}${p.traits.map((t) => `<span class="chip" title="${esc(Sim.TRAIT_DESC[t])}">${esc(t)}</span>`).join('')}${criadoChip(p)}</div>`,
         soc: socLine(p) + avatarLine(p),   // Etapa 14: a pena, o descontentamento, o que só Deus viu; Etapa 21: o avatar
         povo: povoChips(p),   // Etapa 12: o povo da pessoa e os dons dela
+        rpg: rpgHTML(p),   // 0.36: profissão, classe, nível, habilidades
         posses: p.alive ? gear(p) : '',
         barras: p.alive ? `<div class="needs">${needs}</div>` : '',
         familia: fam ? sec('Família', `<div class="kv fam">${fam}</div>`) : '',
@@ -28031,6 +28205,30 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   function feel(t) { return t >= 30 ? 'com calor' : t >= C.COMFORT ? 'confortável' : t >= 8 ? 'com frio' : t >= 0 ? 'com muito frio' : 'congelando'; }
   // ferramenta e roupa de quem está no inspetor
   // Etapa 12: o povo de alguém e os dons (com a fraqueza, de quem é do povo inteiro). Num mundo só de humanos, nada
+  // 0.36: a profissão e a classe na ficha
+  function rpgHTML(p) {
+    const Rp = G.Rpg;
+    if (!Rp || !p.alive) return '';
+    const prof = Rp.profissao(p), r = Rp.de(p), why = Rp.bencaoWhy(S, p);
+    let h = prof ? `<span class="chip" title="O trabalho em que é melhor">${esc(prof)}</span>` : '';
+    if (r) {
+      const c = Rp.CLASSES[r.cls];
+      h += `<span class="chip dom" title="${esc(c.desc)}"><b style="color:${c.cor}">${esc(Rp.nome(p))}</b> · nível ${r.nv}</span>`;
+      h += r.habs.map((k) => `<span class="chip" title="${esc(Rp.HABS[k].desc)}">${esc(Rp.HABS[k].name)}</span>`).join('');
+    }
+    const pct = r && r.nv < Rp.NIVEL_MAX ? Math.floor(r.xp / Rp.pede(r.nv) * 100) : 0;
+    const barra = r && r.nv < Rp.NIVEL_MAX ? `<div class="bar" title="Até o nível ${r.nv + 1}"><i style="width:${pct}%"></i></div>` : '';
+    const adulto = G.Family.age(S, p) >= 16;
+    const btn = adulto ? `<button type="button" class="btn btn-small" data-act="rpg-bencao"${why ? ' disabled' : ''} title="${esc(why ? 'Agora não: ' + why : r ? 'Empurra o nível de força' : 'Desperta a força desta pessoa')}">${r ? 'Abençoar' : 'Despertar'} (${Rp.BENCAO} de Poder)</button>` : '';
+    return h || btn ? `<div class="chips">${h}${btn}</div>${barra}` : '';
+  }
+  // 0.36: os heróis do povo, do mais forte para o menos forte
+  function heroisHTML() {
+    const Rp = G.Rpg, l = Rp.herois(S);
+    const linha = (p) => { const c = Rp.CLASSES[p.rpg.cls]; return `<li class="povo-row"><img class="ico ico-lg" src="${ic(G.Povos.iconOf(p))}" alt=""><div><b><a href="#" data-gact="heroi" data-pid="${p.id}">${esc(p.name)}</a></b> <span class="small" style="color:${c.cor}">${esc(Rp.nome(p))}</span> <span class="small ttl">nível ${p.rpg.nv}</span><div class="chips">${p.rpg.habs.map((k) => `<span class="chip" title="${esc(Rp.HABS[k].desc)}">${esc(Rp.HABS[k].name)}</span>`).join('')}</div></div></li>`; };
+    return `<p class="small">Quem luta, caça e anda longe pode despertar uma classe. O nível de força sobe com o que a pessoa faz, e na ficha de qualquer adulto você pode abençoar.</p>` +
+      `<ul class="donlist povolist">${l.length ? l.map(linha).join('') : '<li class="none small muted">Ninguém despertou ainda.</li>'}</ul>`;
+  }
   function povoChips(p) {
     const Pv = G.Povos;
     if (!Pv || !(S.povos && (S.povos.mixed || p.sangue))) return '';
@@ -28115,7 +28313,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     document.querySelectorAll('#modal-deus [data-gtab]').forEach((b) => { b.classList.toggle('on', b.dataset.gtab === deusTab); b.setAttribute('aria-selected', b.dataset.gtab === deusTab ? 'true' : 'false'); });
     $('#deus-mtitle').textContent = g.name ? g.name + ', ' + g.epithet : 'Deus';
     $('#deus-poder').textContent = fmtN(g.poder) + ' de Poder · glória ' + fmtN(g.glory);
-    $('#deus-body').innerHTML = deusTab === 'escolhidos' ? escolhidosHTML(Dz, g) : deusTab === 'atos' ? atosHTML(Dz, g) : deusTab === 'povos' && G.Povos ? povosHTML(Dz, g) : deusTab === 'memoria' && G.Memoria && S.memoria ? memoriaHTML(Dz) : deusTab === 'sociedade' && G.Soc && S.soc ? sociedadeHTML(Dz) : deusTab === 'tribos' && G.Tribos ? tribosHTML() : nivelHTML(Dz, g);
+    $('#deus-body').innerHTML = deusTab === 'escolhidos' ? escolhidosHTML(Dz, g) : deusTab === 'atos' ? atosHTML(Dz, g) : deusTab === 'povos' && G.Povos ? povosHTML(Dz, g) : deusTab === 'memoria' && G.Memoria && S.memoria ? memoriaHTML(Dz) : deusTab === 'sociedade' && G.Soc && S.soc ? sociedadeHTML(Dz) : deusTab === 'tribos' && G.Tribos ? tribosHTML() : deusTab === 'herois' && G.Rpg ? heroisHTML() : nivelHTML(Dz, g);
     $('#modal-deus').hidden = false;
   };
   // 0.28: as tribos (fazer nascer outra, olhar por cada uma, a relação entre elas e o que Deus faz por ela)
@@ -28143,9 +28341,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   function povosHTML(Dz, g) {
     const Pv = G.Povos, P = S.povos;
     const row = (k) => {
-      const d = Pv.DEF[k], n = Pv.count(S, k), why = k === 'humano' ? null : Pv.callWhy(S, k);
+      const d = Pv.DEF[k], n = Pv.count(S, k), why = Pv.callWhy(S, k);
       const dons = d.dons.map((x) => `<span class="chip dom" title="${esc(Pv.DONS[x].desc)}">${esc(Pv.DONS[x].name)}</span>`).join('') + (d.fraq ? `<span class="chip fraq" title="${esc(Pv.FRAQ[d.fraq].desc)}">${esc(Pv.FRAQ[d.fraq].name)}</span>` : '');
-      const call = k === 'humano' ? '' : `<button type="button" class="btn btn-small" data-gact="chamar" data-k="${k}"${why ? ' disabled' : ''} title="${esc(why ? 'Agora não: ' + why : 'Uma caravana sai na manhã seguinte')}">Chamar (${C.POVO_CALL} de Poder)</button>${why ? `<span class="small muted">Agora não: ${esc(why)}.</span>` : ''}`;
+      const call = `<button type="button" class="btn btn-small" data-gact="chamar" data-k="${k}"${why ? ' disabled' : ''} title="${esc(why ? 'Agora não: ' + why : 'Uma caravana sai na manhã seguinte')}">Chamar (${C.POVO_CALL} de Poder)</button>${why ? `<span class="small muted">Agora não: ${esc(why)}.</span>` : ''}`;
       return `<li class="povo-row"><img class="ico ico-lg" src="${ic(d.icon)}" alt=""><div><b>${esc(d.name)}</b> <span class="small ttl">${esc(d.alias)}</span><span class="small">${esc(d.desc)}</span>
         <span class="small st">${esc(Pv.status(S, k))}</span><div class="chips">${dons}</div>${call ? `<div class="povo-call">${call}</div>` : ''}</div></li>`;
     };
@@ -28740,6 +28938,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       }
       if (a === 'vervila') { const v = S.soc.vila; $('#modal-deus').hidden = true; if (v) UI.hooks.center((v.x + 0.5) * C.TILE, (v.y + 0.5) * C.TILE); return; }
     }
+    if (a === 'heroi') { e.preventDefault(); $('#modal-deus').hidden = true; UI.select(+b.dataset.pid, 0, true); return; }   // 0.36
     if (a === 'chamar' && G.Povos) {   // Etapa 12
       const why = G.Povos.callWhy(S, b.dataset.k);
       if (why) { UI.toast('Agora não: ' + why + '.', 'warn'); return; }
@@ -28988,20 +29187,28 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       const n = C.NARRADORES[k];
       return `<label class="narr-opt"><input type="radio" name="narr" value="${k}"${k === C.NARR_DEFAULT ? ' checked' : ''}><b>${esc(n.name)}</b><span>${esc(n.desc)}</span></label>`;
     }).join('');
+    // 0.36: o povo do casal: humanos vêm marcados; trocar de povo sorteia os nomes dele
+    const Pv = G.Povos;
+    $('#raca-opts').innerHTML = Pv.ORDER.map((k) => {
+      const d = Pv.DEF[k];
+      return `<label class="narr-opt"><input type="radio" name="raca" value="${k}"${k === 'humano' ? ' checked' : ''}><b><img class="ico" src="${ic(d.icon)}" alt=""> ${esc(d.name)}</b><span>${esc(d.desc)}</span></label>`;
+    }).join('');
+    const form = $('#form-names');
+    const raca = () => { const r = form.querySelector('input[name="raca"]:checked'); return r ? r.value : 'humano'; };
+    const pool = (sx) => { const k = raca(), N = Pv.NAMES[k]; return N ? N[sx] : sx === 'F' ? Sim.namePool.FEM : Sim.namePool.MASC; };
     $('#modal-names').hidden = false;
     const roll = (e) => {
       const t = e.target.closest('[data-roll]'); if (!t) return;
-      const pool = t.dataset.roll === 'F' ? Sim.namePool.FEM : Sim.namePool.MASC;
-      (t.dataset.roll === 'F' ? f : m).value = rng.pick(pool);
+      (t.dataset.roll === 'F' ? f : m).value = rng.pick(pool(t.dataset.roll));
     };
-    const form = $('#form-names');
     form.onclick = roll;
+    form.onchange = (e) => { if (e.target.name === 'raca') { f.value = rng.pick(pool('F')); m.value = rng.pick(pool('M')); } };
     form.onsubmit = (e) => {
       e.preventDefault();
       const nf = f.value.trim() || a, nm = m.value.trim() || b;
       const pick = form.querySelector('input[name="narr"]:checked');
       $('#modal-names').hidden = true;
-      cb([nf, nm], pick ? pick.value : C.NARR_DEFAULT);
+      cb([nf, nm], pick ? pick.value : C.NARR_DEFAULT, raca());
     };
     $('#btn-names-back').onclick = () => { $('#modal-names').hidden = true; if (back) back(); };
     setTimeout(() => f.focus(), 50);
@@ -29746,8 +29953,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     R.overlay.ring = { x: tx, y: ty, r: 10, ok: s.valid };
     UI.siteInfo(siteWorld, s);
   }
-  function startGame(names, kind) {
-    S = Sim.newGame(siteSeed, { x: siteSel.x, y: siteSel.y }, names, siteWorld);
+  function startGame(names, kind, raca) {
+    S = Sim.newGame(siteSeed, { x: siteSel.x, y: siteSel.y }, names, siteWorld, raca);
     if (kind) G.Narr.setKind(S, kind);
     siteWorld = null;
     Save.newSlot();   // 0.16: o mundo novo vai para uma gaveta nova; os outros continuam guardados

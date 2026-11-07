@@ -312,6 +312,7 @@
     if (S.ck.season === 3) mult /= C.SNOW_SLOW;
     mult *= G.Narr.walkMult(S);   // nevasca: neve pelos joelhos
     if (G.Eras && G.Eras.walkMult) mult *= G.Eras.walkMult(S);   // 0.33: o bonde
+    if (G.Rpg) mult *= G.Rpg.passo(p);   // 0.36: pé ligeiro
     if (p.carry && p.carry.n >= 6) mult *= 0.92;
     let budget = dt / C.WALK_MIN_PER_TILE * mult, guard = 0;
     while (budget > 1e-6 && p.path && p.pathI < p.path.length && guard++ < 24) {
@@ -1643,7 +1644,7 @@
 
   // caça (lança): escolhe uma capivara, chega perto, arremessa; acertou, carneia e leva carne e couro.
   // Com o arco e flecha (Etapa 8), atira de longe, acerta mais e a flecha não espanta o bando
-  const cacaR = (S, p) => (G.Inv ? G.Inv.cacaR(S) : C.CACA_R) + (p && p.sangue && G.Povos ? G.Povos.cacaReach(p) : 0);   // o olho de arqueiro alcança mais (Etapa 12)
+  const cacaR = (S, p) => (G.Inv ? G.Inv.cacaR(S) : C.CACA_R) + (p && p.sangue && G.Povos ? G.Povos.cacaReach(p) : 0) + (p && G.Rpg ? G.Rpg.alcance(p) : 0);   // o olho de arqueiro alcança mais (Etapa 12)
   // a presa caiu: vai até ela para carnear
   function toCut(S, p, a, e) {
     const w = S.world, ex = Math.floor(e.x), ey = Math.floor(e.y);
@@ -1712,8 +1713,9 @@
         const bow = !!(G.Inv && Tech.known(S, 'arco'));
         S.events.push({ k: 'throw', x1: p.x, y1: p.y - 0.4, x2: e.x, y2: e.y, bow });
         const bando = Fa.alive(S).filter((o) => o !== e && o.h === e.h && Math.hypot(o.x - e.x, o.y - e.y) < 7);
-        if (S.rng.next() < C.CACA_HIT + C.CACA_HIT_LVL * lvl(p, 'caca') + (G.Inv ? G.Inv.cacaHit(S) * (G.Gente ? 0.5 + 0.5 * G.Gente.dom(S, p, 'arco') : 1) : 0) + (p.sangue && G.Povos ? G.Povos.cacaHit(p) : 0)) {   // Etapa 15: o arco rende pelo domínio
+        if (S.rng.next() < C.CACA_HIT + C.CACA_HIT_LVL * lvl(p, 'caca') + (G.Inv ? G.Inv.cacaHit(S) * (G.Gente ? 0.5 + 0.5 * G.Gente.dom(S, p, 'arco') : 1) : 0) + (p.sangue && G.Povos ? G.Povos.cacaHit(p) : 0) + (G.Rpg ? G.Rpg.acerto(p, true) : 0)) {   // Etapa 15: o arco rende pelo domínio
           S.events.push({ k: 'hit', x: e.x, y: e.y });
+          if (G.Rpg) G.Rpg.ganha(S, p, 3, 'caca');   // 0.36
           const r = Fa.hit ? Fa.hit(S, e, p) : (Fa.kill(S, e), 'morto');   // bicho grande pede mais de um acerto
           if (r === 'morto') {
             if (bow) S.stats.arrowKills = (S.stats.arrowKills || 0) + 1;
@@ -1747,7 +1749,7 @@
         if (!S.stats.firstHunt) { S.stats.firstHunt = true; Sim.chron(S, p.name + ' voltou da primeira caçada com ' + C.BICHOS[sp].art + ' nas costas.'); }
         else if (hb[sp] === 1) { Sim.chron(S, p.name + ' caçou ' + C.BICHOS[sp].art + ' pela primeira vez.'); Sim.addMem(S, p, 'cacouNovo'); }   // Etapa 9: cada bicho novo entra na Crônica
         const y = Fa.yieldOf ? Fa.yieldOf(S, sp) : G.Inv ? G.Inv.cacaYield(S) : { carne: C.CACA_CARNE, couro: C.CACA_COURO };   // com a faca, carneia melhor
-        const faro = p.sangue && G.Povos ? G.Povos.cacaMeat(p) : 0;   // Etapa 12: o faro tira mais carne
+        const faro = (p.sangue && G.Povos ? G.Povos.cacaMeat(p) : 0) + (G.Rpg ? G.Rpg.carne(p) : 0);   // Etapa 12: o faro tira mais carne
         p.carry = { k: 'caca', carne: y.carne + faro, couro: y.couro, n: y.carne + faro + y.couro, sp };
         a.stage = 'haul';
         return toCamp(S, p) ? RUN : FAIL;

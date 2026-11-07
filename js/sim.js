@@ -365,7 +365,7 @@
     }
   }
 
-  Sim.newGame = function (seed, site, names, world) {
+  Sim.newGame = function (seed, site, names, world, raca) {
     const w = world || G.W.generate(seed);
     const S = {
       v: 1, seed: seed >>> 0, world: w, t: C.START_HOUR * 60,
@@ -382,9 +382,12 @@
     const [nf, nm] = names || Sim.randomNames(S.rng);
     const a = makePerson(S, 'F', nf, S.rng.int(19, 24));
     const b = makePerson(S, 'M', nm, S.rng.int(20, 26));
+    // 0.36: o povo que funda o mundo (sem escolha, humanos, e o sorteio do mundo fica como sempre foi)
+    if (raca && raca !== 'humano' && G.Povos && G.Povos.DEF[raca]) { S.raca = raca; G.Povos.make(S, a, raca); G.Povos.make(S, b, raca); }
     S.people.push(a, b);
     arrive(S, [a, b]);
     Sim.init(S);
+    if (S.raca && S.povos) { S.povos.st[S.raca] = { state: 'aqui', n: 0, at: S.t }; G.Povos.recount(S); }
     return S;
   };
 
@@ -1083,6 +1086,7 @@
     if (G.Cidade) G.Cidade.daily(S);   // Etapa 16: quem serve, a aula, a estante, a febre, a faísca, a feira
     if (G.Regioes) G.Regioes.daily(S);   // Etapa 17: o sal que chegou
     if (G.Mar) G.Mar.daily(S);   // Etapa 18: a volta da expedição, a carga do barco, as colônias
+    if (G.Rpg) G.Rpg.daily(S);   // 0.36: heróis
     if (G.Eras) G.Eras.daily(S);   // Etapas 19 e 20: a idade, o rumo, a magia, o desafio de cada idade
     if (G.Avatar) G.Avatar.daily(S);   // Etapa 21: o abençoado (a pergunta, o líder nato)
     if (G.Life) G.Life.daily(S);
