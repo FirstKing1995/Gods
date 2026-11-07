@@ -13,6 +13,7 @@
 
   Pv.ORDER = ['humano', 'elfo', 'anao', 'fera'];
   Pv.OUTROS = ['elfo', 'anao', 'fera'];
+  Pv.outros = (S) => (S && S.raca ? Pv.ORDER.filter((k) => k !== S.raca) : Pv.OUTROS.slice());   // 0.36: quem é de fora depende de quem fundou
   // old: a idade em que a velhice chega · fert: filhos · walk: passo · cold: quanto o frio pega · fome · carry: carga
   // trait: o traço da aparência (p.look) · terr: o terreno de onde vêm
   Pv.DEF = {
@@ -45,8 +46,8 @@
     ponte: { name: 'Ponte', icon: 'meio', desc: 'Filho de dois povos: todo dia aproxima um pouco os povos dos pais.' },
   };
   Pv.FRAQ = {
-    arvore: { name: 'Não derruba árvore', desc: 'Um elfo não corta madeira.' },
-    seco: { name: 'Pé no seco', desc: 'Um anão não pesca.' },
+    arvore: { name: 'Não derruba árvore', desc: 'Um elfo não corta madeira, a não ser que só haja elfos no mundo dele.' },
+    seco: { name: 'Pé no seco', desc: 'Um anão não pesca, a não ser que só haja anões no mundo dele.' },
     fome: { name: 'Fome de bicho', desc: 'Come 40% mais.' },
   };
   // nomes de cada povo (inventados para o jogo)
@@ -125,10 +126,12 @@
   Pv.count = (S, kind) => (S.povos && S.povos.n ? S.povos.n[kind] || 0 : kind === 'humano' ? S.people.filter((p) => p.alive).length : 0);
 
   // ---------- o que os dons e o corpo mudam ----------
-  Pv.canWork = function (p, wk) {
-    const f = Pv.fraqOf(p);
-    if (f === 'arvore' && wk === 'madeira') return false;
-    if (f === 'seco' && wk === 'pesca') return false;
+  // 0.36: a fraqueza vale enquanto há quem faça por eles: um povo sozinho no mundo aprende a se virar
+  Pv.canWork = function (p, wk, S) {
+    const f = Pv.fraqOf(p), n = S && S.povos && S.povos.n;
+    const so = (k) => !!n && (n.humano + n.elfo + n.anao + n.fera + n.meio) === (n[k] || 0);
+    if (f === 'arvore' && wk === 'madeira') return so('elfo');
+    if (f === 'seco' && wk === 'pesca') return so('anao');
     return true;
   };
   // velocidade num trabalho (só para quem tem sangue de outro povo; 'forja' é o Ofício na ferraria)
@@ -304,12 +307,12 @@
       if (t === T.MOUNTAIN) mount++; else if (!G.IS_WATER[t]) grass++;
     }
     for (const o of w.objs) if (Math.abs(o.x - cx) < R && Math.abs(o.y - cy) < R) { if (o.k === 'tree' || o.k === 'stump') tree++; else if (o.k === 'rock') rock++; }
-    return { elfo: tree / 14, anao: mount / 6 + rock / 5, fera: grass / 55 - tree / 40 };
+    return { elfo: tree / 14, anao: mount / 6 + rock / 5, fera: grass / 55 - tree / 40, humano: 3 };
   }
   Pv.terrain = terrain;
   function nextKind(S) {
     const P = S.povos;
-    if (!P.order) { const t = terrain(S); P.order = Pv.OUTROS.slice().sort((a, b) => t[b] - t[a] || a.localeCompare(b)); }
+    if (!P.order) { const t = terrain(S); P.order = Pv.outros(S).sort((a, b) => t[b] - t[a] || a.localeCompare(b)); }
     for (const k of P.order) if (P.st[k].state === 'longe') return k;
     for (const k of P.order) if (P.st[k].state === 'recusado' && P.st[k].n < 2 && S.t >= P.st[k].at + C.POVO_VOLTA_D * DAY()) return k;
     return null;
@@ -319,10 +322,7 @@
   function members(S, kind) {
     const N = G.Narr, used = new Set(), r = S.rng;
     const mk = (sex, body, role) => {
-      const pd = N.visitorData(S, sex, Pv.realAge(kind, body), role, used);
-      pd.name = Pv.pickName(S, kind, sex, used);
-      pd.povo = kind; pd.look = Pv.lookOf(S, kind, sex, pd.look);
-      return pd;
+      return N.visitorData(S, sex, Pv.realAge(kind, body), role, used, kind);
     };
     const mom = mk('F', r.int(24, 34), 'mae'), dad = mk('M', r.int(24, 38), 'pai');
     const kid = mk(r.chance(0.5) ? 'F' : 'M', r.int(4, 12), 'filho');
@@ -347,9 +347,11 @@
     elfo: { seca: 15, frutas: 10 },
     anao: { ferro: 3, minerio: 4, carvao: 4 },
     fera: { carne: 16, couro: 6 },
+    humano: { madeira: 20, peixe: 12 },   // 0.36
   };
   // o que trazem (long: com o que ensinam, para a janela de quem pede para ficar)
   Pv.giftText = function (kind, long) {
+    if (kind === 'humano') return 'lenha cortada e peixe salgado' + (long ? ', e mãos para qualquer trabalho' : '');
     return kind === 'anao' ? (long ? 'a mineração e a metalurgia, ' : '') + 'três ferramentas de ferro, minério e carvão' :
       kind === 'elfo' ? 'cestos de fruta seca e fruta fresca' + (long ? ' e, para quem já usa a lança, o arco' : '') : 'carne de caça e couro curtido';
   };
@@ -387,7 +389,7 @@
   // Deus chama um povo (nível 2, POVO_CALL de Poder): a caravana sai na manhã seguinte
   Pv.callWhy = function (S, kind) {
     const P = S.povos, g = S.god;
-    if (!P || !Pv.DEF[kind] || kind === 'humano') return 'povo desconhecido';
+    if (!P || !Pv.DEF[kind]) return 'povo desconhecido';
     if (!G.Deus || G.Deus.level(S) < C.POVO_CALL_LV) return 'chega no nível ' + C.POVO_CALL_LV + ' de Deus';
     if (P.st[kind].state === 'vindo' || P.due) return 'já há uma caravana a caminho';
     if (G.Narr && G.Narr.pending(S)) return 'há viajantes esperando resposta';
@@ -408,7 +410,7 @@
   Pv.init = function (S) {
     const P = S.povos || (S.povos = { conv: {}, st: {}, next: 0, order: null, due: null, called: false });
     P.conv = P.conv || {}; P.st = P.st || {};
-    for (const k of Pv.OUTROS) P.st[k] = P.st[k] || { state: 'longe', n: 0, at: 0 };
+    for (const k of Pv.ORDER) P.st[k] = P.st[k] || { state: 'longe', n: 0, at: 0 };   // 0.36: os humanos também vêm de caravana
     P.uni = P.uni || {}; P.day = P.day || {};
     for (const k in P.conv) if (P.conv[k] >= 100 && !P.uni[k]) P.uni[k] = S.t;
     recount(S);
@@ -475,14 +477,14 @@
     p_acolher: (S) => (S.stats.povosAcolhidos || 0) > 0,
     p_casal: (S) => (S.stats.casaisMistos || 0) > 0,
     p_hibrido: (S) => (S.stats.mesticos || 0) > 0,
-    p_tres: (S) => !!S.povos && Pv.OUTROS.every((k) => S.povos.st[k].state === 'aqui' && Pv.count(S, k) > 0),
+    p_tres: (S) => !!S.povos && Pv.outros(S).every((k) => S.povos.st[k].state === 'aqui' && Pv.count(S, k) > 0),
     p_uniao: (S) => (S.stats.unioes || 0) > 0,
   };
   // para a interface: o estado de cada povo numa frase
   Pv.status = function (S, kind) {
     const P = S.povos, n = Pv.count(S, kind);
-    if (kind === 'humano') return n + (n === 1 ? ' pessoa' : ' pessoas');
     const st = P ? P.st[kind] : null;
+    if (kind === 'humano' && n && !(st && st.state === 'vindo')) return n + (n === 1 ? ' pessoa' : ' pessoas');
     if (!st) return '';
     if (st.state === 'aqui') return n ? n + ' na aldeia' : 'Já moraram aqui, mas não resta ninguém';
     if (st.state === 'vindo') return 'Uma caravana vem a caminho';

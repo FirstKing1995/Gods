@@ -34,7 +34,8 @@
     const Sm = Sim(), sev = G.Narr ? G.Narr.kind(S).sev : 1;
     if (S.t < (p.biteCool || 0)) return;
     p.biteCool = S.t + C.LOBO_BITE_MIN;
-    const hurt = dmg * sev * (Tech().biteMult ? Tech().biteMult(S, p) : 1);   // com a lança na mão, pega menos
+    const hurt = dmg * sev * (Tech().biteMult ? Tech().biteMult(S, p) : 1) * (G.Rpg ? G.Rpg.mordida(p) : 1);   // com a lança na mão, pega menos   // 0.36: e quem tem força sofre menos
+    if (G.Rpg) G.Rpg.ganha(S, p, 2, 'luta');
     p.needs.saude -= hurt;
     const cause = kind === 'jacare' ? 'jacare' : 'bicho';
     p.dmg[cause] = (p.dmg[cause] || 0) + hurt;
@@ -54,12 +55,12 @@
   // revidar: quem foi atacado e tem a lança na mão tenta acertar na hora
   B.fightBack = function (S, p, tgt) {
     if (!B.armed(S, p) || p.needs.saude <= 0 || B.over(S, tgt)) return false;
-    if (!S.rng.chance(B.hitChance(S, p) * 0.8)) { Sim().say(S, p, 'Sai daqui!', true); return false; }
+    if (!(G.Rpg && G.Rpg.tem(p, 'revide')) && !S.rng.chance(B.hitChance(S, p) * 0.8)) { Sim().say(S, p, 'Sai daqui!', true); return false; }
     B.strike(S, p, tgt, true);
     return true;
   };
   B.hitChance = (S, p) => C.LUTA_HIT + C.CACA_HIT_LVL * G.AI.lvl(p, 'caca') + (Tech().known(S, 'arco') ? C.ARCO_HIT * (G.Gente ? 0.5 + 0.5 * G.Gente.dom(S, p, 'arco') : 1) : 0) +   // Etapa 15: pelo domínio
-    (p.tool && p.tool.fe ? C.FERRO_LUTA : 0) + (p.sangue && G.Povos ? G.Povos.lutaHit(p) : 0);   // Etapa 12: a lança de ferro e as garras
+    (p.tool && p.tool.fe ? C.FERRO_LUTA : 0) + (p.sangue && G.Povos ? G.Povos.lutaHit(p) : 0) + (G.Rpg ? G.Rpg.acerto(p, false) : 0);   // Etapa 12: a lança de ferro e as garras
 
   // um golpe (lança) ou uma flechada, já decidido que acertou (sure) ou jogando a chance
   B.strike = function (S, p, tgt, sure) {
@@ -71,6 +72,7 @@
     if (!sure && !S.rng.chance(B.hitChance(S, p))) { Sim().say(S, p, S.rng.pick(['Errei!', 'Quase!', 'Mais uma!']), false); return 'errou'; }
     S.events.push({ k: 'hit', x: e.x, y: e.y });
     p.skills.caca = (p.skills.caca || 0) + 0.5;
+    if (G.Rpg) G.Rpg.ganha(S, p, 4, 'luta');
     S.stats.fightHits = (S.stats.fightHits || 0) + 1;
     Sim().addMem(S, p, 'lutou');
     if (tgt.kind === 'narr') return G.Narr.hitEnt(S, e, p);

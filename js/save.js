@@ -115,6 +115,7 @@
       ia: S.ia || null,   // 0.25: o que a IA já escreveu (nomes, histórias das obras) e o que já viu
       visita: S.visita || null,   // Etapa 22: a abertura do mundo e os recados já aplicados
       povo: S.povo || null,   // 0.16: o nome e o título do lugar
+      raca: S.raca || null,   // 0.36: o povo que fundou o mundo
       tribo: S.tribo || null,   // 0.28: as tribos (a primeira leva as outras e a relação entre elas)
       rel: S.base ? null : S.rel || null,
       outras: S.base || !S.outras ? null : S.outras.map((B) => Save.serialize(B)),
@@ -179,6 +180,7 @@
       visita: d.visita || null,
       povo: d.povo || null,
       tribo: d.tribo || null,
+      raca: d.raca || null,
     };
     if (base) { S.base = base; S.rel = base.rel; } else S.rel = d.rel || null;
     for (const p of S.people) {

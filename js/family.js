@@ -42,7 +42,7 @@
   F.canWork = function (S, p, wk) {
     const st = F.stage(S, p);
     if (st === 'bebe' || p.labor || (p.rest && p.rest > S.t)) return false;   // resguardo depois do parto
-    if (p.sangue && G.Povos && !G.Povos.canWork(p, wk)) return false;   // Etapa 12: elfo não derruba árvore, anão não pesca
+    if (p.sangue && G.Povos && !G.Povos.canWork(p, wk, S)) return false;   // Etapa 12: elfo não derruba árvore, anão não pesca
     if (st === 'crianca') return F.age(S, p) >= C.CHILD_HELP_AGE && (wk === 'frutas' || wk === 'agua' || wk === 'criacao');   // Etapa 10: ovos e ração
     if (st === 'idoso' && F.bodyAge(S, p) >= C.OLD_HEAVY_AGE && OLD_HEAVY.has(wk)) return false;   // 0.16: o corpo já não aguenta
     return true;

@@ -322,8 +322,8 @@
     R.overlay.ring = { x: tx, y: ty, r: 10, ok: s.valid };
     UI.siteInfo(siteWorld, s);
   }
-  function startGame(names, kind) {
-    S = Sim.newGame(siteSeed, { x: siteSel.x, y: siteSel.y }, names, siteWorld);
+  function startGame(names, kind, raca) {
+    S = Sim.newGame(siteSeed, { x: siteSel.x, y: siteSel.y }, names, siteWorld, raca);
     if (kind) G.Narr.setKind(S, kind);
     siteWorld = null;
     Save.newSlot();   // 0.16: o mundo novo vai para uma gaveta nova; os outros continuam guardados

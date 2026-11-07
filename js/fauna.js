@@ -273,6 +273,7 @@
       if (!p.alive || p.carriedBy || p.inTent || p.sleeping || G.Family.age(S, p) < 7) return false;
       if (p.sangue && G.Povos && G.Povos.has(p, 'faro')) return false;   // Etapa 12: o faro chega sem ser notado
       if (p.escolhido && p.escolhido.power === 'caca') return false;   // 0.27: o bicho não foge do Caçador
+      if (G.Rpg && G.Rpg.tem(p, 'passoLeve')) return false;   // 0.36
       return Math.abs(p.x - e.x) <= r && Math.abs(p.y - e.y) <= r && Math.hypot(p.x - e.x, p.y - e.y) <= r;
     };
     // 0.14: olha só os cantos do mapa em volta do bicho (o retrato do povo por passo, da IA), não o povo inteiro
