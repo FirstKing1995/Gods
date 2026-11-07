@@ -1077,7 +1077,7 @@
     const dx = b.x - S.camp.x, dy = b.y - S.camp.y;
     return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'a leste' : 'a oeste') : dy > 0 ? 'ao sul' : 'ao norte';
   }
-  const CAUSA = { frio: 'de frio', sede: 'de sede', fome: 'de fome', raio: 'de um raio', parto: 'no parto', velhice: 'de velhice', lobos: 'no ataque dos lobos', onca: 'no ataque da onça', jacare: 'no ataque de um jacaré', bicho: 'atacado por um bicho', crime: 'pelas mãos de outra pessoa' };
+  const CAUSA = { frio: 'de frio', sede: 'de sede', fome: 'de fome', raio: 'de um raio', parto: 'no parto', velhice: 'de velhice', monstro: 'no ataque de um monstro', lobos: 'no ataque dos lobos', onca: 'no ataque da onça', jacare: 'no ataque de um jacaré', bicho: 'atacado por um bicho', crime: 'pelas mãos de outra pessoa' };
   // o que a cova mostra ao toque
   M.graveInfo = function (S, o) {
     const d = (o.pid && person(S, o.pid)) || S.people.find((p) => !p.alive && p.name === o.name && !p.corpo) || null;

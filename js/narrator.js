@@ -391,7 +391,8 @@
     const did = [];
     if (names.length) did.push('atacaram ' + Sim().listNames(names));
     if (a.stolen) did.push('levaram ' + a.stolen + ' de comida');
-    let txt = did.length ? 'Os lobos ' + (did.length > 1 ? did[0] + ' e ' + did[1] : did[0]) + '.' : 'Os lobos rondaram a noite toda, mas o fogo guardou o povo.';
+    const quem = a.monstro && G.Monstros ? G.Monstros.TIPOS[a.monstro].pl : 'Os lobos';   // 0.38
+    let txt = did.length ? quem + ' ' + (did.length > 1 ? did[0] + ' e ' + did[1] : did[0]) + '.' : quem + ' rondaram a noite toda, mas o fogo guardou o povo.';
     if (a.killed) txt += a.killed === 1 ? ' Um deles ficou pelo caminho.' : ' ' + a.killed + ' deles ficaram pelo caminho.';
     return txt;
   }
@@ -499,7 +500,7 @@
     while (budget > 1e-6 && e.path && e.pathI < e.path.length && guard++ < 24) {
       const idx = e.path[e.pathI];
       const tx = (idx % w.W) + 0.5, ty = ((idx / w.W) | 0) + 0.5;
-      if (w.block[idx] || (wolf && (w.slow[idx] || (e.k === 'lobo' && w.fence && w.fence[idx]) || (e.state !== 'embora' && repelAt(S, tx, ty))))) { e.path = null; break; }
+      if (w.block[idx] || (wolf && (w.slow[idx] || (e.k === 'lobo' && w.fence && w.fence[idx]) || (!e.m && e.state !== 'embora' && repelAt(S, tx, ty))))) { e.path = null; break; }
       const dx = tx - e.x, dy = ty - e.y, d = Math.hypot(dx, dy);
       const cost = C.COST[w.tile[idx]] * (w.slow[idx] ? 2 : 1);
       const can = budget / cost;
@@ -579,6 +580,16 @@
   function biteCap(S) { return C.LOBO_BITES_PERSON + (N.kind(S).sev > 1.2 ? 1 : 0); }
   function bitten(S, p) { const a = S.narr.active.lobos; return a && a.bitten ? a.bitten[p.id] || 0 : 0; }
   // lobo não ataca criança: vai atrás de quem tem 12 anos ou mais, sozinho e fora de abrigo
+  // 0.38: o mais perto entre quem saiu para lutar
+  function lutador(S, e) {
+    let best = null, bd = 9;
+    for (const p of S.people) {
+      if (!p.alive || !p.act || p.act.type !== 'defender') continue;
+      const d = Math.hypot(p.x - e.x, p.y - e.y);
+      if (d < bd) { bd = d; best = p; }
+    }
+    return best;
+  }
   function prey(S, e) {
     let best = null, bd = C.LOBO_SEE * 2.2;
     const cap = biteCap(S);
@@ -596,6 +607,16 @@
     if (G.Cidade && G.Cidade.dentro(S, c.x, c.y)) return false;   // Etapa 16: atrás da muralha, a comida fica
     return !repelAt(S, c.x, c.y);
   }
+  // 0.38: um bando de monstros: entidades de lobo (rondam, roubam, mordem quem está longe do fogo) com a ficha do monstro
+  N.spawnMonstros = function (S, m, pack) {
+    const n = S.narr, T = G.Monstros.TIPOS[m], spot = edgeSpot(S, 16, 22);
+    if (!spot || n.active.lobos) return 0;
+    for (let i = 0; i < pack; i++) newEnt(S, 'lobo', spot.x, spot.y, { home: spot.i, bites: 0, fur: 0, ring: S.rng.next() * Math.PI * 2, m, hp: T.hp });
+    n.active.lobos = { t0: S.t, pack, bites: 0, stolen: 0, killed: 0, fought: 0, hurt: [], monstro: m };
+    Sim().toast(S, T.pl + ' vêm pela noite! São ' + pack + '.', 'bad');
+    S.events.push({ k: 'narr', ev: 'lobos', on: true });
+    return pack;
+  };
   function spawnWolves(S, pack) {
     const spot = edgeSpot(S, 16, 22);
     if (!spot) return 0;
@@ -634,7 +655,7 @@
         if (w.block[ni] || w.slow[ni]) continue;
         if (dx && dy && (w.block[cy * w.W + nx] || w.block[ny * w.W + cx])) continue;
         if (fence && (fence[ni] || (dx && dy && (fence[cy * w.W + nx] || fence[ny * w.W + cx])))) continue;
-        if (repelAt(S, nx + 0.5, ny + 0.5)) continue;
+        if (!e.m && repelAt(S, nx + 0.5, ny + 0.5)) continue;
         const ng = gc + (dx && dy ? Math.SQRT2 : 1) * C.COST[w.tile[ni]];
         if (ng > maxCost) continue;
         if (sB[ni] !== stp || ng < gB[ni]) { sB[ni] = stp; gB[ni] = ng; fB[ni] = cur; heap.push(ng, ni); }
@@ -660,11 +681,14 @@
   function wolfStep(S, e, dt) {
     e.t += dt;
     const hr = S.ck.hour, night = hr >= 19 || hr < 5.5;
-    if (e.state !== 'embora' && (!night || e.t > 9 * 60 || repelAt(S, e.x, e.y))) goAway(S, e);
+    if (e.state !== 'embora' && (!night || e.t > 9 * 60 || (!e.m && repelAt(S, e.x, e.y)))) goAway(S, e);   // 0.38: o monstro não teme o fogo
     const w = S.world;
     switch (e.state) {
       case 'vindo':
       case 'rondar': {
+        // 0.38: o monstro enfrenta primeiro quem veio lutar
+        const lut = e.m ? lutador(S, e) : null;
+        if (lut) { e.state = 'atacar'; e.target = lut.id; e.path = null; e.repath = -1e9; break; }
         const p = prey(S, e);
         if (p) { e.state = 'atacar'; e.target = p.id; e.path = null; e.repath = -1e9; break; }
         if (!e.fed && stockOpen(S)) { e.state = 'roubar'; e.path = null; break; }
@@ -673,7 +697,7 @@
       }
       case 'atacar': {
         const p = Fam().person(S, e.target);
-        if (!p || !p.alive || N.safeSpot(S, p) || guarded(S, p) || bitten(S, p) >= biteCap(S)) { e.state = 'rondar'; e.path = null; break; }
+        if (!p || !p.alive || (!(e.m && p.act && p.act.type === 'defender') && (N.safeSpot(S, p) || guarded(S, p) || bitten(S, p) >= biteCap(S)))) { e.state = 'rondar'; e.path = null; break; }
         if (Math.hypot(p.x - e.x, p.y - e.y) <= 1.5) { e.path = null; bite(S, e, p); break; }   // 1,5: alcança também na diagonal
         if (!e.path || S.t - e.repath >= 8) {
           e.repath = S.t;
@@ -690,7 +714,7 @@
       case 'roubar': {
         if (!stockOpen(S)) { e.state = 'rondar'; e.path = null; break; }
         const c = camp(S);
-        if (Math.abs(e.x - c.x) <= 1.6 && Math.abs(e.y - c.y) <= 1.6) { steal(S, e); goAway(S, e); break; }
+        if (Math.abs(e.x - c.x) <= 1.6 && Math.abs(e.y - c.y) <= 1.6) { steal(S, e); if (e.m) { e.fed = true; e.state = 'rondar'; e.path = null; } else goAway(S, e); break; }   // 0.38: o monstro rouba e fica
         if (!e.path) {
           const r = wolfRoute(S, e, (i) => Sim().isCamp(S, i), 90);
           if (r) setPath(e, r); else { e.state = 'rondar'; e.fed = true; }
@@ -715,13 +739,14 @@
     const a = S.narr.active.lobos, Sm = Sim();
     p.biteCool = S.t + C.LOBO_BITE_MIN;
     if (a) { a.bitten = a.bitten || {}; a.bitten[p.id] = (a.bitten[p.id] || 0) + 1; }
-    const dmg = C.LOBO_BITE * N.kind(S).sev * (G.Tech ? G.Tech.biteMult(S, p) : 1);   // com a lança na mão, pega menos
+    const dmg = C.LOBO_BITE * N.kind(S).sev * (G.Tech ? G.Tech.biteMult(S, p) : 1) * (e.m ? G.Monstros.mordida(e) : 1) * (G.Rpg ? G.Rpg.mordida(p) : 1);   // com a lança na mão, pega menos   // 0.38: a força do monstro e a de quem leva
+    if (G.Rpg) G.Rpg.ganha(S, p, 2, 'luta');
     p.needs.saude -= dmg;
-    p.dmg.lobo = (p.dmg.lobo || 0) + dmg;
+    if (e.m) p.dmg.monstro = (p.dmg.monstro || 0) + dmg; else p.dmg.lobo = (p.dmg.lobo || 0) + dmg;   // 0.38
     e.nextBite = S.t + C.LOBO_BITE_MIN; e.bites++;
     e.dir = Math.abs(p.x - e.x) > Math.abs(p.y - e.y) ? (p.x > e.x ? 2 : 3) : (p.y > e.y ? 0 : 1);
     Sm.addMem(S, p, 'mordido');
-    if (a) { a.bites++; if (a.hurt.indexOf(p.id) < 0) { a.hurt.push(p.id); Sm.toast(S, 'Um lobo atacou ' + p.name + '!', 'bad'); } }
+    if (a) { a.bites++; if (a.hurt.indexOf(p.id) < 0) { a.hurt.push(p.id); Sm.toast(S, (e.m ? G.Monstros.TIPOS[e.m].name : 'Um lobo') + ' atacou ' + p.name + '!', 'bad'); } }
     S.events.push({ k: 'bite', x: p.x, y: p.y, pid: p.id });
     Sm.say(S, p, 'Socorro!', true);
     // quem foi atacado acorda e corre para o abrigo (e reza)
@@ -730,12 +755,13 @@
     G.God.cry(S, p, 'lobos');
     // Etapa 9: quem tem lança revida, e quem está perto e armado vem ajudar
     if (G.Bichos) { const tgt = { kind: 'narr', id: e.id }; G.Bichos.fightBack(S, p, tgt); if (!e.gone && e.state !== 'embora') G.Bichos.alarm(S, p, tgt); }
-    if (!e.gone && e.bites >= C.LOBO_BITES) goAway(S, e);
+    if (!e.gone && !e.m && e.bites >= C.LOBO_BITES) goAway(S, e);
   }
 
   // ---------- luta (Etapa 9): um acerto no lobo ou na onça ----------
   N.hitEnt = function (S, e, p) {
     const n = S.narr, Sm = Sim();
+    if (e.m && G.Monstros) return G.Monstros.golpe(S, e, p);   // 0.38
     // no lobo, um golpe em cheio (LOBO_KILL) derruba de uma vez; senão ele foge ferido
     e.hp = (e.hp === undefined ? (e.k === 'onca' ? C.ONCA_HP : C.LOBO_HP) : e.hp) - (e.k === 'lobo' && S.rng.chance(C.LOBO_KILL) ? 2 : 1);
     const bow = G.Tech && G.Tech.known(S, 'arco');
@@ -1179,7 +1205,7 @@
       const hunting = S.people.some((p) => p.alive && p.act && p.act.type === 'defender' && p.act.tgt && p.act.tgt.hunt);
       return { k: 'onca', text: hunting ? 'Caçada à onça' : N.oncaOut(S) ? 'Onça rondando' : 'Onça por perto · ' + left(a.onca.until), tone: 'bad' };
     }
-    if (a.lobos || N.wolvesOut(S)) return { k: 'lobos', text: 'Lobos rondando', tone: 'bad' };
+    if (a.lobos || N.wolvesOut(S)) return { k: 'lobos', text: a.lobos && a.lobos.monstro && G.Monstros ? G.Monstros.TIPOS[a.lobos.monstro].pl + ' na vila' : 'Lobos rondando', tone: 'bad' };   // 0.38
     if (a.nevasca) return { k: 'nevasca', text: 'Nevasca · ' + left(a.nevasca.until), tone: 'bad' };
     if (a.tempestade) return { k: 'tempestade', text: 'Tempestade · ' + left(a.tempestade.until), tone: 'bad' };
     if (a.seca) return { k: 'seca', text: 'Seca · ' + left(a.seca.until), tone: 'bad' };

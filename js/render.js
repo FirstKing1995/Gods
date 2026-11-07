@@ -684,6 +684,11 @@
         if (x < tx0 - 1 || x > tx1 + 1 || y < ty0 - 1 || y > ty1 + 1) continue;
         list.push({ y: y * TS + 3, cr: a, x, y });
       }
+      // 0.38: os covis, onde o povo já viu
+      if (S.monstros) for (const c of S.monstros.covis) {
+        if (c.x < tx0 - 2 || c.x > tx1 + 2 || c.y < ty0 - 2 || c.y > ty1 + 2 || !G.Sim.isSeen(S, c.x, c.y)) continue;
+        list.push({ y: (c.y + 1) * TS, covil: c });
+      }
       // lobos e viajantes: só onde o povo já viu (na névoa, só os uivos)
       if (S.narr) for (const e of S.narr.ents) {
         if (e.gone || !G.Sim.isSeen(S, Math.floor(e.x), Math.floor(e.y))) continue;
@@ -734,7 +739,8 @@
         } finally { FX = fx0; }
         continue;
       }
-      if (it.o) drawObj(it.o, season, snow, sc < 1, S, now);
+      if (it.covil) { const img = A.covilImg(it.covil.m); blit(img, it.covil.x * TS - 8, (it.covil.y + 1) * TS - img.height); }
+      else if (it.o) drawObj(it.o, season, snow, sc < 1, S, now);
       else if (it.corpo) drawCorpo(it.corpo, now);
       else if (it.b) drawBuilding(S, it.b, now, it.row, it.part);
       else if (it.e) drawEnt(S, it.e, it.x, it.y, now);
@@ -1657,6 +1663,17 @@
   function drawEnt(S, e, x, y, now) {
     const wx = x * TS, wy = y * TS;
     const moving = !!e.path;
+    if (e.m) {   // 0.38: o monstro
+      const sh = A.monstroSheet(e.m), fw = A.MONSTRO_W, fh = A.MONSTRO_H, frame = moving ? 1 + (Math.floor(e.walk * 4) % 2) : 0;
+      blit(A.spr.shadow, wx - 5, wy + 2);
+      const al = e.state === 'embora' ? Math.max(0.35, 1 - (e.t - (e.leftAt || e.t)) / 120) : 1;
+      if (al < 1) ctx.globalAlpha = al;
+      ctx.drawImage(sh, frame * fw, e.dir * fh, fw, fh, Math.round((wx - fw / 2) * sc + ox), Math.round((wy + 4 - fh) * sc + oy), Math.round(fw * sc), Math.round(fh * sc));
+      if (al < 1) ctx.globalAlpha = 1;
+      const T = G.Monstros.TIPOS[e.m];
+      if (e.hp < T.hp) { rect(wx - 5, wy + 4 - fh - 2, 10, 1, '#2b1d1a'); rect(wx - 5, wy + 4 - fh - 2, Math.max(1, Math.round(10 * e.hp / T.hp)), 1, '#e43b44'); }
+      return;
+    }
     if (e.k === 'onca') {
       // a onça (Etapa 9): na toca, some; acuada ou na luta, agachada
       if (e.hidden) return;

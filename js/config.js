@@ -3,7 +3,7 @@
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.37.0',
+    VERSION: '0.38.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -661,6 +661,8 @@
     // 0.29: a Idade Média
     MOINHO_ROCA: 1.25, CASTELO_CRIME: 0.8, ERA_PESTE: 0.5, PESTE_PARTE: 0.2, ESTRELAS_PRAGA: 0.5,
     // 0.30: as Navegações
+    // 0.38: os monstros e os covis
+    MONSTRO_GENTE: 40, MONSTRO_HEROIS: 6, COVIL_DIST: [22, 42], COVIL_MAX: 3, COVIL_NOVO: [90, 200], COVIL_RAID: [18, 36], COVIL_CRESCE: 2, COVIL_ESMAGA: 150,
     // 0.37: a guilda
     GUILDA_FICAM: 8, GUILDA_QUADRO: 3, GUILDA_PRAZO: 25, GUILDA_GRUPOS: 2, GUILDA_MORTE: 1.2, GUILDA_BENCAO: 0.2, GUILDA_SONHO: 20, GUILDA_PROTEGE: 40, TABERNA_DESC: 0.9, TABERNA_DESPERTA: 3,
     // 0.34: a Era Moderna

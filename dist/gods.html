@@ -1328,7 +1328,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.37.0',
+    VERSION: '0.38.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -1986,6 +1986,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     // 0.29: a Idade Média
     MOINHO_ROCA: 1.25, CASTELO_CRIME: 0.8, ERA_PESTE: 0.5, PESTE_PARTE: 0.2, ESTRELAS_PRAGA: 0.5,
     // 0.30: as Navegações
+    // 0.38: os monstros e os covis
+    MONSTRO_GENTE: 40, MONSTRO_HEROIS: 6, COVIL_DIST: [22, 42], COVIL_MAX: 3, COVIL_NOVO: [90, 200], COVIL_RAID: [18, 36], COVIL_CRESCE: 2, COVIL_ESMAGA: 150,
     // 0.37: a guilda
     GUILDA_FICAM: 8, GUILDA_QUADRO: 3, GUILDA_PRAZO: 25, GUILDA_GRUPOS: 2, GUILDA_MORTE: 1.2, GUILDA_BENCAO: 0.2, GUILDA_SONHO: 20, GUILDA_PROTEGE: 40, TABERNA_DESC: 0.9, TABERNA_DESPERTA: 3,
     // 0.34: a Era Moderna
@@ -3691,6 +3693,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (G.Mar) G.Mar.daily(S);   // Etapa 18: a volta da expedição, a carga do barco, as colônias
     if (G.Rpg) G.Rpg.daily(S);   // 0.36: heróis
     if (G.Guilda) G.Guilda.daily(S);   // 0.37: as missões
+    if (G.Monstros) G.Monstros.daily(S);   // 0.38: os covis
     if (G.Eras) G.Eras.daily(S);   // Etapas 19 e 20: a idade, o rumo, a magia, o desafio de cada idade
     if (G.Avatar) G.Avatar.daily(S);   // Etapa 21: o abençoado (a pergunta, o líder nato)
     if (G.Life) G.Life.daily(S);
@@ -3737,6 +3740,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (G.Campo) G.Campo.hourly(S);
     if (G.Minas) G.Minas.hourly(S);   // Etapa 12: a ferramenta de ferro e a joia de quem passa pelo acampamento
     if (G.Povos) G.Povos.hourly(S);   // e a caravana que está para chegar
+    if (G.Monstros) G.Monstros.hourly(S);   // 0.38: o bando sai de noite
     if (G.Memoria) G.Memoria.hourly(S);   // Etapa 13: o corpo, o velório, o rito, o dia dos mortos
     if (G.Soc) G.Soc.hourly(S);   // Etapa 14: os crimes, o julgamento, o líder, as obras do povo
     if (G.Gente) G.Gente.hourly(S);   // Etapa 15: aprender vendo, o combinado, o que se pensa em voz alta
@@ -3859,7 +3863,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if ((d.raio || 0) > 0 && p.needs.saude <= 0 && (d.raio || 0) >= Math.max(d.frio, d.fome, d.sede)) p.cause = 'raio';
     if ((d.parto || 0) > 0 && (d.parto || 0) >= Math.max(d.frio, d.fome, d.sede, d.raio || 0)) p.cause = 'parto';
     // bichos (Etapa 9): lobo, onça, jacaré ou outro bicho; vence quem mais feriu
-    const beasts = [['lobos', d.lobo || 0], ['onca', d.onca || 0], ['jacare', d.jacare || 0], ['bicho', d.bicho || 0]].sort((a, b) => b[1] - a[1]);
+    const beasts = [['lobos', d.lobo || 0], ['onca', d.onca || 0], ['jacare', d.jacare || 0], ['bicho', d.bicho || 0], ['monstro', d.monstro || 0]].sort((a, b) => b[1] - a[1]);
     if (beasts[0][1] > 0 && beasts[0][1] >= Math.max(d.frio, d.fome, d.sede, d.raio || 0, d.parto || 0)) p.cause = beasts[0][0];
     if (d.velhice) p.cause = 'velhice';
     if (d.crime) p.cause = 'crime';   // Etapa 14: morto por outra pessoa
@@ -3879,7 +3883,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         (i) => (!G.W.objAt(w, i) && w.bgrid[i] < 0 && !Sim.isCamp(S, i) && !G.IS_WATER[w.tile[i]] ? 1 : 0), 30);
       if (r) G.W.addObj(w, 'grave', r.idx % w.W, (r.idx / w.W) | 0, { name: p.name, pid: p.id, t: S.t });
     }
-    const causeTxt = { frio: 'de frio', sede: 'de sede', fome: 'de fome', raio: 'atingid' + (p.sex === 'F' ? 'a' : 'o') + ' por um raio', parto: 'no parto', velhice: 'de velhice', lobos: 'no ataque dos lobos',
+    const causeTxt = { frio: 'de frio', sede: 'de sede', fome: 'de fome', raio: 'atingid' + (p.sex === 'F' ? 'a' : 'o') + ' por um raio', parto: 'no parto', velhice: 'de velhice', monstro: 'no ataque de um monstro', lobos: 'no ataque dos lobos',
       onca: 'no ataque da onça', jacare: 'no ataque de um jacaré', bicho: 'atacad' + (p.sex === 'F' ? 'a' : 'o') + ' por um bicho', crime: 'pelas mãos de outra pessoa', doenca: 'de febre' }[p.cause];
     const age = Sim.ageOf(S, p);
     Sim.chron(S, p.name + ' morreu ' + causeTxt + (age < 1 ? ', com poucos meses.' : ', ' + (age < 12 ? 'com ' : 'aos ') + age + (age === 1 ? ' ano.' : ' anos.')));
@@ -7210,7 +7214,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   const Sim = () => G.Sim, Fam = () => G.Family, Tech = () => G.Tech;
 
   // armado: ferramenta na mão (a lança vem dela) e a lança já descoberta
-  B.armed = (S, p) => !!(p && p.alive && ((p.tool && Tech().known(S, 'lanca')) || (p.sangue && G.Povos && G.Povos.has(p, 'garras') && Fam().age(S, p) >= 12)));   // Etapa 12: o povo-fera luta com as garras
+  B.armed = (S, p) => !!(p && p.alive && ((G.Rpg && G.Rpg.de(p)) || (p.tool && Tech().known(S, 'lanca')) || (p.sangue && G.Povos && G.Povos.has(p, 'garras') && Fam().age(S, p) >= 12)));   // Etapa 12: o povo-fera luta com as garras
   // o alvo de uma luta: { kind: 'fauna' | 'narr', id } → a entidade, se ainda existe
   B.ent = function (S, tgt) {
     if (!tgt) return null;
@@ -7225,8 +7229,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     return e.state === 'morta' || e.state === 'fuga' || (e.sp === 'jacare' && e.inWater);
   };
   const SP_NAME = { lobo: 'lobo', onca: 'onça' }, SP_THE = { lobo: 'o lobo', onca: 'a onça' };
-  B.theOf = (S, tgt) => { const e = B.ent(S, tgt); if (!e) return 'o bicho'; return tgt.kind === 'narr' ? SP_THE[e.k] || 'o bicho' : (C.BICHOS[e.sp] || C.BICHOS.capivara).art.replace(/^uma /, 'a ').replace(/^um /, 'o '); };
-  B.nameOf = (S, tgt) => { const e = B.ent(S, tgt); if (!e) return 'bicho'; return tgt.kind === 'narr' ? SP_NAME[e.k] || e.k : (C.BICHOS[e.sp] || C.BICHOS.capivara).name.toLowerCase(); };
+  B.theOf = (S, tgt) => { const e = B.ent(S, tgt); if (!e) return 'o bicho'; if (e.m && G.Monstros) return G.Monstros.TIPOS[e.m].art.replace(/^uma /, 'a ').replace(/^um /, 'o '); return tgt.kind === 'narr' ? SP_THE[e.k] || 'o bicho' : (C.BICHOS[e.sp] || C.BICHOS.capivara).art.replace(/^uma /, 'a ').replace(/^um /, 'o '); };
+  B.nameOf = (S, tgt) => { const e = B.ent(S, tgt); if (!e) return 'bicho'; if (e.m && G.Monstros) return G.Monstros.TIPOS[e.m].name.toLowerCase(); return tgt.kind === 'narr' ? SP_NAME[e.k] || e.k : (C.BICHOS[e.sp] || C.BICHOS.capivara).name.toLowerCase(); };
   const ATTACK = { jacare: (p) => 'Um jacaré atacou ' + p.name + ' na beira d’água!', porco: (p) => 'Um porco-do-mato partiu para cima de ' + p.name + '!',
     anta: (p) => 'Uma anta ferida derrubou ' + p.name + '!' };
 
@@ -10236,14 +10240,14 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       if (!e || B.over(S, a.tgt)) { say(S, p, 'venceu', 0.6, true); return DONE; }
       a.t += dt;
       // na caçada à onça, a caminhada até a toca é longa; na defesa, a luta é curta
-      if (a.t > (hunt ? 360 : 45) || !B.armed(S, p) || p.needs.saude < 25) return DONE;
+      if (a.t > (hunt ? 360 : e.m ? 300 : 45) || !B.armed(S, p) || p.needs.saude < 25) return DONE;   // 0.38: contra monstro, a luta vai longe
       const R = cacaR(S), d = Math.hypot(e.x - p.x, e.y - p.y);
       if (d > R) {
         a.stage = 'go';
         if (!moving(p) || S.t >= a.repath) {
           a.repath = S.t + (hunt && d > 8 ? 20 : 4);
           const w = S.world, ex = e.x, ey = e.y;
-          const r = W.findNearest(w, tileOf(S, p), (i) => { const x = i % w.W + 0.5, y = ((i / w.W) | 0) + 0.5; return Math.hypot(x - ex, y - ey) <= R - 0.4 ? 1 : 0; }, hunt ? 240 : 80);
+          const r = W.findNearest(w, tileOf(S, p), (i) => { const x = i % w.W + 0.5, y = ((i / w.W) | 0) + 0.5; return Math.hypot(x - ex, y - ey) <= R - 0.4 ? 1 : 0; }, hunt || e.m ? 240 : 80);
           if (!r) return FAIL;
           setPath(p, r.path.length ? r.path : null);
         }
@@ -10998,7 +11002,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   };
   AI.describe = function (S, p) {
     if (p.fora) return G.Soc ? G.Soc.foraTxt(S, p) : 'Foi embora';   // Etapa 14
-    if (!p.alive) { const o = p.sex === 'F' ? 'a' : 'o'; return 'Morreu ' + ({ frio: 'de frio', sede: 'de sede', fome: 'de fome', raio: 'atingid' + o + ' por um raio', parto: 'no parto', velhice: 'de velhice', lobos: 'no ataque dos lobos',
+    if (!p.alive) { const o = p.sex === 'F' ? 'a' : 'o'; return 'Morreu ' + ({ frio: 'de frio', sede: 'de sede', fome: 'de fome', raio: 'atingid' + o + ' por um raio', parto: 'no parto', velhice: 'de velhice', monstro: 'no ataque de um monstro', lobos: 'no ataque dos lobos',
       onca: 'no ataque da onça', jacare: 'no ataque de um jacaré', bicho: 'atacad' + o + ' por um bicho', crime: 'pelas mãos de outra pessoa' }[p.cause] || ''); }
     if (p.carriedBy) { const c = person(S, p.carriedBy); return c ? (c.sleeping ? 'Dormindo no colo de ' : 'No colo de ') + c.name : 'Sozinho'; }
     const a = p.act;
@@ -12654,7 +12658,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const did = [];
     if (names.length) did.push('atacaram ' + Sim().listNames(names));
     if (a.stolen) did.push('levaram ' + a.stolen + ' de comida');
-    let txt = did.length ? 'Os lobos ' + (did.length > 1 ? did[0] + ' e ' + did[1] : did[0]) + '.' : 'Os lobos rondaram a noite toda, mas o fogo guardou o povo.';
+    const quem = a.monstro && G.Monstros ? G.Monstros.TIPOS[a.monstro].pl : 'Os lobos';   // 0.38
+    let txt = did.length ? quem + ' ' + (did.length > 1 ? did[0] + ' e ' + did[1] : did[0]) + '.' : quem + ' rondaram a noite toda, mas o fogo guardou o povo.';
     if (a.killed) txt += a.killed === 1 ? ' Um deles ficou pelo caminho.' : ' ' + a.killed + ' deles ficaram pelo caminho.';
     return txt;
   }
@@ -12762,7 +12767,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     while (budget > 1e-6 && e.path && e.pathI < e.path.length && guard++ < 24) {
       const idx = e.path[e.pathI];
       const tx = (idx % w.W) + 0.5, ty = ((idx / w.W) | 0) + 0.5;
-      if (w.block[idx] || (wolf && (w.slow[idx] || (e.k === 'lobo' && w.fence && w.fence[idx]) || (e.state !== 'embora' && repelAt(S, tx, ty))))) { e.path = null; break; }
+      if (w.block[idx] || (wolf && (w.slow[idx] || (e.k === 'lobo' && w.fence && w.fence[idx]) || (!e.m && e.state !== 'embora' && repelAt(S, tx, ty))))) { e.path = null; break; }
       const dx = tx - e.x, dy = ty - e.y, d = Math.hypot(dx, dy);
       const cost = C.COST[w.tile[idx]] * (w.slow[idx] ? 2 : 1);
       const can = budget / cost;
@@ -12842,6 +12847,16 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   function biteCap(S) { return C.LOBO_BITES_PERSON + (N.kind(S).sev > 1.2 ? 1 : 0); }
   function bitten(S, p) { const a = S.narr.active.lobos; return a && a.bitten ? a.bitten[p.id] || 0 : 0; }
   // lobo não ataca criança: vai atrás de quem tem 12 anos ou mais, sozinho e fora de abrigo
+  // 0.38: o mais perto entre quem saiu para lutar
+  function lutador(S, e) {
+    let best = null, bd = 9;
+    for (const p of S.people) {
+      if (!p.alive || !p.act || p.act.type !== 'defender') continue;
+      const d = Math.hypot(p.x - e.x, p.y - e.y);
+      if (d < bd) { bd = d; best = p; }
+    }
+    return best;
+  }
   function prey(S, e) {
     let best = null, bd = C.LOBO_SEE * 2.2;
     const cap = biteCap(S);
@@ -12859,6 +12874,16 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (G.Cidade && G.Cidade.dentro(S, c.x, c.y)) return false;   // Etapa 16: atrás da muralha, a comida fica
     return !repelAt(S, c.x, c.y);
   }
+  // 0.38: um bando de monstros: entidades de lobo (rondam, roubam, mordem quem está longe do fogo) com a ficha do monstro
+  N.spawnMonstros = function (S, m, pack) {
+    const n = S.narr, T = G.Monstros.TIPOS[m], spot = edgeSpot(S, 16, 22);
+    if (!spot || n.active.lobos) return 0;
+    for (let i = 0; i < pack; i++) newEnt(S, 'lobo', spot.x, spot.y, { home: spot.i, bites: 0, fur: 0, ring: S.rng.next() * Math.PI * 2, m, hp: T.hp });
+    n.active.lobos = { t0: S.t, pack, bites: 0, stolen: 0, killed: 0, fought: 0, hurt: [], monstro: m };
+    Sim().toast(S, T.pl + ' vêm pela noite! São ' + pack + '.', 'bad');
+    S.events.push({ k: 'narr', ev: 'lobos', on: true });
+    return pack;
+  };
   function spawnWolves(S, pack) {
     const spot = edgeSpot(S, 16, 22);
     if (!spot) return 0;
@@ -12897,7 +12922,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         if (w.block[ni] || w.slow[ni]) continue;
         if (dx && dy && (w.block[cy * w.W + nx] || w.block[ny * w.W + cx])) continue;
         if (fence && (fence[ni] || (dx && dy && (fence[cy * w.W + nx] || fence[ny * w.W + cx])))) continue;
-        if (repelAt(S, nx + 0.5, ny + 0.5)) continue;
+        if (!e.m && repelAt(S, nx + 0.5, ny + 0.5)) continue;
         const ng = gc + (dx && dy ? Math.SQRT2 : 1) * C.COST[w.tile[ni]];
         if (ng > maxCost) continue;
         if (sB[ni] !== stp || ng < gB[ni]) { sB[ni] = stp; gB[ni] = ng; fB[ni] = cur; heap.push(ng, ni); }
@@ -12923,11 +12948,14 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   function wolfStep(S, e, dt) {
     e.t += dt;
     const hr = S.ck.hour, night = hr >= 19 || hr < 5.5;
-    if (e.state !== 'embora' && (!night || e.t > 9 * 60 || repelAt(S, e.x, e.y))) goAway(S, e);
+    if (e.state !== 'embora' && (!night || e.t > 9 * 60 || (!e.m && repelAt(S, e.x, e.y)))) goAway(S, e);   // 0.38: o monstro não teme o fogo
     const w = S.world;
     switch (e.state) {
       case 'vindo':
       case 'rondar': {
+        // 0.38: o monstro enfrenta primeiro quem veio lutar
+        const lut = e.m ? lutador(S, e) : null;
+        if (lut) { e.state = 'atacar'; e.target = lut.id; e.path = null; e.repath = -1e9; break; }
         const p = prey(S, e);
         if (p) { e.state = 'atacar'; e.target = p.id; e.path = null; e.repath = -1e9; break; }
         if (!e.fed && stockOpen(S)) { e.state = 'roubar'; e.path = null; break; }
@@ -12936,7 +12964,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       }
       case 'atacar': {
         const p = Fam().person(S, e.target);
-        if (!p || !p.alive || N.safeSpot(S, p) || guarded(S, p) || bitten(S, p) >= biteCap(S)) { e.state = 'rondar'; e.path = null; break; }
+        if (!p || !p.alive || (!(e.m && p.act && p.act.type === 'defender') && (N.safeSpot(S, p) || guarded(S, p) || bitten(S, p) >= biteCap(S)))) { e.state = 'rondar'; e.path = null; break; }
         if (Math.hypot(p.x - e.x, p.y - e.y) <= 1.5) { e.path = null; bite(S, e, p); break; }   // 1,5: alcança também na diagonal
         if (!e.path || S.t - e.repath >= 8) {
           e.repath = S.t;
@@ -12953,7 +12981,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       case 'roubar': {
         if (!stockOpen(S)) { e.state = 'rondar'; e.path = null; break; }
         const c = camp(S);
-        if (Math.abs(e.x - c.x) <= 1.6 && Math.abs(e.y - c.y) <= 1.6) { steal(S, e); goAway(S, e); break; }
+        if (Math.abs(e.x - c.x) <= 1.6 && Math.abs(e.y - c.y) <= 1.6) { steal(S, e); if (e.m) { e.fed = true; e.state = 'rondar'; e.path = null; } else goAway(S, e); break; }   // 0.38: o monstro rouba e fica
         if (!e.path) {
           const r = wolfRoute(S, e, (i) => Sim().isCamp(S, i), 90);
           if (r) setPath(e, r); else { e.state = 'rondar'; e.fed = true; }
@@ -12978,13 +13006,14 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const a = S.narr.active.lobos, Sm = Sim();
     p.biteCool = S.t + C.LOBO_BITE_MIN;
     if (a) { a.bitten = a.bitten || {}; a.bitten[p.id] = (a.bitten[p.id] || 0) + 1; }
-    const dmg = C.LOBO_BITE * N.kind(S).sev * (G.Tech ? G.Tech.biteMult(S, p) : 1);   // com a lança na mão, pega menos
+    const dmg = C.LOBO_BITE * N.kind(S).sev * (G.Tech ? G.Tech.biteMult(S, p) : 1) * (e.m ? G.Monstros.mordida(e) : 1) * (G.Rpg ? G.Rpg.mordida(p) : 1);   // com a lança na mão, pega menos   // 0.38: a força do monstro e a de quem leva
+    if (G.Rpg) G.Rpg.ganha(S, p, 2, 'luta');
     p.needs.saude -= dmg;
-    p.dmg.lobo = (p.dmg.lobo || 0) + dmg;
+    if (e.m) p.dmg.monstro = (p.dmg.monstro || 0) + dmg; else p.dmg.lobo = (p.dmg.lobo || 0) + dmg;   // 0.38
     e.nextBite = S.t + C.LOBO_BITE_MIN; e.bites++;
     e.dir = Math.abs(p.x - e.x) > Math.abs(p.y - e.y) ? (p.x > e.x ? 2 : 3) : (p.y > e.y ? 0 : 1);
     Sm.addMem(S, p, 'mordido');
-    if (a) { a.bites++; if (a.hurt.indexOf(p.id) < 0) { a.hurt.push(p.id); Sm.toast(S, 'Um lobo atacou ' + p.name + '!', 'bad'); } }
+    if (a) { a.bites++; if (a.hurt.indexOf(p.id) < 0) { a.hurt.push(p.id); Sm.toast(S, (e.m ? G.Monstros.TIPOS[e.m].name : 'Um lobo') + ' atacou ' + p.name + '!', 'bad'); } }
     S.events.push({ k: 'bite', x: p.x, y: p.y, pid: p.id });
     Sm.say(S, p, 'Socorro!', true);
     // quem foi atacado acorda e corre para o abrigo (e reza)
@@ -12993,12 +13022,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     G.God.cry(S, p, 'lobos');
     // Etapa 9: quem tem lança revida, e quem está perto e armado vem ajudar
     if (G.Bichos) { const tgt = { kind: 'narr', id: e.id }; G.Bichos.fightBack(S, p, tgt); if (!e.gone && e.state !== 'embora') G.Bichos.alarm(S, p, tgt); }
-    if (!e.gone && e.bites >= C.LOBO_BITES) goAway(S, e);
+    if (!e.gone && !e.m && e.bites >= C.LOBO_BITES) goAway(S, e);
   }
 
   // ---------- luta (Etapa 9): um acerto no lobo ou na onça ----------
   N.hitEnt = function (S, e, p) {
     const n = S.narr, Sm = Sim();
+    if (e.m && G.Monstros) return G.Monstros.golpe(S, e, p);   // 0.38
     // no lobo, um golpe em cheio (LOBO_KILL) derruba de uma vez; senão ele foge ferido
     e.hp = (e.hp === undefined ? (e.k === 'onca' ? C.ONCA_HP : C.LOBO_HP) : e.hp) - (e.k === 'lobo' && S.rng.chance(C.LOBO_KILL) ? 2 : 1);
     const bow = G.Tech && G.Tech.known(S, 'arco');
@@ -13442,7 +13472,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       const hunting = S.people.some((p) => p.alive && p.act && p.act.type === 'defender' && p.act.tgt && p.act.tgt.hunt);
       return { k: 'onca', text: hunting ? 'Caçada à onça' : N.oncaOut(S) ? 'Onça rondando' : 'Onça por perto · ' + left(a.onca.until), tone: 'bad' };
     }
-    if (a.lobos || N.wolvesOut(S)) return { k: 'lobos', text: 'Lobos rondando', tone: 'bad' };
+    if (a.lobos || N.wolvesOut(S)) return { k: 'lobos', text: a.lobos && a.lobos.monstro && G.Monstros ? G.Monstros.TIPOS[a.lobos.monstro].pl + ' na vila' : 'Lobos rondando', tone: 'bad' };   // 0.38
     if (a.nevasca) return { k: 'nevasca', text: 'Nevasca · ' + left(a.nevasca.until), tone: 'bad' };
     if (a.tempestade) return { k: 'tempestade', text: 'Tempestade · ' + left(a.tempestade.until), tone: 'bad' };
     if (a.seca) return { k: 'seca', text: 'Seca · ' + left(a.seca.until), tone: 'bad' };
@@ -15302,7 +15332,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const dx = b.x - S.camp.x, dy = b.y - S.camp.y;
     return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'a leste' : 'a oeste') : dy > 0 ? 'ao sul' : 'ao norte';
   }
-  const CAUSA = { frio: 'de frio', sede: 'de sede', fome: 'de fome', raio: 'de um raio', parto: 'no parto', velhice: 'de velhice', lobos: 'no ataque dos lobos', onca: 'no ataque da onça', jacare: 'no ataque de um jacaré', bicho: 'atacado por um bicho', crime: 'pelas mãos de outra pessoa' };
+  const CAUSA = { frio: 'de frio', sede: 'de sede', fome: 'de fome', raio: 'de um raio', parto: 'no parto', velhice: 'de velhice', monstro: 'no ataque de um monstro', lobos: 'no ataque dos lobos', onca: 'no ataque da onça', jacare: 'no ataque de um jacaré', bicho: 'atacado por um bicho', crime: 'pelas mãos de outra pessoa' };
   // o que a cova mostra ao toque
   M.graveInfo = function (S, o) {
     const d = (o.pid && person(S, o.pid)) || S.people.find((p) => !p.alive && p.name === o.name && !p.corpo) || null;
@@ -20060,6 +20090,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       ok: ['{g} voltaram arrastando a fera do morro. A vila inteira saiu para ver.', 'A fera do morro não vai mais descer: {g} trouxeram o couro como prova.'],
       mal: ['A fera do morro é maior do que contavam. {g} recuaram, e ela continua lá em cima.'] },
   };
+  // 0.38: a missão de limpar um covil: o nome e o rank vêm do covil
+  Gu.TIPOS.covil = { nome: 'Limpar o covil', rank: 1, dias: [5, 9], risco: 0.25, premio: { ouro: 5, couro: 6 },
+    ok: ['{g} entraram no covil e saíram com o que restou lá dentro. O mato ficou quieto.', '{g} acabaram com o covil. Quem morava perto voltou a dormir de noite.'],
+    mal: ['O covil era maior por dentro. {g} voltaram correndo, e ele continua lá.'] };
+  Gu.rankM = (m) => (m.tipo === 'covil' ? Math.min(3, m.nv || 1) : Gu.TIPOS[m.tipo].rank);
+  Gu.nomeM = (m) => (m.tipo === 'covil' ? 'Limpar: ' + (m.nome || 'o covil') : Gu.TIPOS[m.tipo].nome);
   const FORCA = [4, 10, 24, 50];   // a força somada que cada rank de missão pede
   const tem = (S, k) => S.buildings.some((b) => b.type === k && b.built);
   Gu.temTaberna = (S) => tem(S, 'taberna');
@@ -20085,7 +20121,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   Gu.livres = (S) => S.people.filter((p) => livre(S, p)).sort((a, b) => b.rpg.nv - a.rpg.nv || a.id - b.id);
   // o grupo de uma missão: os mais fortes até somar a força (de 2 a 4); null se não dá
   Gu.grupo = function (S, m) {
-    const pede = FORCA[Gu.TIPOS[m.tipo].rank], l = Gu.livres(S);
+    const pede = FORCA[Gu.rankM(m)], l = Gu.livres(S);
     if (l.length < 2) return null;
     const vivos = S.people.filter((p) => p.alive).length;
     const sobra = Math.max(0, Math.min(4, vivos - C.GUILDA_FICAM));
@@ -20097,14 +20133,16 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   };
   // a chance de dar certo: pela força do grupo contra a que a missão pede, e pelo perigo; a proteção de Deus soma
   Gu.chance = function (m, forca, n, protegido) {
-    const T = Gu.TIPOS[m.tipo], pede = FORCA[T.rank];
+    const T = Gu.TIPOS[m.tipo], pede = FORCA[Gu.rankM(m)];
     const c = 0.55 + 0.3 * Math.min(1.5, (forca - pede) / Math.max(1, pede)) + 0.03 * (n - 2) - T.risco * 0.5;
     return Math.max(0.1, Math.min(0.95, c + (protegido ? C.GUILDA_BENCAO : 0)));
   };
   // ---------- o quadro ----------
   function novaMissao(S) {
+    // 0.38: covil sem missão vai primeiro para o quadro
+    if (S.monstros) for (const c of S.monstros.covis) if (!S.guilda.quadro.some((m) => m.covil === c.id) && !S.guilda.idas.some((i) => i.covil === c.id)) { S.guilda.quadro.push({ id: S.guilda.nid++, tipo: 'covil', covil: c.id, nv: c.nv, nome: G.Monstros.nomeDe(c), t: S.t, ate: S.t + C.GUILDA_PRAZO * 4 * DAY() }); return; }
     const g = S.guilda, top = Math.max(0, ...S.people.filter((p) => R().de(p)).map((p) => p.rpg.nv));
-    const pode = Object.keys(Gu.TIPOS).filter((k) => FORCA[Gu.TIPOS[k].rank] <= Math.max(FORCA[0], top * 3));
+    const pode = Object.keys(Gu.TIPOS).filter((k) => k !== 'covil' && FORCA[Gu.TIPOS[k].rank] <= Math.max(FORCA[0], top * 3));
     const fora = pode.filter((k) => !g.quadro.some((m) => m.tipo === k));
     const l = fora.length ? fora : pode;
     const tipo = l[Math.floor(sorte(S, g.nid * 7 + 1) * l.length)];
@@ -20115,11 +20153,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const dias = T.dias[0] + sorte(S, m.id * 11) * (T.dias[1] - T.dias[0]);
     const forca = grupo.reduce((a, p) => a + p.rpg.nv, 0);
     g.quadro = g.quadro.filter((x) => x !== m);
-    const ida = { id: m.id, tipo: m.tipo, t0: S.t, volta: S.t + dias * DAY(), ids: grupo.map((p) => p.id), nomes: grupo.map((p) => p.name), forca, sonho: sonho ? 1 : 0 };
+    const ida = { id: m.id, tipo: m.tipo, covil: m.covil || 0, nv: m.nv || 0, nome: m.nome || '', t0: S.t, volta: S.t + dias * DAY(), ids: grupo.map((p) => p.id), nomes: grupo.map((p) => p.name), forca, sonho: sonho ? 1 : 0 };
     for (const p of grupo) { So().sair(S, p, 'missao'); p.away.vila = 0; p.away.mar = 1; p.away.missao = 1; }
     g.idas.push(ida);
     S.stats.missoesIdas = (S.stats.missoesIdas || 0) + 1;
-    const txt = Sim().listNames(grupo) + ' pegaram no quadro da guilda: ' + T.nome.toLowerCase() + '.';
+    const txt = Sim().listNames(grupo) + ' pegaram no quadro da guilda: ' + Gu.nomeM(m).toLowerCase() + '.';
     if (S.stats.missoesIdas === 1) Sim().chron(S, 'A primeira missão da guilda saiu: ' + txt);
     else if (!S.safe) Sim().toast(S, txt, '');
     return ida;
@@ -20141,24 +20179,25 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     volta.forEach((p, k) => {
       So().voltar(S, p, cx + (k % 3), cy + Math.floor(k / 3));
       if (!ok) p.needs.saude = Math.max(25, p.needs.saude - 40);
-      R().ganha(S, p, (ok ? 10 : 3) * (T.rank + 1), 'luta');
+      R().ganha(S, p, (ok ? 10 : 3) * (Gu.rankM(ida) + 1), 'luta');
       Sm.say(S, p, ok ? 'Voltamos!' : 'Foi por pouco.', true);
     });
     if (G.Soc && G.Soc.reindex) G.Soc.reindex(S);
     if (ok) for (const k in T.premio) if (S.stock[k] !== undefined) S.stock[k] += T.premio[k];
+    if (ok && ida.covil && G.Monstros) { G.Monstros.remove(S, ida.covil); S.stats.covisLimpos = (S.stats.covisLimpos || 0) + 1; }   // 0.38
     if (ok && T.saber && G.Tech && G.Tech.open) { const a = G.Tech.open(S); if (a) G.Tech.addPractice(S, a, T.saber, null); }
     S.stats.missoes = (S.stats.missoes || 0) + 1; if (ok) S.stats.missoesOk = (S.stats.missoesOk || 0) + 1;
     S.stats.mortosMissao = (S.stats.mortosMissao || 0) + mortos.length;
     const frases = ok ? T.ok : T.mal, frase = frases[Math.floor(sorte(S, ida.id * 19) * frases.length)];
     const nomes = Sm.listNames(volta.length ? volta : gente);
-    let txt = volta.length ? frase.replace('{g}', nomes) : 'O grupo que saiu para ' + T.nome.toLowerCase() + ' não voltou.';
+    let txt = volta.length ? frase.replace('{g}', nomes) : 'O grupo que saiu para ' + Gu.nomeM(ida).toLowerCase() + ' não voltou.';
     if (mortos.length && volta.length) txt += ' ' + Sm.listNames(mortos) + (mortos.length > 1 ? ' ficaram' : ' ficou') + ' pelo caminho.';
     else if (mortos.length) txt += ' ' + Sm.listNames(mortos) + (mortos.length > 1 ? ' ficaram' : ' ficou') + ' por lá.';
     if (mortos.length) for (const q of S.people) if (q.alive) Sm.addMem(S, q, 'parenteFoi');
     if (ida.protegido && !ok) txt += ' Dizem que algo os trouxe de volta.';
     g.hist.unshift({ t: S.t, tipo: ida.tipo, ok, txt });
     g.hist = g.hist.slice(0, 12);
-    if (T.rank >= 2 || mortos.length || S.stats.missoes === 1) Sm.chron(S, txt);
+    if (Gu.rankM(ida) >= 2 || ida.covil || mortos.length || S.stats.missoes === 1) Sm.chron(S, txt);
     else if (!S.safe) Sm.toast(S, txt, ok ? 'good' : 'warn');
     return { ok, mortos, volta };
   };
@@ -20203,6 +20242,144 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // a taberna: o descontentamento cresce menos, e mais gente acorda para a aventura
   Gu.descMult = (S) => (Gu.temTaberna(S) ? C.TABERNA_DESC : 1);
   Gu.despertarMult = (S) => (Gu.temTaberna(S) ? C.TABERNA_DESPERTA : 1);
+})(globalThis.G = globalThis.G || {});
+
+/* ---- js/monstros.js ---- */
+/* Gods · 0.38: monstros e covis. Com a vila grande ou com a guilda aberta, aparecem covis no mapa (a toca de goblins, a
+   poça das gosmas, a cripta, o ninho de aranhas, a caverna do ogro). De tempos em tempos, de noite, sai um bando: anda como
+   os lobos, rouba e morde quem está longe do fogo, e os heróis vão para cima. Cada golpe conta: o monstro tem vida e não
+   foge ferido. Enquanto o covil existe, ele cresce. A guilda põe a missão de limpar no quadro; Deus pode esmagar o covil
+   de uma vez, se quiser pagar. O sorteio é próprio, menos o lugar de onde o bando sai (a mesma regra dos lobos). Sem DOM. */
+(function (G) {
+  'use strict';
+  const C = G.CFG;
+  const Mo = G.Monstros = {};
+  const Sim = () => G.Sim, Fam = () => G.Family, R = () => G.Rpg;
+  const DAY = () => C.DAY_MIN, YEAR = () => C.YEAR_DAYS * C.DAY_MIN;
+
+  Mo.TIPOS = {
+    gosma: { name: 'Gosma', art: 'uma gosma', pl: 'As gosmas', de: 'de gosmas', fem: 1, covil: 'Poça das gosmas', hp: 2, forca: 0.6, pack: [3, 5], min: 0, ouro: 0 },
+    goblin: { name: 'Goblin', art: 'um goblin', pl: 'Os goblins', de: 'de goblins', covil: 'Toca dos goblins', hp: 2, forca: 0.7, pack: [3, 6], min: 0, ouro: 1 },
+    esqueleto: { name: 'Esqueleto', art: 'um esqueleto', pl: 'Os esqueletos', de: 'de esqueletos', covil: 'Cripta esquecida', hp: 3, forca: 1, pack: [3, 5], min: 5, ouro: 1 },
+    aranha: { name: 'Aranha gigante', art: 'uma aranha gigante', pl: 'As aranhas gigantes', de: 'de aranhas', fem: 1, covil: 'Ninho de aranhas', hp: 3, forca: 1.2, pack: [2, 4], min: 5, ouro: 0 },
+    ogro: { name: 'Ogro', art: 'um ogro', pl: 'Os ogros', de: 'de ogros', covil: 'Caverna do ogro', hp: 7, forca: 2, pack: [1, 2], min: 10, ouro: 3 },
+  };
+  function sorte(S, sal) {
+    let x = (Math.imul((S.t / 60) | 0, 40503) ^ Math.imul(sal | 0, 2654435761) ^ (S.seed | 0)) >>> 0;
+    x ^= x >>> 13; x = Math.imul(x, 1597334677) >>> 0; x ^= x >>> 15; x = Math.imul(x, 69069) >>> 0; x ^= x >>> 11;
+    return (x >>> 0) / 4294967296;
+  }
+  Mo.init = function (S) {
+    const m = S.monstros || (S.monstros = {});
+    m.covis = m.covis || []; m.prox = m.prox || 0; m.nid = m.nid || 1;
+    return m;
+  };
+  const vivos = (S) => S.people.filter((p) => p.alive).length;
+  Mo.ativo = (S) => (G.Guilda && G.Guilda.temGuilda(S)) || vivos(S) >= C.MONSTRO_GENTE;
+  Mo.covil = (S, id) => (S.monstros ? S.monstros.covis.find((c) => c.id === id) : null);
+  Mo.nomeDe = (c) => Mo.TIPOS[c.m].covil;
+  // um lugar longe da vila, em terra livre e sem obra
+  function lugar(S) {
+    const w = S.world;
+    for (let k = 0; k < 60; k++) {
+      const a = sorte(S, 100 + k) * Math.PI * 2, d = C.COVIL_DIST[0] + sorte(S, 200 + k) * (C.COVIL_DIST[1] - C.COVIL_DIST[0]);
+      const x = Math.round(S.camp.x + Math.cos(a) * d), y = Math.round(S.camp.y + Math.sin(a) * d);
+      if (x < 3 || y < 3 || x >= w.W - 3 || y >= w.H - 3) continue;
+      const i = y * w.W + x;
+      if (w.block[i] || G.IS_WATER[w.tile[i]] || w.bgrid[i] >= 0) continue;
+      if (S.monstros.covis.some((c) => Math.hypot(c.x - x, c.y - y) < 12)) continue;
+      return { x, y };
+    }
+    return null;
+  }
+  Mo.novo = function (S, tipo) {
+    const m = Mo.init(S), ano = S.ck.year, ks = Object.keys(Mo.TIPOS).filter((k) => Mo.TIPOS[k].min <= ano);
+    const k = tipo || ks[Math.floor(sorte(S, m.nid * 3) * ks.length)], at = lugar(S);
+    if (!at) return null;
+    const c = { id: m.nid++, m: k, x: at.x, y: at.y, nv: 1, t: S.t, ataque: S.t + (C.COVIL_RAID[0] + sorte(S, m.nid) * (C.COVIL_RAID[1] - C.COVIL_RAID[0])) * DAY(), bandos: 0 };
+    m.covis.push(c);
+    S.stats.covis = (S.stats.covis || 0) + 1;
+    const T = Mo.TIPOS[k];
+    if (S.stats.covis === 1) Sim().chron(S, 'Quem foi longe voltou contando: há um covil no mato, ' + T.covil.toLowerCase() + '. À noite, sai coisa de lá. Até agora, ninguém foi ver de perto.');
+    else if (!S.safe) Sim().toast(S, 'Apareceu um covil no mapa: ' + T.covil + '.', 'warn');
+    return c;
+  };
+  Mo.remove = function (S, id) { const m = Mo.init(S); m.covis = m.covis.filter((c) => c.id !== id); };
+  // ---------- o dia e a hora ----------
+  Mo.daily = function (S) {
+    const m = Mo.init(S);
+    if (S.resumido || S.safe || S.over || !Mo.ativo(S)) return;
+    if (!m.prox) m.prox = S.t + (5 + sorte(S, 11) * 15) * DAY();
+    if (S.t >= m.prox) {
+      if (m.covis.length < C.COVIL_MAX) Mo.novo(S);
+      m.prox = S.t + (C.COVIL_NOVO[0] + sorte(S, 13) * (C.COVIL_NOVO[1] - C.COVIL_NOVO[0])) * DAY();
+    }
+    // quem deixa o covil em paz vê ele crescer
+    for (const c of m.covis) if (c.nv < 3 && S.t - c.t > c.nv * C.COVIL_CRESCE * YEAR()) { c.nv++; Sim().toast(S, Mo.nomeDe(c) + ' cresceu: os bandos vêm maiores.', 'warn'); }
+  };
+  Mo.hourly = function (S) {
+    const m = S.monstros;
+    if (!m || S.safe || S.over || S.resumido || !S.narr) return;
+    const A = S.narr.active.lobos;
+    if (A && A.monstro) Mo.chamaHerois(S);
+    if (!m.covis.length) return;
+    const h = S.ck.hour;
+    if (h < 20 || h >= 22 || S.narr.active.lobos || S.narr.active.onca) return;
+    for (const c of m.covis) {
+      if (S.t < c.ataque) continue;
+      Mo.bando(S, c);
+      return;
+    }
+  };
+  Mo.bando = function (S, c) {
+    const T = Mo.TIPOS[c.m], n = T.pack[0] + Math.floor(sorte(S, c.id * 5) * (T.pack[1] - T.pack[0] + 1)) + (c.nv - 1);
+    c.ataque = S.t + (C.COVIL_RAID[0] + sorte(S, c.id * 7) * (C.COVIL_RAID[1] - C.COVIL_RAID[0])) * DAY();
+    const made = G.Narr.spawnMonstros(S, c.m, n);
+    if (!made) return 0;
+    c.bandos++; S.stats.bandos = (S.stats.bandos || 0) + 1;
+    if (S.stats.bandos === 1) Sim().chron(S, 'Pela primeira vez, ' + T.pl.toLowerCase() + ' vieram até a vila. O povo correu para o fogo.');
+    Mo.chamaHerois(S);
+    return made;
+  };
+  // os heróis saem para a luta (os mais fortes primeiro; quem está ferido fica)
+  Mo.chamaHerois = function (S) {
+    if (!R()) return 0;
+    const es = S.narr.ents.filter((e) => e.m && !e.gone && e.state !== 'embora');
+    if (!es.length) return 0;
+    const hs = R().herois(S).filter((p) => !p.carriedBy && !p.labor && Fam().age(S, p) >= 16 && p.needs.saude >= 40 && !(p.act && p.act.type === 'defender')).slice(0, C.MONSTRO_HEROIS);
+    let n = 0;
+    hs.forEach((p, k) => { p.sleeping = false; if (p.inTent) { const b = Sim().building(S, p.inTent); if (b) { p.x = b.x + 1; p.y = b.y + b.h + 0.5; p.px = p.x; p.py = p.y; } p.inTent = 0; } if (G.AI.startDefend(S, p, { kind: 'narr', id: es[k % es.length].id })) n++; });
+    return n;
+  };
+  // ---------- o golpe ----------
+  // um golpe no monstro: ele tem vida e não foge ferido; caiu, conta, e às vezes deixa alguma coisa
+  Mo.golpe = function (S, e, p) {
+    const T = Mo.TIPOS[e.m], a = S.narr.active.lobos, Sm = Sim();
+    e.hp = (e.hp === undefined ? T.hp : e.hp) - 1;
+    if (a) a.fought = (a.fought || 0) + 1;
+    if (e.hp > 0) return 'acertou';
+    e.gone = true;
+    if (a) a.killed++;
+    S.stats.monstros = (S.stats.monstros || 0) + 1;
+    if (R()) R().ganha(S, p, 6 + T.hp * 2, 'luta');
+    if (T.ouro && S.stock.ouro !== undefined && sorte(S, e.id) < 0.25) { S.stock.ouro += T.ouro; Sm.float(S, e.x, e.y, '+' + T.ouro + ' ouro'); }
+    if (S.stats.monstros === 1) Sm.chron(S, p.name + ' enfrentou ' + T.art + ' e derrubou. O povo ficou olhando, e no outro dia todo mundo queria aprender a lutar.');
+    else Sm.toast(S, p.name + ' derrubou ' + T.art + '.', 'good');
+    return 'morto';
+  };
+  Mo.mordida = (e) => Mo.TIPOS[e.m].forca;
+  // ---------- Deus ----------
+  Mo.esmagaWhy = function (S) { return !S.god || S.god.poder < C.COVIL_ESMAGA ? 'faltam ' + Math.ceil(C.COVIL_ESMAGA - (S.god ? S.god.poder : 0)) + ' de Poder' : ''; };
+  Mo.esmaga = function (S, id) {
+    const c = Mo.covil(S, id);
+    if (!c || Mo.esmagaWhy(S)) return false;
+    S.god.poder -= C.COVIL_ESMAGA;
+    Mo.remove(S, id);
+    S.stats.covisLimpos = (S.stats.covisLimpos || 0) + 1;
+    Sim().chron(S, 'A terra se abriu sobre ' + Mo.nomeDe(c).toLowerCase() + '. Ninguém do povo viu, mas no outro dia o mato estava quieto.');
+    S.events.push({ k: 'toast', text: 'O covil não existe mais.', tone: 'good' });
+    return true;
+  };
 })(globalThis.G = globalThis.G || {});
 
 /* ---- js/save.js ---- */
@@ -20325,6 +20502,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       povo: S.povo || null,   // 0.16: o nome e o título do lugar
       raca: S.raca || null,   // 0.36: o povo que fundou o mundo
       guilda: S.guilda || null,   // 0.37: o quadro e os grupos fora
+      monstros: S.monstros || null,   // 0.38: os covis
       tribo: S.tribo || null,   // 0.28: as tribos (a primeira leva as outras e a relação entre elas)
       rel: S.base ? null : S.rel || null,
       outras: S.base || !S.outras ? null : S.outras.map((B) => Save.serialize(B)),
@@ -20391,6 +20569,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       tribo: d.tribo || null,
       raca: d.raca || null,
       guilda: d.guilda || null,
+      monstros: d.monstros || null,
     };
     if (base) { S.base = base; S.rel = base.rel; } else S.rel = d.rel || null;
     for (const p of S.people) {
@@ -22697,6 +22876,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       { k: P.ink2, s: P.mist, d: P.bark }],
     torre: [['...kkkk...', '..kyyyyk..', '.kkkkkkkk.', '..kwwwwk..', '..kssssk..', '..ksddsk..', '..kssssk..', '.ksssssk..', '.kssssssk.', 'kkkkkkkkkk'],
       { k: P.ink2, s: P.mist, y: P.tan, w: P.wood, d: P.ink }],
+    // 0.38: o covil
+    covil: [['..........', '...kkkk...', '..kssssk..', '.ksskksk..', '.kskddksk.', 'kskddddksk', 'kskddddksk', 'ksddddddsk', 'kkkkkkkkkk', '..........'],
+      { k: P.ink2, s: P.mist, d: P.ink }],
     // 0.37: a taberna e a guilda
     taberna: [['.kkkkkkkk.', 'kyyyyyyyyk', 'kkkkkkkkkk', '.k......k.', '.kwwkkddk.', '.kwwkkddk.', '.kkkkkkkk.', '...kk.....', '...kk.....', '..kkkk....'],
       { k: P.ink2, y: P.wood, w: P.yellow, d: P.bark }],
@@ -23791,6 +23973,53 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     rect7(b, 33, 0, 37, 2, '#c8423a');   // a bandeira
     return b.canvas();
   }
+  // ---------- 0.38: os monstros ----------
+  // folha de 3 quadros por 4 direções (a mesma ordem dos lobos): 0 de frente, 1 de costas, 2 direita, 3 esquerda
+  A.MONSTRO_W = 16; A.MONSTRO_H = 18;
+  const monstroCache = {};
+  function gente(b, f, d, pele, roupa, olho, porte) {
+    const cx = 8, base = 17, h = porte, passo = f === 1 ? 1 : f === 2 ? -1 : 0;
+    const top = base - h;
+    rect7(b, cx - 3, top, cx + 2, top + 4, pele);
+    if (d === 0) { b.set(cx - 2, top + 2, olho); b.set(cx + 1, top + 2, olho); }
+    if (d === 2) b.set(cx + 1, top + 2, olho);
+    if (d === 3) b.set(cx - 2, top + 2, olho);
+    rect7(b, cx - 3, top + 5, cx + 2, base - 4, roupa);
+    rect7(b, cx - 4, top + 5, cx - 4, base - 5 + (passo > 0 ? -1 : 0), pele); rect7(b, cx + 3, top + 5, cx + 3, base - 5 + (passo < 0 ? -1 : 0), pele);
+    rect7(b, cx - 2, base - 3, cx - 1, base - (passo > 0 ? 1 : 0), roupa); rect7(b, cx, base - 3, cx + 1, base - (passo < 0 ? 1 : 0), roupa);
+  }
+  function monstroFrame(m, f, d) {
+    const b = new Buf(A.MONSTRO_W, A.MONSTRO_H);
+    if (m === 'goblin') { gente(b, f, d, '#5e9a3c', '#6a4a30', '#fee761', 11); b.set(4, 8, '#5e9a3c'); b.set(3, 7, '#5e9a3c'); b.set(11, 8, '#5e9a3c'); b.set(12, 7, '#5e9a3c'); line(b, 12, 8, 13, 13, '#a4adb6'); }
+    else if (m === 'esqueleto') { gente(b, f, d, '#e8e4d4', '#2a2e34', '#2b1d1a', 13); for (let y = 10; y <= 13; y += 2) rect7(b, 5, y, 10, y, '#e8e4d4'); line(b, 12, 6, 12, 13, '#a4adb6'); }
+    else if (m === 'ogro') { const o = { 0: 0 }; rect7(b, 2, 2, 13, 13, '#7a8a50'); rect7(b, 4, 0, 11, 5, '#8a9a5e'); if (d !== 1) { b.set(5, 3, '#c8423a'); b.set(10, 3, '#c8423a'); rect7(b, 6, 5, 9, 5, '#2b1d1a'); b.set(6, 6, '#f4f0e6'); b.set(9, 6, '#f4f0e6'); } rect7(b, 3, 9, 12, 12, '#6a4a30'); rect7(b, 0, 4, 1, 11 + (f === 1 ? -1 : 0), '#7a8a50'); rect7(b, 14, 4, 15, 11 + (f === 2 ? -1 : 0), '#7a8a50'); line(b, 15, 2, 15, 13, PLANK[0]); rect7(b, 4, 14, 6, 17 - (f === 1 ? 1 : 0), '#6a7a44'); rect7(b, 9, 14, 11, 17 - (f === 2 ? 1 : 0), '#6a7a44'); o[0] = 1; }
+    else if (m === 'aranha') { rect7(b, 5, 8, 10, 12, '#3a2a3a'); rect7(b, 6, 7, 9, 7, '#4e3a4e'); rect7(b, 6, 12, 9, 13, '#2a1e2a'); if (d !== 1) { b.set(6, 9, '#e43b44'); b.set(9, 9, '#e43b44'); } const q = f === 1 ? 1 : f === 2 ? -1 : 0; for (let k = 0; k < 3; k++) { const dy = k * 2 + (k % 2 ? q : -q); line(b, 5, 9 + k, 1, 6 + dy, '#2a1e2a'); line(b, 1, 6 + dy, 0, 11 + dy, '#2a1e2a'); line(b, 10, 9 + k, 14, 6 + dy, '#2a1e2a'); line(b, 14, 6 + dy, 15, 11 + dy, '#2a1e2a'); } }
+    else { const a = f === 1 ? 1 : f === 2 ? -1 : 0; for (let y = 8 + a; y <= 16; y++) { const t = (y - 8 - a) / (8 - a), hw = Math.round(3 + t * 4); rect7(b, 8 - hw, y, 7 + hw, y, y === 8 + a ? '#c8f0a0' : y === 16 ? '#4e9a3c' : '#7ccc5c'); } if (d !== 1) { b.set(5, 12, '#1f2a14'); b.set(10, 12, '#1f2a14'); } b.set(5, 10 + a, '#e8ffd0'); }
+    return b;
+  }
+  A.monstroSheet = function (m) {
+    if (monstroCache[m]) return monstroCache[m];
+    const [c, x] = mk(A.MONSTRO_W * 3, A.MONSTRO_H * 4);
+    A.polishWith(() => { for (let d = 0; d < 4; d++) for (let f = 0; f < 3; f++) x.drawImage(monstroFrame(m, f, d).canvas(), f * A.MONSTRO_W, d * A.MONSTRO_H); });
+    return (monstroCache[m] = c);
+  };
+  // o covil de cada monstro (32 x 28): a boca de pedra, a tocha e o que ele deixa por perto
+  const covilCache = {};
+  A.covilImg = function (m) {
+    if (covilCache[m]) return covilCache[m];
+    return (covilCache[m] = A.polishWith(() => {
+      const b = new Buf(32, 28);
+      for (let y = 4; y <= 25; y++) { const t = (y - 4) / 21, hw = Math.round(5 + Math.sqrt(t) * 10); for (let x = 16 - hw; x <= 15 + hw; x++) { const c = H7(x, y, 301) < 0.2 ? STONE[1] : x < 14 ? STONE[3] : STONE[2]; b.set(x, y, c); } }
+      for (let y = 13; y <= 25; y++) { const t = (y - 13) / 12, hw = Math.round(2 + Math.sqrt(t) * 5); for (let x = 16 - hw; x <= 15 + hw; x++) b.set(x, y, y < 16 ? '#1f1a24' : '#120e16'); }
+      for (const x of [5, 26]) { rect7(b, x, 16, x, 25, PLANK[0]); rect7(b, x - 1, 14, x + 1, 15, '#f77622'); b.set(x, 13, '#fee761'); }
+      if (m === 'esqueleto') for (const [x, y] of [[9, 25], [21, 26], [12, 26]]) { rect7(b, x, y, x + 2, y, '#e8e4d4'); }
+      if (m === 'aranha') for (let k = 0; k < 5; k++) { line(b, 8, 12, 8 + k * 4, 25, '#e8e8f0'); }
+      if (m === 'gosma') for (const [x, y] of [[7, 25], [23, 26], [17, 26]]) { rect7(b, x, y, x + 2, y + 1, '#7ccc5c'); }
+      if (m === 'goblin') { line(b, 22, 18, 22, 25, PLANK[1]); rect7(b, 21, 18, 23, 19, '#e8e4d4'); }
+      if (m === 'ogro') { rect7(b, 7, 24, 10, 26, '#6d6672'); rect7(b, 21, 25, 24, 26, '#6d6672'); }
+      return b.canvas();
+    }));
+  };
   // 0.37: a taberna (48 x 36, 3 x 2 passos): parede de tábua, janelas acesas, a placa da caneca e o barril na porta
   function tabernaSpr() {
     const b = new Buf(48, 36);
@@ -24934,6 +25163,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         if (x < tx0 - 1 || x > tx1 + 1 || y < ty0 - 1 || y > ty1 + 1) continue;
         list.push({ y: y * TS + 3, cr: a, x, y });
       }
+      // 0.38: os covis, onde o povo já viu
+      if (S.monstros) for (const c of S.monstros.covis) {
+        if (c.x < tx0 - 2 || c.x > tx1 + 2 || c.y < ty0 - 2 || c.y > ty1 + 2 || !G.Sim.isSeen(S, c.x, c.y)) continue;
+        list.push({ y: (c.y + 1) * TS, covil: c });
+      }
       // lobos e viajantes: só onde o povo já viu (na névoa, só os uivos)
       if (S.narr) for (const e of S.narr.ents) {
         if (e.gone || !G.Sim.isSeen(S, Math.floor(e.x), Math.floor(e.y))) continue;
@@ -24984,7 +25218,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         } finally { FX = fx0; }
         continue;
       }
-      if (it.o) drawObj(it.o, season, snow, sc < 1, S, now);
+      if (it.covil) { const img = A.covilImg(it.covil.m); blit(img, it.covil.x * TS - 8, (it.covil.y + 1) * TS - img.height); }
+      else if (it.o) drawObj(it.o, season, snow, sc < 1, S, now);
       else if (it.corpo) drawCorpo(it.corpo, now);
       else if (it.b) drawBuilding(S, it.b, now, it.row, it.part);
       else if (it.e) drawEnt(S, it.e, it.x, it.y, now);
@@ -25907,6 +26142,17 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   function drawEnt(S, e, x, y, now) {
     const wx = x * TS, wy = y * TS;
     const moving = !!e.path;
+    if (e.m) {   // 0.38: o monstro
+      const sh = A.monstroSheet(e.m), fw = A.MONSTRO_W, fh = A.MONSTRO_H, frame = moving ? 1 + (Math.floor(e.walk * 4) % 2) : 0;
+      blit(A.spr.shadow, wx - 5, wy + 2);
+      const al = e.state === 'embora' ? Math.max(0.35, 1 - (e.t - (e.leftAt || e.t)) / 120) : 1;
+      if (al < 1) ctx.globalAlpha = al;
+      ctx.drawImage(sh, frame * fw, e.dir * fh, fw, fh, Math.round((wx - fw / 2) * sc + ox), Math.round((wy + 4 - fh) * sc + oy), Math.round(fw * sc), Math.round(fh * sc));
+      if (al < 1) ctx.globalAlpha = 1;
+      const T = G.Monstros.TIPOS[e.m];
+      if (e.hp < T.hp) { rect(wx - 5, wy + 4 - fh - 2, 10, 1, '#2b1d1a'); rect(wx - 5, wy + 4 - fh - 2, Math.max(1, Math.round(10 * e.hp / T.hp)), 1, '#e43b44'); }
+      return;
+    }
     if (e.k === 'onca') {
       // a onça (Etapa 9): na toca, some; acuada ou na luta, agachada
       if (e.hidden) return;
@@ -28473,16 +28719,19 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       return `<p class="small">Ainda não há guilda. ${Gu.temTaberna(S) ? esc(wg ? 'Agora não: ' + wg + '.' : 'Construa a guilda: é ali que os grupos se formam.') : esc(w ? 'A taberna ' + w + '.' : 'Comece pela taberna, no menu Construir.')}</p>`;
     }
     const quadro = g.quadro.map((m) => {
-      const T = Gu.TIPOS[m.tipo], R0 = Gu.RANKS[T.rank], why = Gu.sonhoWhy(S, m);
-      return `<li class="povo-row"><img class="ico ico-lg" src="${ic('guilda')}" alt=""><div><b>${esc(T.nome)}</b> <span class="small" style="color:${R0.cor}">rank ${esc(R0.nome)}</span><span class="small">${Math.max(1, Math.ceil((m.ate - S.t) / C.DAY_MIN))} dias no quadro · uns ${T.dias[0]} a ${T.dias[1]} dias de viagem</span><div class="chips"><button type="button" class="btn btn-small" data-gact="guilda-sonho" data-id="${m.id}"${why ? ' disabled' : ''} title="${esc(why ? 'Agora não: ' + why : 'Os mais fortes saem hoje')}">Mandar um sonho (${C.GUILDA_SONHO} de Poder)</button></div></div></li>`;
+      const T = Gu.TIPOS[m.tipo], R0 = Gu.RANKS[Gu.rankM(m)], why = Gu.sonhoWhy(S, m);
+      return `<li class="povo-row"><img class="ico ico-lg" src="${ic(m.tipo === 'covil' ? 'covil' : 'guilda')}" alt=""><div><b>${esc(Gu.nomeM(m))}</b> <span class="small" style="color:${R0.cor}">rank ${esc(R0.nome)}</span><span class="small">${Math.max(1, Math.ceil((m.ate - S.t) / C.DAY_MIN))} dias no quadro · uns ${T.dias[0]} a ${T.dias[1]} dias de viagem</span><div class="chips"><button type="button" class="btn btn-small" data-gact="guilda-sonho" data-id="${m.id}"${why ? ' disabled' : ''} title="${esc(why ? 'Agora não: ' + why : 'Os mais fortes saem hoje')}">Mandar um sonho (${C.GUILDA_SONHO} de Poder)</button></div></div></li>`;
     }).join('');
     const fora = g.idas.map((i) => {
-      const T = Gu.TIPOS[i.tipo], why = Gu.protegeWhy(S, i);
-      return `<li class="povo-row"><img class="ico ico-lg" src="${ic('guilda')}" alt=""><div><b>${esc(T.nome)}</b><span class="small">${esc(i.nomes.join(', '))} · volta em uns ${Math.max(1, Math.ceil((i.volta - S.t) / C.DAY_MIN))} dias</span><div class="chips">${i.protegido ? '<span class="chip dom">Sob a sua proteção</span>' : `<button type="button" class="btn btn-small" data-gact="guilda-protege" data-id="${i.id}"${why ? ' disabled' : ''} title="${esc(why ? 'Agora não: ' + why : 'Mais chance, e ninguém morre nesta viagem')}">Proteger (${C.GUILDA_PROTEGE} de Poder)</button>`}</div></div></li>`;
+      const why = Gu.protegeWhy(S, i);
+      return `<li class="povo-row"><img class="ico ico-lg" src="${ic('guilda')}" alt=""><div><b>${esc(Gu.nomeM(i))}</b><span class="small">${esc(i.nomes.join(', '))} · volta em uns ${Math.max(1, Math.ceil((i.volta - S.t) / C.DAY_MIN))} dias</span><div class="chips">${i.protegido ? '<span class="chip dom">Sob a sua proteção</span>' : `<button type="button" class="btn btn-small" data-gact="guilda-protege" data-id="${i.id}"${why ? ' disabled' : ''} title="${esc(why ? 'Agora não: ' + why : 'Mais chance, e ninguém morre nesta viagem')}">Proteger (${C.GUILDA_PROTEGE} de Poder)</button>`}</div></div></li>`;
     }).join('');
     const hist = g.hist.map((h) => `<li class="small">${esc(h.txt)}</li>`).join('');
+    const Mo = G.Monstros, wEs = Mo ? Mo.esmagaWhy(S) : '';
+    const covis = Mo && S.monstros ? S.monstros.covis.map((c) => `<li class="povo-row"><img class="ico ico-lg" src="${ic('covil')}" alt=""><div><b>${esc(Mo.nomeDe(c))}</b> <span class="small ttl">força ${c.nv} de 3</span><span class="small">${c.bandos ? c.bandos + (c.bandos === 1 ? ' bando já saiu de lá' : ' bandos já saíram de lá') : 'Ainda não saiu nenhum bando'}</span><div class="chips"><button type="button" class="btn btn-small" data-gact="covil-esmaga" data-id="${c.id}"${wEs ? ' disabled' : ''} title="${esc(wEs ? 'Agora não: ' + wEs : 'A terra se abre e o covil acaba. Os heróis não ganham nada com isso')}">Esmagar (${C.COVIL_ESMAGA} de Poder)</button></div></div></li>`).join('') : '';
     return `<h3>O quadro</h3><ul class="donlist povolist">${quadro || '<li class="none small muted">Nenhuma missão pregada agora.</li>'}</ul>` +
       `<h3>Quem está fora</h3><ul class="donlist povolist">${fora || '<li class="none small muted">Ninguém saiu.</li>'}</ul>` +
+      (covis ? `<h3>Os covis</h3><ul class="donlist povolist">${covis}</ul>` : '') +
       (hist ? `<h3>O que já aconteceu</h3><ul class="mems">${hist}</ul>` : '');
   }
   // 0.36: os heróis do povo, do mais forte para o menos forte
@@ -29201,6 +29450,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       }
       if (a === 'vervila') { const v = S.soc.vila; $('#modal-deus').hidden = true; if (v) UI.hooks.center((v.x + 0.5) * C.TILE, (v.y + 0.5) * C.TILE); return; }
     }
+    if (a === 'covil-esmaga' && G.Monstros) { G.Monstros.esmaga(S, +b.dataset.id); UI.deus('guilda'); UI.update(0, true); return; }   // 0.38
     if (a === 'guilda-sonho' || a === 'guilda-protege') { (a === 'guilda-sonho' ? G.Guilda.sonho : G.Guilda.protege)(S, +b.dataset.id); UI.deus('guilda'); UI.update(0, true); return; }   // 0.37
     if (a === 'heroi') { e.preventDefault(); $('#modal-deus').hidden = true; UI.select(+b.dataset.pid, 0, true); return; }   // 0.36
     if (a === 'chamar' && G.Povos) {   // Etapa 12
