@@ -2257,6 +2257,7 @@
   // quem foi embora, para o painel
   So.foraTxt = function (S, p) {
     const v = S.soc ? S.soc.vila : null, w = p.away ? p.away.why : '';
+    if (p.away && p.away.missao) return p.morto ? 'Não voltou da missão' : 'Em missão, longe daqui';   // 0.37
     if (p.morto) return 'Morreu longe daqui' + (v ? ', em ' + v.nome : '');
     const onde = p.away && p.away.vila && v && !v.fim ? '. Vive em ' + v.nome : '';
     return (w === 'exilio' ? 'Foi mandad' + oa(p) + ' embora' : w === 'casou' ? 'Foi morar fora: casou' : 'Foi embora com o grupo') + onde;

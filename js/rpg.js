@@ -123,7 +123,7 @@
         R.ganha(S, p, 2, 'anda');
         if (R.tem(p, 'achador') && !S.safe && sorte(S, p, 7) < 0.04) { const k = ['sal', 'minerio', 'ouro'][Math.floor(sorte(S, p, 8) * 3)]; if (S.stock[k] !== undefined) { S.stock[k] += 1; Sim().toast(S, p.name + ' achou ' + (k === 'minerio' ? 'minério' : k) + ' pelo caminho.', 'good'); } }
       } else if (r && r.cls) { if (sorte(S, p, 5) < 0.3) R.ganha(S, p, 1); }
-      else if (Fam().age(S, p) <= 40 && sorte(S, p, 3) < 0.004) R.ganha(S, p, 4, 'anda');   // de vez em quando, alguém sai para ver o que tem depois do morro
+      else if (Fam().age(S, p) <= 40 && sorte(S, p, 3) < 0.004 * (G.Guilda ? G.Guilda.despertarMult(S) : 1)) R.ganha(S, p, 4, 'anda');   // de vez em quando, alguém sai para ver o que tem depois do morro
     }
   };
   // ---------- Deus abençoa ----------

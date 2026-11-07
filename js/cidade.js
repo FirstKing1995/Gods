@@ -51,6 +51,9 @@
     mercado: (S) => (S.soc && S.soc.vila && !S.soc.vila.fim ? '' : 'pede uma vila de fora para trocar'),
     // 0.29: a Idade Média (os dois chegam com os Reinos; o castelo pede uma cidade)
     moinho: (S) => (G.Eras && G.Eras.idade(S) >= 4 ? '' : 'chega com a Idade dos Reinos'),
+    // 0.37: a taberna pede gente para beber; a guilda pede a taberna (é ali que os grupos se formam)
+    taberna: (S) => (vivos(S) >= 12 ? '' : 'pede 12 pessoas'),
+    guilda: (S) => (!S.buildings.some((b) => b.type === 'taberna' && b.built) ? 'pede uma taberna pronta' : vivos(S) >= 20 ? '' : 'pede 20 pessoas'),
     // 0.34: a Era Moderna (chega com a Era Elétrica; o rádio e a garagem pedem a usina)
     radio: (S) => (!(G.Eras && G.Eras.idade(S) >= 9) ? 'chega com a Era Elétrica' : S.buildings.some((b) => b.type === 'usina' && b.built) || (G.Eras && G.Eras.temMagia(S, 'raio')) ? '' : 'pede uma usina pronta'),
     garagem: (S) => (!(G.Eras && G.Eras.idade(S) >= 9) ? 'chega com a Era Elétrica' : S.buildings.some((b) => b.type === 'usina' && b.built) || (G.Eras && G.Eras.temMagia(S, 'raio')) ? '' : 'pede uma usina pronta'),

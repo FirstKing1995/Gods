@@ -175,6 +175,8 @@
       ['porto', 'porto'], ['galeao', 'galeao'],
       // 0.31: a Pólvora e a Imprensa
       ['imprensa', 'imprensa'], ['universidade', 'universidade'], ['arsenal', 'arsenal'],
+      // 0.37: a taberna e a guilda
+      ['taberna', 'taberna'], ['guilda', 'guilda'],
       // 0.34: a Era Moderna
       ['radio', 'radio'], ['garagem', 'garagem'], ['hospitalgeral', 'hospitalgeral'],
       // 0.33: a Era Elétrica
@@ -1164,7 +1166,8 @@
     let h = prof ? `<span class="chip" title="O trabalho em que é melhor">${esc(prof)}</span>` : '';
     if (r) {
       const c = Rp.CLASSES[r.cls];
-      h += `<span class="chip dom" title="${esc(c.desc)}"><b style="color:${c.cor}">${esc(Rp.nome(p))}</b> · nível ${r.nv}</span>`;
+      const rk = G.Guilda ? G.Guilda.rank(p) : null;
+      h += `<span class="chip dom" title="${esc(c.desc)}"><b style="color:${c.cor}">${esc(Rp.nome(p))}</b> · nível ${r.nv}${rk ? ` · <span style="color:${rk.cor}">${esc(rk.nome)}</span>` : ''}</span>`;
       h += r.habs.map((k) => `<span class="chip" title="${esc(Rp.HABS[k].desc)}">${esc(Rp.HABS[k].name)}</span>`).join('');
     }
     const pct = r && r.nv < Rp.NIVEL_MAX ? Math.floor(r.xp / Rp.pede(r.nv) * 100) : 0;
@@ -1173,10 +1176,30 @@
     const btn = adulto ? `<button type="button" class="btn btn-small" data-act="rpg-bencao"${why ? ' disabled' : ''} title="${esc(why ? 'Agora não: ' + why : r ? 'Empurra o nível de força' : 'Desperta a força desta pessoa')}">${r ? 'Abençoar' : 'Despertar'} (${Rp.BENCAO} de Poder)</button>` : '';
     return h || btn ? `<div class="chips">${h}${btn}</div>${barra}` : '';
   }
+  // 0.37: a guilda: o quadro, quem está fora e o que já aconteceu
+  function guildaHTML() {
+    const Gu = G.Guilda, g = Gu.init(S);
+    if (!Gu.temGuilda(S)) {
+      const w = G.Cidade.openWhy(S, 'taberna'), wg = G.Cidade.openWhy(S, 'guilda');
+      return `<p class="small">Ainda não há guilda. ${Gu.temTaberna(S) ? esc(wg ? 'Agora não: ' + wg + '.' : 'Construa a guilda: é ali que os grupos se formam.') : esc(w ? 'A taberna ' + w + '.' : 'Comece pela taberna, no menu Construir.')}</p>`;
+    }
+    const quadro = g.quadro.map((m) => {
+      const T = Gu.TIPOS[m.tipo], R0 = Gu.RANKS[T.rank], why = Gu.sonhoWhy(S, m);
+      return `<li class="povo-row"><img class="ico ico-lg" src="${ic('guilda')}" alt=""><div><b>${esc(T.nome)}</b> <span class="small" style="color:${R0.cor}">rank ${esc(R0.nome)}</span><span class="small">${Math.max(1, Math.ceil((m.ate - S.t) / C.DAY_MIN))} dias no quadro · uns ${T.dias[0]} a ${T.dias[1]} dias de viagem</span><div class="chips"><button type="button" class="btn btn-small" data-gact="guilda-sonho" data-id="${m.id}"${why ? ' disabled' : ''} title="${esc(why ? 'Agora não: ' + why : 'Os mais fortes saem hoje')}">Mandar um sonho (${C.GUILDA_SONHO} de Poder)</button></div></div></li>`;
+    }).join('');
+    const fora = g.idas.map((i) => {
+      const T = Gu.TIPOS[i.tipo], why = Gu.protegeWhy(S, i);
+      return `<li class="povo-row"><img class="ico ico-lg" src="${ic('guilda')}" alt=""><div><b>${esc(T.nome)}</b><span class="small">${esc(i.nomes.join(', '))} · volta em uns ${Math.max(1, Math.ceil((i.volta - S.t) / C.DAY_MIN))} dias</span><div class="chips">${i.protegido ? '<span class="chip dom">Sob a sua proteção</span>' : `<button type="button" class="btn btn-small" data-gact="guilda-protege" data-id="${i.id}"${why ? ' disabled' : ''} title="${esc(why ? 'Agora não: ' + why : 'Mais chance, e ninguém morre nesta viagem')}">Proteger (${C.GUILDA_PROTEGE} de Poder)</button>`}</div></div></li>`;
+    }).join('');
+    const hist = g.hist.map((h) => `<li class="small">${esc(h.txt)}</li>`).join('');
+    return `<h3>O quadro</h3><ul class="donlist povolist">${quadro || '<li class="none small muted">Nenhuma missão pregada agora.</li>'}</ul>` +
+      `<h3>Quem está fora</h3><ul class="donlist povolist">${fora || '<li class="none small muted">Ninguém saiu.</li>'}</ul>` +
+      (hist ? `<h3>O que já aconteceu</h3><ul class="mems">${hist}</ul>` : '');
+  }
   // 0.36: os heróis do povo, do mais forte para o menos forte
   function heroisHTML() {
     const Rp = G.Rpg, l = Rp.herois(S);
-    const linha = (p) => { const c = Rp.CLASSES[p.rpg.cls]; return `<li class="povo-row"><img class="ico ico-lg" src="${ic(G.Povos.iconOf(p))}" alt=""><div><b><a href="#" data-gact="heroi" data-pid="${p.id}">${esc(p.name)}</a></b> <span class="small" style="color:${c.cor}">${esc(Rp.nome(p))}</span> <span class="small ttl">nível ${p.rpg.nv}</span><div class="chips">${p.rpg.habs.map((k) => `<span class="chip" title="${esc(Rp.HABS[k].desc)}">${esc(Rp.HABS[k].name)}</span>`).join('')}</div></div></li>`; };
+    const linha = (p) => { const c = Rp.CLASSES[p.rpg.cls]; return `<li class="povo-row"><img class="ico ico-lg" src="${ic(G.Povos.iconOf(p))}" alt=""><div><b><a href="#" data-gact="heroi" data-pid="${p.id}">${esc(p.name)}</a></b> <span class="small" style="color:${c.cor}">${esc(Rp.nome(p))}</span> <span class="small ttl">nível ${p.rpg.nv}${G.Guilda ? ' · ' + G.Guilda.rank(p).nome : ''}</span><div class="chips">${p.rpg.habs.map((k) => `<span class="chip" title="${esc(Rp.HABS[k].desc)}">${esc(Rp.HABS[k].name)}</span>`).join('')}</div></div></li>`; };
     return `<p class="small">Quem luta, caça e anda longe pode despertar uma classe. O nível de força sobe com o que a pessoa faz, e na ficha de qualquer adulto você pode abençoar.</p>` +
       `<ul class="donlist povolist">${l.length ? l.map(linha).join('') : '<li class="none small muted">Ninguém despertou ainda.</li>'}</ul>`;
   }
@@ -1264,7 +1287,7 @@
     document.querySelectorAll('#modal-deus [data-gtab]').forEach((b) => { b.classList.toggle('on', b.dataset.gtab === deusTab); b.setAttribute('aria-selected', b.dataset.gtab === deusTab ? 'true' : 'false'); });
     $('#deus-mtitle').textContent = g.name ? g.name + ', ' + g.epithet : 'Deus';
     $('#deus-poder').textContent = fmtN(g.poder) + ' de Poder · glória ' + fmtN(g.glory);
-    $('#deus-body').innerHTML = deusTab === 'escolhidos' ? escolhidosHTML(Dz, g) : deusTab === 'atos' ? atosHTML(Dz, g) : deusTab === 'povos' && G.Povos ? povosHTML(Dz, g) : deusTab === 'memoria' && G.Memoria && S.memoria ? memoriaHTML(Dz) : deusTab === 'sociedade' && G.Soc && S.soc ? sociedadeHTML(Dz) : deusTab === 'tribos' && G.Tribos ? tribosHTML() : deusTab === 'herois' && G.Rpg ? heroisHTML() : nivelHTML(Dz, g);
+    $('#deus-body').innerHTML = deusTab === 'escolhidos' ? escolhidosHTML(Dz, g) : deusTab === 'atos' ? atosHTML(Dz, g) : deusTab === 'povos' && G.Povos ? povosHTML(Dz, g) : deusTab === 'memoria' && G.Memoria && S.memoria ? memoriaHTML(Dz) : deusTab === 'sociedade' && G.Soc && S.soc ? sociedadeHTML(Dz) : deusTab === 'tribos' && G.Tribos ? tribosHTML() : deusTab === 'herois' && G.Rpg ? heroisHTML() : deusTab === 'guilda' && G.Guilda ? guildaHTML() : nivelHTML(Dz, g);
     $('#modal-deus').hidden = false;
   };
   // 0.28: as tribos (fazer nascer outra, olhar por cada uma, a relação entre elas e o que Deus faz por ela)
@@ -1889,6 +1912,7 @@
       }
       if (a === 'vervila') { const v = S.soc.vila; $('#modal-deus').hidden = true; if (v) UI.hooks.center((v.x + 0.5) * C.TILE, (v.y + 0.5) * C.TILE); return; }
     }
+    if (a === 'guilda-sonho' || a === 'guilda-protege') { (a === 'guilda-sonho' ? G.Guilda.sonho : G.Guilda.protege)(S, +b.dataset.id); UI.deus('guilda'); UI.update(0, true); return; }   // 0.37
     if (a === 'heroi') { e.preventDefault(); $('#modal-deus').hidden = true; UI.select(+b.dataset.pid, 0, true); return; }   // 0.36
     if (a === 'chamar' && G.Povos) {   // Etapa 12
       const why = G.Povos.callWhy(S, b.dataset.k);

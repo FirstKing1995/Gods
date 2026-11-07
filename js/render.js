@@ -1162,7 +1162,7 @@
   // a figura da obra no nível dela (Etapa 7): casas, oficinas, armazém
   function houseImg(d) { const S2 = A.spr; return d.lv >= 3 && d.kind ? S2.house[d.kind] : S2.house[d.lv >= 2 ? 2 : 1]; }
   // 0.35: a forma da casa e da oficina na idade delas (null: a figura de sempre)
-  const OBRA_FORMA = { armazem: 1, marcenaria: 1, tecelagem: 1, ferraria: 1, escola: 1, biblioteca: 1, hospital: 1, guarda: 1, brigada: 1, mercado: 1 };
+  const OBRA_FORMA = { armazem: 1, marcenaria: 1, tecelagem: 1, ferraria: 1, escola: 1, biblioteca: 1, hospital: 1, guarda: 1, brigada: 1, mercado: 1, taberna: 1, guilda: 1 };
   function casaImg(b, lv, kind) {
     const f = G.Eras && G.Eras.formaCasa ? G.Eras.formaCasa(b.era || 0) : 0;
     return !f || (f === 1 && lv >= 3 && kind) ? null : A.casaEra(f, kind, b.id);

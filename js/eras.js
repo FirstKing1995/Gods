@@ -102,7 +102,7 @@
   E.trocaMult = (S) => (E.ordem(S) === 'reino' ? 1.3 : 1);
   E.xp = (S) => (E.ordem(S) === 'guildas' ? 1.15 : 1);
   E.cacaMult = (S) => (E.ordem(S) === 'clas' ? 1.25 : 1);
-  E.descMult = (S) => (E.ordem(S) === 'assembleia' ? 0.75 : 1) * (E.temLuz(S) ? C.USINA_DESC : 1);   // 0.33: a luz
+  E.descMult = (S) => (E.ordem(S) === 'assembleia' ? 0.75 : 1) * (E.temLuz(S) ? C.USINA_DESC : 1) * (G.Guilda ? G.Guilda.descMult(S) : 1);   // 0.33: a luz
   // no conselho, só mulher fala por todos (o matriarcado das elfas)
   E.candidatos = (S, list) => (E.ordem(S) === 'conselho' && list.some((p) => p.sex === 'F') ? list.filter((p) => p.sex === 'F') : list);
 
