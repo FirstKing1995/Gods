@@ -513,7 +513,7 @@
       if (b.type === 'fabrica' && b.built && Math.random() < dt * 4) spawn({ x: b.x * TS + 38 + Math.random() * 4, y: b.y * TS - 20, vx: 2 + Math.random() * 3, vy: -8 - Math.random() * 4, g: 0, life: 3.2, col: 'smoke' });   // 0.32: a chaminé da fábrica
       if (b.type === 'moquem' && b.batch && Math.random() < dt * 3) spawn({ x: b.x * TS + 6 + Math.random() * 5, y: b.y * TS + 2, vx: (Math.random() - 0.5) * 3, vy: -7 - Math.random() * 4, g: 0, life: 2.6, col: 'smoke' });
       // casa de pedra com gente dentro no frio: fumaça na chaminé (Etapa 7)
-      if (b.kind === 'pedra' && b.built && S.temp < 14 && Math.random() < dt * 2.5 && FX && FX.tent.has(b.id)) {
+      if (b.kind === 'pedra' && (b.era || 0) < 4 && b.built && S.temp < 14 && Math.random() < dt * 2.5 && FX && FX.tent.has(b.id)) {
         spawn({ x: b.x * TS + 23 + Math.random() * 2, y: b.y * TS - 3, vx: 1 + Math.random() * 2, vy: -6 - Math.random() * 3, g: 0, life: 2.4, col: 'smoke' });
       }
       if (b.type !== 'fogueira' || !b.built || b.fuel <= 0) continue;
@@ -1161,9 +1161,29 @@
   const HALO = { cura: '#9be070', palavra: '#ffffff', luz: '#fee761', colheita: '#d8c040', caca: '#e4a672', paz: '#9fd8ff', sabedoria: '#c8a8ff', forca: '#f77622' };
   // a figura da obra no nível dela (Etapa 7): casas, oficinas, armazém
   function houseImg(d) { const S2 = A.spr; return d.lv >= 3 && d.kind ? S2.house[d.kind] : S2.house[d.lv >= 2 ? 2 : 1]; }
+  // 0.35: a forma da casa e da oficina na idade delas (null: a figura de sempre)
+  const OBRA_FORMA = { armazem: 1, marcenaria: 1, tecelagem: 1, ferraria: 1, escola: 1, biblioteca: 1, hospital: 1, guarda: 1, brigada: 1, mercado: 1 };
+  function casaImg(b, lv, kind) {
+    const f = G.Eras && G.Eras.formaCasa ? G.Eras.formaCasa(b.era || 0) : 0;
+    return !f || (f === 1 && lv >= 3 && kind) ? null : A.casaEra(f, kind, b.id);
+  }
+  function obraImg(b) {
+    if (!OBRA_FORMA[b.type] || !G.Eras || !G.Eras.formaObra) return null;
+    const f = G.Eras.formaObra(b.era || 0);
+    return f ? A.obraEra(b.type, f, b.w * TS) : null;
+  }
+  let ultimoS = null;
   function drawBuilding(S, b, now, row, part) {
     eraObra = b.built && !SEM_TELHADO[b.type] ? b.era || 0 : 0;
+    ultimoS = S;
     try { drawBuilding0(S, b, now, row, part); } finally { eraObra = 0; }
+    // 0.35: a obra que acabou de ser refeita fica um dia de andaime
+    if (b.reformT && b.built && row === undefined && part === undefined && S.t - b.reformT < C.DAY_MIN && !SEM_TELHADO[b.type]) {
+      const bx = b.x * TS, by = b.y * TS, w = b.w * TS;
+      for (let x = bx + 1; x < bx + w; x += Math.max(8, (w - 3) / 3)) rect(x, by + 4, 1, 27, '#93683f');
+      rect(bx, by + 10, w, 1, '#6e4a35'); rect(bx, by + 20, w, 1, '#6e4a35');
+      if (Math.random() < 0.03) spawn({ x: bx + Math.random() * w, y: by + 8 + Math.random() * 16, vx: (Math.random() - 0.5) * 4, vy: -5, g: 0, life: 1.2, col: 'smoke' });
+    }
   }
   function drawBuilding0(S, b, now, row, part) {
     const S2 = A.spr, bx = b.x * TS, by = b.y * TS;
@@ -1207,7 +1227,8 @@
         blit(icon, bx + 16 - icon.width / 2, top - 12 + bob, 0.55 + 0.45 * (0.5 + 0.5 * Math.sin(now / 400)));
       }
     } else {
-      const img = houseImg(d);
+      const nova = casaImg(b, lv, d.kind), img = nova || houseImg(d);
+      if (nova) eraObra = 0;
       const top = by + 31 - img.height;
       blit(S2.bigShadow, bx + 5, by + 26, ghost ? 0.4 : undefined);
       blit(img, bx, top, ghost ? 0.45 : undefined);
@@ -1327,7 +1348,8 @@
   // chegou, com o desenho inteiro apagadinho atrás e os andaimes por cima
   function drawCidade(S, S2, b, bx, by, ghost, lv) {
     if (b.mar) return;   // Etapa 18: o navio está no mar
-    const set = S2.cidade[b.type], img = Array.isArray(set) ? set[Math.max(1, Math.min(set.length - 1, lv))] : set;
+    const set = S2.cidade[b.type], nova = obraImg(b), img = nova || (Array.isArray(set) ? set[Math.max(1, Math.min(set.length - 1, lv))] : set);
+    if (nova) eraObra = 0;
     const base = by + b.h * TS, top = base - img.height, gr = C.BUILD[b.type].grande;
     blit(S2.bigShadow, bx + b.w * TS / 2 - 10, base - 5, ghost ? 0.4 : undefined);
     if (!gr || b.built || !(b.progress > 0)) { blit(img, bx, top, ghost ? 0.45 : undefined); return; }
@@ -1358,7 +1380,9 @@
     const imgs = S2.shop[b.type], img = imgs[Math.min(imgs.length - 1, lv)], top = by + 31 - img.height;
     blit(S2.bigShadow, bx + 5, by + 26, ghost ? 0.4 : undefined);
     if (b.type === 'cemiterio' && !ghost && lv >= 2 && G.Memoria) cercaCem(S, b);   // Etapa 13
-    blit(img, bx, top, ghost ? 0.45 : undefined);
+    const nova = obraImg(b);   // 0.35: a forma da idade (as peças em volta seguem no mesmo lugar)
+    if (nova) { eraObra = 0; blit(nova, bx, by + 31 - nova.height, ghost ? 0.45 : undefined); }
+    else blit(img, bx, top, ghost ? 0.45 : undefined);
     if (ghost) return;
     const st = S.stock, it = S2.item;
     if (b.type === 'marcenaria') {
@@ -1764,6 +1788,9 @@
     }
     if (S2.cidade && S2.cidade[type]) { const set = S2.cidade[type], im = Array.isArray(set) ? set[Math.max(1, Math.min(3, lv))] : set; return { img: im, dy: C.BUILD[type].h * TS - im.height }; }   // Etapa 16
     const shop = S2.shop[type];
+    const novaIdade = ultimoS && ultimoS.eras ? ultimoS.eras.idade || 0 : 0;   // 0.35: o fantasma já mostra a forma da idade
+    if (type === 'barraca') { const n = casaImg({ era: novaIdade, id: 2 }, lv, kind); if (n) return { img: n, dy: 31 - n.height }; }
+    if (OBRA_FORMA[type]) { const n = obraImg({ type, era: novaIdade, w: C.BUILD[type].w }); if (n) return { img: n, dy: 31 - n.height }; }
     const img = shop ? shop[Math.max(1, Math.min(shop.length - 1, lv))] : houseImg({ lv, kind });
     return { img, dy: 31 - img.height };
   }

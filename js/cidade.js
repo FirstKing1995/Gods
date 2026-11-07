@@ -345,8 +345,9 @@
     for (const q of S.people) if (here(q) && q.inTent === b.id && !q.labor) { G.AI.abort(S, q); q.fail.dormir = S.t + C.FOGO_MIN + 15; q.nextEval = S.t; }
     if (!S.safe) S.events.push({ k: 'soc', ev: 'fogo', on: true, bid: b.id, x: b.x + b.w / 2, y: b.y + b.h / 2 });
     const d = Sim().def(b);
-    toast(S, 'Uma faísca pegou na palha ' + (d.a === 'o' ? 'do ' : 'da ') + d.name.toLowerCase() + '. Fogo!', 'warn');
-    if (c.fogos === 1) chron(S, 'Uma faísca do verão seco pegou na palha ' + (d.a === 'o' ? 'do ' : 'da ') + d.name.toLowerCase() + '. Foi o primeiro fogo sem culpado.');
+    const onde = (b.era || 0) >= 6 ? 'no forro ' : 'na palha ';   // 0.35: casa caiada e prédio não têm palha
+    toast(S, 'Uma faísca pegou ' + onde + (d.a === 'o' ? 'do ' : 'da ') + d.name.toLowerCase() + '. Fogo!', 'warn');
+    if (c.fogos === 1) chron(S, 'Uma faísca do verão seco pegou ' + onde + (d.a === 'o' ? 'do ' : 'da ') + d.name.toLowerCase() + '. Foi o primeiro fogo sem culpado.');
   }
 
   // ---------- a troca da feira ----------
