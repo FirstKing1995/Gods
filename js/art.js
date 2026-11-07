@@ -2528,8 +2528,26 @@
     else { const a = f === 1 ? 1 : f === 2 ? -1 : 0; for (let y = 8 + a; y <= 16; y++) { const t = (y - 8 - a) / (8 - a), hw = Math.round(3 + t * 4); rect7(b, 8 - hw, y, 7 + hw, y, y === 8 + a ? '#c8f0a0' : y === 16 ? '#4e9a3c' : '#7ccc5c'); } if (d !== 1) { b.set(5, 12, '#1f2a14'); b.set(10, 12, '#1f2a14'); } b.set(5, 10 + a, '#e8ffd0'); }
     return b;
   }
+  // 0.40: o dragão (40 x 34): corpo vermelho-escuro, asas abertas que batem, a boca acesa
+  A.DRAGAO_W = 40; A.DRAGAO_H = 34;
+  function dragaoFrame(f, d) {
+    const b = new Buf(A.DRAGAO_W, A.DRAGAO_H), E0 = ['#3a1012', '#6a1c1e', '#9a2c28', '#c84a38', '#e8804e'], asa = f === 1 ? 0 : f === 2 ? 6 : 3;
+    for (const lado of [0, 1]) for (let k = 0; k < 12; k++) { const x0 = lado ? 24 + k : 15 - k, y0 = 10 + asa + Math.round(k * (asa ? 0.35 : 0.5)) - (lado ? 0 : 0), alto = 12 - k; for (let y = y0 - (11 - k) + asa; y < y0 + alto / 2; y++) if (y >= 0 && y < 30) b.set(x0, y, (k % 3 === 0) ? E0[0] : y < y0 ? E0[1] : E0[2]); }
+    for (let y = 12; y <= 27; y++) { const hw = y < 15 ? 4 : y < 24 ? 7 : 5; for (let x = 20 - hw; x <= 19 + hw; x++) b.set(x, y, x < 17 ? E0[3] : x > 22 ? E0[1] : (y % 3 === 0 ? E0[2] : E0[3])); }
+    for (let y = 18; y <= 25; y++) for (let x = 17; x <= 22; x++) b.set(x, y, y % 2 ? '#e8b060' : '#d89a4e');
+    const cab = d === 1 ? 0 : 1;
+    for (let y = 3; y <= 12; y++) { const hw = y < 6 ? 3 : y < 10 ? 5 : 3; for (let x = 20 - hw; x <= 19 + hw; x++) b.set(x, y, E0[cab ? 3 : 2]); }
+    for (const x of [15, 24]) { line(b, x, 3, x + (x < 20 ? -2 : 2), 0, '#2a1a1a'); }
+    if (d !== 1) { b.set(17, 7, '#fee761'); b.set(22, 7, '#fee761'); rect7(b, 17, 11, 22, 12, '#2b1d1a'); rect7(b, 18, 11, 21, 11, '#feae34'); for (const x of [17, 19, 21]) b.set(x, 12, '#f4f0e6'); }
+    if (d === 2) { rect7(b, 22, 6, 25, 11, E0[3]); b.set(24, 7, '#fee761'); }
+    if (d === 3) { rect7(b, 14, 6, 17, 11, E0[3]); b.set(15, 7, '#fee761'); }
+    rect7(b, 13, 25 - (f === 1 ? 1 : 0), 16, 30, E0[2]); rect7(b, 23, 25 - (f === 2 ? 1 : 0), 26, 30, E0[2]);
+    for (const x of [13, 16, 23, 26]) b.set(x, 31, '#2a1a1a');
+    return b;
+  }
   A.monstroSheet = function (m) {
     if (monstroCache[m]) return monstroCache[m];
+    if (m === 'dragao') { const [c, x] = mk(A.DRAGAO_W * 3, A.DRAGAO_H * 4); A.polishWith(() => { for (let d = 0; d < 4; d++) for (let f = 0; f < 3; f++) x.drawImage(dragaoFrame(f, d).canvas(), f * A.DRAGAO_W, d * A.DRAGAO_H); }); return (monstroCache[m] = c); }
     const [c, x] = mk(A.MONSTRO_W * 3, A.MONSTRO_H * 4);
     A.polishWith(() => { for (let d = 0; d < 4; d++) for (let f = 0; f < 3; f++) x.drawImage(monstroFrame(m, f, d).canvas(), f * A.MONSTRO_W, d * A.MONSTRO_H); });
     return (monstroCache[m] = c);
@@ -2548,6 +2566,7 @@
       if (m === 'gosma') for (const [x, y] of [[7, 25], [23, 26], [17, 26]]) { rect7(b, x, y, x + 2, y + 1, '#7ccc5c'); }
       if (m === 'goblin') { line(b, 22, 18, 22, 25, PLANK[1]); rect7(b, 21, 18, 23, 19, '#e8e4d4'); }
       if (m === 'ogro') { rect7(b, 7, 24, 10, 26, '#6d6672'); rect7(b, 21, 25, 24, 26, '#6d6672'); }
+      if (m === 'dragao') for (const [x, y] of [[8, 25], [21, 26], [12, 26], [24, 24]]) { rect7(b, x, y, x + 1, y + 1, '#fee761'); }
       return b.canvas();
     }));
   };

@@ -632,6 +632,7 @@
     if (first && !S.stats.eraEnd) { S.era = 'familia'; Sm.chron(S, 'Começa a Era da Família.'); }
     G.God.onBirth(S, baby, w, dad);
     if (G.Povos) G.Povos.onBirth(S, baby, w, dad);
+    if (G.Isekai) G.Isekai.onBirth(S, baby);   // 0.40: de raro em raro, alguém nasce lembrando de outra vida
     if (G.Life) G.Life.onBirth(S, baby, w, dad);   // agradecem e fazem festa
     return baby;
   }

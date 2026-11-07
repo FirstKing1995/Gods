@@ -3,7 +3,7 @@
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.39.0',
+    VERSION: '0.40.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -664,6 +664,8 @@
     // 0.29: a Idade Média
     MOINHO_ROCA: 1.25, CASTELO_CRIME: 0.8, ERA_PESTE: 0.5, PESTE_PARTE: 0.2, ESTRELAS_PRAGA: 0.5,
     // 0.30: as Navegações
+    // 0.40: o dragão e as almas de outro mundo
+    DRAGAO_RAIO: 25, DRAGAO_ANO: 12, DRAGAO_GENTE: 80, DRAGAO_VOLTA: 4, DRAGAO_OURO: 0.3, DRAGAO_TESOURO: 40, ALMA_DEPOIS: 12, ALMA_CHANCE: 0.05, ALMA_FALA: 5,
     // 0.39: a magia
     MAGIA_ACORDA: 0.04, MAGIA_FE_SACERDOTE: 45, MAGIA_CURA: 12, MAGIA_DOM: 80,
     // 0.38: os monstros e os covis

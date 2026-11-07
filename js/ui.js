@@ -1170,11 +1170,13 @@
     if (r) {
       const c = Rp.CLASSES[r.cls];
       const rk = G.Guilda ? G.Guilda.rank(p) : null;
+      if (r.lenda) h += `<span class="chip dom" title="Fez o que ninguém fez"><b style="color:#ff8ad0">${esc(r.lenda)}</b></span>`;
       h += `<span class="chip dom" title="${esc(c.desc)}"><b style="color:${c.cor}">${esc(Rp.nome(p))}</b> · nível ${r.nv}${rk ? ` · <span style="color:${rk.cor}">${esc(rk.nome)}</span>` : ''}</span>`;
       h += r.habs.map((k) => `<span class="chip" title="${esc(Rp.HABS[k].desc)}">${esc(Rp.HABS[k].name)}</span>`).join('');
     }
     const pct = r && r.nv < Rp.NIVEL_MAX ? Math.floor(r.xp / Rp.pede(r.nv) * 100) : 0;
     const barra = r && r.nv < Rp.NIVEL_MAX ? `<div class="bar" title="Até o nível ${r.nv + 1}"><i style="width:${pct}%"></i></div>` : '';
+    if (G.Isekai && G.Isekai.de(p) && p.outro.falou) h += `<span class="chip dom" title="Lembra de ${esc(p.outro.mundo)}. ${esc(G.Isekai.DONS[p.outro.dom].desc)}"><b style="color:#9fe8ff">De outro mundo</b> · ${esc(G.Isekai.DONS[p.outro.dom].name)}</span>`;
     const Ma = G.Magia;
     if (Ma && !r && Ma.temDom(S, p)) h += '<span class="chip dom" title="Nasceu com o dom da magia. Com a torre de magia, acorda sozinho">Tem o dom</span>';
     const whyDom = Ma ? Ma.domWhy(S, p) : 'x';
@@ -1208,9 +1210,16 @@
   }
   // 0.36: os heróis do povo, do mais forte para o menos forte
   function heroisHTML() {
-    const Rp = G.Rpg, l = Rp.herois(S);
+    const Rp = G.Rpg, l = Rp.herois(S), Is = G.Isekai;
+    const almas = Is ? Is.almas(S).filter((p) => p.outro.falou) : [];
+    const almaL = almas.map((p) => {
+      const o = p.outro, D = Is.DONS[o.dom];
+      const bt = o.escolha ? `<span class="small muted">${esc(o.esqueceu ? 'Esqueceu.' : o.guia ? 'Guiada por você.' : 'Vive do jeito dela.')}</span>` :
+        Object.keys(Is.ESCOLHAS).map((k) => { const E = Is.ESCOLHAS[k], w = Is.escolheWhy(S, p, k); return `<button type="button" class="btn btn-small" data-gact="alma" data-pid="${p.id}" data-k="${k}"${w ? ' disabled' : ''} title="${esc(w ? 'Agora não: ' + w : E.desc)}">${esc(E.name)}${E.custo ? ' (' + E.custo + ' de Poder)' : ''}</button>`; }).join('');
+      return `<li class="povo-row"><img class="ico ico-lg" src="${ic('deus')}" alt=""><div><b><a href="#" data-gact="heroi" data-pid="${p.id}">${esc(p.name)}</a></b> <span class="small ttl">${G.Family.age(S, p)} anos</span><span class="small">Lembra de ${esc(o.mundo)}.</span><span class="small" title="${esc(D.desc)}">${o.esqueceu ? '' : esc(D.name) + ': ' + esc(D.desc)}</span><div class="chips">${bt}</div></div></li>`;
+    }).join('');
     const linha = (p) => { const c = Rp.CLASSES[p.rpg.cls]; return `<li class="povo-row"><img class="ico ico-lg" src="${ic(G.Povos.iconOf(p))}" alt=""><div><b><a href="#" data-gact="heroi" data-pid="${p.id}">${esc(p.name)}</a></b> <span class="small" style="color:${c.cor}">${esc(Rp.nome(p))}</span> <span class="small ttl">nível ${p.rpg.nv}${G.Guilda ? ' · ' + G.Guilda.rank(p).nome : ''}</span><div class="chips">${p.rpg.habs.map((k) => `<span class="chip" title="${esc(Rp.HABS[k].desc)}">${esc(Rp.HABS[k].name)}</span>`).join('')}</div></div></li>`; };
-    return `<p class="small">Quem luta, caça e anda longe pode despertar uma classe. O nível de força sobe com o que a pessoa faz, e na ficha de qualquer adulto você pode abençoar.</p>` +
+    return (almaL ? `<h3>Quem veio de outro mundo</h3><ul class="donlist povolist">${almaL}</ul><h3>Os heróis</h3>` : '') + `<p class="small">Quem luta, caça e anda longe pode despertar uma classe. O nível de força sobe com o que a pessoa faz, e na ficha de qualquer adulto você pode abençoar.</p>` +
       `<ul class="donlist povolist">${l.length ? l.map(linha).join('') : '<li class="none small muted">Ninguém despertou ainda.</li>'}</ul>`;
   }
   function povoChips(p) {
@@ -1851,7 +1860,7 @@
     body.innerHTML = '<div class="dom-opts" role="radiogroup" aria-label="Respostas">' +
       `<button type="button" class="dom-opt mem-opt" role="radio" aria-checked="false" data-k="chuva"${why ? ' disabled' : ''}><span class="nm">Mandar a Chuva <span class="small muted">· ${custo} de Poder</span></span><span class="ds small">${esc(why ? 'Agora não: ' + why.charAt(0).toLowerCase() + why.slice(1) : 'Apaga na hora, sem gastar a água do povo.')}</span></button>` +
       `<button type="button" class="dom-opt mem-opt" role="radio" aria-checked="false" data-k="povo"><span class="nm">Deixar com o povo</span><span class="ds small">${esc((perto ? (perto === 1 ? 'Há 1 pessoa acordada' : 'Há ' + perto + ' pessoas acordadas') + ' por perto' : 'Não há ninguém acordado por perto') + (agua ? '' : ', e falta água no estoque') + ': ' + ch + ' em 10 de apagarem a tempo. Se não, a obra se vai' + (b.type === 'armazem' ? ', com ' + Math.round(C.FOGO_COMIDA * 100) + '% da comida' : mor.length ? ', e quem mora ali fica sem teto' : '') + '.')}</span></button>` +
-      '</div><p class="small muted">Pôr fogo é coisa grave: depois, o povo julga quem viu fazer, e você pode castigar, mostrar em sonho quem foi ou perdoar.</p>';
+      '</div>' + (c ? '<p class="small muted">Pôr fogo é coisa grave: depois, o povo julga quem viu fazer, e você pode castigar, mostrar em sonho quem foi ou perdoar.</p>' : '');
     let pick = null;
     ok.textContent = 'Está decidido';
     ok.disabled = true;
@@ -1922,6 +1931,7 @@
       }
       if (a === 'vervila') { const v = S.soc.vila; $('#modal-deus').hidden = true; if (v) UI.hooks.center((v.x + 0.5) * C.TILE, (v.y + 0.5) * C.TILE); return; }
     }
+    if (a === 'alma' && G.Isekai) { const q = S.people.find((x) => x.id === +b.dataset.pid), wh = G.Isekai.escolheWhy(S, q, b.dataset.k); if (wh) UI.toast('Agora não: ' + wh + '.', 'warn'); else G.Isekai.escolhe(S, q, b.dataset.k); UI.deus('herois'); UI.update(0, true); return; }   // 0.40
     if (a === 'covil-esmaga' && G.Monstros) { G.Monstros.esmaga(S, +b.dataset.id); UI.deus('guilda'); UI.update(0, true); return; }   // 0.38
     if (a === 'guilda-sonho' || a === 'guilda-protege') { (a === 'guilda-sonho' ? G.Guilda.sonho : G.Guilda.protege)(S, +b.dataset.id); UI.deus('guilda'); UI.update(0, true); return; }   // 0.37
     if (a === 'heroi') { e.preventDefault(); $('#modal-deus').hidden = true; UI.select(+b.dataset.pid, 0, true); return; }   // 0.36

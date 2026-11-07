@@ -1,7 +1,7 @@
 // Gods · testes da 0.39: o dom, a torre, o mago na luta, o sacerdote que cura, e Deus dando o dom.
 // Uso: node test/magia-test.js
 globalThis.G = globalThis.G || {};
-for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'sociedade', 'gente', 'cidade', 'regioes', 'mar', 'eras', 'avatar', 'visita', 'tribos', 'rpg', 'guilda', 'monstros', 'magia', 'save', 'offline']) require('../js/' + f + '.js');
+for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'sociedade', 'gente', 'cidade', 'regioes', 'mar', 'eras', 'avatar', 'visita', 'tribos', 'rpg', 'guilda', 'monstros', 'magia', 'isekai', 'save', 'offline']) require('../js/' + f + '.js');
 G.CFG.WORLD_GEN = 1;
 const { W, Sim, CFG: C, Rpg: R, Monstros: Mo, Magia: Ma, Save, Family: F, Eras: E, Cidade: Ci, Povos: Pv, Narr: N } = G;
 const DAY = C.DAY_MIN;

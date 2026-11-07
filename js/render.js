@@ -1666,7 +1666,7 @@
     const wx = x * TS, wy = y * TS;
     const moving = !!e.path;
     if (e.m) {   // 0.38: o monstro
-      const sh = A.monstroSheet(e.m), fw = A.MONSTRO_W, fh = A.MONSTRO_H, frame = moving ? 1 + (Math.floor(e.walk * 4) % 2) : 0;
+      const sh = A.monstroSheet(e.m), fw = e.m === 'dragao' ? A.DRAGAO_W : A.MONSTRO_W, fh = e.m === 'dragao' ? A.DRAGAO_H : A.MONSTRO_H, frame = moving ? 1 + (Math.floor(e.walk * 4) % 2) : 0;
       blit(A.spr.shadow, wx - 5, wy + 2);
       const al = e.state === 'embora' ? Math.max(0.35, 1 - (e.t - (e.leftAt || e.t)) / 120) : 1;
       if (al < 1) ctx.globalAlpha = al;

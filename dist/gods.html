@@ -1332,7 +1332,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.39.0',
+    VERSION: '0.40.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -1993,6 +1993,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     // 0.29: a Idade Média
     MOINHO_ROCA: 1.25, CASTELO_CRIME: 0.8, ERA_PESTE: 0.5, PESTE_PARTE: 0.2, ESTRELAS_PRAGA: 0.5,
     // 0.30: as Navegações
+    // 0.40: o dragão e as almas de outro mundo
+    DRAGAO_RAIO: 25, DRAGAO_ANO: 12, DRAGAO_GENTE: 80, DRAGAO_VOLTA: 4, DRAGAO_OURO: 0.3, DRAGAO_TESOURO: 40, ALMA_DEPOIS: 12, ALMA_CHANCE: 0.05, ALMA_FALA: 5,
     // 0.39: a magia
     MAGIA_ACORDA: 0.04, MAGIA_FE_SACERDOTE: 45, MAGIA_CURA: 12, MAGIA_DOM: 80,
     // 0.38: os monstros e os covis
@@ -3704,6 +3706,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (G.Guilda) G.Guilda.daily(S);   // 0.37: as missões
     if (G.Monstros) G.Monstros.daily(S);   // 0.38: os covis
     if (G.Magia) G.Magia.daily(S);   // 0.39: quem acorda, quem cura
+    if (G.Isekai) G.Isekai.daily(S);   // 0.40: o dragão e as almas
     if (G.Eras) G.Eras.daily(S);   // Etapas 19 e 20: a idade, o rumo, a magia, o desafio de cada idade
     if (G.Avatar) G.Avatar.daily(S);   // Etapa 21: o abençoado (a pergunta, o líder nato)
     if (G.Life) G.Life.daily(S);
@@ -4671,6 +4674,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (first && !S.stats.eraEnd) { S.era = 'familia'; Sm.chron(S, 'Começa a Era da Família.'); }
     G.God.onBirth(S, baby, w, dad);
     if (G.Povos) G.Povos.onBirth(S, baby, w, dad);
+    if (G.Isekai) G.Isekai.onBirth(S, baby);   // 0.40: de raro em raro, alguém nasce lembrando de outra vida
     if (G.Life) G.Life.onBirth(S, baby, w, dad);   // agradecem e fazem festa
     return baby;
   }
@@ -12740,12 +12744,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     for (const e of wolves) { const d = Math.hypot(e.x - cx, e.y - cy); if (d < bd) { bd = d; hit = e; } }
     if (!hit && !wolves.some((e) => Math.hypot(e.x - cx, e.y - cy) < 6)) return null;
     const a = n.active.lobos;
-    if (hit) { hit.gone = true; if (a) a.killed++; }
-    for (const e of wolves) if (!e.gone) goAway(S, e);
+    if (hit && hit.m && G.Monstros.TIPOS[hit.m].boss) { hit.hp = Math.max(1, hit.hp - C.DRAGAO_RAIO); if (hit.cov) { const c0 = G.Monstros.covil(S, hit.cov); if (c0) c0.hp = hit.hp; } hit = null; }   // 0.40: no dragão, o raio só machuca
+    else if (hit) { hit.gone = true; if (a) a.killed++; }
+    for (const e of wolves) if (!e.gone && !(e.m && G.Monstros.TIPOS[e.m].boss)) goAway(S, e);
     G.God.answerKind(S, ['lobos']);
     G.God.align(S, 2);
     for (const p of alive(S)) if (Math.hypot(p.x - cx, p.y - cy) < 10) { G.God.faith(S, p, 3); Sim().addMem(S, p, 'viuMilagre'); }
-    return hit ? 'O raio abateu um lobo. A matilha fugiu.' : 'O trovão espantou os lobos.';
+    return hit ? 'O raio abateu um lobo. A matilha fugiu.' : a && a.monstro ? 'O raio caiu no meio deles.' : 'O trovão espantou os lobos.';
   };
 
   // ---------- entidades: lobos e viajantes ----------
@@ -12890,7 +12895,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (!spot || n.active.lobos) return 0;
     for (let i = 0; i < pack; i++) newEnt(S, 'lobo', spot.x, spot.y, { home: spot.i, bites: 0, fur: 0, ring: S.rng.next() * Math.PI * 2, m, hp: T.hp });
     n.active.lobos = { t0: S.t, pack, bites: 0, stolen: 0, killed: 0, fought: 0, hurt: [], monstro: m };
-    Sim().toast(S, T.pl + ' vêm pela noite! São ' + pack + '.', 'bad');
+    Sim().toast(S, T.boss ? T.pl + ' desceu da serra!' : T.pl + ' vêm pela noite! São ' + pack + '.', 'bad');
     S.events.push({ k: 'narr', ev: 'lobos', on: true });
     return pack;
   };
@@ -18014,6 +18019,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (mem(S, p, 'aprendeuCom')) add(26, 'Aprendi uma coisa nova hoje.', 'Alguém ensinou.', 'aprendeu');
     if (mem(S, p, 'nasceuFilho')) add(48, 'Meu filho nasceu. Não cabe em mim.', 'Um filho nasceu.', 'filho');
     if (mem(S, p, 'novoPar')) add(40, 'Acho que tô apaixonad' + oa(p) + '.', 'Tem um par novo.', 'novoPar');
+    if (G.Isekai && G.Isekai.de(p) && p.outro.falou) add(14, 'Lembro de ' + p.outro.mundo + '.', 'Veio de outro mundo.', 'outro');   // 0.40
     // o gosto e o dia
     if (S.ck.season === g.estacao) add(10, 'Adoro ' + Ge.EST[g.estacao] + '.', 'É a estação de que mais gosta.', 'estacao');
     if (p.fe >= 85) add(12, 'Sinto que alguém olha por nós.', 'Fé ' + Math.round(p.fe) + '.', 'fe');
@@ -18529,6 +18535,14 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (casas.length < C.FOGO_ACASO_CASAS || S.rng.next() >= C.FOGO_ACASO) return;
     c.faisca = S.t + (10 + S.rng.next() * 7) * 60;
   }
+  // 0.40: pôr fogo numa obra de fora (o dragão)
+  Ci.queima = function (S, b) {
+    const c = S.cidade;
+    if (!c || !S.soc || b.fogo) return false;
+    b.fogo = S.t; S.soc.arde = 1; c.fogos++;
+    if (!S.safe) S.events.push({ k: 'soc', ev: 'fogo', on: true, bid: b.id, x: b.x + b.w / 2, y: b.y + b.h / 2 });
+    return true;
+  };
   function faiscaHora(S) {
     const c = S.cidade;
     if (!c.faisca || S.t < c.faisca) return;
@@ -20025,6 +20039,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const r = p.rpg || (p.rpg = { por: {} });
     r.por = r.por || {};
     if (por) r.por[por] = (r.por[por] || 0) + n;
+    if (G.Isekai) n *= G.Isekai.xp(p);   // 0.40: quem veio de outro mundo
     if (r.cls) { r.xp += n; sobe(S, p); return; }
     r.xp0 = (r.xp0 || 0) + n;
     if (r.xp0 >= 30 && adulto(S, p) && herois(S).length < teto(S)) R.desperta(S, p);
@@ -20173,7 +20188,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   function parte(S, m, grupo, sonho) {
     const g = S.guilda, T = Gu.TIPOS[m.tipo];
     const dias = T.dias[0] + sorte(S, m.id * 11) * (T.dias[1] - T.dias[0]);
-    const forca = grupo.reduce((a, p) => a + p.rpg.nv, 0);
+    const forca = grupo.reduce((a, p) => a + p.rpg.nv + (G.Isekai && G.Isekai.tem(p, 'sorte') ? 15 : 0), 0);   // 0.40: a sorte de outro mundo
     g.quadro = g.quadro.filter((x) => x !== m);
     const ida = { id: m.id, tipo: m.tipo, covil: m.covil || 0, nv: m.nv || 0, nome: m.nome || '', t0: S.t, volta: S.t + dias * DAY(), ids: grupo.map((p) => p.id), nomes: grupo.map((p) => p.name), forca, sonho: sonho ? 1 : 0 };
     for (const p of grupo) { So().sair(S, p, 'missao'); p.away.vila = 0; p.away.mar = 1; p.away.missao = 1; }
@@ -20201,7 +20216,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     volta.forEach((p, k) => {
       So().voltar(S, p, cx + (k % 3), cy + Math.floor(k / 3));
       if (!ok) p.needs.saude = Math.max(25, p.needs.saude - 40);
-      R().ganha(S, p, (ok ? 10 : 3) * (Gu.rankM(ida) + 1), 'luta');
+      R().ganha(S, p, (ok ? 15 : 4) * (Gu.rankM(ida) + 1), 'luta');
       Sm.say(S, p, ok ? 'Voltamos!' : 'Foi por pouco.', true);
     });
     if (G.Soc && G.Soc.reindex) G.Soc.reindex(S);
@@ -20284,6 +20299,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     goblin: { name: 'Goblin', art: 'um goblin', pl: 'Os goblins', de: 'de goblins', covil: 'Toca dos goblins', hp: 2, forca: 0.7, pack: [3, 6], min: 0, ouro: 1 },
     esqueleto: { name: 'Esqueleto', art: 'um esqueleto', pl: 'Os esqueletos', de: 'de esqueletos', covil: 'Cripta esquecida', hp: 3, forca: 1, pack: [3, 5], min: 5, ouro: 1 },
     aranha: { name: 'Aranha gigante', art: 'uma aranha gigante', pl: 'As aranhas gigantes', de: 'de aranhas', fem: 1, covil: 'Ninho de aranhas', hp: 3, forca: 1.2, pack: [2, 4], min: 5, ouro: 0 },
+    dragao: { name: 'Dragão', art: 'o dragão', pl: 'O dragão', de: 'de dragão', covil: 'Ninho do dragão', hp: 160, forca: 3, pack: [1, 1], min: 9999, ouro: 0, boss: 1, verbo: 'vem' },
     ogro: { name: 'Ogro', art: 'um ogro', pl: 'Os ogros', de: 'de ogros', covil: 'Caverna do ogro', hp: 7, forca: 2, pack: [1, 2], min: 10, ouro: 3 },
   };
   function sorte(S, sal) {
@@ -20322,6 +20338,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     m.covis.push(c);
     S.stats.covis = (S.stats.covis || 0) + 1;
     const T = Mo.TIPOS[k];
+    if (T.boss) return c;   // 0.40: o dragão tem a crônica dele
     if (S.stats.covis === 1) Sim().chron(S, 'Quem foi longe voltou contando: há um covil no mato, ' + T.covil.toLowerCase() + '. À noite, sai coisa de lá. Até agora, ninguém foi ver de perto.');
     else if (!S.safe) Sim().toast(S, 'Apareceu um covil no mapa: ' + T.covil + '.', 'warn');
     return c;
@@ -20355,11 +20372,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     }
   };
   Mo.bando = function (S, c) {
-    const T = Mo.TIPOS[c.m], n = T.pack[0] + Math.floor(sorte(S, c.id * 5) * (T.pack[1] - T.pack[0] + 1)) + (c.nv - 1);
+    const T = Mo.TIPOS[c.m], n = T.pack[0] + Math.floor(sorte(S, c.id * 5) * (T.pack[1] - T.pack[0] + 1)) + (T.boss ? 0 : c.nv - 1);
     c.ataque = S.t + (C.COVIL_RAID[0] + sorte(S, c.id * 7) * (C.COVIL_RAID[1] - C.COVIL_RAID[0])) * DAY() * (G.Guilda && G.Guilda.temGuilda(S) ? 1 : C.COVIL_SEM_GUILDA);
     const made = G.Narr.spawnMonstros(S, c.m, n);
     if (!made) return 0;
+    if (T.boss) for (const e of S.narr.ents) if (e.m === c.m && !e.gone) { e.cov = c.id; if (c.hp) e.hp = c.hp; }   // 0.40: a ferida do dragão não fecha entre uma descida e outra
     c.bandos++; S.stats.bandos = (S.stats.bandos || 0) + 1;
+    if (G.Isekai) G.Isekai.aoDescer(S, c);   // 0.40: o dragão chega queimando
     if (S.stats.bandos === 1) Sim().chron(S, 'Pela primeira vez, ' + T.pl.toLowerCase() + ' vieram até a vila. O povo correu para o fogo.');
     Mo.chamaHerois(S);
     return made;
@@ -20381,11 +20400,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const principal = dano === undefined;   // 0.39: o golpe que espirra não espirra de novo
     e.hp = (e.hp === undefined ? T.hp : e.hp) - (principal && G.Magia ? G.Magia.dano(p) : dano || 1);
     if (principal && G.Magia) G.Magia.espalha(S, e, p);
+    if (T.boss && e.cov) { const c0 = Mo.covil(S, e.cov); if (c0) c0.hp = Math.max(1, e.hp); }
     if (a) a.fought = (a.fought || 0) + 1;
     if (e.hp > 0) return 'acertou';
     e.gone = true;
     if (a) a.killed++;
     S.stats.monstros = (S.stats.monstros || 0) + 1;
+    if (T.boss && G.Isekai) { G.Isekai.lenda(S, p); return 'morto'; }   // 0.40
     if (R()) R().ganha(S, p, 6 + T.hp * 2, 'luta');
     if (T.ouro && S.stock.ouro !== undefined && sorte(S, e.id) < 0.25) { S.stock.ouro += T.ouro; Sm.float(S, e.x, e.y, '+' + T.ouro + ' ouro'); }
     if (S.stats.monstros === 1) Sm.chron(S, p.name + ' enfrentou ' + T.art + ' e derrubou. O povo ficou olhando, e no outro dia todo mundo queria aprender a lutar.');
@@ -20504,6 +20525,131 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (!S.safe) Sim().toast(S, p.name + ' acordou com o dom: ' + R().nome(p).toLowerCase() + '.', 'good');
     return true;
   };
+})(globalThis.G = globalThis.G || {});
+
+/* ---- js/isekai.js ---- */
+/* Gods · 0.40: dragões e almas de outro mundo. O dragão é o monstro maior: faz ninho na serra quando o povo já é grande,
+   desce de tempos em tempos, põe fogo em casa e leva ouro; só um grupo forte tira ele de lá, e quem derruba vira lenda.
+   As almas: de raro em raro nasce alguém lembrando de outra vida, num mundo que ninguém aqui conhece, e com um jeito único.
+   Aos cinco anos a criança começa a falar disso, e cabe a você: guiar, deixar viver como quiser, ou fazer esquecer.
+   Sorteio próprio, menos o bando (a mesma regra dos lobos). Sem DOM. */
+(function (G) {
+  'use strict';
+  const C = G.CFG;
+  const Is = G.Isekai = {};
+  const Sim = () => G.Sim, Fam = () => G.Family, R = () => G.Rpg;
+  const DAY = () => C.DAY_MIN, YEAR = () => C.YEAR_DAYS * C.DAY_MIN;
+
+  function hashN(a, b, c) {
+    let x = (Math.imul(a | 0, 2654435761) ^ Math.imul(b | 0, 40503) ^ Math.imul(c | 0, 69069)) >>> 0;
+    x ^= x >>> 13; x = Math.imul(x, 1597334677) >>> 0; x ^= x >>> 15;
+    return (x >>> 0) / 4294967296;
+  }
+  // ---------- o dragão ----------
+  Is.dragaoAtivo = (S) => (S.ck.year >= C.DRAGAO_ANO || S.people.filter((p) => p.alive).length >= C.DRAGAO_GENTE) && S.people.filter((p) => p.alive).length >= 30;
+  Is.temDragao = (S) => !!(S.monstros && S.monstros.covis.some((c) => c.m === 'dragao'));
+  function dragaoDia(S) {
+    if (!G.Monstros || S.safe || S.resumido || S.over) return;
+    const m = G.Monstros.init(S);
+    if (Is.temDragao(S) || !Is.dragaoAtivo(S)) return;
+    if (!m.proxDragao) { m.proxDragao = S.t + (40 + hashN(S.seed, 1, 1) * 160) * DAY(); return; }
+    if (S.t < m.proxDragao) return;
+    m.proxDragao = S.t + C.DRAGAO_VOLTA * YEAR();
+    const c = G.Monstros.novo(S, 'dragao');
+    if (!c) return;
+    c.nv = 3;
+    S.stats.dragoes = (S.stats.dragoes || 0) + 1;
+    Sim().chron(S, 'Uma sombra enorme passou por cima da vila e ninguém dormiu naquela noite. Um dragão fez ninho na serra.');
+    S.events.push({ k: 'toast', text: 'Um dragão fez ninho perto daqui.', tone: 'bad' });
+  }
+  // quando o bando é o dragão: uma casa pega fogo (a primeira coisa que ele faz ao chegar)
+  Is.aoDescer = function (S, c) {
+    if (c.m !== 'dragao' || !G.Cidade || !G.Cidade.queima) return;
+    const l = S.buildings.filter((b) => b.built && b.type === 'barraca' && !b.fogo);
+    if (l.length) G.Cidade.queima(S, l[Math.floor(hashN(S.t | 0, c.id, 3) * l.length)]);
+    if (S.stock.ouro > 0) { const n = Math.ceil(S.stock.ouro * C.DRAGAO_OURO); S.stock.ouro -= n; if (!S.safe) Sim().toast(S, 'O dragão levou ' + n + ' de ouro.', 'bad'); }
+  };
+  // quem dá o golpe final no dragão vira lenda
+  Is.lenda = function (S, p) {
+    const r = p.rpg;
+    if (r) { r.lenda = 'Matador de Dragão'; if (R()) R().ganha(S, p, R().pede(r.nv) * 2, 'luta'); }
+    S.stats.dragoesMortos = (S.stats.dragoesMortos || 0) + 1;
+    for (const c of S.monstros.covis.filter((x) => x.m === 'dragao')) G.Monstros.remove(S, c.id);
+    if (S.stock.ouro !== undefined) S.stock.ouro += C.DRAGAO_TESOURO;
+    Sim().chron(S, p.name + ' derrubou o dragão diante de todo mundo. Do ninho na serra, o povo trouxe ' + C.DRAGAO_TESOURO + ' de ouro. Vão contar isso por muitos anos.');
+    for (const q of S.people) if (q.alive && Sim().addMem) Sim().addMem(S, q, 'vencemos');
+    if (G.Life && G.Life.party) G.Life.party(S, 'onca', { name: p.name });
+  };
+  // ---------- as almas de outro mundo ----------
+  // os mundos são lembranças vagas, sem nome: a criança não sabe explicar
+  Is.MUNDOS = [
+    'uma cidade de torres de vidro, com luzes que nunca apagavam',
+    'carroças que andavam sozinhas e um céu cheio de fios',
+    'uma sala cheia de gente olhando para janelinhas que brilhavam',
+    'uma escola enorme, e uma ponte, e um barulho muito alto',
+    'um mar visto de cima, de dentro de um pássaro de ferro',
+  ];
+  Is.DONS = {
+    rapido: { name: 'Aprende depressa', desc: 'Sabe como se aprende: a força sobe em dobro.' },
+    sabio: { name: 'Sabe antes da hora', desc: 'Lembra de coisas que o povo ainda não descobriu: todo dia, a descoberta da vez chega mais perto.' },
+    sorte: { name: 'Sorte absurda', desc: 'O grupo com esta pessoa conta como mais forte nas missões.' },
+    ponte: { name: 'Fala com todos', desc: 'Para quem veio de outro mundo, todos os povos são iguais: a convivência entre eles sobe sozinha.' },
+  };
+  const LISTA = Object.keys(Is.DONS);
+  Is.de = (p) => (p && p.outro && !p.outro.esqueceu ? p.outro : null);
+  Is.tem = (p, d) => { const o = Is.de(p); return !!(o && o.dom === d); };
+  Is.xp = (p) => (Is.tem(p, 'rapido') ? (p.outro.guia ? 3 : 2) : 1);
+  // a cada nascimento, uma chance pequena; a primeira alma vem depois de umas tantas crianças
+  Is.onBirth = function (S, baby) {
+    S.stats.nascidosI = (S.stats.nascidosI || 0) + 1;
+    const r = hashN(baby.id, S.seed, 11);
+    if (S.stats.nascidosI < C.ALMA_DEPOIS || r >= C.ALMA_CHANCE) return false;
+    baby.outro = { t: S.t, mundo: Is.MUNDOS[Math.floor(hashN(baby.id, S.seed, 13) * Is.MUNDOS.length)], dom: LISTA[Math.floor(hashN(baby.id, S.seed, 17) * LISTA.length)], falou: 0, escolha: '' };
+    S.stats.almas = (S.stats.almas || 0) + 1;
+    return true;
+  };
+  Is.pendentes = (S) => S.people.filter((p) => p.alive && p.outro && p.outro.falou && !p.outro.escolha);
+  Is.almas = (S) => S.people.filter((p) => p.alive && p.outro);
+  function almaDia(S) {
+    for (const p of S.people) {
+      if (!p.alive || p.fora || !Is.de(p)) continue;
+      const o = p.outro, age = Fam().age(S, p);
+      if (!o.falou && age >= C.ALMA_FALA) {
+        o.falou = S.t;
+        Sim().chron(S, p.name + ', de ' + age + ' anos, começou a falar de coisas que ninguém ensinou: ' + o.mundo + '. Diz que já viveu antes.');
+        if (!S.safe) { Sim().toast(S, p.name + ' lembra de outro mundo. Abra Deus → Heróis.', 'warn'); }
+      }
+      if (S.resumido) continue;
+      if (o.dom === 'sabio' && age >= C.ALMA_FALA && G.Tech && G.Tech.open) { const a = G.Tech.open(S); if (a) G.Tech.addPractice(S, a, o.guia ? 6 : 3, null); }
+      if (o.dom === 'ponte' && age >= C.ALMA_FALA && G.Povos && G.Povos.shift) G.Povos.shift(S, o.guia ? 0.1 : 0.05);
+      // já crescido, desperta sozinho (o que veio de longe sabe o que é força)
+      if (age >= 16 && R() && !R().de(p)) R().desperta(S, p);
+    }
+  }
+  // ---------- a escolha de Deus ----------
+  Is.ESCOLHAS = {
+    guiar: { name: 'Guiar', custo: 40, desc: 'Você fala com esta alma nos sonhos: o dom dela fica mais forte, e a fé vai ao máximo.' },
+    deixar: { name: 'Deixar viver', custo: 0, desc: 'Ela segue com o que lembra, do jeito dela.' },
+    esquecer: { name: 'Fazer esquecer', custo: 20, desc: 'A lembrança some, com o dom junto. Vira uma criança como as outras.' },
+  };
+  Is.escolheWhy = function (S, p, k) {
+    const E = Is.ESCOLHAS[k];
+    if (!E || !p || !p.outro || p.outro.escolha) return 'não dá mais';
+    if (E.custo && (!S.god || S.god.poder < E.custo)) return 'faltam ' + Math.ceil(E.custo - (S.god ? S.god.poder : 0)) + ' de Poder';
+    return '';
+  };
+  Is.escolhe = function (S, p, k) {
+    if (Is.escolheWhy(S, p, k)) return false;
+    const E = Is.ESCOLHAS[k], o = p.outro;
+    if (E.custo) S.god.poder -= E.custo;
+    o.escolha = k;
+    if (k === 'guiar') { o.guia = 1; p.fe = 100; Sim().chron(S, p.name + ' acordou calmo, dizendo que alguém explicou tudo durante a noite.'.replace('calmo', p.sex === 'F' ? 'calma' : 'calmo')); }
+    else if (k === 'esquecer') { o.esqueceu = 1; Sim().chron(S, p.name + ' parou de falar do outro mundo. Quando perguntam, ri e não sabe do que estão falando.'); }
+    else Sim().chron(S, 'O povo se acostumou com as histórias de ' + p.name + '. Ninguém sabe o que fazer com elas, e tudo bem.');
+    return true;
+  };
+  // ---------- o relógio ----------
+  Is.daily = function (S) { dragaoDia(S); almaDia(S); };
 })(globalThis.G = globalThis.G || {});
 
 /* ---- js/save.js ---- */
@@ -21227,6 +21373,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (n.calor < 35) corpo.push('com frio'); if (n.saude < 50) corpo.push(o('fraco', 'fraca') + ' de saúde'); if (p.sick) corpo.push('com febre');
     if (p.preg && p.preg.known) corpo.push('grávida');
     if (corpo.length) out.push('O corpo: ' + corpo.join(', ') + '.');
+    if (G.Rpg && G.Rpg.de(p)) out.push('É ' + G.Rpg.nome(p).toLowerCase() + ', nível ' + p.rpg.nv + ' de força' + (p.rpg.lenda ? ', e o povo a chama de ' + p.rpg.lenda : '') + '.');   // 0.36
+    if (G.Isekai && G.Isekai.de(p) && p.outro.falou) out.push('Nasceu lembrando de outra vida, em outro mundo: ' + p.outro.mundo + '. Fala disso com naturalidade, mas não sabe explicar.');   // 0.40
     if (p.traits.length) out.push('Jeito: ' + p.traits.map((t) => t + (Sim.TRAIT_DESC[t] && !/\d/.test(Sim.TRAIT_DESC[t]) ? ' (' + Sim.TRAIT_DESC[t].replace(/\.$/, '') + ')' : '')).join('; ') + '.');   // sem os números do jogo
     // a família (vivos e mortos), sem inventar ninguém
     const fam = {};
@@ -24135,8 +24283,26 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     else { const a = f === 1 ? 1 : f === 2 ? -1 : 0; for (let y = 8 + a; y <= 16; y++) { const t = (y - 8 - a) / (8 - a), hw = Math.round(3 + t * 4); rect7(b, 8 - hw, y, 7 + hw, y, y === 8 + a ? '#c8f0a0' : y === 16 ? '#4e9a3c' : '#7ccc5c'); } if (d !== 1) { b.set(5, 12, '#1f2a14'); b.set(10, 12, '#1f2a14'); } b.set(5, 10 + a, '#e8ffd0'); }
     return b;
   }
+  // 0.40: o dragão (40 x 34): corpo vermelho-escuro, asas abertas que batem, a boca acesa
+  A.DRAGAO_W = 40; A.DRAGAO_H = 34;
+  function dragaoFrame(f, d) {
+    const b = new Buf(A.DRAGAO_W, A.DRAGAO_H), E0 = ['#3a1012', '#6a1c1e', '#9a2c28', '#c84a38', '#e8804e'], asa = f === 1 ? 0 : f === 2 ? 6 : 3;
+    for (const lado of [0, 1]) for (let k = 0; k < 12; k++) { const x0 = lado ? 24 + k : 15 - k, y0 = 10 + asa + Math.round(k * (asa ? 0.35 : 0.5)) - (lado ? 0 : 0), alto = 12 - k; for (let y = y0 - (11 - k) + asa; y < y0 + alto / 2; y++) if (y >= 0 && y < 30) b.set(x0, y, (k % 3 === 0) ? E0[0] : y < y0 ? E0[1] : E0[2]); }
+    for (let y = 12; y <= 27; y++) { const hw = y < 15 ? 4 : y < 24 ? 7 : 5; for (let x = 20 - hw; x <= 19 + hw; x++) b.set(x, y, x < 17 ? E0[3] : x > 22 ? E0[1] : (y % 3 === 0 ? E0[2] : E0[3])); }
+    for (let y = 18; y <= 25; y++) for (let x = 17; x <= 22; x++) b.set(x, y, y % 2 ? '#e8b060' : '#d89a4e');
+    const cab = d === 1 ? 0 : 1;
+    for (let y = 3; y <= 12; y++) { const hw = y < 6 ? 3 : y < 10 ? 5 : 3; for (let x = 20 - hw; x <= 19 + hw; x++) b.set(x, y, E0[cab ? 3 : 2]); }
+    for (const x of [15, 24]) { line(b, x, 3, x + (x < 20 ? -2 : 2), 0, '#2a1a1a'); }
+    if (d !== 1) { b.set(17, 7, '#fee761'); b.set(22, 7, '#fee761'); rect7(b, 17, 11, 22, 12, '#2b1d1a'); rect7(b, 18, 11, 21, 11, '#feae34'); for (const x of [17, 19, 21]) b.set(x, 12, '#f4f0e6'); }
+    if (d === 2) { rect7(b, 22, 6, 25, 11, E0[3]); b.set(24, 7, '#fee761'); }
+    if (d === 3) { rect7(b, 14, 6, 17, 11, E0[3]); b.set(15, 7, '#fee761'); }
+    rect7(b, 13, 25 - (f === 1 ? 1 : 0), 16, 30, E0[2]); rect7(b, 23, 25 - (f === 2 ? 1 : 0), 26, 30, E0[2]);
+    for (const x of [13, 16, 23, 26]) b.set(x, 31, '#2a1a1a');
+    return b;
+  }
   A.monstroSheet = function (m) {
     if (monstroCache[m]) return monstroCache[m];
+    if (m === 'dragao') { const [c, x] = mk(A.DRAGAO_W * 3, A.DRAGAO_H * 4); A.polishWith(() => { for (let d = 0; d < 4; d++) for (let f = 0; f < 3; f++) x.drawImage(dragaoFrame(f, d).canvas(), f * A.DRAGAO_W, d * A.DRAGAO_H); }); return (monstroCache[m] = c); }
     const [c, x] = mk(A.MONSTRO_W * 3, A.MONSTRO_H * 4);
     A.polishWith(() => { for (let d = 0; d < 4; d++) for (let f = 0; f < 3; f++) x.drawImage(monstroFrame(m, f, d).canvas(), f * A.MONSTRO_W, d * A.MONSTRO_H); });
     return (monstroCache[m] = c);
@@ -24155,6 +24321,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       if (m === 'gosma') for (const [x, y] of [[7, 25], [23, 26], [17, 26]]) { rect7(b, x, y, x + 2, y + 1, '#7ccc5c'); }
       if (m === 'goblin') { line(b, 22, 18, 22, 25, PLANK[1]); rect7(b, 21, 18, 23, 19, '#e8e4d4'); }
       if (m === 'ogro') { rect7(b, 7, 24, 10, 26, '#6d6672'); rect7(b, 21, 25, 24, 26, '#6d6672'); }
+      if (m === 'dragao') for (const [x, y] of [[8, 25], [21, 26], [12, 26], [24, 24]]) { rect7(b, x, y, x + 1, y + 1, '#fee761'); }
       return b.canvas();
     }));
   };
@@ -26283,7 +26450,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const wx = x * TS, wy = y * TS;
     const moving = !!e.path;
     if (e.m) {   // 0.38: o monstro
-      const sh = A.monstroSheet(e.m), fw = A.MONSTRO_W, fh = A.MONSTRO_H, frame = moving ? 1 + (Math.floor(e.walk * 4) % 2) : 0;
+      const sh = A.monstroSheet(e.m), fw = e.m === 'dragao' ? A.DRAGAO_W : A.MONSTRO_W, fh = e.m === 'dragao' ? A.DRAGAO_H : A.MONSTRO_H, frame = moving ? 1 + (Math.floor(e.walk * 4) % 2) : 0;
       blit(A.spr.shadow, wx - 5, wy + 2);
       const al = e.state === 'embora' ? Math.max(0.35, 1 - (e.t - (e.leftAt || e.t)) / 120) : 1;
       if (al < 1) ctx.globalAlpha = al;
@@ -28845,11 +29012,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (r) {
       const c = Rp.CLASSES[r.cls];
       const rk = G.Guilda ? G.Guilda.rank(p) : null;
+      if (r.lenda) h += `<span class="chip dom" title="Fez o que ninguém fez"><b style="color:#ff8ad0">${esc(r.lenda)}</b></span>`;
       h += `<span class="chip dom" title="${esc(c.desc)}"><b style="color:${c.cor}">${esc(Rp.nome(p))}</b> · nível ${r.nv}${rk ? ` · <span style="color:${rk.cor}">${esc(rk.nome)}</span>` : ''}</span>`;
       h += r.habs.map((k) => `<span class="chip" title="${esc(Rp.HABS[k].desc)}">${esc(Rp.HABS[k].name)}</span>`).join('');
     }
     const pct = r && r.nv < Rp.NIVEL_MAX ? Math.floor(r.xp / Rp.pede(r.nv) * 100) : 0;
     const barra = r && r.nv < Rp.NIVEL_MAX ? `<div class="bar" title="Até o nível ${r.nv + 1}"><i style="width:${pct}%"></i></div>` : '';
+    if (G.Isekai && G.Isekai.de(p) && p.outro.falou) h += `<span class="chip dom" title="Lembra de ${esc(p.outro.mundo)}. ${esc(G.Isekai.DONS[p.outro.dom].desc)}"><b style="color:#9fe8ff">De outro mundo</b> · ${esc(G.Isekai.DONS[p.outro.dom].name)}</span>`;
     const Ma = G.Magia;
     if (Ma && !r && Ma.temDom(S, p)) h += '<span class="chip dom" title="Nasceu com o dom da magia. Com a torre de magia, acorda sozinho">Tem o dom</span>';
     const whyDom = Ma ? Ma.domWhy(S, p) : 'x';
@@ -28883,9 +29052,16 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   }
   // 0.36: os heróis do povo, do mais forte para o menos forte
   function heroisHTML() {
-    const Rp = G.Rpg, l = Rp.herois(S);
+    const Rp = G.Rpg, l = Rp.herois(S), Is = G.Isekai;
+    const almas = Is ? Is.almas(S).filter((p) => p.outro.falou) : [];
+    const almaL = almas.map((p) => {
+      const o = p.outro, D = Is.DONS[o.dom];
+      const bt = o.escolha ? `<span class="small muted">${esc(o.esqueceu ? 'Esqueceu.' : o.guia ? 'Guiada por você.' : 'Vive do jeito dela.')}</span>` :
+        Object.keys(Is.ESCOLHAS).map((k) => { const E = Is.ESCOLHAS[k], w = Is.escolheWhy(S, p, k); return `<button type="button" class="btn btn-small" data-gact="alma" data-pid="${p.id}" data-k="${k}"${w ? ' disabled' : ''} title="${esc(w ? 'Agora não: ' + w : E.desc)}">${esc(E.name)}${E.custo ? ' (' + E.custo + ' de Poder)' : ''}</button>`; }).join('');
+      return `<li class="povo-row"><img class="ico ico-lg" src="${ic('deus')}" alt=""><div><b><a href="#" data-gact="heroi" data-pid="${p.id}">${esc(p.name)}</a></b> <span class="small ttl">${G.Family.age(S, p)} anos</span><span class="small">Lembra de ${esc(o.mundo)}.</span><span class="small" title="${esc(D.desc)}">${o.esqueceu ? '' : esc(D.name) + ': ' + esc(D.desc)}</span><div class="chips">${bt}</div></div></li>`;
+    }).join('');
     const linha = (p) => { const c = Rp.CLASSES[p.rpg.cls]; return `<li class="povo-row"><img class="ico ico-lg" src="${ic(G.Povos.iconOf(p))}" alt=""><div><b><a href="#" data-gact="heroi" data-pid="${p.id}">${esc(p.name)}</a></b> <span class="small" style="color:${c.cor}">${esc(Rp.nome(p))}</span> <span class="small ttl">nível ${p.rpg.nv}${G.Guilda ? ' · ' + G.Guilda.rank(p).nome : ''}</span><div class="chips">${p.rpg.habs.map((k) => `<span class="chip" title="${esc(Rp.HABS[k].desc)}">${esc(Rp.HABS[k].name)}</span>`).join('')}</div></div></li>`; };
-    return `<p class="small">Quem luta, caça e anda longe pode despertar uma classe. O nível de força sobe com o que a pessoa faz, e na ficha de qualquer adulto você pode abençoar.</p>` +
+    return (almaL ? `<h3>Quem veio de outro mundo</h3><ul class="donlist povolist">${almaL}</ul><h3>Os heróis</h3>` : '') + `<p class="small">Quem luta, caça e anda longe pode despertar uma classe. O nível de força sobe com o que a pessoa faz, e na ficha de qualquer adulto você pode abençoar.</p>` +
       `<ul class="donlist povolist">${l.length ? l.map(linha).join('') : '<li class="none small muted">Ninguém despertou ainda.</li>'}</ul>`;
   }
   function povoChips(p) {
@@ -29526,7 +29702,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     body.innerHTML = '<div class="dom-opts" role="radiogroup" aria-label="Respostas">' +
       `<button type="button" class="dom-opt mem-opt" role="radio" aria-checked="false" data-k="chuva"${why ? ' disabled' : ''}><span class="nm">Mandar a Chuva <span class="small muted">· ${custo} de Poder</span></span><span class="ds small">${esc(why ? 'Agora não: ' + why.charAt(0).toLowerCase() + why.slice(1) : 'Apaga na hora, sem gastar a água do povo.')}</span></button>` +
       `<button type="button" class="dom-opt mem-opt" role="radio" aria-checked="false" data-k="povo"><span class="nm">Deixar com o povo</span><span class="ds small">${esc((perto ? (perto === 1 ? 'Há 1 pessoa acordada' : 'Há ' + perto + ' pessoas acordadas') + ' por perto' : 'Não há ninguém acordado por perto') + (agua ? '' : ', e falta água no estoque') + ': ' + ch + ' em 10 de apagarem a tempo. Se não, a obra se vai' + (b.type === 'armazem' ? ', com ' + Math.round(C.FOGO_COMIDA * 100) + '% da comida' : mor.length ? ', e quem mora ali fica sem teto' : '') + '.')}</span></button>` +
-      '</div><p class="small muted">Pôr fogo é coisa grave: depois, o povo julga quem viu fazer, e você pode castigar, mostrar em sonho quem foi ou perdoar.</p>';
+      '</div>' + (c ? '<p class="small muted">Pôr fogo é coisa grave: depois, o povo julga quem viu fazer, e você pode castigar, mostrar em sonho quem foi ou perdoar.</p>' : '');
     let pick = null;
     ok.textContent = 'Está decidido';
     ok.disabled = true;
@@ -29597,6 +29773,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       }
       if (a === 'vervila') { const v = S.soc.vila; $('#modal-deus').hidden = true; if (v) UI.hooks.center((v.x + 0.5) * C.TILE, (v.y + 0.5) * C.TILE); return; }
     }
+    if (a === 'alma' && G.Isekai) { const q = S.people.find((x) => x.id === +b.dataset.pid), wh = G.Isekai.escolheWhy(S, q, b.dataset.k); if (wh) UI.toast('Agora não: ' + wh + '.', 'warn'); else G.Isekai.escolhe(S, q, b.dataset.k); UI.deus('herois'); UI.update(0, true); return; }   // 0.40
     if (a === 'covil-esmaga' && G.Monstros) { G.Monstros.esmaga(S, +b.dataset.id); UI.deus('guilda'); UI.update(0, true); return; }   // 0.38
     if (a === 'guilda-sonho' || a === 'guilda-protege') { (a === 'guilda-sonho' ? G.Guilda.sonho : G.Guilda.protege)(S, +b.dataset.id); UI.deus('guilda'); UI.update(0, true); return; }   // 0.37
     if (a === 'heroi') { e.preventDefault(); $('#modal-deus').hidden = true; UI.select(+b.dataset.pid, 0, true); return; }   // 0.36
