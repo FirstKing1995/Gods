@@ -437,7 +437,8 @@
       for (let i = 0; i < 6; i++) spawn({ x: e.x * TS + 8, y: e.y * TS + 8, vx: (Math.random() - 0.5) * 24, vy: -14 - Math.random() * 10, g: 50, life: 0.6, col: '#c8f4ff' });
     } else if (e.k === 'throw') {
       // lança voando de quem caça até a capivara
-      spears.push({ x1: e.x1 * TS, y1: e.y1 * TS - 6, x2: e.x2 * TS, y2: e.y2 * TS - 3, t0: performance.now(), bow: !!e.bow });
+      if (e.magia) { for (let k = 0; k <= 10; k++) { const f = k / 10; spawn({ x: (e.x1 + (e.x2 - e.x1) * f) * TS + (Math.random() - 0.5) * 3, y: (e.y1 + (e.y2 - e.y1) * f) * TS - 5 + (Math.random() - 0.5) * 3, vx: (Math.random() - 0.5) * 6, vy: -4 - Math.random() * 5, g: 0, life: 0.25 + f * 0.45, col: k % 3 ? '#feae34' : '#fee761' }); } }
+      else spears.push({ x1: e.x1 * TS, y1: e.y1 * TS - 6, x2: e.x2 * TS, y2: e.y2 * TS - 3, t0: performance.now(), bow: !!e.bow });
     } else if (e.k === 'star') {
       // nos cantos de cima (o meio de cima é dos avisos), riscando para o lado de fora
       const left = Math.random() < 0.5;
@@ -509,6 +510,7 @@
     for (let i = glows.length - 1; i >= 0; i--) { const g = glows[i]; g.life -= dt; g.x += g.vx * dt; g.y += g.vy * dt; if (g.life <= 0) glows.splice(i, 1); }
     for (const b of S.buildings) {
       // moquém armado: fumaça fina
+      if (b.type === 'torremagia' && b.built && Math.random() < dt * 2) spawn({ x: b.x * TS + 15 + Math.random() * 2, y: b.y * TS + 31 - 58, vx: (Math.random() - 0.5) * 5, vy: -5 - Math.random() * 4, g: 0, life: 1.6, col: '#9fe8ff' });   // 0.39
       if (b.type === 'usina' && b.built && Math.random() < dt * 4) spawn({ x: b.x * TS + 9 + (Math.random() < 0.5 ? 0 : 8) + Math.random() * 3, y: b.y * TS - 2, vx: 2 + Math.random() * 3, vy: -8 - Math.random() * 4, g: 0, life: 3, col: 'smoke' });   // 0.33: as chaminés da usina
       if (b.type === 'fabrica' && b.built && Math.random() < dt * 4) spawn({ x: b.x * TS + 38 + Math.random() * 4, y: b.y * TS - 20, vx: 2 + Math.random() * 3, vy: -8 - Math.random() * 4, g: 0, life: 3.2, col: 'smoke' });   // 0.32: a chaminé da fábrica
       if (b.type === 'moquem' && b.batch && Math.random() < dt * 3) spawn({ x: b.x * TS + 6 + Math.random() * 5, y: b.y * TS + 2, vx: (Math.random() - 0.5) * 3, vy: -7 - Math.random() * 4, g: 0, life: 2.6, col: 'smoke' });
@@ -526,7 +528,7 @@
   // ---------- helpers de desenho ----------
   // 0.31: as obras sem telhado de sapê (madeira, pedra, barco) não mudam de cor com a idade: a tábua e o sapê têm cores
   // parecidas demais para separar pela cor, então quem decide é o tipo da obra
-  const SEM_TELHADO = { porto: 1, galeao: 1, navio: 1, barco: 1, canoa: 1, ponte: 1, jirau: 1, moquem: 1, curral: 1, roca: 1, fogueira: 1, estatua: 1, cemiterio: 1, mina: 1, aqueduto: 1, muralha: 1, castelo: 1, arsenal: 1, universidade: 1, fabrica: 1, estacao: 1, usina: 1, bonde: 1, radio: 1, garagem: 1, hospitalgeral: 1 };
+  const SEM_TELHADO = { porto: 1, galeao: 1, navio: 1, barco: 1, canoa: 1, ponte: 1, jirau: 1, moquem: 1, curral: 1, roca: 1, fogueira: 1, estatua: 1, cemiterio: 1, mina: 1, aqueduto: 1, muralha: 1, castelo: 1, arsenal: 1, universidade: 1, fabrica: 1, estacao: 1, usina: 1, bonde: 1, radio: 1, garagem: 1, hospitalgeral: 1, torremagia: 1 };
   let eraObra = 0;   // 0.27: a idade da construção que está sendo desenhada (o telhado muda de cor)
   function blit(img, wx, wy, alpha) {
     if (eraObra >= 2) img = A.eraImg(img, eraObra);

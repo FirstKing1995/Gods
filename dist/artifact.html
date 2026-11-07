@@ -1323,7 +1323,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.38.1',
+    VERSION: '0.39.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -1524,6 +1524,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         desc: 'A casa de Deus, de pedra e de muitas mãos. Quem tem fé reza ali de manhã e ganha o dobro de fé; a festa e o rito ficam maiores perto dele.' },
       muralha: { name: 'Muralha', a: 'a', key: '', w: 3, h: 2, cost: { pedra: 200, madeira: 40 }, work: 30000, grande: true, wall: { r: 16 },
         desc: 'Um anel de pedra em volta do centro, com portão. Lobo e onça não entram, e ninguém leva a comida guardada lá dentro.' },
+      // 0.39: a torre de magia
+      torremagia: { name: 'Torre de magia', a: 'a', key: '', w: 2, h: 2, cost: { pedra: 90, madeira: 40 }, work: 3500,
+        desc: 'Quem nasceu com o dom olha para ela e acorda: o mago lança fogo na luta, o sacerdote cura o povo todo dia. A torre ainda ensina quem já acordou.' },
       // 0.37: a taberna e a guilda de aventureiros
       taberna: { name: 'Taberna', a: 'a', key: '', w: 3, h: 2, cost: { madeira: 40, pedra: 10 }, work: 1500,
         desc: 'Mesa comprida, caneca e conversa até tarde: o descontentamento cresce menos, e mais gente acorda para a aventura.' },
@@ -1981,10 +1984,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     // 0.29: a Idade Média
     MOINHO_ROCA: 1.25, CASTELO_CRIME: 0.8, ERA_PESTE: 0.5, PESTE_PARTE: 0.2, ESTRELAS_PRAGA: 0.5,
     // 0.30: as Navegações
+    // 0.39: a magia
+    MAGIA_ACORDA: 0.04, MAGIA_FE_SACERDOTE: 45, MAGIA_CURA: 12, MAGIA_DOM: 80,
     // 0.38: os monstros e os covis
-    MONSTRO_GENTE: 40, MONSTRO_HEROIS: 6, COVIL_DIST: [22, 42], COVIL_MAX: 3, COVIL_NOVO: [90, 200], COVIL_RAID: [18, 36], COVIL_CRESCE: 2, COVIL_ESMAGA: 150,
+    MONSTRO_GENTE: 40, MONSTRO_HEROIS: 6, COVIL_DIST: [22, 42], COVIL_MAX: 3, COVIL_NOVO: [60, 140], COVIL_RAID: [12, 24], COVIL_ESPERA: 60, COVIL_SEM_GUILDA: 4, COVIL_CRESCE: 2, COVIL_ESMAGA: 150,
     // 0.37: a guilda
-    GUILDA_FICAM: 8, GUILDA_QUADRO: 3, GUILDA_PRAZO: 25, GUILDA_GRUPOS: 2, GUILDA_MORTE: 1.2, GUILDA_BENCAO: 0.2, GUILDA_SONHO: 20, GUILDA_PROTEGE: 40, TABERNA_DESC: 0.9, TABERNA_DESPERTA: 3,
+    GUILDA_FICAM: 8, GUILDA_QUADRO: 3, GUILDA_PRAZO: 25, GUILDA_GRUPOS: 2, GUILDA_MORTE: 0.6, GUILDA_BENCAO: 0.2, GUILDA_SONHO: 20, GUILDA_PROTEGE: 40, TABERNA_DESC: 0.9, TABERNA_DESPERTA: 3,
     // 0.34: a Era Moderna
     RADIO_CRIME: 0.8, GARAGEM_CARGA: 1.3, HGERAL_FEBRE: 0.5, ERA_CRISE: 0.5, CRISE_D: 6, CRISE_OFICIO: 0.7, CRISE_DESC: 10,
     // 0.33: a Era Elétrica
@@ -3689,6 +3694,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (G.Rpg) G.Rpg.daily(S);   // 0.36: heróis
     if (G.Guilda) G.Guilda.daily(S);   // 0.37: as missões
     if (G.Monstros) G.Monstros.daily(S);   // 0.38: os covis
+    if (G.Magia) G.Magia.daily(S);   // 0.39: quem acorda, quem cura
     if (G.Eras) G.Eras.daily(S);   // Etapas 19 e 20: a idade, o rumo, a magia, o desafio de cada idade
     if (G.Avatar) G.Avatar.daily(S);   // Etapa 21: o abençoado (a pergunta, o líder nato)
     if (G.Life) G.Life.daily(S);
@@ -7268,7 +7274,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const e = B.ent(S, tgt);
     if (!e) return 'fim';
     const bow = Tech().known(S, 'arco');
-    S.events.push({ k: 'throw', x1: p.x, y1: p.y - 0.4, x2: e.x, y2: e.y, bow });
+    S.events.push({ k: 'throw', x1: p.x, y1: p.y - 0.4, x2: e.x, y2: e.y, bow, magia: G.Magia && G.Magia.conjura(p) });   // 0.39: o fogo do mago
     S.stats.strikes = (S.stats.strikes || 0) + 1;
     if (!sure && !S.rng.chance(B.hitChance(S, p))) { Sim().say(S, p, S.rng.pick(['Errei!', 'Quase!', 'Mais uma!']), false); return 'errou'; }
     S.events.push({ k: 'hit', x: e.x, y: e.y });
@@ -18228,6 +18234,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     mercado: (S) => (S.soc && S.soc.vila && !S.soc.vila.fim ? '' : 'pede uma vila de fora para trocar'),
     // 0.29: a Idade Média (os dois chegam com os Reinos; o castelo pede uma cidade)
     moinho: (S) => (G.Eras && G.Eras.idade(S) >= 4 ? '' : 'chega com a Idade dos Reinos'),
+    // 0.39: a torre pede quem saiba escrever o que aprende (ou o conselho, que já lida com isso)
+    torremagia: (S) => (vivos(S) < 25 ? 'pede 25 pessoas' : (G.Eras && G.Eras.idade(S) >= 2) || (G.Eras && G.Eras.ordem(S) === 'conselho') ? '' : 'chega com a Idade do Bronze'),
     // 0.37: a taberna pede gente para beber; a guilda pede a taberna (é ali que os grupos se formam)
     taberna: (S) => (vivos(S) >= 12 ? '' : 'pede 12 pessoas'),
     guilda: (S) => (!S.buildings.some((b) => b.type === 'taberna' && b.built) ? 'pede uma taberna pronta' : vivos(S) >= 20 ? '' : 'pede 20 pessoas'),
@@ -19912,9 +19920,16 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     guerreiro: { name: 'Guerreiro', nameF: 'Guerreira', cor: '#e43b44', desc: 'Fica na frente quando o bicho vem. Acerta mais e sofre menos.', habs: ['golpe', 'couraca', 'revide'] },
     arqueiro: { name: 'Arqueiro', nameF: 'Arqueira', cor: '#63c74d', desc: 'Olho treinado e mão firme. Acerta de longe, antes de o bicho chegar.', habs: ['certeiro', 'longo', 'veloz'] },
     cacador: { name: 'Caçador', nameF: 'Caçadora', cor: '#feae34', desc: 'Lê o rastro e o vento. O bicho não o percebe, e rende mais carne.', habs: ['rastro', 'passoLeve', 'carneada'] },
+    mago: { name: 'Mago', nameF: 'Maga', cor: '#b080ff', magia: true, desc: 'Nasceu com o dom. Na luta, o golpe dele é fogo e vale o dobro.', habs: ['faisca', 'escudo', 'bola'] },
+    sacerdote: { name: 'Sacerdote', nameF: 'Sacerdotisa', cor: '#fff0a0', magia: true, desc: 'Nasceu com o dom e com a fé. Todo dia cura quem mais precisa.', habs: ['prece', 'escudo', 'milagre'] },
     explorador: { name: 'Explorador', nameF: 'Exploradora', cor: '#2ce8f5', desc: 'Conhece todo caminho. Anda mais depressa, carrega mais e sempre volta com alguma coisa.', habs: ['passada', 'carga', 'achador'] },
   };
   R.HABS = {
+    faisca: { name: 'Faísca certeira', desc: 'O fogo acerta 10% mais.' },
+    escudo: { name: 'Escudo de luz', desc: 'A mordida dói 30% menos.' },
+    bola: { name: 'Bola de fogo', desc: 'O golpe atinge também os monstros que estão perto.' },
+    prece: { name: 'Prece em voz alta', desc: 'Quem está perto ganha fé todo dia.' },
+    milagre: { name: 'Mão que sara', desc: 'A cura também tira a febre.' },
     golpe: { name: 'Golpe firme', desc: 'Acerta 10% mais na luta.' },
     couraca: { name: 'Couro grosso', desc: 'A mordida dói 25% menos.' },
     revide: { name: 'Revide certo', desc: 'Quem morde sempre leva o troco, se ele estiver armado.' },
@@ -19948,7 +19963,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   R.tem = (p, h) => !!(p && p.rpg && p.rpg.habs && p.rpg.habs.indexOf(h) >= 0);
   R.nome = (p) => { const r = R.de(p); if (!r) return ''; const c = R.CLASSES[r.cls]; return p.sex === 'F' ? c.nameF : c.name; };
   R.nivel = (p) => { const r = R.de(p); return r ? r.nv : 0; };
-  R.pede = (nv) => Math.round(10 * Math.pow(nv, 1.6));   // o xp de um nível ao próximo
+  R.pede = (nv) => Math.round(8 * Math.pow(nv, 1.3));   // o xp de um nível ao próximo
   // a profissão: o trabalho em que a pessoa é melhor (só depois que ela já é boa em alguma coisa)
   R.profissao = function (p) {
     let top = '', v = 0;
@@ -20006,8 +20021,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (r.xp0 >= 30 && adulto(S, p) && herois(S).length < teto(S)) R.desperta(S, p);
   };
   // ---------- os efeitos (ganchos pequenos, chamados de onde a coisa acontece) ----------
-  R.acerto = (p, caca) => { const r = R.de(p); if (!r) return 0; return Math.min(0.2, r.nv * 0.006) + (R.tem(p, 'golpe') && !caca ? 0.1 : 0) + (R.tem(p, 'certeiro') ? 0.1 : 0) + (R.tem(p, 'rastro') && caca ? 0.1 : 0); };
-  R.mordida = (p) => { const r = R.de(p); if (!r) return 1; return (1 - Math.min(0.3, r.nv * 0.008)) * (R.tem(p, 'couraca') ? 0.75 : 1); };
+  R.acerto = (p, caca) => { const r = R.de(p); if (!r) return 0; return Math.min(0.2, r.nv * 0.006) + (R.tem(p, 'golpe') && !caca ? 0.1 : 0) + (R.tem(p, 'certeiro') ? 0.1 : 0) + (R.tem(p, 'rastro') && caca ? 0.1 : 0) + (R.tem(p, 'faisca') ? 0.1 : 0); };
+  R.mordida = (p) => { const r = R.de(p); if (!r) return 1; return (1 - Math.min(0.3, r.nv * 0.008)) * (R.tem(p, 'couraca') ? 0.75 : 1) * (R.tem(p, 'escudo') ? 0.7 : 1); };
   R.passo = (p) => (R.tem(p, 'veloz') || R.tem(p, 'passada') ? 1.1 : 1);
   R.cargaMult = (p) => (R.tem(p, 'carga') ? 1.15 : 1);
   R.alcance = (p) => (R.tem(p, 'longo') ? 2 : 0);
@@ -20081,6 +20096,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     ruinas: { nome: 'Explorar as ruínas antigas', rank: 2, dias: [7, 12], risco: 0.2, premio: { ouro: 6, sal: 6 }, saber: 30,
       ok: ['Nas ruínas, {g} acharam ouro e paredes cheias de sinais que o povo agora tenta entender.', '{g} voltaram das ruínas contando de uma gente que viveu aqui muito antes do casal.'],
       mal: ['As ruínas estavam vazias, e o chão cedeu duas vezes. {g} não quiseram ficar.'] },
+    grimorio: { nome: 'Buscar o grimório perdido', rank: 2, dias: [7, 11], risco: 0.18, premio: { ouro: 3 }, saber: 45,
+      ok: ['{g} acharam o grimório num baú de pedra. A torre passou a noite lendo.', '{g} trouxeram um livro que ninguém sabe quem escreveu, e o povo aprendeu com ele.'],
+      mal: ['O grimório virou cinza na mão de quem pegou. {g} voltaram sem nada.'] },
     fera: { nome: 'Caçar a fera do morro', rank: 3, dias: [8, 13], risco: 0.28, premio: { carne: 40, couro: 14, ouro: 4 },
       ok: ['{g} voltaram arrastando a fera do morro. A vila inteira saiu para ver.', 'A fera do morro não vai mais descer: {g} trouxeram o couro como prova.'],
       mal: ['A fera do morro é maior do que contavam. {g} recuaram, e ela continua lá em cima.'] },
@@ -20135,7 +20153,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // ---------- o quadro ----------
   function novaMissao(S) {
     // 0.38: covil sem missão vai primeiro para o quadro
-    if (S.monstros) for (const c of S.monstros.covis) if (!S.guilda.quadro.some((m) => m.covil === c.id) && !S.guilda.idas.some((i) => i.covil === c.id)) { S.guilda.quadro.push({ id: S.guilda.nid++, tipo: 'covil', covil: c.id, nv: c.nv, nome: G.Monstros.nomeDe(c), t: S.t, ate: S.t + C.GUILDA_PRAZO * 4 * DAY() }); return; }
+    if (S.monstros) for (const c of S.monstros.covis) if (S.t - c.t >= C.COVIL_ESPERA * DAY() && !S.guilda.quadro.some((m) => m.covil === c.id) && !S.guilda.idas.some((i) => i.covil === c.id)) { S.guilda.quadro.push({ id: S.guilda.nid++, tipo: 'covil', covil: c.id, nv: c.nv, nome: G.Monstros.nomeDe(c), t: S.t, ate: S.t + C.GUILDA_PRAZO * 4 * DAY() }); return; }
     const g = S.guilda, top = Math.max(0, ...S.people.filter((p) => R().de(p)).map((p) => p.rpg.nv));
     const pode = Object.keys(Gu.TIPOS).filter((k) => k !== 'covil' && FORCA[Gu.TIPOS[k].rank] <= Math.max(FORCA[0], top * 3));
     const fora = pode.filter((k) => !g.quadro.some((m) => m.tipo === k));
@@ -20306,7 +20324,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (S.resumido || S.safe || S.over || !Mo.ativo(S)) return;
     if (!m.prox) m.prox = S.t + (5 + sorte(S, 11) * 15) * DAY();
     if (S.t >= m.prox) {
-      if (m.covis.length < C.COVIL_MAX) Mo.novo(S);
+      // 0.39: sem guilda, não há quem limpe: um covil só, e os bandos bem mais raros
+      if (m.covis.length < (G.Guilda && G.Guilda.temGuilda(S) ? C.COVIL_MAX : 1)) Mo.novo(S);
       m.prox = S.t + (C.COVIL_NOVO[0] + sorte(S, 13) * (C.COVIL_NOVO[1] - C.COVIL_NOVO[0])) * DAY();
     }
     // quem deixa o covil em paz vê ele crescer
@@ -20328,7 +20347,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   };
   Mo.bando = function (S, c) {
     const T = Mo.TIPOS[c.m], n = T.pack[0] + Math.floor(sorte(S, c.id * 5) * (T.pack[1] - T.pack[0] + 1)) + (c.nv - 1);
-    c.ataque = S.t + (C.COVIL_RAID[0] + sorte(S, c.id * 7) * (C.COVIL_RAID[1] - C.COVIL_RAID[0])) * DAY();
+    c.ataque = S.t + (C.COVIL_RAID[0] + sorte(S, c.id * 7) * (C.COVIL_RAID[1] - C.COVIL_RAID[0])) * DAY() * (G.Guilda && G.Guilda.temGuilda(S) ? 1 : C.COVIL_SEM_GUILDA);
     const made = G.Narr.spawnMonstros(S, c.m, n);
     if (!made) return 0;
     c.bandos++; S.stats.bandos = (S.stats.bandos || 0) + 1;
@@ -20348,9 +20367,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   };
   // ---------- o golpe ----------
   // um golpe no monstro: ele tem vida e não foge ferido; caiu, conta, e às vezes deixa alguma coisa
-  Mo.golpe = function (S, e, p) {
+  Mo.golpe = function (S, e, p, dano) {
     const T = Mo.TIPOS[e.m], a = S.narr.active.lobos, Sm = Sim();
-    e.hp = (e.hp === undefined ? T.hp : e.hp) - 1;
+    const principal = dano === undefined;   // 0.39: o golpe que espirra não espirra de novo
+    e.hp = (e.hp === undefined ? T.hp : e.hp) - (principal && G.Magia ? G.Magia.dano(p) : dano || 1);
+    if (principal && G.Magia) G.Magia.espalha(S, e, p);
     if (a) a.fought = (a.fought || 0) + 1;
     if (e.hp > 0) return 'acertou';
     e.gone = true;
@@ -20373,6 +20394,105 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     S.stats.covisLimpos = (S.stats.covisLimpos || 0) + 1;
     Sim().chron(S, 'A terra se abriu sobre ' + Mo.nomeDe(c).toLowerCase() + '. Ninguém do povo viu, mas no outro dia o mato estava quieto.');
     S.events.push({ k: 'toast', text: 'O covil não existe mais.', tone: 'good' });
+    return true;
+  };
+})(globalThis.G = globalThis.G || {});
+
+/* ---- js/magia.js ---- */
+/* Gods · 0.39: a magia para todos os povos. Algumas pessoas nascem com o dom (os elfos mais, o povo-fera menos). Quem tem o
+   dom e vê a torre de magia acorda como mago ou sacerdote: o mago lança fogo na luta (o golpe dele vale o dobro, e a bola de
+   fogo atinge quem está perto); o sacerdote cura o povo todo dia e ergue a fé. Deus pode dar o dom a quem não nasceu com
+   ele. O conselho das mais velhas segue com a magia dele, à parte; aqui é o saber de cada um. Sorteio próprio. Sem DOM. */
+(function (G) {
+  'use strict';
+  const C = G.CFG;
+  const Ma = G.Magia = {};
+  const Sim = () => G.Sim, Fam = () => G.Family, R = () => G.Rpg;
+
+  function sorte(S, p, sal) {
+    let x = (Math.imul(p.id | 0, 2654435761) ^ Math.imul((S.t / 60) | 0, 40503) ^ Math.imul(sal | 0, 69069)) >>> 0;
+    x ^= x >>> 13; x = Math.imul(x, 1597334677) >>> 0; x ^= x >>> 15;
+    return (x >>> 0) / 4294967296;
+  }
+  // nasce ou não com o dom: fixo por pessoa, sem guardar nem sortear do mundo
+  const CHANCE = { elfo: 0.16, humano: 0.06, anao: 0.03, fera: 0.03, meio: 0.08 };
+  function hashDom(S, p) {
+    let x = (Math.imul(p.id | 0, 40503) ^ Math.imul(S.seed | 0, 2654435761) ^ 0x5bd1e995) >>> 0;
+    x ^= x >>> 15; x = Math.imul(x, 1597334677) >>> 0; x ^= x >>> 13;
+    return (x >>> 0) / 4294967296;
+  }
+  Ma.temDom = function (S, p) {
+    if (p.domDado) return true;
+    const k = G.Povos ? G.Povos.of(p) : 'humano';
+    return hashDom(S, p) < (CHANCE[k] || CHANCE.humano);
+  };
+  const tem = (S, k) => S.buildings.some((b) => b.type === k && b.built);
+  Ma.temTorre = (S) => tem(S, 'torremagia');
+  const adulto = (S, p) => p.alive && !p.fora && !p.carriedBy && Fam().age(S, p) >= 14;
+  const conjurador = (p) => { const r = R() && R().de(p); return r && (r.cls === 'mago' || r.cls === 'sacerdote') ? r.cls : ''; };
+  Ma.classe = conjurador;
+  // quem tem fé alta vira sacerdote; os outros, mago
+  function acorda(S, p, motivo) {
+    const cls = (p.fe || 0) >= C.MAGIA_FE_SACERDOTE && sorte(S, p, 21) < 0.6 ? 'sacerdote' : 'mago';
+    if (!R().desperta(S, p, cls)) return false;
+    S.stats.magos = (S.stats.magos || 0) + 1;
+    const nome = R().nome(p).toLowerCase();
+    if (S.stats.magos === 1) Sim().chron(S, p.name + ' olhou para a torre e sentiu o que sempre esteve ali: ' + (p.sex === 'F' ? 'é a primeira ' : 'é o primeiro ') + nome + ' do povo. ' + (motivo || ''));
+    return true;
+  }
+  // ---------- o dia ----------
+  Ma.daily = function (S) {
+    if (S.resumido || !R()) return;
+    const torre = Ma.temTorre(S);
+    for (const p of S.people) {
+      if (!p.alive || p.fora || p.carriedBy) continue;
+      const c = conjurador(p);
+      if (!c) {
+        if (torre && !R().de(p) && adulto(S, p) && Ma.temDom(S, p) && sorte(S, p, 3) < C.MAGIA_ACORDA) acorda(S, p);
+        continue;
+      }
+      if (torre) R().ganha(S, p, 2);   // a torre ensina
+      if (c === 'sacerdote') cura(S, p);
+      if (c === 'sacerdote' && R().tem(p, 'prece')) for (const q of S.people) if (q.alive && !q.fora && q !== p && Math.hypot(q.x - p.x, q.y - p.y) < 6 && G.God && G.God.addFaith) G.God.addFaith(S, q, 0.5);
+    }
+  };
+  // o sacerdote cura um por dia: quem mais precisa, a qualquer distância na vila
+  function cura(S, p) {
+    const r = p.rpg, alvo = S.people.filter((q) => q.alive && !q.fora && q.needs.saude < 85).sort((a, b) => a.needs.saude - b.needs.saude)[0];
+    if (!alvo) return false;
+    const n = C.MAGIA_CURA + r.nv * 1.5;
+    alvo.needs.saude = Math.min(100, alvo.needs.saude + n);
+    if (R().tem(p, 'milagre') && alvo.sick) { alvo.sick = null; if (!S.safe) Sim().toast(S, p.name + ' curou a febre de ' + alvo.name + '.', 'good'); }
+    if (!S.safe) Sim().float(S, alvo.x, alvo.y, '+saúde');
+    R().ganha(S, p, 1);
+    S.stats.curasMagia = (S.stats.curasMagia || 0) + 1;
+    return true;
+  }
+  Ma.cura = cura;
+  // ---------- a luta ----------
+  Ma.dano = (p) => (conjurador(p) === 'mago' ? 2 : 1);
+  Ma.conjura = (p) => conjurador(p) === 'mago';
+  // a bola de fogo atinge quem está perto de quem levou o golpe
+  Ma.espalha = function (S, e, p) {
+    if (!R().tem(p, 'bola') || !S.narr) return 0;
+    let n = 0;
+    for (const o of S.narr.ents) if (o !== e && o.m && !o.gone && Math.hypot(o.x - e.x, o.y - e.y) < 2.5) { n++; G.Monstros.golpe(S, o, p, 1); }
+    return n;
+  };
+  Ma.acerto = (p) => (R().tem(p, 'faisca') ? 0.1 : 0);
+  // ---------- Deus dá o dom ----------
+  Ma.domWhy = function (S, p) {
+    if (!p || !adulto(S, p)) return 'só quem já cresceu';
+    if (R().de(p)) return 'já despertou de outro jeito';
+    if (!S.god || S.god.poder < C.MAGIA_DOM) return 'faltam ' + Math.ceil(C.MAGIA_DOM - (S.god ? S.god.poder : 0)) + ' de Poder';
+    return '';
+  };
+  Ma.daDom = function (S, p) {
+    if (Ma.domWhy(S, p)) return false;
+    S.god.poder -= C.MAGIA_DOM;
+    p.domDado = S.t;
+    acorda(S, p, 'Dizem que veio num sonho.');
+    if (!S.safe) Sim().toast(S, p.name + ' acordou com o dom: ' + R().nome(p).toLowerCase() + '.', 'good');
     return true;
   };
 })(globalThis.G = globalThis.G || {});
@@ -22871,6 +22991,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       { k: P.ink2, s: P.mist, d: P.bark }],
     torre: [['...kkkk...', '..kyyyyk..', '.kkkkkkkk.', '..kwwwwk..', '..kssssk..', '..ksddsk..', '..kssssk..', '.ksssssk..', '.kssssssk.', 'kkkkkkkkkk'],
       { k: P.ink2, s: P.mist, y: P.tan, w: P.wood, d: P.ink }],
+    // 0.39: a torre de magia
+    torremagia: [['....bb....', '...bwwb...', '....bb....', '...kkkk...', '..kskksk..', '..ksbbsk..', '..ksbbsk..', '..kssssk..', '..kskksk..', '.kkkkkkkk.'],
+      { k: P.ink2, s: P.mist, b: P.sky, w: P.parch }],
     // 0.38: o covil
     covil: [['..........', '...kkkk...', '..kssssk..', '.ksskksk..', '.kskddksk.', 'kskddddksk', 'kskddddksk', 'ksddddddsk', 'kkkkkkkkkk', '..........'],
       { k: P.ink2, s: P.mist, d: P.ink }],
@@ -23968,6 +24091,17 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     rect7(b, 33, 0, 37, 2, '#c8423a');   // a bandeira
     return b.canvas();
   }
+  // 0.39: a torre de magia (32 x 62, 2 x 2 passos): pedra escura, janelas azuis, a cúpula e o cristal que brilha
+  function torreMagiaSpr() {
+    const b = new Buf(32, 62), S0 = ['#2a2440', '#3e3660', '#564c80', '#7468a0', '#a498c8'];
+    for (let y = 18; y <= 58; y++) { const hw = y > 50 ? 12 : y > 46 ? 11 : 9; for (let x = 16 - hw; x <= 15 + hw; x++) { const row = (y >> 2), off = row % 2 ? 2 : 0, junta = y % 4 === 3 || (x + off) % 6 === 0; b.set(x, y, junta ? S0[0] : x < 12 ? S0[3] : x > 19 ? S0[1] : S0[2]); } }
+    for (let y = 7; y <= 17; y++) { const t = (y - 7) / 10, hw = Math.round(1 + t * 11); for (let x = 16 - hw; x <= 15 + hw; x++) b.set(x, y, y === 17 ? S0[0] : x < 14 ? '#6a4aa8' : '#4a3488'); }
+    for (const y of [23, 34]) { rect7(b, 13, y, 18, y + 6, S0[0]); rect7(b, 14, y + 1, 17, y + 5, '#6ac8ff'); b.set(14, y + 1, '#e0f4ff'); }
+    rect7(b, 12, 48, 19, 58, S0[0]); rect7(b, 13, 49, 18, 58, '#2b1d1a'); b.set(17, 54, '#fee761');
+    rect7(b, 14, 3, 17, 6, '#9fe8ff'); rect7(b, 15, 1, 16, 8, '#6ac8ff'); b.set(15, 3, '#ffffff'); b.set(14, 4, '#e0f4ff');
+    for (let x = 4; x <= 27; x++) b.set(x, 59, S0[0]);
+    return b.canvas();
+  }
   // ---------- 0.38: os monstros ----------
   // folha de 3 quadros por 4 direções (a mesma ordem dos lobos): 0 de frente, 1 de costas, 2 direita, 3 esquerda
   A.MONSTRO_W = 16; A.MONSTRO_H = 18;
@@ -24370,7 +24504,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     return b.canvas();
   }
   A.cidadeSprites = function () {
-    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr(), imprensa: imprensaSpr(), universidade: universidadeSpr(), arsenal: arsenalSpr(), fabrica: fabricaSpr(), estacao: estacaoSpr(), usina: usinaSpr(), bonde: bondeSpr(), radio: radioSpr(), garagem: garagemSpr(), hospitalgeral: hospitalGeralSpr(), taberna: tabernaSpr(), guilda: guildaSpr() };
+    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr(), imprensa: imprensaSpr(), universidade: universidadeSpr(), arsenal: arsenalSpr(), fabrica: fabricaSpr(), estacao: estacaoSpr(), usina: usinaSpr(), bonde: bondeSpr(), radio: radioSpr(), garagem: garagemSpr(), hospitalgeral: hospitalGeralSpr(), taberna: tabernaSpr(), guilda: guildaSpr(), torremagia: torreMagiaSpr() };
     for (const k of ['escola', 'biblioteca', 'hospital', 'guarda', 'brigada', 'mercado']) out[k] = [null, instituicao(k, 1), instituicao(k, 2), instituicao(k, 3)];
     return out;
   };
@@ -24911,7 +25045,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       for (let i = 0; i < 6; i++) spawn({ x: e.x * TS + 8, y: e.y * TS + 8, vx: (Math.random() - 0.5) * 24, vy: -14 - Math.random() * 10, g: 50, life: 0.6, col: '#c8f4ff' });
     } else if (e.k === 'throw') {
       // lança voando de quem caça até a capivara
-      spears.push({ x1: e.x1 * TS, y1: e.y1 * TS - 6, x2: e.x2 * TS, y2: e.y2 * TS - 3, t0: performance.now(), bow: !!e.bow });
+      if (e.magia) { for (let k = 0; k <= 10; k++) { const f = k / 10; spawn({ x: (e.x1 + (e.x2 - e.x1) * f) * TS + (Math.random() - 0.5) * 3, y: (e.y1 + (e.y2 - e.y1) * f) * TS - 5 + (Math.random() - 0.5) * 3, vx: (Math.random() - 0.5) * 6, vy: -4 - Math.random() * 5, g: 0, life: 0.25 + f * 0.45, col: k % 3 ? '#feae34' : '#fee761' }); } }
+      else spears.push({ x1: e.x1 * TS, y1: e.y1 * TS - 6, x2: e.x2 * TS, y2: e.y2 * TS - 3, t0: performance.now(), bow: !!e.bow });
     } else if (e.k === 'star') {
       // nos cantos de cima (o meio de cima é dos avisos), riscando para o lado de fora
       const left = Math.random() < 0.5;
@@ -24983,6 +25118,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     for (let i = glows.length - 1; i >= 0; i--) { const g = glows[i]; g.life -= dt; g.x += g.vx * dt; g.y += g.vy * dt; if (g.life <= 0) glows.splice(i, 1); }
     for (const b of S.buildings) {
       // moquém armado: fumaça fina
+      if (b.type === 'torremagia' && b.built && Math.random() < dt * 2) spawn({ x: b.x * TS + 15 + Math.random() * 2, y: b.y * TS + 31 - 58, vx: (Math.random() - 0.5) * 5, vy: -5 - Math.random() * 4, g: 0, life: 1.6, col: '#9fe8ff' });   // 0.39
       if (b.type === 'usina' && b.built && Math.random() < dt * 4) spawn({ x: b.x * TS + 9 + (Math.random() < 0.5 ? 0 : 8) + Math.random() * 3, y: b.y * TS - 2, vx: 2 + Math.random() * 3, vy: -8 - Math.random() * 4, g: 0, life: 3, col: 'smoke' });   // 0.33: as chaminés da usina
       if (b.type === 'fabrica' && b.built && Math.random() < dt * 4) spawn({ x: b.x * TS + 38 + Math.random() * 4, y: b.y * TS - 20, vx: 2 + Math.random() * 3, vy: -8 - Math.random() * 4, g: 0, life: 3.2, col: 'smoke' });   // 0.32: a chaminé da fábrica
       if (b.type === 'moquem' && b.batch && Math.random() < dt * 3) spawn({ x: b.x * TS + 6 + Math.random() * 5, y: b.y * TS + 2, vx: (Math.random() - 0.5) * 3, vy: -7 - Math.random() * 4, g: 0, life: 2.6, col: 'smoke' });
@@ -25000,7 +25136,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // ---------- helpers de desenho ----------
   // 0.31: as obras sem telhado de sapê (madeira, pedra, barco) não mudam de cor com a idade: a tábua e o sapê têm cores
   // parecidas demais para separar pela cor, então quem decide é o tipo da obra
-  const SEM_TELHADO = { porto: 1, galeao: 1, navio: 1, barco: 1, canoa: 1, ponte: 1, jirau: 1, moquem: 1, curral: 1, roca: 1, fogueira: 1, estatua: 1, cemiterio: 1, mina: 1, aqueduto: 1, muralha: 1, castelo: 1, arsenal: 1, universidade: 1, fabrica: 1, estacao: 1, usina: 1, bonde: 1, radio: 1, garagem: 1, hospitalgeral: 1 };
+  const SEM_TELHADO = { porto: 1, galeao: 1, navio: 1, barco: 1, canoa: 1, ponte: 1, jirau: 1, moquem: 1, curral: 1, roca: 1, fogueira: 1, estatua: 1, cemiterio: 1, mina: 1, aqueduto: 1, muralha: 1, castelo: 1, arsenal: 1, universidade: 1, fabrica: 1, estacao: 1, usina: 1, bonde: 1, radio: 1, garagem: 1, hospitalgeral: 1, torremagia: 1 };
   let eraObra = 0;   // 0.27: a idade da construção que está sendo desenhada (o telhado muda de cor)
   function blit(img, wx, wy, alpha) {
     if (eraObra >= 2) img = A.eraImg(img, eraObra);
@@ -27206,7 +27342,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (st) {
       hour = st.ck.hour; season = st.ck.season; precip = st.precip;
       blizzard = !!(G.Narr && G.Narr.is(st, 'nevasca')); storm = !!(G.Narr && G.Narr.is(st, 'tempestade'));
-      wolves = !!(G.Narr && G.Narr.wolvesOut(st));
+      wolves = !!(G.Narr && G.Narr.wolvesOut(st) && !(st.narr && st.narr.active.lobos && st.narr.active.lobos.monstro));
       onca = !!(G.Narr && G.Narr.oncaOut && G.Narr.oncaOut(st));
     }
     const night = hour >= 19.5 || hour < 5, dawn = hour >= 5 && hour < 8;
@@ -27705,6 +27841,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       ['porto', 'porto'], ['galeao', 'galeao'],
       // 0.31: a Pólvora e a Imprensa
       ['imprensa', 'imprensa'], ['universidade', 'universidade'], ['arsenal', 'arsenal'],
+      // 0.39: a torre de magia
+      ['torremagia', 'torremagia'],
       // 0.37: a taberna e a guilda
       ['taberna', 'taberna'], ['guilda', 'guilda'],
       // 0.34: a Era Moderna
@@ -27818,6 +27956,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     $('#inspector').addEventListener('click', (e) => {
       const b = e.target.closest('[data-act]'); if (!b || !S) return;
       if (b.dataset.act === 'ia-conversa' && G.Ia) { G.Ia.conversa(S, S.people.find((q) => q.id === UI.sel.person)); return; }   // 0.25
+      if (b.dataset.act === 'magia-dom' && G.Magia) { const q = S.people.find((x) => x.id === UI.sel.person), wh = G.Magia.domWhy(S, q); if (wh) UI.toast('Agora não: ' + wh + '.', 'warn'); else G.Magia.daDom(S, q); UI.update(0, true); return; }   // 0.39
       if (b.dataset.act === 'rpg-bencao' && G.Rpg) { const q = S.people.find((x) => x.id === UI.sel.person), wh = G.Rpg.bencaoWhy(S, q); if (wh) UI.toast('Agora não: ' + wh + '.', 'warn'); else G.Rpg.abencoa(S, q); UI.update(0, true); return; }   // 0.36
       if (b.dataset.act === 'voz' && G.Voz) { G.Voz.abrir(S, S.people.find((q) => q.id === UI.sel.person)); return; }   // 0.24
       if (b.dataset.act === 'av-possuir' && G.Avatar) { const r = G.Avatar.possuir(S, UI.sel.person); if (!r.ok) UI.toast('Agora não: ' + r.why + '.', 'warn'); else if (UI.hooks.follow) UI.hooks.follow(UI.sel.person); return; }   // Etapa 21
@@ -28702,9 +28841,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     }
     const pct = r && r.nv < Rp.NIVEL_MAX ? Math.floor(r.xp / Rp.pede(r.nv) * 100) : 0;
     const barra = r && r.nv < Rp.NIVEL_MAX ? `<div class="bar" title="Até o nível ${r.nv + 1}"><i style="width:${pct}%"></i></div>` : '';
+    const Ma = G.Magia;
+    if (Ma && !r && Ma.temDom(S, p)) h += '<span class="chip dom" title="Nasceu com o dom da magia. Com a torre de magia, acorda sozinho">Tem o dom</span>';
+    const whyDom = Ma ? Ma.domWhy(S, p) : 'x';
+    const btnDom = Ma && !r && G.Family.age(S, p) >= 14 ? `<button type="button" class="btn btn-small" data-act="magia-dom"${whyDom ? ' disabled' : ''} title="${esc(whyDom ? 'Agora não: ' + whyDom : 'A pessoa acorda como mago ou sacerdote')}">Dar o dom (${C.MAGIA_DOM} de Poder)</button>` : '';
     const adulto = G.Family.age(S, p) >= 16;
     const btn = adulto ? `<button type="button" class="btn btn-small" data-act="rpg-bencao"${why ? ' disabled' : ''} title="${esc(why ? 'Agora não: ' + why : r ? 'Empurra o nível de força' : 'Desperta a força desta pessoa')}">${r ? 'Abençoar' : 'Despertar'} (${Rp.BENCAO} de Poder)</button>` : '';
-    return h || btn ? `<div class="chips">${h}${btn}</div>${barra}` : '';
+    return h || btn || btnDom ? `<div class="chips">${h}${btn}${btnDom}</div>${barra}` : '';
   }
   // 0.37: a guilda: o quadro, quem está fora e o que já aconteceu
   function guildaHTML() {

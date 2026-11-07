@@ -175,6 +175,8 @@
       ['porto', 'porto'], ['galeao', 'galeao'],
       // 0.31: a Pólvora e a Imprensa
       ['imprensa', 'imprensa'], ['universidade', 'universidade'], ['arsenal', 'arsenal'],
+      // 0.39: a torre de magia
+      ['torremagia', 'torremagia'],
       // 0.37: a taberna e a guilda
       ['taberna', 'taberna'], ['guilda', 'guilda'],
       // 0.34: a Era Moderna
@@ -288,6 +290,7 @@
     $('#inspector').addEventListener('click', (e) => {
       const b = e.target.closest('[data-act]'); if (!b || !S) return;
       if (b.dataset.act === 'ia-conversa' && G.Ia) { G.Ia.conversa(S, S.people.find((q) => q.id === UI.sel.person)); return; }   // 0.25
+      if (b.dataset.act === 'magia-dom' && G.Magia) { const q = S.people.find((x) => x.id === UI.sel.person), wh = G.Magia.domWhy(S, q); if (wh) UI.toast('Agora não: ' + wh + '.', 'warn'); else G.Magia.daDom(S, q); UI.update(0, true); return; }   // 0.39
       if (b.dataset.act === 'rpg-bencao' && G.Rpg) { const q = S.people.find((x) => x.id === UI.sel.person), wh = G.Rpg.bencaoWhy(S, q); if (wh) UI.toast('Agora não: ' + wh + '.', 'warn'); else G.Rpg.abencoa(S, q); UI.update(0, true); return; }   // 0.36
       if (b.dataset.act === 'voz' && G.Voz) { G.Voz.abrir(S, S.people.find((q) => q.id === UI.sel.person)); return; }   // 0.24
       if (b.dataset.act === 'av-possuir' && G.Avatar) { const r = G.Avatar.possuir(S, UI.sel.person); if (!r.ok) UI.toast('Agora não: ' + r.why + '.', 'warn'); else if (UI.hooks.follow) UI.hooks.follow(UI.sel.person); return; }   // Etapa 21
@@ -1172,9 +1175,13 @@
     }
     const pct = r && r.nv < Rp.NIVEL_MAX ? Math.floor(r.xp / Rp.pede(r.nv) * 100) : 0;
     const barra = r && r.nv < Rp.NIVEL_MAX ? `<div class="bar" title="Até o nível ${r.nv + 1}"><i style="width:${pct}%"></i></div>` : '';
+    const Ma = G.Magia;
+    if (Ma && !r && Ma.temDom(S, p)) h += '<span class="chip dom" title="Nasceu com o dom da magia. Com a torre de magia, acorda sozinho">Tem o dom</span>';
+    const whyDom = Ma ? Ma.domWhy(S, p) : 'x';
+    const btnDom = Ma && !r && G.Family.age(S, p) >= 14 ? `<button type="button" class="btn btn-small" data-act="magia-dom"${whyDom ? ' disabled' : ''} title="${esc(whyDom ? 'Agora não: ' + whyDom : 'A pessoa acorda como mago ou sacerdote')}">Dar o dom (${C.MAGIA_DOM} de Poder)</button>` : '';
     const adulto = G.Family.age(S, p) >= 16;
     const btn = adulto ? `<button type="button" class="btn btn-small" data-act="rpg-bencao"${why ? ' disabled' : ''} title="${esc(why ? 'Agora não: ' + why : r ? 'Empurra o nível de força' : 'Desperta a força desta pessoa')}">${r ? 'Abençoar' : 'Despertar'} (${Rp.BENCAO} de Poder)</button>` : '';
-    return h || btn ? `<div class="chips">${h}${btn}</div>${barra}` : '';
+    return h || btn || btnDom ? `<div class="chips">${h}${btn}${btnDom}</div>${barra}` : '';
   }
   // 0.37: a guilda: o quadro, quem está fora e o que já aconteceu
   function guildaHTML() {

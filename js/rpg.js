@@ -13,9 +13,16 @@
     guerreiro: { name: 'Guerreiro', nameF: 'Guerreira', cor: '#e43b44', desc: 'Fica na frente quando o bicho vem. Acerta mais e sofre menos.', habs: ['golpe', 'couraca', 'revide'] },
     arqueiro: { name: 'Arqueiro', nameF: 'Arqueira', cor: '#63c74d', desc: 'Olho treinado e mão firme. Acerta de longe, antes de o bicho chegar.', habs: ['certeiro', 'longo', 'veloz'] },
     cacador: { name: 'Caçador', nameF: 'Caçadora', cor: '#feae34', desc: 'Lê o rastro e o vento. O bicho não o percebe, e rende mais carne.', habs: ['rastro', 'passoLeve', 'carneada'] },
+    mago: { name: 'Mago', nameF: 'Maga', cor: '#b080ff', magia: true, desc: 'Nasceu com o dom. Na luta, o golpe dele é fogo e vale o dobro.', habs: ['faisca', 'escudo', 'bola'] },
+    sacerdote: { name: 'Sacerdote', nameF: 'Sacerdotisa', cor: '#fff0a0', magia: true, desc: 'Nasceu com o dom e com a fé. Todo dia cura quem mais precisa.', habs: ['prece', 'escudo', 'milagre'] },
     explorador: { name: 'Explorador', nameF: 'Exploradora', cor: '#2ce8f5', desc: 'Conhece todo caminho. Anda mais depressa, carrega mais e sempre volta com alguma coisa.', habs: ['passada', 'carga', 'achador'] },
   };
   R.HABS = {
+    faisca: { name: 'Faísca certeira', desc: 'O fogo acerta 10% mais.' },
+    escudo: { name: 'Escudo de luz', desc: 'A mordida dói 30% menos.' },
+    bola: { name: 'Bola de fogo', desc: 'O golpe atinge também os monstros que estão perto.' },
+    prece: { name: 'Prece em voz alta', desc: 'Quem está perto ganha fé todo dia.' },
+    milagre: { name: 'Mão que sara', desc: 'A cura também tira a febre.' },
     golpe: { name: 'Golpe firme', desc: 'Acerta 10% mais na luta.' },
     couraca: { name: 'Couro grosso', desc: 'A mordida dói 25% menos.' },
     revide: { name: 'Revide certo', desc: 'Quem morde sempre leva o troco, se ele estiver armado.' },
@@ -49,7 +56,7 @@
   R.tem = (p, h) => !!(p && p.rpg && p.rpg.habs && p.rpg.habs.indexOf(h) >= 0);
   R.nome = (p) => { const r = R.de(p); if (!r) return ''; const c = R.CLASSES[r.cls]; return p.sex === 'F' ? c.nameF : c.name; };
   R.nivel = (p) => { const r = R.de(p); return r ? r.nv : 0; };
-  R.pede = (nv) => Math.round(10 * Math.pow(nv, 1.6));   // o xp de um nível ao próximo
+  R.pede = (nv) => Math.round(8 * Math.pow(nv, 1.3));   // o xp de um nível ao próximo
   // a profissão: o trabalho em que a pessoa é melhor (só depois que ela já é boa em alguma coisa)
   R.profissao = function (p) {
     let top = '', v = 0;
@@ -107,8 +114,8 @@
     if (r.xp0 >= 30 && adulto(S, p) && herois(S).length < teto(S)) R.desperta(S, p);
   };
   // ---------- os efeitos (ganchos pequenos, chamados de onde a coisa acontece) ----------
-  R.acerto = (p, caca) => { const r = R.de(p); if (!r) return 0; return Math.min(0.2, r.nv * 0.006) + (R.tem(p, 'golpe') && !caca ? 0.1 : 0) + (R.tem(p, 'certeiro') ? 0.1 : 0) + (R.tem(p, 'rastro') && caca ? 0.1 : 0); };
-  R.mordida = (p) => { const r = R.de(p); if (!r) return 1; return (1 - Math.min(0.3, r.nv * 0.008)) * (R.tem(p, 'couraca') ? 0.75 : 1); };
+  R.acerto = (p, caca) => { const r = R.de(p); if (!r) return 0; return Math.min(0.2, r.nv * 0.006) + (R.tem(p, 'golpe') && !caca ? 0.1 : 0) + (R.tem(p, 'certeiro') ? 0.1 : 0) + (R.tem(p, 'rastro') && caca ? 0.1 : 0) + (R.tem(p, 'faisca') ? 0.1 : 0); };
+  R.mordida = (p) => { const r = R.de(p); if (!r) return 1; return (1 - Math.min(0.3, r.nv * 0.008)) * (R.tem(p, 'couraca') ? 0.75 : 1) * (R.tem(p, 'escudo') ? 0.7 : 1); };
   R.passo = (p) => (R.tem(p, 'veloz') || R.tem(p, 'passada') ? 1.1 : 1);
   R.cargaMult = (p) => (R.tem(p, 'carga') ? 1.15 : 1);
   R.alcance = (p) => (R.tem(p, 'longo') ? 2 : 0);

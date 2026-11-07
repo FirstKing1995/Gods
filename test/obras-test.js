@@ -9,7 +9,7 @@ const path = require('path');
 const fs = require('fs');
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 globalThis.G = {};
-for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'sociedade', 'gente', 'cidade', 'regioes', 'mar', 'eras', 'avatar', 'visita', 'rpg', 'guilda', 'monstros', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
+for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'sociedade', 'gente', 'cidade', 'regioes', 'mar', 'eras', 'avatar', 'visita', 'rpg', 'guilda', 'monstros', 'magia', 'save', 'offline']) require(path.join(__dirname, '..', 'js', f + '.js'));
 G.CFG.WORLD_GEN = 1;   // 0.18: estes testes foram montados nos mapas de antes das regiões (as regiões têm o teste delas)
 const { W, Sim, CFG: C, Family: F, God, Save, AI, Tech: T, Life: L, Obras: O, Narr: N } = G;
 const TT = G.T;
@@ -77,7 +77,7 @@ if (isMainThread) {
   // ===================== toda obra evolui =====================
   {
     const types = Object.keys(C.BUILD);
-    const DE_ERA = ['moinho', 'imprensa', 'arsenal', 'fabrica', 'usina', 'radio', 'garagem', 'taberna', 'guilda'];   // 0.29 a 0.37: as obras de cada era não têm níveis (a era é o nível delas)
+    const DE_ERA = ['moinho', 'imprensa', 'arsenal', 'fabrica', 'usina', 'radio', 'garagem', 'taberna', 'guilda', 'torremagia'];   // 0.29 a 0.39: as obras de cada era não têm níveis (a era é o nível delas)
     const sem = types.filter((t) => !(C.BUILD[t].grande || C.BUILD[t].boat || DE_ERA.indexOf(t) >= 0 || (C.BUILD[t].up && C.BUILD[t].up.length >= 1)));
     check('toda obra tem pelo menos uma melhoria (as grandes obras, os barcos e as obras de era não têm níveis)', !sem.length, sem.join(', '));
     const f2 = Sim.defOf('fogueira', 2), f3 = Sim.defOf('fogueira', 3);
