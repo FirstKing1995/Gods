@@ -1,7 +1,7 @@
 // Gods · testes da 0.38: os monstros, os covis e as batalhas.
 // Uso: node test/monstros-test.js
 globalThis.G = globalThis.G || {};
-for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'sociedade', 'gente', 'cidade', 'regioes', 'mar', 'eras', 'avatar', 'visita', 'tribos', 'rpg', 'guilda', 'monstros', 'save', 'offline']) require('../js/' + f + '.js');
+for (const f of ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'sociedade', 'gente', 'cidade', 'regioes', 'mar', 'eras', 'avatar', 'visita', 'tribos', 'rpg', 'guilda', 'monstros', 'magia', 'save', 'offline']) require('../js/' + f + '.js');
 G.CFG.WORLD_GEN = 1;
 const { W, Sim, CFG: C, Rpg: R, Guilda: Gu, Monstros: Mo, Save, Family: F, Eras: E, Bichos: B, Narr: N } = G;
 const DAY = C.DAY_MIN;

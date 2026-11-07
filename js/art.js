@@ -1393,6 +1393,9 @@
       { k: P.ink2, s: P.mist, d: P.bark }],
     torre: [['...kkkk...', '..kyyyyk..', '.kkkkkkkk.', '..kwwwwk..', '..kssssk..', '..ksddsk..', '..kssssk..', '.ksssssk..', '.kssssssk.', 'kkkkkkkkkk'],
       { k: P.ink2, s: P.mist, y: P.tan, w: P.wood, d: P.ink }],
+    // 0.39: a torre de magia
+    torremagia: [['....bb....', '...bwwb...', '....bb....', '...kkkk...', '..kskksk..', '..ksbbsk..', '..ksbbsk..', '..kssssk..', '..kskksk..', '.kkkkkkkk.'],
+      { k: P.ink2, s: P.mist, b: P.sky, w: P.parch }],
     // 0.38: o covil
     covil: [['..........', '...kkkk...', '..kssssk..', '.ksskksk..', '.kskddksk.', 'kskddddksk', 'kskddddksk', 'ksddddddsk', 'kkkkkkkkkk', '..........'],
       { k: P.ink2, s: P.mist, d: P.ink }],
@@ -2490,6 +2493,17 @@
     rect7(b, 33, 0, 37, 2, '#c8423a');   // a bandeira
     return b.canvas();
   }
+  // 0.39: a torre de magia (32 x 62, 2 x 2 passos): pedra escura, janelas azuis, a cúpula e o cristal que brilha
+  function torreMagiaSpr() {
+    const b = new Buf(32, 62), S0 = ['#2a2440', '#3e3660', '#564c80', '#7468a0', '#a498c8'];
+    for (let y = 18; y <= 58; y++) { const hw = y > 50 ? 12 : y > 46 ? 11 : 9; for (let x = 16 - hw; x <= 15 + hw; x++) { const row = (y >> 2), off = row % 2 ? 2 : 0, junta = y % 4 === 3 || (x + off) % 6 === 0; b.set(x, y, junta ? S0[0] : x < 12 ? S0[3] : x > 19 ? S0[1] : S0[2]); } }
+    for (let y = 7; y <= 17; y++) { const t = (y - 7) / 10, hw = Math.round(1 + t * 11); for (let x = 16 - hw; x <= 15 + hw; x++) b.set(x, y, y === 17 ? S0[0] : x < 14 ? '#6a4aa8' : '#4a3488'); }
+    for (const y of [23, 34]) { rect7(b, 13, y, 18, y + 6, S0[0]); rect7(b, 14, y + 1, 17, y + 5, '#6ac8ff'); b.set(14, y + 1, '#e0f4ff'); }
+    rect7(b, 12, 48, 19, 58, S0[0]); rect7(b, 13, 49, 18, 58, '#2b1d1a'); b.set(17, 54, '#fee761');
+    rect7(b, 14, 3, 17, 6, '#9fe8ff'); rect7(b, 15, 1, 16, 8, '#6ac8ff'); b.set(15, 3, '#ffffff'); b.set(14, 4, '#e0f4ff');
+    for (let x = 4; x <= 27; x++) b.set(x, 59, S0[0]);
+    return b.canvas();
+  }
   // ---------- 0.38: os monstros ----------
   // folha de 3 quadros por 4 direções (a mesma ordem dos lobos): 0 de frente, 1 de costas, 2 direita, 3 esquerda
   A.MONSTRO_W = 16; A.MONSTRO_H = 18;
@@ -2892,7 +2906,7 @@
     return b.canvas();
   }
   A.cidadeSprites = function () {
-    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr(), imprensa: imprensaSpr(), universidade: universidadeSpr(), arsenal: arsenalSpr(), fabrica: fabricaSpr(), estacao: estacaoSpr(), usina: usinaSpr(), bonde: bondeSpr(), radio: radioSpr(), garagem: garagemSpr(), hospitalgeral: hospitalGeralSpr(), taberna: tabernaSpr(), guilda: guildaSpr() };
+    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr(), imprensa: imprensaSpr(), universidade: universidadeSpr(), arsenal: arsenalSpr(), fabrica: fabricaSpr(), estacao: estacaoSpr(), usina: usinaSpr(), bonde: bondeSpr(), radio: radioSpr(), garagem: garagemSpr(), hospitalgeral: hospitalGeralSpr(), taberna: tabernaSpr(), guilda: guildaSpr(), torremagia: torreMagiaSpr() };
     for (const k of ['escola', 'biblioteca', 'hospital', 'guarda', 'brigada', 'mercado']) out[k] = [null, instituicao(k, 1), instituicao(k, 2), instituicao(k, 3)];
     return out;
   };

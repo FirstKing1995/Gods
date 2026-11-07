@@ -51,6 +51,8 @@
     mercado: (S) => (S.soc && S.soc.vila && !S.soc.vila.fim ? '' : 'pede uma vila de fora para trocar'),
     // 0.29: a Idade Média (os dois chegam com os Reinos; o castelo pede uma cidade)
     moinho: (S) => (G.Eras && G.Eras.idade(S) >= 4 ? '' : 'chega com a Idade dos Reinos'),
+    // 0.39: a torre pede quem saiba escrever o que aprende (ou o conselho, que já lida com isso)
+    torremagia: (S) => (vivos(S) < 25 ? 'pede 25 pessoas' : (G.Eras && G.Eras.idade(S) >= 2) || (G.Eras && G.Eras.ordem(S) === 'conselho') ? '' : 'chega com a Idade do Bronze'),
     // 0.37: a taberna pede gente para beber; a guilda pede a taberna (é ali que os grupos se formam)
     taberna: (S) => (vivos(S) >= 12 ? '' : 'pede 12 pessoas'),
     guilda: (S) => (!S.buildings.some((b) => b.type === 'taberna' && b.built) ? 'pede uma taberna pronta' : vivos(S) >= 20 ? '' : 'pede 20 pessoas'),

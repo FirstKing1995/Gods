@@ -64,7 +64,8 @@
     if (S.resumido || S.safe || S.over || !Mo.ativo(S)) return;
     if (!m.prox) m.prox = S.t + (5 + sorte(S, 11) * 15) * DAY();
     if (S.t >= m.prox) {
-      if (m.covis.length < C.COVIL_MAX) Mo.novo(S);
+      // 0.39: sem guilda, não há quem limpe: um covil só, e os bandos bem mais raros
+      if (m.covis.length < (G.Guilda && G.Guilda.temGuilda(S) ? C.COVIL_MAX : 1)) Mo.novo(S);
       m.prox = S.t + (C.COVIL_NOVO[0] + sorte(S, 13) * (C.COVIL_NOVO[1] - C.COVIL_NOVO[0])) * DAY();
     }
     // quem deixa o covil em paz vê ele crescer
@@ -86,7 +87,7 @@
   };
   Mo.bando = function (S, c) {
     const T = Mo.TIPOS[c.m], n = T.pack[0] + Math.floor(sorte(S, c.id * 5) * (T.pack[1] - T.pack[0] + 1)) + (c.nv - 1);
-    c.ataque = S.t + (C.COVIL_RAID[0] + sorte(S, c.id * 7) * (C.COVIL_RAID[1] - C.COVIL_RAID[0])) * DAY();
+    c.ataque = S.t + (C.COVIL_RAID[0] + sorte(S, c.id * 7) * (C.COVIL_RAID[1] - C.COVIL_RAID[0])) * DAY() * (G.Guilda && G.Guilda.temGuilda(S) ? 1 : C.COVIL_SEM_GUILDA);
     const made = G.Narr.spawnMonstros(S, c.m, n);
     if (!made) return 0;
     c.bandos++; S.stats.bandos = (S.stats.bandos || 0) + 1;
@@ -106,9 +107,11 @@
   };
   // ---------- o golpe ----------
   // um golpe no monstro: ele tem vida e não foge ferido; caiu, conta, e às vezes deixa alguma coisa
-  Mo.golpe = function (S, e, p) {
+  Mo.golpe = function (S, e, p, dano) {
     const T = Mo.TIPOS[e.m], a = S.narr.active.lobos, Sm = Sim();
-    e.hp = (e.hp === undefined ? T.hp : e.hp) - 1;
+    const principal = dano === undefined;   // 0.39: o golpe que espirra não espirra de novo
+    e.hp = (e.hp === undefined ? T.hp : e.hp) - (principal && G.Magia ? G.Magia.dano(p) : dano || 1);
+    if (principal && G.Magia) G.Magia.espalha(S, e, p);
     if (a) a.fought = (a.fought || 0) + 1;
     if (e.hp > 0) return 'acertou';
     e.gone = true;

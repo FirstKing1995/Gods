@@ -34,6 +34,9 @@
     ruinas: { nome: 'Explorar as ruínas antigas', rank: 2, dias: [7, 12], risco: 0.2, premio: { ouro: 6, sal: 6 }, saber: 30,
       ok: ['Nas ruínas, {g} acharam ouro e paredes cheias de sinais que o povo agora tenta entender.', '{g} voltaram das ruínas contando de uma gente que viveu aqui muito antes do casal.'],
       mal: ['As ruínas estavam vazias, e o chão cedeu duas vezes. {g} não quiseram ficar.'] },
+    grimorio: { nome: 'Buscar o grimório perdido', rank: 2, dias: [7, 11], risco: 0.18, premio: { ouro: 3 }, saber: 45,
+      ok: ['{g} acharam o grimório num baú de pedra. A torre passou a noite lendo.', '{g} trouxeram um livro que ninguém sabe quem escreveu, e o povo aprendeu com ele.'],
+      mal: ['O grimório virou cinza na mão de quem pegou. {g} voltaram sem nada.'] },
     fera: { nome: 'Caçar a fera do morro', rank: 3, dias: [8, 13], risco: 0.28, premio: { carne: 40, couro: 14, ouro: 4 },
       ok: ['{g} voltaram arrastando a fera do morro. A vila inteira saiu para ver.', 'A fera do morro não vai mais descer: {g} trouxeram o couro como prova.'],
       mal: ['A fera do morro é maior do que contavam. {g} recuaram, e ela continua lá em cima.'] },
@@ -88,7 +91,7 @@
   // ---------- o quadro ----------
   function novaMissao(S) {
     // 0.38: covil sem missão vai primeiro para o quadro
-    if (S.monstros) for (const c of S.monstros.covis) if (!S.guilda.quadro.some((m) => m.covil === c.id) && !S.guilda.idas.some((i) => i.covil === c.id)) { S.guilda.quadro.push({ id: S.guilda.nid++, tipo: 'covil', covil: c.id, nv: c.nv, nome: G.Monstros.nomeDe(c), t: S.t, ate: S.t + C.GUILDA_PRAZO * 4 * DAY() }); return; }
+    if (S.monstros) for (const c of S.monstros.covis) if (S.t - c.t >= C.COVIL_ESPERA * DAY() && !S.guilda.quadro.some((m) => m.covil === c.id) && !S.guilda.idas.some((i) => i.covil === c.id)) { S.guilda.quadro.push({ id: S.guilda.nid++, tipo: 'covil', covil: c.id, nv: c.nv, nome: G.Monstros.nomeDe(c), t: S.t, ate: S.t + C.GUILDA_PRAZO * 4 * DAY() }); return; }
     const g = S.guilda, top = Math.max(0, ...S.people.filter((p) => R().de(p)).map((p) => p.rpg.nv));
     const pode = Object.keys(Gu.TIPOS).filter((k) => k !== 'covil' && FORCA[Gu.TIPOS[k].rank] <= Math.max(FORCA[0], top * 3));
     const fora = pode.filter((k) => !g.quadro.some((m) => m.tipo === k));

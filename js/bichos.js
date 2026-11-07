@@ -67,7 +67,7 @@
     const e = B.ent(S, tgt);
     if (!e) return 'fim';
     const bow = Tech().known(S, 'arco');
-    S.events.push({ k: 'throw', x1: p.x, y1: p.y - 0.4, x2: e.x, y2: e.y, bow });
+    S.events.push({ k: 'throw', x1: p.x, y1: p.y - 0.4, x2: e.x, y2: e.y, bow, magia: G.Magia && G.Magia.conjura(p) });   // 0.39: o fogo do mago
     S.stats.strikes = (S.stats.strikes || 0) + 1;
     if (!sure && !S.rng.chance(B.hitChance(S, p))) { Sim().say(S, p, S.rng.pick(['Errei!', 'Quase!', 'Mais uma!']), false); return 'errou'; }
     S.events.push({ k: 'hit', x: e.x, y: e.y });

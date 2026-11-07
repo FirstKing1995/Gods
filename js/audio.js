@@ -523,7 +523,7 @@
     if (st) {
       hour = st.ck.hour; season = st.ck.season; precip = st.precip;
       blizzard = !!(G.Narr && G.Narr.is(st, 'nevasca')); storm = !!(G.Narr && G.Narr.is(st, 'tempestade'));
-      wolves = !!(G.Narr && G.Narr.wolvesOut(st));
+      wolves = !!(G.Narr && G.Narr.wolvesOut(st) && !(st.narr && st.narr.active.lobos && st.narr.active.lobos.monstro));
       onca = !!(G.Narr && G.Narr.oncaOut && G.Narr.oncaOut(st));
     }
     const night = hour >= 19.5 || hour < 5, dawn = hour >= 5 && hour < 8;
