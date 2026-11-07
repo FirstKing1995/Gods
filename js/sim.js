@@ -1087,6 +1087,7 @@
     if (G.Regioes) G.Regioes.daily(S);   // Etapa 17: o sal que chegou
     if (G.Mar) G.Mar.daily(S);   // Etapa 18: a volta da expedição, a carga do barco, as colônias
     if (G.Rpg) G.Rpg.daily(S);   // 0.36: heróis
+    if (G.Guilda) G.Guilda.daily(S);   // 0.37: as missões
     if (G.Eras) G.Eras.daily(S);   // Etapas 19 e 20: a idade, o rumo, a magia, o desafio de cada idade
     if (G.Avatar) G.Avatar.daily(S);   // Etapa 21: o abençoado (a pergunta, o líder nato)
     if (G.Life) G.Life.daily(S);

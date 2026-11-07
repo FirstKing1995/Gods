@@ -3,7 +3,7 @@
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.36.0',
+    VERSION: '0.37.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -204,6 +204,11 @@
         desc: 'A casa de Deus, de pedra e de muitas mãos. Quem tem fé reza ali de manhã e ganha o dobro de fé; a festa e o rito ficam maiores perto dele.' },
       muralha: { name: 'Muralha', a: 'a', key: '', w: 3, h: 2, cost: { pedra: 200, madeira: 40 }, work: 30000, grande: true, wall: { r: 16 },
         desc: 'Um anel de pedra em volta do centro, com portão. Lobo e onça não entram, e ninguém leva a comida guardada lá dentro.' },
+      // 0.37: a taberna e a guilda de aventureiros
+      taberna: { name: 'Taberna', a: 'a', key: '', w: 3, h: 2, cost: { madeira: 40, pedra: 10 }, work: 1500,
+        desc: 'Mesa comprida, caneca e conversa até tarde: o descontentamento cresce menos, e mais gente acorda para a aventura.' },
+      guilda: { name: 'Guilda de aventureiros', a: 'a', key: '', w: 3, h: 3, cost: { madeira: 60, pedra: 40 }, work: 3000,
+        desc: 'O quadro de missões: quem já despertou forma grupo, sai em busca de prêmio e volta com história. Ou não volta.' },
       // 0.34: a Era Moderna. O rádio e a garagem (obras comuns) e o hospital geral (grande obra)
       radio: { name: 'Rádio', a: 'o', key: '', w: 2, h: 2, cost: { pedra: 60, tabuas: 40 }, extra: { ferro: 10 }, work: 4000,
         desc: 'A antena alta e a voz que chega em toda casa: o malfeito cai 20%, e a Grande Crise não vira revolta. Duas tribos com rádio se conhecem na hora. Pede a usina e 10 de ferro.' },
@@ -656,6 +661,8 @@
     // 0.29: a Idade Média
     MOINHO_ROCA: 1.25, CASTELO_CRIME: 0.8, ERA_PESTE: 0.5, PESTE_PARTE: 0.2, ESTRELAS_PRAGA: 0.5,
     // 0.30: as Navegações
+    // 0.37: a guilda
+    GUILDA_FICAM: 8, GUILDA_QUADRO: 3, GUILDA_PRAZO: 25, GUILDA_GRUPOS: 2, GUILDA_MORTE: 1.2, GUILDA_BENCAO: 0.2, GUILDA_SONHO: 20, GUILDA_PROTEGE: 40, TABERNA_DESC: 0.9, TABERNA_DESPERTA: 3,
     // 0.34: a Era Moderna
     RADIO_CRIME: 0.8, GARAGEM_CARGA: 1.3, HGERAL_FEBRE: 0.5, ERA_CRISE: 0.5, CRISE_D: 6, CRISE_OFICIO: 0.7, CRISE_DESC: 10,
     // 0.33: a Era Elétrica

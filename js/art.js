@@ -1393,6 +1393,11 @@
       { k: P.ink2, s: P.mist, d: P.bark }],
     torre: [['...kkkk...', '..kyyyyk..', '.kkkkkkkk.', '..kwwwwk..', '..kssssk..', '..ksddsk..', '..kssssk..', '.ksssssk..', '.kssssssk.', 'kkkkkkkkkk'],
       { k: P.ink2, s: P.mist, y: P.tan, w: P.wood, d: P.ink }],
+    // 0.37: a taberna e a guilda
+    taberna: [['.kkkkkkkk.', 'kyyyyyyyyk', 'kkkkkkkkkk', '.k......k.', '.kwwkkddk.', '.kwwkkddk.', '.kkkkkkkk.', '...kk.....', '...kk.....', '..kkkk....'],
+      { k: P.ink2, y: P.wood, w: P.yellow, d: P.bark }],
+    guilda: [['.kkkkkkkk.', '.krrrrrrk.', '.krwwwwrk.', '.krwkkwrk.', '.krwwwwrk.', '.krrkkrrk.', '.krrkkrrk.', '.kkrkkrkk.', '..kkkkkk..', '..........'],
+      { k: P.ink2, r: P.red, w: P.parch }],
     // 0.35: a casa, quando a barraca fica para trás
     casa: [['....kk....', '...kyyk...', '..kyyyyk..', '.kyyyyyyk.', 'kkkkkkkkkk', '.kwwwwwwk.', '.kwdkwwwk.', '.kwdkwbwk.', '.kwdkwwwk.', '.kkkkkkkk.'],
       { k: P.ink2, y: P.wood, w: P.parch, d: P.bark, b: P.sky }],
@@ -2482,6 +2487,31 @@
     rect7(b, 33, 0, 37, 2, '#c8423a');   // a bandeira
     return b.canvas();
   }
+  // 0.37: a taberna (48 x 36, 3 x 2 passos): parede de tábua, janelas acesas, a placa da caneca e o barril na porta
+  function tabernaSpr() {
+    const b = new Buf(48, 36);
+    plankWall(b, 3, 15, 44, 32);
+    thatch(b, 24, 2, 14, 12, 23, 211);
+    for (const x of [7, 33]) { rect7(b, x - 1, 20, x + 7, 27, PLANK[0]); rect7(b, x, 21, x + 6, 26, '#f0c060'); line(b, x + 3, 21, x + 3, 26, PLANK[0]); }
+    door(b, 20, 21, 27, 32);
+    line(b, 40, 12, 46, 12, PLANK[0]); line(b, 45, 12, 45, 15, PLANK[0]); rect7(b, 42, 15, 47, 21, PLANK[1]); rect7(b, 43, 16, 45, 20, '#e8c060'); rect7(b, 46, 17, 46, 19, '#e8c060'); rect7(b, 43, 16, 45, 16, '#f4f0e6');
+    for (const x of [13, 30]) { rect7(b, x, 28, x + 4, 33, PLANK[2]); rect7(b, x, 29, x + 4, 29, PLANK[0]); rect7(b, x, 32, x + 4, 32, PLANK[0]); }
+    for (let x = 3; x <= 44; x++) b.set(x, 33, P.maroon);
+    return b.canvas();
+  }
+  // a guilda (48 x 52, 3 x 3 passos): salão de pedra e tábua, dois estandartes, o escudo sobre a porta e o quadro de missões
+  function guildaSpr() {
+    const b = new Buf(48, 52);
+    stoneWall(b, 3, 20, 44, 48, 221);
+    shingles(b, 24, 3, 19, 7, 23, PLANK);
+    for (const x of [6, 38]) { rect7(b, x, 22, x + 4, 34, '#a02a2a'); rect7(b, x, 22, x + 4, 23, '#fee761'); b.set(x + 2, 28, '#fee761'); b.set(x, 34, 0); b.set(x + 4, 34, 0); }
+    door(b, 19, 34, 28, 48, true);
+    rect7(b, 20, 23, 27, 31, '#3e444c'); rect7(b, 21, 24, 26, 30, '#a02a2a'); line(b, 23, 25, 23, 29, '#f4f0e6'); rect7(b, 21, 27, 26, 27, '#f4f0e6');
+    rect7(b, 33, 37, 42, 44, PLANK[0]); rect7(b, 34, 38, 41, 43, PLANK[3]); for (const [x, y] of [[35, 39], [38, 39], [36, 41], [39, 41]]) rect7(b, x, y, x + 1, y + 1, '#f4f0e6');
+    for (const x of [6, 12]) { rect7(b, x, 37, x + 3, 44, '#2b2b34'); rect7(b, x + 1, 38, x + 2, 43, '#f0c060'); }
+    for (let x = 3; x <= 44; x++) b.set(x, 49, STONE[0]);
+    return b.canvas();
+  }
   // ---------- 0.35: as construções mudam de forma com a idade ----------
   function janela(b, x, y, w, h, moldura, vidro) { rect7(b, x - 1, y - 1, x + w, y + h, moldura); rect7(b, x, y, x + w - 1, y + h - 1, vidro); b.set(x, y, '#e8f0f8'); }
   function porta(b, x, y0, y1, w, cor, trinco) { rect7(b, x - 1, y0 - 1, x + w, y1, '#2b1d1a'); rect7(b, x, y0, x + w - 1, y1, cor); b.set(x + w - 2, Math.round((y0 + y1) / 2), trinco || '#e8c060'); }
@@ -2586,7 +2616,7 @@
     return (casaCache[chave] = o);
   };
   // a oficina ou instituição numa forma (1 madeira e pedra, 2 tijolo, 3 concreto), com a placa do ofício na parede
-  const OBRA_COR = { armazem: '#a87a30', marcenaria: '#8a5a30', tecelagem: '#a0507a', ferraria: '#505868', escola: '#3a6a9a', biblioteca: '#6a4a8a', hospital: '#2e6a4a', guarda: '#7a3a30', brigada: '#c8423a', mercado: '#c8a030' };
+  const OBRA_COR = { armazem: '#a87a30', marcenaria: '#8a5a30', tecelagem: '#a0507a', ferraria: '#505868', escola: '#3a6a9a', biblioteca: '#6a4a8a', hospital: '#2e6a4a', guarda: '#7a3a30', brigada: '#c8423a', mercado: '#c8a030', taberna: '#a87a30', guilda: '#a02a2a' };
   const obraCache = {};
   A.obraEra = function (tipo, forma, w) {
     const chave = tipo + '|' + forma;
@@ -2812,7 +2842,7 @@
     return b.canvas();
   }
   A.cidadeSprites = function () {
-    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr(), imprensa: imprensaSpr(), universidade: universidadeSpr(), arsenal: arsenalSpr(), fabrica: fabricaSpr(), estacao: estacaoSpr(), usina: usinaSpr(), bonde: bondeSpr(), radio: radioSpr(), garagem: garagemSpr(), hospitalgeral: hospitalGeralSpr() };
+    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr(), imprensa: imprensaSpr(), universidade: universidadeSpr(), arsenal: arsenalSpr(), fabrica: fabricaSpr(), estacao: estacaoSpr(), usina: usinaSpr(), bonde: bondeSpr(), radio: radioSpr(), garagem: garagemSpr(), hospitalgeral: hospitalGeralSpr(), taberna: tabernaSpr(), guilda: guildaSpr() };
     for (const k of ['escola', 'biblioteca', 'hospital', 'guarda', 'brigada', 'mercado']) out[k] = [null, instituicao(k, 1), instituicao(k, 2), instituicao(k, 3)];
     return out;
   };

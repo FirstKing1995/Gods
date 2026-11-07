@@ -1018,6 +1018,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       <button type="button" role="tab" data-gtab="atos">Grandes atos</button>
       <button type="button" role="tab" data-gtab="povos">Povos</button>
       <button type="button" role="tab" data-gtab="herois">Heróis</button>
+      <button type="button" role="tab" data-gtab="guilda">Guilda</button>
       <button type="button" role="tab" data-gtab="memoria">Memória</button>
       <button type="button" role="tab" data-gtab="sociedade">Sociedade</button>
       <button type="button" role="tab" data-gtab="tribos">Tribos</button>
@@ -1327,7 +1328,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.36.0',
+    VERSION: '0.37.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -1528,6 +1529,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         desc: 'A casa de Deus, de pedra e de muitas mãos. Quem tem fé reza ali de manhã e ganha o dobro de fé; a festa e o rito ficam maiores perto dele.' },
       muralha: { name: 'Muralha', a: 'a', key: '', w: 3, h: 2, cost: { pedra: 200, madeira: 40 }, work: 30000, grande: true, wall: { r: 16 },
         desc: 'Um anel de pedra em volta do centro, com portão. Lobo e onça não entram, e ninguém leva a comida guardada lá dentro.' },
+      // 0.37: a taberna e a guilda de aventureiros
+      taberna: { name: 'Taberna', a: 'a', key: '', w: 3, h: 2, cost: { madeira: 40, pedra: 10 }, work: 1500,
+        desc: 'Mesa comprida, caneca e conversa até tarde: o descontentamento cresce menos, e mais gente acorda para a aventura.' },
+      guilda: { name: 'Guilda de aventureiros', a: 'a', key: '', w: 3, h: 3, cost: { madeira: 60, pedra: 40 }, work: 3000,
+        desc: 'O quadro de missões: quem já despertou forma grupo, sai em busca de prêmio e volta com história. Ou não volta.' },
       // 0.34: a Era Moderna. O rádio e a garagem (obras comuns) e o hospital geral (grande obra)
       radio: { name: 'Rádio', a: 'o', key: '', w: 2, h: 2, cost: { pedra: 60, tabuas: 40 }, extra: { ferro: 10 }, work: 4000,
         desc: 'A antena alta e a voz que chega em toda casa: o malfeito cai 20%, e a Grande Crise não vira revolta. Duas tribos com rádio se conhecem na hora. Pede a usina e 10 de ferro.' },
@@ -1980,6 +1986,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     // 0.29: a Idade Média
     MOINHO_ROCA: 1.25, CASTELO_CRIME: 0.8, ERA_PESTE: 0.5, PESTE_PARTE: 0.2, ESTRELAS_PRAGA: 0.5,
     // 0.30: as Navegações
+    // 0.37: a guilda
+    GUILDA_FICAM: 8, GUILDA_QUADRO: 3, GUILDA_PRAZO: 25, GUILDA_GRUPOS: 2, GUILDA_MORTE: 1.2, GUILDA_BENCAO: 0.2, GUILDA_SONHO: 20, GUILDA_PROTEGE: 40, TABERNA_DESC: 0.9, TABERNA_DESPERTA: 3,
     // 0.34: a Era Moderna
     RADIO_CRIME: 0.8, GARAGEM_CARGA: 1.3, HGERAL_FEBRE: 0.5, ERA_CRISE: 0.5, CRISE_D: 6, CRISE_OFICIO: 0.7, CRISE_DESC: 10,
     // 0.33: a Era Elétrica
@@ -3682,6 +3690,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (G.Regioes) G.Regioes.daily(S);   // Etapa 17: o sal que chegou
     if (G.Mar) G.Mar.daily(S);   // Etapa 18: a volta da expedição, a carga do barco, as colônias
     if (G.Rpg) G.Rpg.daily(S);   // 0.36: heróis
+    if (G.Guilda) G.Guilda.daily(S);   // 0.37: as missões
     if (G.Eras) G.Eras.daily(S);   // Etapas 19 e 20: a idade, o rumo, a magia, o desafio de cada idade
     if (G.Avatar) G.Avatar.daily(S);   // Etapa 21: o abençoado (a pergunta, o líder nato)
     if (G.Life) G.Life.daily(S);
@@ -17606,6 +17615,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // quem foi embora, para o painel
   So.foraTxt = function (S, p) {
     const v = S.soc ? S.soc.vila : null, w = p.away ? p.away.why : '';
+    if (p.away && p.away.missao) return p.morto ? 'Não voltou da missão' : 'Em missão, longe daqui';   // 0.37
     if (p.morto) return 'Morreu longe daqui' + (v ? ', em ' + v.nome : '');
     const onde = p.away && p.away.vila && v && !v.fim ? '. Vive em ' + v.nome : '';
     return (w === 'exilio' ? 'Foi mandad' + oa(p) + ' embora' : w === 'casou' ? 'Foi morar fora: casou' : 'Foi embora com o grupo') + onde;
@@ -18193,6 +18203,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     mercado: (S) => (S.soc && S.soc.vila && !S.soc.vila.fim ? '' : 'pede uma vila de fora para trocar'),
     // 0.29: a Idade Média (os dois chegam com os Reinos; o castelo pede uma cidade)
     moinho: (S) => (G.Eras && G.Eras.idade(S) >= 4 ? '' : 'chega com a Idade dos Reinos'),
+    // 0.37: a taberna pede gente para beber; a guilda pede a taberna (é ali que os grupos se formam)
+    taberna: (S) => (vivos(S) >= 12 ? '' : 'pede 12 pessoas'),
+    guilda: (S) => (!S.buildings.some((b) => b.type === 'taberna' && b.built) ? 'pede uma taberna pronta' : vivos(S) >= 20 ? '' : 'pede 20 pessoas'),
     // 0.34: a Era Moderna (chega com a Era Elétrica; o rádio e a garagem pedem a usina)
     radio: (S) => (!(G.Eras && G.Eras.idade(S) >= 9) ? 'chega com a Era Elétrica' : S.buildings.some((b) => b.type === 'usina' && b.built) || (G.Eras && G.Eras.temMagia(S, 'raio')) ? '' : 'pede uma usina pronta'),
     garagem: (S) => (!(G.Eras && G.Eras.idade(S) >= 9) ? 'chega com a Era Elétrica' : S.buildings.some((b) => b.type === 'usina' && b.built) || (G.Eras && G.Eras.temMagia(S, 'raio')) ? '' : 'pede uma usina pronta'),
@@ -19099,7 +19112,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   E.trocaMult = (S) => (E.ordem(S) === 'reino' ? 1.3 : 1);
   E.xp = (S) => (E.ordem(S) === 'guildas' ? 1.15 : 1);
   E.cacaMult = (S) => (E.ordem(S) === 'clas' ? 1.25 : 1);
-  E.descMult = (S) => (E.ordem(S) === 'assembleia' ? 0.75 : 1) * (E.temLuz(S) ? C.USINA_DESC : 1);   // 0.33: a luz
+  E.descMult = (S) => (E.ordem(S) === 'assembleia' ? 0.75 : 1) * (E.temLuz(S) ? C.USINA_DESC : 1) * (G.Guilda ? G.Guilda.descMult(S) : 1);   // 0.33: a luz
   // no conselho, só mulher fala por todos (o matriarcado das elfas)
   E.candidatos = (S, list) => (E.ordem(S) === 'conselho' && list.some((p) => p.sex === 'F') ? list.filter((p) => p.sex === 'F') : list);
 
@@ -19984,7 +19997,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         R.ganha(S, p, 2, 'anda');
         if (R.tem(p, 'achador') && !S.safe && sorte(S, p, 7) < 0.04) { const k = ['sal', 'minerio', 'ouro'][Math.floor(sorte(S, p, 8) * 3)]; if (S.stock[k] !== undefined) { S.stock[k] += 1; Sim().toast(S, p.name + ' achou ' + (k === 'minerio' ? 'minério' : k) + ' pelo caminho.', 'good'); } }
       } else if (r && r.cls) { if (sorte(S, p, 5) < 0.3) R.ganha(S, p, 1); }
-      else if (Fam().age(S, p) <= 40 && sorte(S, p, 3) < 0.004) R.ganha(S, p, 4, 'anda');   // de vez em quando, alguém sai para ver o que tem depois do morro
+      else if (Fam().age(S, p) <= 40 && sorte(S, p, 3) < 0.004 * (G.Guilda ? G.Guilda.despertarMult(S) : 1)) R.ganha(S, p, 4, 'anda');   // de vez em quando, alguém sai para ver o que tem depois do morro
     }
   };
   // ---------- Deus abençoa ----------
@@ -20004,6 +20017,192 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     else { r.xp += R.pede(r.nv); sobe(S, p); if (!S.safe) Sim().toast(S, p.name + ' sentiu a sua bênção: nível ' + r.nv + '.', 'good'); }
     return true;
   };
+})(globalThis.G = globalThis.G || {});
+
+/* ---- js/guilda.js ---- */
+/* Gods · 0.37: a taberna e a guilda de aventureiros. A taberna junta o povo à noite: o descontentamento cresce menos e
+   mais gente acorda para a aventura. A guilda põe missões no quadro; quem já despertou forma grupo, sai pela beira do
+   mapa e volta dias depois com prêmio e história, ou ferido, ou não volta. Cada aventureiro tem um rank pela força:
+   Ferro, Bronze, Prata, Ouro, Platina e Lenda. Você segue sendo Deus: não escolhe quem vai, mas pode mandar um sonho
+   (o grupo sai hoje) ou cobrir um grupo com a sua proteção (mais chance, e ninguém morre).
+   Nada aqui gasta o S.rng: o sorteio é próprio, para não mudar o resto da história do mundo. Sem DOM. */
+(function (G) {
+  'use strict';
+  const C = G.CFG;
+  const Gu = G.Guilda = {};
+  const Sim = () => G.Sim, Fam = () => G.Family, R = () => G.Rpg, So = () => G.Soc;
+  const DAY = () => C.DAY_MIN;
+
+  Gu.RANKS = [
+    { nome: 'Ferro', min: 1, cor: '#a4adb6' }, { nome: 'Bronze', min: 5, cor: '#c87a3e' }, { nome: 'Prata', min: 12, cor: '#dfe6ee' },
+    { nome: 'Ouro', min: 25, cor: '#fee761' }, { nome: 'Platina', min: 40, cor: '#9fe8ff' }, { nome: 'Lenda', min: 55, cor: '#ff8ad0' },
+  ];
+  Gu.rankDe = (nv) => { let k = 0; for (let i = 0; i < Gu.RANKS.length; i++) if (nv >= Gu.RANKS[i].min) k = i; return k; };
+  Gu.rank = (p) => (R() && R().de(p) ? Gu.RANKS[Gu.rankDe(p.rpg.nv)] : null);
+  // rank: o da missão (quem vai precisa somar a força); dias: quanto dura; risco: o perigo de base; premio: o que traz
+  Gu.TIPOS = {
+    matilha: { nome: 'Espantar a matilha do vale', rank: 0, dias: [3, 6], risco: 0.1, premio: { carne: 16, couro: 5 },
+      ok: ['{g} voltaram do vale com couro e carne: a matilha mudou de morro.', '{g} acharam a toca dos lobos e fizeram tanto barulho que eles não voltam tão cedo.'],
+      mal: ['{g} voltaram do vale sem nada: a matilha era maior do que diziam.'] },
+    erva: { nome: 'Buscar erva da serra', rank: 0, dias: [4, 7], risco: 0.07, premio: { frutas: 18, fibra: 8 },
+      ok: ['{g} subiram a serra e voltaram de cesto cheio.', '{g} acharam o vale das ervas, que os velhos só conheciam de ouvir falar.'],
+      mal: ['{g} procuraram a erva por dias e só acharam chuva.'] },
+    caravana: { nome: 'Escoltar a caravana de sal', rank: 1, dias: [5, 9], risco: 0.12, premio: { sal: 10, ouro: 2 },
+      ok: ['{g} levaram a caravana até o fim do caminho, e o dono pagou em sal e ouro.', 'Bandidos olharam para {g} e resolveram esperar a próxima caravana.'],
+      mal: ['A caravana foi roubada no segundo dia. {g} voltaram de mãos vazias.'] },
+    caverna: { nome: 'Descer à caverna funda', rank: 2, dias: [6, 10], risco: 0.18, premio: { minerio: 14, carvao: 10, ferro: 3 },
+      ok: ['{g} desceram até onde a tocha não alcança e subiram com a mochila pesada de minério.', 'No fundo da caverna, {g} acharam um veio que ninguém tinha tocado.'],
+      mal: ['A caverna desabou no caminho. {g} saíram por pouco, cobertos de pó.'] },
+    ruinas: { nome: 'Explorar as ruínas antigas', rank: 2, dias: [7, 12], risco: 0.2, premio: { ouro: 6, sal: 6 }, saber: 30,
+      ok: ['Nas ruínas, {g} acharam ouro e paredes cheias de sinais que o povo agora tenta entender.', '{g} voltaram das ruínas contando de uma gente que viveu aqui muito antes do casal.'],
+      mal: ['As ruínas estavam vazias, e o chão cedeu duas vezes. {g} não quiseram ficar.'] },
+    fera: { nome: 'Caçar a fera do morro', rank: 3, dias: [8, 13], risco: 0.28, premio: { carne: 40, couro: 14, ouro: 4 },
+      ok: ['{g} voltaram arrastando a fera do morro. A vila inteira saiu para ver.', 'A fera do morro não vai mais descer: {g} trouxeram o couro como prova.'],
+      mal: ['A fera do morro é maior do que contavam. {g} recuaram, e ela continua lá em cima.'] },
+  };
+  const FORCA = [4, 10, 24, 50];   // a força somada que cada rank de missão pede
+  const tem = (S, k) => S.buildings.some((b) => b.type === k && b.built);
+  Gu.temTaberna = (S) => tem(S, 'taberna');
+  Gu.temGuilda = (S) => tem(S, 'guilda');
+  function sorte(S, sal) {
+    let x = (Math.imul((S.t / 60) | 0, 40503) ^ Math.imul(sal | 0, 2654435761) ^ (S.seed | 0)) >>> 0;
+    x ^= x >>> 13; x = Math.imul(x, 1597334677) >>> 0; x ^= x >>> 15; x = Math.imul(x, 69069) >>> 0; x ^= x >>> 11;
+    return (x >>> 0) / 4294967296;
+  }
+  Gu.init = function (S) {
+    const g = S.guilda || (S.guilda = {});
+    g.quadro = g.quadro || []; g.idas = g.idas || []; g.hist = g.hist || []; g.prox = g.prox || 0; g.nid = g.nid || 1;
+    return g;
+  };
+  // quem pode sair: herói adulto que não fala por todos, sem bebê no colo, sem barriga, sem Deus no corpo
+  function livre(S, p) {
+    if (!R().de(p) || !p.alive || p.fora || p.carriedBy || p.labor || p.preg || p.escolhido) return false;
+    if (S.soc && S.soc.lider === p.id) return false;
+    if (S.avatar && S.avatar.pid === p.id) return false;
+    if (Fam().age(S, p) < 16 || p.needs.saude < 50 || p.sick) return false;
+    return !S.people.some((b) => b.alive && b.carriedBy === p.id);
+  }
+  Gu.livres = (S) => S.people.filter((p) => livre(S, p)).sort((a, b) => b.rpg.nv - a.rpg.nv || a.id - b.id);
+  // o grupo de uma missão: os mais fortes até somar a força (de 2 a 4); null se não dá
+  Gu.grupo = function (S, m) {
+    const pede = FORCA[Gu.TIPOS[m.tipo].rank], l = Gu.livres(S);
+    if (l.length < 2) return null;
+    const vivos = S.people.filter((p) => p.alive).length;
+    const sobra = Math.max(0, Math.min(4, vivos - C.GUILDA_FICAM));
+    if (sobra < 2) return null;
+    const out = [];
+    let soma = 0;
+    for (const p of l) { if (out.length >= sobra) break; out.push(p); soma += p.rpg.nv; if (out.length >= 2 && soma >= pede) break; }
+    return soma >= pede ? out : null;
+  };
+  // a chance de dar certo: pela força do grupo contra a que a missão pede, e pelo perigo; a proteção de Deus soma
+  Gu.chance = function (m, forca, n, protegido) {
+    const T = Gu.TIPOS[m.tipo], pede = FORCA[T.rank];
+    const c = 0.55 + 0.3 * Math.min(1.5, (forca - pede) / Math.max(1, pede)) + 0.03 * (n - 2) - T.risco * 0.5;
+    return Math.max(0.1, Math.min(0.95, c + (protegido ? C.GUILDA_BENCAO : 0)));
+  };
+  // ---------- o quadro ----------
+  function novaMissao(S) {
+    const g = S.guilda, top = Math.max(0, ...S.people.filter((p) => R().de(p)).map((p) => p.rpg.nv));
+    const pode = Object.keys(Gu.TIPOS).filter((k) => FORCA[Gu.TIPOS[k].rank] <= Math.max(FORCA[0], top * 3));
+    const fora = pode.filter((k) => !g.quadro.some((m) => m.tipo === k));
+    const l = fora.length ? fora : pode;
+    const tipo = l[Math.floor(sorte(S, g.nid * 7 + 1) * l.length)];
+    g.quadro.push({ id: g.nid++, tipo, t: S.t, ate: S.t + C.GUILDA_PRAZO * DAY() });
+  }
+  function parte(S, m, grupo, sonho) {
+    const g = S.guilda, T = Gu.TIPOS[m.tipo];
+    const dias = T.dias[0] + sorte(S, m.id * 11) * (T.dias[1] - T.dias[0]);
+    const forca = grupo.reduce((a, p) => a + p.rpg.nv, 0);
+    g.quadro = g.quadro.filter((x) => x !== m);
+    const ida = { id: m.id, tipo: m.tipo, t0: S.t, volta: S.t + dias * DAY(), ids: grupo.map((p) => p.id), nomes: grupo.map((p) => p.name), forca, sonho: sonho ? 1 : 0 };
+    for (const p of grupo) { So().sair(S, p, 'missao'); p.away.vila = 0; p.away.mar = 1; p.away.missao = 1; }
+    g.idas.push(ida);
+    S.stats.missoesIdas = (S.stats.missoesIdas || 0) + 1;
+    const txt = Sim().listNames(grupo) + ' pegaram no quadro da guilda: ' + T.nome.toLowerCase() + '.';
+    if (S.stats.missoesIdas === 1) Sim().chron(S, 'A primeira missão da guilda saiu: ' + txt);
+    else if (!S.safe) Sim().toast(S, txt, '');
+    return ida;
+  }
+  // ---------- a volta ----------
+  // rolagem: de 0 a 1 (abaixo da chance, deu certo). Os testes passam a deles
+  Gu.volta = function (S, ida, rolagem) {
+    const g = S.guilda, T = Gu.TIPOS[ida.tipo], Sm = Sim();
+    g.idas = g.idas.filter((x) => x !== ida);
+    const gente = ida.ids.map((id) => So().away(S, id)).filter((p) => p && !p.morto);
+    if (!gente.length) return { ok: false, gente: [] };
+    const chance = Gu.chance(ida, ida.forca, ida.ids.length, ida.protegido);
+    const r = rolagem !== undefined ? rolagem : sorte(S, ida.id * 13 + 3);
+    const ok = r < chance, mortos = [];
+    if (!ok && !ida.protegido) gente.forEach((p, k) => { if (sorte(S, ida.id * 17 + k) < (rolagem !== undefined && rolagem >= 1 ? 1 : T.risco * C.GUILDA_MORTE)) mortos.push(p); });
+    for (const p of mortos) { p.morto = S.t; p.cause = 'missao'; }
+    const volta = gente.filter((p) => mortos.indexOf(p) < 0);
+    const cx = S.camp.x + 1.5, cy = S.camp.y + 2.5;
+    volta.forEach((p, k) => {
+      So().voltar(S, p, cx + (k % 3), cy + Math.floor(k / 3));
+      if (!ok) p.needs.saude = Math.max(25, p.needs.saude - 40);
+      R().ganha(S, p, (ok ? 10 : 3) * (T.rank + 1), 'luta');
+      Sm.say(S, p, ok ? 'Voltamos!' : 'Foi por pouco.', true);
+    });
+    if (G.Soc && G.Soc.reindex) G.Soc.reindex(S);
+    if (ok) for (const k in T.premio) if (S.stock[k] !== undefined) S.stock[k] += T.premio[k];
+    if (ok && T.saber && G.Tech && G.Tech.open) { const a = G.Tech.open(S); if (a) G.Tech.addPractice(S, a, T.saber, null); }
+    S.stats.missoes = (S.stats.missoes || 0) + 1; if (ok) S.stats.missoesOk = (S.stats.missoesOk || 0) + 1;
+    S.stats.mortosMissao = (S.stats.mortosMissao || 0) + mortos.length;
+    const frases = ok ? T.ok : T.mal, frase = frases[Math.floor(sorte(S, ida.id * 19) * frases.length)];
+    const nomes = Sm.listNames(volta.length ? volta : gente);
+    let txt = volta.length ? frase.replace('{g}', nomes) : 'O grupo que saiu para ' + T.nome.toLowerCase() + ' não voltou.';
+    if (mortos.length && volta.length) txt += ' ' + Sm.listNames(mortos) + (mortos.length > 1 ? ' ficaram' : ' ficou') + ' pelo caminho.';
+    else if (mortos.length) txt += ' ' + Sm.listNames(mortos) + (mortos.length > 1 ? ' ficaram' : ' ficou') + ' por lá.';
+    if (mortos.length) for (const q of S.people) if (q.alive) Sm.addMem(S, q, 'parenteFoi');
+    if (ida.protegido && !ok) txt += ' Dizem que algo os trouxe de volta.';
+    g.hist.unshift({ t: S.t, tipo: ida.tipo, ok, txt });
+    g.hist = g.hist.slice(0, 12);
+    if (T.rank >= 2 || mortos.length || S.stats.missoes === 1) Sm.chron(S, txt);
+    else if (!S.safe) Sm.toast(S, txt, ok ? 'good' : 'warn');
+    return { ok, mortos, volta };
+  };
+  // ---------- o dia ----------
+  Gu.daily = function (S) {
+    const g = Gu.init(S);
+    for (const ida of g.idas.slice()) if (S.t >= ida.volta) Gu.volta(S, ida);
+    if (!Gu.temGuilda(S) || S.resumido || !R()) return;
+    if (!g.aberta) { g.aberta = S.t; Sim().chron(S, 'A guilda abriu as portas e pregou o primeiro quadro de missões. Quem já sentiu a força crescer começa a olhar para ele.'); }
+    g.quadro = g.quadro.filter((m) => m.ate > S.t);
+    if (S.t >= g.prox && g.quadro.length < C.GUILDA_QUADRO) { novaMissao(S); g.prox = S.t + (2 + sorte(S, 31) * 5) * DAY(); }
+    if (S.safe || g.idas.length >= C.GUILDA_GRUPOS || sorte(S, 37) > 0.35) return;
+    for (const m of g.quadro) { const q = Gu.grupo(S, m); if (q) { parte(S, m, q); return; } }
+  };
+  // ---------- Deus ----------
+  Gu.sonhoWhy = function (S, m) {
+    if (!S.god || S.god.poder < C.GUILDA_SONHO) return 'faltam ' + Math.ceil(C.GUILDA_SONHO - (S.god ? S.god.poder : 0)) + ' de Poder';
+    if (!Gu.grupo(S, m)) return 'ninguém tem força para esta ainda';
+    return '';
+  };
+  Gu.sonho = function (S, id) {
+    const m = S.guilda.quadro.find((x) => x.id === id);
+    if (!m || Gu.sonhoWhy(S, m)) return false;
+    S.god.poder -= C.GUILDA_SONHO;
+    const ida = parte(S, m, Gu.grupo(S, m), true);
+    Sim().toast(S, ida.nomes.join(', ') + ' sonharam com a mesma coisa e saíram antes do sol.', 'good');
+    return true;
+  };
+  Gu.protegeWhy = function (S, ida) {
+    if (ida.protegido) return 'este grupo já está coberto';
+    if (!S.god || S.god.poder < C.GUILDA_PROTEGE) return 'faltam ' + Math.ceil(C.GUILDA_PROTEGE - (S.god ? S.god.poder : 0)) + ' de Poder';
+    return '';
+  };
+  Gu.protege = function (S, id) {
+    const ida = S.guilda.idas.find((x) => x.id === id);
+    if (!ida || Gu.protegeWhy(S, ida)) return false;
+    S.god.poder -= C.GUILDA_PROTEGE;
+    ida.protegido = 1;
+    Sim().toast(S, 'O grupo de ' + ida.nomes[0] + ' está sob a sua proteção: ninguém morre nesta viagem.', 'good');
+    return true;
+  };
+  // a taberna: o descontentamento cresce menos, e mais gente acorda para a aventura
+  Gu.descMult = (S) => (Gu.temTaberna(S) ? C.TABERNA_DESC : 1);
+  Gu.despertarMult = (S) => (Gu.temTaberna(S) ? C.TABERNA_DESPERTA : 1);
 })(globalThis.G = globalThis.G || {});
 
 /* ---- js/save.js ---- */
@@ -20125,6 +20324,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       visita: S.visita || null,   // Etapa 22: a abertura do mundo e os recados já aplicados
       povo: S.povo || null,   // 0.16: o nome e o título do lugar
       raca: S.raca || null,   // 0.36: o povo que fundou o mundo
+      guilda: S.guilda || null,   // 0.37: o quadro e os grupos fora
       tribo: S.tribo || null,   // 0.28: as tribos (a primeira leva as outras e a relação entre elas)
       rel: S.base ? null : S.rel || null,
       outras: S.base || !S.outras ? null : S.outras.map((B) => Save.serialize(B)),
@@ -20190,6 +20390,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       povo: d.povo || null,
       tribo: d.tribo || null,
       raca: d.raca || null,
+      guilda: d.guilda || null,
     };
     if (base) { S.base = base; S.rel = base.rel; } else S.rel = d.rel || null;
     for (const p of S.people) {
@@ -22496,6 +22697,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       { k: P.ink2, s: P.mist, d: P.bark }],
     torre: [['...kkkk...', '..kyyyyk..', '.kkkkkkkk.', '..kwwwwk..', '..kssssk..', '..ksddsk..', '..kssssk..', '.ksssssk..', '.kssssssk.', 'kkkkkkkkkk'],
       { k: P.ink2, s: P.mist, y: P.tan, w: P.wood, d: P.ink }],
+    // 0.37: a taberna e a guilda
+    taberna: [['.kkkkkkkk.', 'kyyyyyyyyk', 'kkkkkkkkkk', '.k......k.', '.kwwkkddk.', '.kwwkkddk.', '.kkkkkkkk.', '...kk.....', '...kk.....', '..kkkk....'],
+      { k: P.ink2, y: P.wood, w: P.yellow, d: P.bark }],
+    guilda: [['.kkkkkkkk.', '.krrrrrrk.', '.krwwwwrk.', '.krwkkwrk.', '.krwwwwrk.', '.krrkkrrk.', '.krrkkrrk.', '.kkrkkrkk.', '..kkkkkk..', '..........'],
+      { k: P.ink2, r: P.red, w: P.parch }],
     // 0.35: a casa, quando a barraca fica para trás
     casa: [['....kk....', '...kyyk...', '..kyyyyk..', '.kyyyyyyk.', 'kkkkkkkkkk', '.kwwwwwwk.', '.kwdkwwwk.', '.kwdkwbwk.', '.kwdkwwwk.', '.kkkkkkkk.'],
       { k: P.ink2, y: P.wood, w: P.parch, d: P.bark, b: P.sky }],
@@ -23585,6 +23791,31 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     rect7(b, 33, 0, 37, 2, '#c8423a');   // a bandeira
     return b.canvas();
   }
+  // 0.37: a taberna (48 x 36, 3 x 2 passos): parede de tábua, janelas acesas, a placa da caneca e o barril na porta
+  function tabernaSpr() {
+    const b = new Buf(48, 36);
+    plankWall(b, 3, 15, 44, 32);
+    thatch(b, 24, 2, 14, 12, 23, 211);
+    for (const x of [7, 33]) { rect7(b, x - 1, 20, x + 7, 27, PLANK[0]); rect7(b, x, 21, x + 6, 26, '#f0c060'); line(b, x + 3, 21, x + 3, 26, PLANK[0]); }
+    door(b, 20, 21, 27, 32);
+    line(b, 40, 12, 46, 12, PLANK[0]); line(b, 45, 12, 45, 15, PLANK[0]); rect7(b, 42, 15, 47, 21, PLANK[1]); rect7(b, 43, 16, 45, 20, '#e8c060'); rect7(b, 46, 17, 46, 19, '#e8c060'); rect7(b, 43, 16, 45, 16, '#f4f0e6');
+    for (const x of [13, 30]) { rect7(b, x, 28, x + 4, 33, PLANK[2]); rect7(b, x, 29, x + 4, 29, PLANK[0]); rect7(b, x, 32, x + 4, 32, PLANK[0]); }
+    for (let x = 3; x <= 44; x++) b.set(x, 33, P.maroon);
+    return b.canvas();
+  }
+  // a guilda (48 x 52, 3 x 3 passos): salão de pedra e tábua, dois estandartes, o escudo sobre a porta e o quadro de missões
+  function guildaSpr() {
+    const b = new Buf(48, 52);
+    stoneWall(b, 3, 20, 44, 48, 221);
+    shingles(b, 24, 3, 19, 7, 23, PLANK);
+    for (const x of [6, 38]) { rect7(b, x, 22, x + 4, 34, '#a02a2a'); rect7(b, x, 22, x + 4, 23, '#fee761'); b.set(x + 2, 28, '#fee761'); b.set(x, 34, 0); b.set(x + 4, 34, 0); }
+    door(b, 19, 34, 28, 48, true);
+    rect7(b, 20, 23, 27, 31, '#3e444c'); rect7(b, 21, 24, 26, 30, '#a02a2a'); line(b, 23, 25, 23, 29, '#f4f0e6'); rect7(b, 21, 27, 26, 27, '#f4f0e6');
+    rect7(b, 33, 37, 42, 44, PLANK[0]); rect7(b, 34, 38, 41, 43, PLANK[3]); for (const [x, y] of [[35, 39], [38, 39], [36, 41], [39, 41]]) rect7(b, x, y, x + 1, y + 1, '#f4f0e6');
+    for (const x of [6, 12]) { rect7(b, x, 37, x + 3, 44, '#2b2b34'); rect7(b, x + 1, 38, x + 2, 43, '#f0c060'); }
+    for (let x = 3; x <= 44; x++) b.set(x, 49, STONE[0]);
+    return b.canvas();
+  }
   // ---------- 0.35: as construções mudam de forma com a idade ----------
   function janela(b, x, y, w, h, moldura, vidro) { rect7(b, x - 1, y - 1, x + w, y + h, moldura); rect7(b, x, y, x + w - 1, y + h - 1, vidro); b.set(x, y, '#e8f0f8'); }
   function porta(b, x, y0, y1, w, cor, trinco) { rect7(b, x - 1, y0 - 1, x + w, y1, '#2b1d1a'); rect7(b, x, y0, x + w - 1, y1, cor); b.set(x + w - 2, Math.round((y0 + y1) / 2), trinco || '#e8c060'); }
@@ -23689,7 +23920,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     return (casaCache[chave] = o);
   };
   // a oficina ou instituição numa forma (1 madeira e pedra, 2 tijolo, 3 concreto), com a placa do ofício na parede
-  const OBRA_COR = { armazem: '#a87a30', marcenaria: '#8a5a30', tecelagem: '#a0507a', ferraria: '#505868', escola: '#3a6a9a', biblioteca: '#6a4a8a', hospital: '#2e6a4a', guarda: '#7a3a30', brigada: '#c8423a', mercado: '#c8a030' };
+  const OBRA_COR = { armazem: '#a87a30', marcenaria: '#8a5a30', tecelagem: '#a0507a', ferraria: '#505868', escola: '#3a6a9a', biblioteca: '#6a4a8a', hospital: '#2e6a4a', guarda: '#7a3a30', brigada: '#c8423a', mercado: '#c8a030', taberna: '#a87a30', guilda: '#a02a2a' };
   const obraCache = {};
   A.obraEra = function (tipo, forma, w) {
     const chave = tipo + '|' + forma;
@@ -23915,7 +24146,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     return b.canvas();
   }
   A.cidadeSprites = function () {
-    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr(), imprensa: imprensaSpr(), universidade: universidadeSpr(), arsenal: arsenalSpr(), fabrica: fabricaSpr(), estacao: estacaoSpr(), usina: usinaSpr(), bonde: bondeSpr(), radio: radioSpr(), garagem: garagemSpr(), hospitalgeral: hospitalGeralSpr() };
+    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr(), imprensa: imprensaSpr(), universidade: universidadeSpr(), arsenal: arsenalSpr(), fabrica: fabricaSpr(), estacao: estacaoSpr(), usina: usinaSpr(), bonde: bondeSpr(), radio: radioSpr(), garagem: garagemSpr(), hospitalgeral: hospitalGeralSpr(), taberna: tabernaSpr(), guilda: guildaSpr() };
     for (const k of ['escola', 'biblioteca', 'hospital', 'guarda', 'brigada', 'mercado']) out[k] = [null, instituicao(k, 1), instituicao(k, 2), instituicao(k, 3)];
     return out;
   };
@@ -25181,7 +25412,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // a figura da obra no nível dela (Etapa 7): casas, oficinas, armazém
   function houseImg(d) { const S2 = A.spr; return d.lv >= 3 && d.kind ? S2.house[d.kind] : S2.house[d.lv >= 2 ? 2 : 1]; }
   // 0.35: a forma da casa e da oficina na idade delas (null: a figura de sempre)
-  const OBRA_FORMA = { armazem: 1, marcenaria: 1, tecelagem: 1, ferraria: 1, escola: 1, biblioteca: 1, hospital: 1, guarda: 1, brigada: 1, mercado: 1 };
+  const OBRA_FORMA = { armazem: 1, marcenaria: 1, tecelagem: 1, ferraria: 1, escola: 1, biblioteca: 1, hospital: 1, guarda: 1, brigada: 1, mercado: 1, taberna: 1, guilda: 1 };
   function casaImg(b, lv, kind) {
     const f = G.Eras && G.Eras.formaCasa ? G.Eras.formaCasa(b.era || 0) : 0;
     return !f || (f === 1 && lv >= 3 && kind) ? null : A.casaEra(f, kind, b.id);
@@ -27233,6 +27464,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       ['porto', 'porto'], ['galeao', 'galeao'],
       // 0.31: a Pólvora e a Imprensa
       ['imprensa', 'imprensa'], ['universidade', 'universidade'], ['arsenal', 'arsenal'],
+      // 0.37: a taberna e a guilda
+      ['taberna', 'taberna'], ['guilda', 'guilda'],
       // 0.34: a Era Moderna
       ['radio', 'radio'], ['garagem', 'garagem'], ['hospitalgeral', 'hospitalgeral'],
       // 0.33: a Era Elétrica
@@ -28222,7 +28455,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     let h = prof ? `<span class="chip" title="O trabalho em que é melhor">${esc(prof)}</span>` : '';
     if (r) {
       const c = Rp.CLASSES[r.cls];
-      h += `<span class="chip dom" title="${esc(c.desc)}"><b style="color:${c.cor}">${esc(Rp.nome(p))}</b> · nível ${r.nv}</span>`;
+      const rk = G.Guilda ? G.Guilda.rank(p) : null;
+      h += `<span class="chip dom" title="${esc(c.desc)}"><b style="color:${c.cor}">${esc(Rp.nome(p))}</b> · nível ${r.nv}${rk ? ` · <span style="color:${rk.cor}">${esc(rk.nome)}</span>` : ''}</span>`;
       h += r.habs.map((k) => `<span class="chip" title="${esc(Rp.HABS[k].desc)}">${esc(Rp.HABS[k].name)}</span>`).join('');
     }
     const pct = r && r.nv < Rp.NIVEL_MAX ? Math.floor(r.xp / Rp.pede(r.nv) * 100) : 0;
@@ -28231,10 +28465,30 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const btn = adulto ? `<button type="button" class="btn btn-small" data-act="rpg-bencao"${why ? ' disabled' : ''} title="${esc(why ? 'Agora não: ' + why : r ? 'Empurra o nível de força' : 'Desperta a força desta pessoa')}">${r ? 'Abençoar' : 'Despertar'} (${Rp.BENCAO} de Poder)</button>` : '';
     return h || btn ? `<div class="chips">${h}${btn}</div>${barra}` : '';
   }
+  // 0.37: a guilda: o quadro, quem está fora e o que já aconteceu
+  function guildaHTML() {
+    const Gu = G.Guilda, g = Gu.init(S);
+    if (!Gu.temGuilda(S)) {
+      const w = G.Cidade.openWhy(S, 'taberna'), wg = G.Cidade.openWhy(S, 'guilda');
+      return `<p class="small">Ainda não há guilda. ${Gu.temTaberna(S) ? esc(wg ? 'Agora não: ' + wg + '.' : 'Construa a guilda: é ali que os grupos se formam.') : esc(w ? 'A taberna ' + w + '.' : 'Comece pela taberna, no menu Construir.')}</p>`;
+    }
+    const quadro = g.quadro.map((m) => {
+      const T = Gu.TIPOS[m.tipo], R0 = Gu.RANKS[T.rank], why = Gu.sonhoWhy(S, m);
+      return `<li class="povo-row"><img class="ico ico-lg" src="${ic('guilda')}" alt=""><div><b>${esc(T.nome)}</b> <span class="small" style="color:${R0.cor}">rank ${esc(R0.nome)}</span><span class="small">${Math.max(1, Math.ceil((m.ate - S.t) / C.DAY_MIN))} dias no quadro · uns ${T.dias[0]} a ${T.dias[1]} dias de viagem</span><div class="chips"><button type="button" class="btn btn-small" data-gact="guilda-sonho" data-id="${m.id}"${why ? ' disabled' : ''} title="${esc(why ? 'Agora não: ' + why : 'Os mais fortes saem hoje')}">Mandar um sonho (${C.GUILDA_SONHO} de Poder)</button></div></div></li>`;
+    }).join('');
+    const fora = g.idas.map((i) => {
+      const T = Gu.TIPOS[i.tipo], why = Gu.protegeWhy(S, i);
+      return `<li class="povo-row"><img class="ico ico-lg" src="${ic('guilda')}" alt=""><div><b>${esc(T.nome)}</b><span class="small">${esc(i.nomes.join(', '))} · volta em uns ${Math.max(1, Math.ceil((i.volta - S.t) / C.DAY_MIN))} dias</span><div class="chips">${i.protegido ? '<span class="chip dom">Sob a sua proteção</span>' : `<button type="button" class="btn btn-small" data-gact="guilda-protege" data-id="${i.id}"${why ? ' disabled' : ''} title="${esc(why ? 'Agora não: ' + why : 'Mais chance, e ninguém morre nesta viagem')}">Proteger (${C.GUILDA_PROTEGE} de Poder)</button>`}</div></div></li>`;
+    }).join('');
+    const hist = g.hist.map((h) => `<li class="small">${esc(h.txt)}</li>`).join('');
+    return `<h3>O quadro</h3><ul class="donlist povolist">${quadro || '<li class="none small muted">Nenhuma missão pregada agora.</li>'}</ul>` +
+      `<h3>Quem está fora</h3><ul class="donlist povolist">${fora || '<li class="none small muted">Ninguém saiu.</li>'}</ul>` +
+      (hist ? `<h3>O que já aconteceu</h3><ul class="mems">${hist}</ul>` : '');
+  }
   // 0.36: os heróis do povo, do mais forte para o menos forte
   function heroisHTML() {
     const Rp = G.Rpg, l = Rp.herois(S);
-    const linha = (p) => { const c = Rp.CLASSES[p.rpg.cls]; return `<li class="povo-row"><img class="ico ico-lg" src="${ic(G.Povos.iconOf(p))}" alt=""><div><b><a href="#" data-gact="heroi" data-pid="${p.id}">${esc(p.name)}</a></b> <span class="small" style="color:${c.cor}">${esc(Rp.nome(p))}</span> <span class="small ttl">nível ${p.rpg.nv}</span><div class="chips">${p.rpg.habs.map((k) => `<span class="chip" title="${esc(Rp.HABS[k].desc)}">${esc(Rp.HABS[k].name)}</span>`).join('')}</div></div></li>`; };
+    const linha = (p) => { const c = Rp.CLASSES[p.rpg.cls]; return `<li class="povo-row"><img class="ico ico-lg" src="${ic(G.Povos.iconOf(p))}" alt=""><div><b><a href="#" data-gact="heroi" data-pid="${p.id}">${esc(p.name)}</a></b> <span class="small" style="color:${c.cor}">${esc(Rp.nome(p))}</span> <span class="small ttl">nível ${p.rpg.nv}${G.Guilda ? ' · ' + G.Guilda.rank(p).nome : ''}</span><div class="chips">${p.rpg.habs.map((k) => `<span class="chip" title="${esc(Rp.HABS[k].desc)}">${esc(Rp.HABS[k].name)}</span>`).join('')}</div></div></li>`; };
     return `<p class="small">Quem luta, caça e anda longe pode despertar uma classe. O nível de força sobe com o que a pessoa faz, e na ficha de qualquer adulto você pode abençoar.</p>` +
       `<ul class="donlist povolist">${l.length ? l.map(linha).join('') : '<li class="none small muted">Ninguém despertou ainda.</li>'}</ul>`;
   }
@@ -28322,7 +28576,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     document.querySelectorAll('#modal-deus [data-gtab]').forEach((b) => { b.classList.toggle('on', b.dataset.gtab === deusTab); b.setAttribute('aria-selected', b.dataset.gtab === deusTab ? 'true' : 'false'); });
     $('#deus-mtitle').textContent = g.name ? g.name + ', ' + g.epithet : 'Deus';
     $('#deus-poder').textContent = fmtN(g.poder) + ' de Poder · glória ' + fmtN(g.glory);
-    $('#deus-body').innerHTML = deusTab === 'escolhidos' ? escolhidosHTML(Dz, g) : deusTab === 'atos' ? atosHTML(Dz, g) : deusTab === 'povos' && G.Povos ? povosHTML(Dz, g) : deusTab === 'memoria' && G.Memoria && S.memoria ? memoriaHTML(Dz) : deusTab === 'sociedade' && G.Soc && S.soc ? sociedadeHTML(Dz) : deusTab === 'tribos' && G.Tribos ? tribosHTML() : deusTab === 'herois' && G.Rpg ? heroisHTML() : nivelHTML(Dz, g);
+    $('#deus-body').innerHTML = deusTab === 'escolhidos' ? escolhidosHTML(Dz, g) : deusTab === 'atos' ? atosHTML(Dz, g) : deusTab === 'povos' && G.Povos ? povosHTML(Dz, g) : deusTab === 'memoria' && G.Memoria && S.memoria ? memoriaHTML(Dz) : deusTab === 'sociedade' && G.Soc && S.soc ? sociedadeHTML(Dz) : deusTab === 'tribos' && G.Tribos ? tribosHTML() : deusTab === 'herois' && G.Rpg ? heroisHTML() : deusTab === 'guilda' && G.Guilda ? guildaHTML() : nivelHTML(Dz, g);
     $('#modal-deus').hidden = false;
   };
   // 0.28: as tribos (fazer nascer outra, olhar por cada uma, a relação entre elas e o que Deus faz por ela)
@@ -28947,6 +29201,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       }
       if (a === 'vervila') { const v = S.soc.vila; $('#modal-deus').hidden = true; if (v) UI.hooks.center((v.x + 0.5) * C.TILE, (v.y + 0.5) * C.TILE); return; }
     }
+    if (a === 'guilda-sonho' || a === 'guilda-protege') { (a === 'guilda-sonho' ? G.Guilda.sonho : G.Guilda.protege)(S, +b.dataset.id); UI.deus('guilda'); UI.update(0, true); return; }   // 0.37
     if (a === 'heroi') { e.preventDefault(); $('#modal-deus').hidden = true; UI.select(+b.dataset.pid, 0, true); return; }   // 0.36
     if (a === 'chamar' && G.Povos) {   // Etapa 12
       const why = G.Povos.callWhy(S, b.dataset.k);
