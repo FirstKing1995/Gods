@@ -271,10 +271,24 @@
     S.stats.estudos = (S.stats.estudos || 0) + 1;
     if (S.stats.estudos === 1) Sim().chron(S, 'Os primeiros estudiosos da universidade passaram a noite com os livros: a descoberta que o povo procura chegou mais perto.');
   }
+  // 0.35: a casa muda de forma com a idade, não só de cor: a barraca vira cabana, a cabana vira casa de madeira e taipa,
+  // depois a casa caiada, o sobrado, a casa de tijolo, a casa de varanda e o prédio. Cada forma abriga mais e melhor
+  E.CASAS = [null,
+    { name: 'Cabana', a: 'a', heat: 10, cap: 6, sleep: 12, desc: 'Paredes de pau a pique e telhado de palha: +10 °C e 6 lugares.' },
+    { name: 'Casa de madeira e taipa', a: 'a', heat: 12, cap: 6, sleep: 13, desc: 'Esteios de madeira e paredes de taipa: +12 °C e 6 lugares.' },
+    { name: 'Casa caiada', a: 'a', heat: 14, cap: 7, sleep: 13, desc: 'Paredes brancas de cal e telha de barro: +14 °C e 7 lugares.' },
+    { name: 'Sobrado', a: 'o', heat: 15, cap: 8, sleep: 14, desc: 'Dois andares e sacada de ferro: +15 °C e 8 lugares.' },
+    { name: 'Casa de tijolo', a: 'a', heat: 16, cap: 8, sleep: 14, desc: 'Tijolo aparente e chaminé: +16 °C e 8 lugares.' },
+    { name: 'Casa de varanda', a: 'a', heat: 18, cap: 9, sleep: 14, desc: 'Varanda com colunas e luz na porta: +18 °C e 9 lugares.' },
+    { name: 'Prédio de apartamentos', a: 'o', heat: 20, cap: 12, sleep: 15, desc: 'Quatro andares de concreto: +20 °C e 12 lugares no chão de uma casa.' },
+  ];
+  E.formaCasa = (era) => (era >= 10 ? 7 : era >= 9 ? 6 : era >= 8 ? 5 : era >= 7 ? 4 : era >= 6 ? 3 : era >= 4 ? 2 : era >= 2 ? 1 : 0);
+  // as oficinas e as instituições têm três formas: madeira e pedra, tijolo, concreto
+  E.formaObra = (era) => (era >= 9 ? 3 : era >= 7 ? 2 : era >= 4 ? 1 : 0);
   // 0.27: quando o povo muda de idade, as construções vão sendo refeitas no jeito novo, poucas por dia (as mais antigas
   // primeiro). O jeito aparece no telhado: sapê até a Pedra Polida, sapê trançado no Bronze, tabuinha no Ferro, telha
   // de barro nos Reinos
-  const REFORMA_TXT = { 2: 'trançam o sapê novo, mais firme', 3: 'trocam o sapê por tabuinhas de madeira', 4: 'cobrem os telhados com telha de barro', 5: 'cobrem os telhados de ardósia', 6: 'pintam as paredes e cobrem com telha nova de olaria', 7: 'erguem sobrados de tijolo com telhado escuro', 8: 'trocam a telha por chapa de zinco', 9: 'cobrem com telha francesa e puxam os fios da luz', 10: 'trocam a telha por laje de concreto' };
+  const REFORMA_TXT = { 2: 'desmontam as barracas e levantam cabanas de pau a pique', 3: 'trocam o sapê por tabuinhas de madeira', 4: 'erguem casas de madeira e taipa, e as oficinas ganham paredes firmes', 5: 'cobrem os telhados de ardósia', 6: 'caiam as casas de branco e cobrem com telha de olaria', 7: 'erguem sobrados de dois andares, e as oficinas passam para o tijolo', 8: 'levantam casas de tijolo com chaminé e telhado de zinco', 9: 'fazem casas de varanda, com a luz na porta, e as oficinas passam para o concreto', 10: 'derrubam as casas velhas e sobem prédios de apartamentos' };
   function reforma(S) {
     const idade = S.eras.idade || 0;
     if (idade < 2) return;
@@ -283,7 +297,7 @@
     velhas.sort((a, b) => (a.era || 0) - (b.era || 0) || a.id - b.id);
     const n = Math.max(1, Math.ceil(velhas.length * C.REFORMA_DIA));
     if ((S.eras.reformou || 0) < idade && REFORMA_TXT[idade]) { S.eras.reformou = idade; Sim().chron(S, 'Com a ' + E.IDADES[idade].nome + ', o povo começa a refazer as casas: ' + REFORMA_TXT[idade] + '.'); }
-    for (let i = 0; i < n && i < velhas.length; i++) velhas[i].era = idade;
+    for (let i = 0; i < n && i < velhas.length; i++) { velhas[i].era = idade; velhas[i].reformT = S.t; }   // 0.35: a obra fica com andaime por um dia
   }
   E.reforma = reforma;
   E.info = function (S) {

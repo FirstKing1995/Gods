@@ -514,7 +514,18 @@
     byL[kk] = d;
     return d;
   };
-  Sim.def = (b) => Sim.defOf(b.type, b.lv, b.kind);
+  // 0.35: a casa reformada tem o nome e o abrigo da forma da idade dela (a melhor das duas: uma oca de 12 lugares não encolhe)
+  const casaCache = {};
+  Sim.def = function (b) {
+    const d = Sim.defOf(b.type, b.lv, b.kind);
+    if (b.type !== 'barraca' || !b.era || !G.Eras || !G.Eras.formaCasa) return d;
+    const f = G.Eras.formaCasa(b.era);
+    if (!f || (f === 1 && (b.lv || 1) >= 3)) return d;   // a casa do lugar (oca, palafita, barro, pedra) espera a forma seguinte
+    const k = f + '|' + (b.lv || 1) + '|' + (b.kind || '');
+    if (casaCache[k]) return casaCache[k];
+    const F = G.Eras.CASAS[f];
+    return (casaCache[k] = Object.assign({}, d, { name: F.name, a: F.a, desc: F.desc, heat: Math.max(d.heat, F.heat), cap: Math.max(d.cap, F.cap), sleep: Math.max(d.sleep, F.sleep) }));
+  };
   // o que a obra ainda pede para poder ser marcada (vazio = pode): descoberta, obra no acampamento, material que ainda não existe
   Sim.needWhy = function (S, d) {
     const T = G.Tech;
@@ -530,6 +541,7 @@
   // melhorias possíveis de uma obra pronta: [{ lv, kind, def, why }] (why vazio = dá para marcar)
   Sim.upgrades = function (S, b) {
     if (!b.built || b.up || b.demol) return [];
+    if (b.type === 'barraca' && G.Eras && G.Eras.formaCasa && G.Eras.formaCasa(b.era || 0) >= 2) return [];   // 0.35: a casa já cresce com a idade
     const base = C.BUILD[b.type], lv = b.lv || 1;
     const u = base && base.up && base.up[lv - 1];
     if (!u) return [];
@@ -597,6 +609,7 @@
     if (def.extra) for (const k in def.extra) S.stock[k] -= def.extra[k];   // Etapa 18: a vela e os pregos saem do estoque ao marcar
     const b = { id: S.nextBid++, type, lv: 1, kind: null, x, y, w: def.w, h: def.h, built: false, progress: 0,
       have: {}, fuel: 0, beds: [], up: null, t0: S.t };
+    if (S.eras && S.eras.idade >= 2) b.era = S.eras.idade;   // 0.35: a obra nova já nasce no jeito da idade
     for (const k of C.MATERIALS) b.have[k] = 0;
     for (let dy = 0; dy < def.h; dy++) for (let dx = 0; dx < def.w; dx++) {
       const i = (y + dy) * w.W + x + dx;

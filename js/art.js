@@ -1393,6 +1393,9 @@
       { k: P.ink2, s: P.mist, d: P.bark }],
     torre: [['...kkkk...', '..kyyyyk..', '.kkkkkkkk.', '..kwwwwk..', '..kssssk..', '..ksddsk..', '..kssssk..', '.ksssssk..', '.kssssssk.', 'kkkkkkkkkk'],
       { k: P.ink2, s: P.mist, y: P.tan, w: P.wood, d: P.ink }],
+    // 0.35: a casa, quando a barraca fica para trás
+    casa: [['....kk....', '...kyyk...', '..kyyyyk..', '.kyyyyyyk.', 'kkkkkkkkkk', '.kwwwwwwk.', '.kwdkwwwk.', '.kwdkwbwk.', '.kwdkwwwk.', '.kkkkkkkk.'],
+      { k: P.ink2, y: P.wood, w: P.parch, d: P.bark, b: P.sky }],
     // 0.34: o rádio, a garagem e o hospital geral
     radio: [['....rr....', '....kk....', '...k..k...', '...kkkk...', '..k....k..', '..kkkkkk..', '.kssssssk.', '.kswwsdsk.', '.kssssdsk.', 'kkkkkkkkkk'],
       { k: P.ink2, r: P.red, s: P.mist, w: P.yellow, d: P.ink }],
@@ -2479,6 +2482,145 @@
     rect7(b, 33, 0, 37, 2, '#c8423a');   // a bandeira
     return b.canvas();
   }
+  // ---------- 0.35: as construções mudam de forma com a idade ----------
+  function janela(b, x, y, w, h, moldura, vidro) { rect7(b, x - 1, y - 1, x + w, y + h, moldura); rect7(b, x, y, x + w - 1, y + h - 1, vidro); b.set(x, y, '#e8f0f8'); }
+  function porta(b, x, y0, y1, w, cor, trinco) { rect7(b, x - 1, y0 - 1, x + w, y1, '#2b1d1a'); rect7(b, x, y0, x + w - 1, y1, cor); b.set(x + w - 2, Math.round((y0 + y1) / 2), trinco || '#e8c060'); }
+  function reboco(b, x0, y0, x1, y1, cores, seed) { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { let c = x <= x0 + 1 ? cores[0] : x >= x1 - 1 ? cores[2] : cores[1]; if (H7(x, y, seed) < 0.05) c = cores[2]; b.set(x, y, c); } }
+  const CAL = [['#f6f0e0', '#e8e0cc', '#c8c0aa', '#3a6a9a'], ['#f4eedc', '#e4dcc4', '#c4bca2', '#c8a030'], ['#f8f2e4', '#ece4d0', '#ccc4ae', '#3f7a58']];
+  const PASTEL = [['#eec8b0', '#dcae94', '#bc8c74'], ['#e8dc9c', '#d6c67e', '#b4a462'], ['#b8d0d8', '#9cb8c4', '#7c98a6']];
+  const VARANDA = [['#f0e4c8', '#e0d0ac', '#bcaa88'], ['#c8d8b8', '#b0c49e', '#90a480'], ['#ecc8c0', '#dcaca4', '#b88a84']];
+  // cabana (32 x 32): parede de pau a pique, porta de varas e o telhado de palha
+  function cabana(v) {
+    const b = new Buf(32, 32);
+    for (let y = 17; y <= 28; y++) for (let x = 6; x <= 25; x++) { let c = x < 11 ? CLAY[0] : x > 21 ? CLAY[1] : '#9a5e42'; if ((y % 4 === 1 && (x + y) % 3 === 0) || H7(x, y, 41 + v) < 0.08) c = PLANK[1]; b.set(x, y, c); }
+    for (let y = 17; y <= 28; y++) { b.set(5, y, PLANK[0]); b.set(26, y, PLANK[0]); }
+    for (let x = 5; x <= 26; x++) b.set(x, 29, P.maroon);
+    porta(b, 13, 21, 28, 5, PLANK[2]);
+    windowAt(b, 20, 20, 3, 3);
+    thatch(b, 15, 4, 17, 5, 14, 51 + v);
+    return b;
+  }
+  // casa de madeira e taipa (32 x 38): base de pedra, parede clara com os esteios escuros em X e telhado alto de tabuinhas
+  function casaEnxaimel(kind, v) {
+    const b = new Buf(32, 38), E0 = PLANK[0];
+    if (kind === 'pedra') stoneWall(b, 3, 16, 28, 34, 61 + v);
+    else {
+      reboco(b, 3, 16, 28, 34, kind === 'barro' ? ['#c88a62', '#b0704e', '#7e4a36'] : ['#ecdcbc', '#dcc8a4', '#b8a484'], 61 + v);
+      for (let x = 3; x <= 28; x += 8) rect7(b, x, 16, x + 1, 34, E0);
+      rect7(b, 3, 16, 28, 17, E0); rect7(b, 3, 25, 28, 25, E0);
+      line(b, 5, 18, 10, 24, E0); line(b, 21, 24, 26, 18, E0);
+      stoneWall(b, 3, 30, 28, 34, 66 + v);
+    }
+    porta(b, 14, 26, 34, 5, PLANK[2]);
+    janela(b, 6, 27, 3, 3, E0, '#2b2b34'); janela(b, 23, 27, 3, 3, E0, '#2b2b34'); janela(b, 14, 19, 4, 3, E0, '#2b2b34');
+    shingles(b, 16, 1, 15, 4, 15, ERA_TETO[v % 2 ? 5 : 4]);
+    return b;
+  }
+  // casa caiada (32 x 34): parede branca, faixa colorida no pé e nas janelas, telha alaranjada
+  function casaCaiada(v) {
+    const b = new Buf(32, 34), C0 = CAL[v % 3];
+    reboco(b, 2, 15, 29, 31, C0, 71 + v);
+    rect7(b, 2, 29, 29, 31, C0[3]); rect7(b, 2, 15, 29, 15, C0[2]);
+    porta(b, 14, 21, 31, 5, C0[3]);
+    janela(b, 6, 20, 4, 5, C0[3], '#2b2b34'); janela(b, 22, 20, 4, 5, C0[3], '#2b2b34');
+    shingles(b, 16, 4, 14, 6, 16, ERA_TETO[6]);
+    return b;
+  }
+  // sobrado (32 x 44): dois andares pintados, sacada de ferro e telhado escuro
+  function sobrado(v) {
+    const b = new Buf(32, 44), P0 = PASTEL[v % 3];
+    reboco(b, 4, 12, 27, 41, P0, 81 + v);
+    rect7(b, 4, 26, 27, 26, P0[2]); rect7(b, 4, 39, 27, 41, '#5a5058');
+    for (const x of [7, 21]) janela(b, x, 15, 4, 8, '#f4f0e6', '#2b2b34');
+    porta(b, 14, 15, 23, 4, '#6a4a3a');
+    rect7(b, 5, 24, 26, 24, '#2a2e34'); for (let x = 5; x <= 26; x += 2) { b.set(x, 25, '#2a2e34'); }
+    porta(b, 13, 30, 41, 6, '#6a2e26');
+    janela(b, 7, 30, 3, 6, '#f4f0e6', '#2b2b34'); janela(b, 23, 30, 3, 6, '#f4f0e6', '#2b2b34');
+    shingles(b, 16, 2, 11, 7, 14, ERA_TETO[7]);
+    return b;
+  }
+  // casa de tijolo (32 x 44): dois andares de tijolo aparente, janelas altas, chaminé e chapa de zinco
+  function casaTijolo(v) {
+    const b = new Buf(32, 44);
+    tijolos(b, 4, 12, 27, 41);
+    rect7(b, 4, 26, 27, 26, '#c8bca8');
+    for (const x of [7, 14, 21]) { janela(b, x, 15, 3, 8, '#c8bca8', v % 2 ? '#2b2b34' : '#3a3e4a'); }
+    porta(b, 13, 31, 41, 6, '#2a3a4a'); rect7(b, 12, 29, 19, 29, '#c8bca8');
+    janela(b, 7, 31, 3, 6, '#c8bca8', '#2b2b34'); janela(b, 23, 31, 3, 6, '#c8bca8', '#2b2b34');
+    tijolos(b, 22, 0, 25, 7); rect7(b, 21, 0, 26, 1, TIJOLO[0]);
+    shingles(b, 16, 3, 11, 8, 14, ERA_TETO[8]);
+    return b;
+  }
+  // casa de varanda (32 x 42): sobrado claro, a varanda com colunas, a lâmpada na porta e telha francesa
+  function casaVaranda(v) {
+    const b = new Buf(32, 42), P0 = VARANDA[v % 3];
+    reboco(b, 4, 12, 27, 38, P0, 91 + v);
+    for (const x of [7, 21]) janela(b, x, 15, 4, 6, '#f4f0e6', '#9ac8e0');
+    porta(b, 15, 29, 38, 4, '#6a4a3a'); janela(b, 8, 30, 4, 5, '#f4f0e6', '#9ac8e0'); janela(b, 22, 30, 3, 5, '#f4f0e6', '#9ac8e0');
+    rect7(b, 2, 25, 29, 27, ERA_TETO[9][2]); rect7(b, 2, 25, 29, 25, ERA_TETO[9][4]); rect7(b, 2, 27, 29, 27, ERA_TETO[9][0]);
+    for (const x of [3, 13, 21, 28]) rect7(b, x, 28, x, 38, '#f4f0e6');
+    b.set(17, 29, '#f8e888');
+    rect7(b, 2, 39, 29, 40, '#8a8478');
+    shingles(b, 16, 2, 11, 7, 14, ERA_TETO[9]);
+    return b;
+  }
+  // prédio de apartamentos (32 x 58): quatro andares de concreto, as janelas em grade, a caixa d'água e a antena
+  function predio(v) {
+    const b = new Buf(32, 58);
+    parede(b, 4, 8, 27, 55); rect7(b, 3, 6, 28, 7, CONCRETO[1]);
+    for (let k = 0; k < 4; k++) { const y = 11 + k * 11; for (const x of [7, 14, 21]) { if (k === 3 && x === 14) continue; janela(b, x, y, 3, 5, CONCRETO[1], ((x + k + v) % 5 === 0) ? '#f0d060' : '#7aa8c8'); } if (k < 3) rect7(b, 4, y + 8, 27, y + 8, CONCRETO[2]); }
+    rect7(b, 13, 44, 18, 55, '#2b2b34'); rect7(b, 14, 45, 17, 55, '#7aa8c8'); rect7(b, 11, 42, 20, 43, CONCRETO[0]);
+    rect7(b, 20, 1, 25, 5, '#78828c'); rect7(b, 20, 1, 25, 1, '#a4adb6'); line(b, 8, 0, 8, 5, '#3e444c'); rect7(b, 6, 2, 10, 2, '#3e444c');
+    for (let x = 4; x <= 27; x++) b.set(x, 56, CONCRETO[0]);
+    return b;
+  }
+  const casaCache = {};
+  // a casa de uma forma (1 a 7): cada id cai numa das três cores, e metade das casas sai espelhada, para a rua não ser carimbo
+  A.casaEra = function (forma, kind, id) {
+    const v = (id || 0) % 3, flip = (id || 0) % 2, chave = forma + '|' + (forma === 2 ? kind || '' : '') + '|' + v + '|' + flip;
+    if (casaCache[chave]) return casaCache[chave];
+    const c = A.polishWith(() => (forma === 1 ? cabana(v) : forma === 2 ? casaEnxaimel(kind, v) : forma === 3 ? casaCaiada(v) : forma === 4 ? sobrado(v) : forma === 5 ? casaTijolo(v) : forma === 6 ? casaVaranda(v) : predio(v)).canvas());
+    if (!flip) return (casaCache[chave] = c);
+    const [o, x] = mk(c.width, c.height);
+    x.translate(c.width, 0); x.scale(-1, 1); x.drawImage(c, 0, 0);
+    return (casaCache[chave] = o);
+  };
+  // a oficina ou instituição numa forma (1 madeira e pedra, 2 tijolo, 3 concreto), com a placa do ofício na parede
+  const OBRA_COR = { armazem: '#a87a30', marcenaria: '#8a5a30', tecelagem: '#a0507a', ferraria: '#505868', escola: '#3a6a9a', biblioteca: '#6a4a8a', hospital: '#2e6a4a', guarda: '#7a3a30', brigada: '#c8423a', mercado: '#c8a030' };
+  const obraCache = {};
+  A.obraEra = function (tipo, forma, w) {
+    const chave = tipo + '|' + forma;
+    if (obraCache[chave]) return obraCache[chave];
+    const c = A.polishWith(() => {
+      const H = w >= 48 ? (forma === 1 ? 50 : forma === 2 ? 54 : 56) : (forma === 1 ? 38 : forma === 2 ? 40 : 42), b = new Buf(w, H), R = w - 3, cor = OBRA_COR[tipo] || '#58606a', cx = w >> 1, chao = H - 3;
+      const passo = w >= 48 ? 11 : 9;
+      if (forma === 1) {
+        reboco(b, 2, 16, R, chao, ['#ecdcbc', '#dcc8a4', '#b8a484'], 101);
+        for (let x = 2; x <= R; x += w >= 48 ? 11 : 9) rect7(b, x, 16, x + 1, chao, PLANK[0]);
+        rect7(b, 2, 16, R, 17, PLANK[0]);
+        stoneWall(b, 2, chao - 4, R, chao, 102);
+        shingles(b, cx, 2, 15, Math.round(w * 0.2), cx - 1, ERA_TETO[5]);
+      } else if (forma === 2) {
+        tijolos(b, 2, 14, R, chao);
+        rect7(b, 1, 12, R + 1, 13, TIJOLO[0]);
+        shingles(b, cx, 2, 11, Math.round(w * 0.25), cx - 1, ERA_TETO[8]);
+      } else {
+        parede(b, 2, 8, R, chao); rect7(b, 1, 6, R + 1, 7, CONCRETO[0]); rect7(b, 1, 5, R + 1, 5, CONCRETO[4]);
+      }
+      const moldura = forma === 2 ? '#c8bca8' : forma === 3 ? CONCRETO[1] : PLANK[0], vidro = forma === 3 ? '#7aa8c8' : '#2b2b34';
+      const yJan = forma === 1 ? 21 : forma === 2 ? 20 : 15;
+      for (let x = 6; x + 4 < w - 4; x += passo) if (Math.abs(x + 2 - cx) > 7) janela(b, x, yJan + 7, 4, 6, moldura, vidro);
+      if (w >= 48) for (let x = 6; x + 4 < w - 4; x += passo) if (Math.abs(x + 2 - cx) > 7) janela(b, x, yJan - 2, 4, 5, moldura, vidro);
+      porta(b, cx - 3, chao - 11, chao, 6, forma === 3 ? '#7aa8c8' : PLANK[1]);
+      if (forma === 3) { rect7(b, cx - 8, chao - 13, cx + 8, chao - 12, cor); for (let x = cx - 8; x <= cx + 8; x += 2) b.set(x, chao - 11, cor); }
+      for (let x = 2; x <= R; x++) b.set(x, chao + 1, forma === 2 ? TIJOLO[0] : CONCRETO[0]);
+      rect7(b, cx - 7, yJan - 6, cx + 6, yJan + 5, cor); rect7(b, cx - 6, yJan - 5, cx + 5, yJan + 4, '#f0e8d8');
+      const out = b.canvas(), ic = A.icon(tipo);
+      if (ic) out.getContext('2d').drawImage(ic, cx - 5, yJan - 5);
+      return out;
+    });
+    return (obraCache[chave] = c);
+  };
   // 0.34: o rádio (32 x 44, 2 x 2 passos): a casinha de concreto, a sala com a janela acesa e a antena alta em treliça
   const CONCRETO = ['#3c3e42', '#5c5e60', '#808180', '#a4a39e', '#c8c6be'];
   function parede(b, x0, y0, x1, y1) { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) b.set(x, y, y === y0 ? CONCRETO[4] : y === y1 ? CONCRETO[1] : (x + y * 3) % 11 === 0 ? CONCRETO[2] : CONCRETO[3]); }

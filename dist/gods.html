@@ -1322,7 +1322,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.34.0',
+    VERSION: '0.35.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -3104,7 +3104,18 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     byL[kk] = d;
     return d;
   };
-  Sim.def = (b) => Sim.defOf(b.type, b.lv, b.kind);
+  // 0.35: a casa reformada tem o nome e o abrigo da forma da idade dela (a melhor das duas: uma oca de 12 lugares não encolhe)
+  const casaCache = {};
+  Sim.def = function (b) {
+    const d = Sim.defOf(b.type, b.lv, b.kind);
+    if (b.type !== 'barraca' || !b.era || !G.Eras || !G.Eras.formaCasa) return d;
+    const f = G.Eras.formaCasa(b.era);
+    if (!f || (f === 1 && (b.lv || 1) >= 3)) return d;   // a casa do lugar (oca, palafita, barro, pedra) espera a forma seguinte
+    const k = f + '|' + (b.lv || 1) + '|' + (b.kind || '');
+    if (casaCache[k]) return casaCache[k];
+    const F = G.Eras.CASAS[f];
+    return (casaCache[k] = Object.assign({}, d, { name: F.name, a: F.a, desc: F.desc, heat: Math.max(d.heat, F.heat), cap: Math.max(d.cap, F.cap), sleep: Math.max(d.sleep, F.sleep) }));
+  };
   // o que a obra ainda pede para poder ser marcada (vazio = pode): descoberta, obra no acampamento, material que ainda não existe
   Sim.needWhy = function (S, d) {
     const T = G.Tech;
@@ -3120,6 +3131,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // melhorias possíveis de uma obra pronta: [{ lv, kind, def, why }] (why vazio = dá para marcar)
   Sim.upgrades = function (S, b) {
     if (!b.built || b.up || b.demol) return [];
+    if (b.type === 'barraca' && G.Eras && G.Eras.formaCasa && G.Eras.formaCasa(b.era || 0) >= 2) return [];   // 0.35: a casa já cresce com a idade
     const base = C.BUILD[b.type], lv = b.lv || 1;
     const u = base && base.up && base.up[lv - 1];
     if (!u) return [];
@@ -3187,6 +3199,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (def.extra) for (const k in def.extra) S.stock[k] -= def.extra[k];   // Etapa 18: a vela e os pregos saem do estoque ao marcar
     const b = { id: S.nextBid++, type, lv: 1, kind: null, x, y, w: def.w, h: def.h, built: false, progress: 0,
       have: {}, fuel: 0, beds: [], up: null, t0: S.t };
+    if (S.eras && S.eras.idade >= 2) b.era = S.eras.idade;   // 0.35: a obra nova já nasce no jeito da idade
     for (const k of C.MATERIALS) b.have[k] = 0;
     for (let dy = 0; dy < def.h; dy++) for (let dx = 0; dx < def.w; dx++) {
       const i = (y + dy) * w.W + x + dx;
@@ -6875,6 +6888,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // sai dali: a ave voa, o de chão reaparece no pasto de casa. Só em lugar de onde se chega à volta do ninho.
   function soltar(S, e, h) {
     const w = S.world, R = C.FAUNA_HOME_R;
+    // sorteio próprio: gastar o S.rng aqui mudaria toda a história do mundo a partir deste bicho
+    let sem = (e.id * 2654435761 + S.t) >>> 0;
+    const rint = (_, lo, hi) => { sem = (Math.imul(sem, 1664525) + 1013904223) >>> 0; return lo + sem % (hi - lo + 1); };
     for (let k = 0; k < 40; k++) {
       const x = h.x + rint(S, -R, R), y = h.y + rint(S, -R, R);
       if (!tileOk(w, x, y)) continue;
@@ -18451,8 +18467,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     for (const q of S.people) if (here(q) && q.inTent === b.id && !q.labor) { G.AI.abort(S, q); q.fail.dormir = S.t + C.FOGO_MIN + 15; q.nextEval = S.t; }
     if (!S.safe) S.events.push({ k: 'soc', ev: 'fogo', on: true, bid: b.id, x: b.x + b.w / 2, y: b.y + b.h / 2 });
     const d = Sim().def(b);
-    toast(S, 'Uma faísca pegou na palha ' + (d.a === 'o' ? 'do ' : 'da ') + d.name.toLowerCase() + '. Fogo!', 'warn');
-    if (c.fogos === 1) chron(S, 'Uma faísca do verão seco pegou na palha ' + (d.a === 'o' ? 'do ' : 'da ') + d.name.toLowerCase() + '. Foi o primeiro fogo sem culpado.');
+    const onde = (b.era || 0) >= 6 ? 'no forro ' : 'na palha ';   // 0.35: casa caiada e prédio não têm palha
+    toast(S, 'Uma faísca pegou ' + onde + (d.a === 'o' ? 'do ' : 'da ') + d.name.toLowerCase() + '. Fogo!', 'warn');
+    if (c.fogos === 1) chron(S, 'Uma faísca do verão seco pegou ' + onde + (d.a === 'o' ? 'do ' : 'da ') + d.name.toLowerCase() + '. Foi o primeiro fogo sem culpado.');
   }
 
   // ---------- a troca da feira ----------
@@ -19231,10 +19248,24 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     S.stats.estudos = (S.stats.estudos || 0) + 1;
     if (S.stats.estudos === 1) Sim().chron(S, 'Os primeiros estudiosos da universidade passaram a noite com os livros: a descoberta que o povo procura chegou mais perto.');
   }
+  // 0.35: a casa muda de forma com a idade, não só de cor: a barraca vira cabana, a cabana vira casa de madeira e taipa,
+  // depois a casa caiada, o sobrado, a casa de tijolo, a casa de varanda e o prédio. Cada forma abriga mais e melhor
+  E.CASAS = [null,
+    { name: 'Cabana', a: 'a', heat: 10, cap: 6, sleep: 12, desc: 'Paredes de pau a pique e telhado de palha: +10 °C e 6 lugares.' },
+    { name: 'Casa de madeira e taipa', a: 'a', heat: 12, cap: 6, sleep: 13, desc: 'Esteios de madeira e paredes de taipa: +12 °C e 6 lugares.' },
+    { name: 'Casa caiada', a: 'a', heat: 14, cap: 7, sleep: 13, desc: 'Paredes brancas de cal e telha de barro: +14 °C e 7 lugares.' },
+    { name: 'Sobrado', a: 'o', heat: 15, cap: 8, sleep: 14, desc: 'Dois andares e sacada de ferro: +15 °C e 8 lugares.' },
+    { name: 'Casa de tijolo', a: 'a', heat: 16, cap: 8, sleep: 14, desc: 'Tijolo aparente e chaminé: +16 °C e 8 lugares.' },
+    { name: 'Casa de varanda', a: 'a', heat: 18, cap: 9, sleep: 14, desc: 'Varanda com colunas e luz na porta: +18 °C e 9 lugares.' },
+    { name: 'Prédio de apartamentos', a: 'o', heat: 20, cap: 12, sleep: 15, desc: 'Quatro andares de concreto: +20 °C e 12 lugares no chão de uma casa.' },
+  ];
+  E.formaCasa = (era) => (era >= 10 ? 7 : era >= 9 ? 6 : era >= 8 ? 5 : era >= 7 ? 4 : era >= 6 ? 3 : era >= 4 ? 2 : era >= 2 ? 1 : 0);
+  // as oficinas e as instituições têm três formas: madeira e pedra, tijolo, concreto
+  E.formaObra = (era) => (era >= 9 ? 3 : era >= 7 ? 2 : era >= 4 ? 1 : 0);
   // 0.27: quando o povo muda de idade, as construções vão sendo refeitas no jeito novo, poucas por dia (as mais antigas
   // primeiro). O jeito aparece no telhado: sapê até a Pedra Polida, sapê trançado no Bronze, tabuinha no Ferro, telha
   // de barro nos Reinos
-  const REFORMA_TXT = { 2: 'trançam o sapê novo, mais firme', 3: 'trocam o sapê por tabuinhas de madeira', 4: 'cobrem os telhados com telha de barro', 5: 'cobrem os telhados de ardósia', 6: 'pintam as paredes e cobrem com telha nova de olaria', 7: 'erguem sobrados de tijolo com telhado escuro', 8: 'trocam a telha por chapa de zinco', 9: 'cobrem com telha francesa e puxam os fios da luz', 10: 'trocam a telha por laje de concreto' };
+  const REFORMA_TXT = { 2: 'desmontam as barracas e levantam cabanas de pau a pique', 3: 'trocam o sapê por tabuinhas de madeira', 4: 'erguem casas de madeira e taipa, e as oficinas ganham paredes firmes', 5: 'cobrem os telhados de ardósia', 6: 'caiam as casas de branco e cobrem com telha de olaria', 7: 'erguem sobrados de dois andares, e as oficinas passam para o tijolo', 8: 'levantam casas de tijolo com chaminé e telhado de zinco', 9: 'fazem casas de varanda, com a luz na porta, e as oficinas passam para o concreto', 10: 'derrubam as casas velhas e sobem prédios de apartamentos' };
   function reforma(S) {
     const idade = S.eras.idade || 0;
     if (idade < 2) return;
@@ -19243,7 +19274,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     velhas.sort((a, b) => (a.era || 0) - (b.era || 0) || a.id - b.id);
     const n = Math.max(1, Math.ceil(velhas.length * C.REFORMA_DIA));
     if ((S.eras.reformou || 0) < idade && REFORMA_TXT[idade]) { S.eras.reformou = idade; Sim().chron(S, 'Com a ' + E.IDADES[idade].nome + ', o povo começa a refazer as casas: ' + REFORMA_TXT[idade] + '.'); }
-    for (let i = 0; i < n && i < velhas.length; i++) velhas[i].era = idade;
+    for (let i = 0; i < n && i < velhas.length; i++) { velhas[i].era = idade; velhas[i].reformT = S.t; }   // 0.35: a obra fica com andaime por um dia
   }
   E.reforma = reforma;
   E.info = function (S) {
@@ -22295,6 +22326,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       { k: P.ink2, s: P.mist, d: P.bark }],
     torre: [['...kkkk...', '..kyyyyk..', '.kkkkkkkk.', '..kwwwwk..', '..kssssk..', '..ksddsk..', '..kssssk..', '.ksssssk..', '.kssssssk.', 'kkkkkkkkkk'],
       { k: P.ink2, s: P.mist, y: P.tan, w: P.wood, d: P.ink }],
+    // 0.35: a casa, quando a barraca fica para trás
+    casa: [['....kk....', '...kyyk...', '..kyyyyk..', '.kyyyyyyk.', 'kkkkkkkkkk', '.kwwwwwwk.', '.kwdkwwwk.', '.kwdkwbwk.', '.kwdkwwwk.', '.kkkkkkkk.'],
+      { k: P.ink2, y: P.wood, w: P.parch, d: P.bark, b: P.sky }],
     // 0.34: o rádio, a garagem e o hospital geral
     radio: [['....rr....', '....kk....', '...k..k...', '...kkkk...', '..k....k..', '..kkkkkk..', '.kssssssk.', '.kswwsdsk.', '.kssssdsk.', 'kkkkkkkkkk'],
       { k: P.ink2, r: P.red, s: P.mist, w: P.yellow, d: P.ink }],
@@ -23381,6 +23415,145 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     rect7(b, 33, 0, 37, 2, '#c8423a');   // a bandeira
     return b.canvas();
   }
+  // ---------- 0.35: as construções mudam de forma com a idade ----------
+  function janela(b, x, y, w, h, moldura, vidro) { rect7(b, x - 1, y - 1, x + w, y + h, moldura); rect7(b, x, y, x + w - 1, y + h - 1, vidro); b.set(x, y, '#e8f0f8'); }
+  function porta(b, x, y0, y1, w, cor, trinco) { rect7(b, x - 1, y0 - 1, x + w, y1, '#2b1d1a'); rect7(b, x, y0, x + w - 1, y1, cor); b.set(x + w - 2, Math.round((y0 + y1) / 2), trinco || '#e8c060'); }
+  function reboco(b, x0, y0, x1, y1, cores, seed) { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { let c = x <= x0 + 1 ? cores[0] : x >= x1 - 1 ? cores[2] : cores[1]; if (H7(x, y, seed) < 0.05) c = cores[2]; b.set(x, y, c); } }
+  const CAL = [['#f6f0e0', '#e8e0cc', '#c8c0aa', '#3a6a9a'], ['#f4eedc', '#e4dcc4', '#c4bca2', '#c8a030'], ['#f8f2e4', '#ece4d0', '#ccc4ae', '#3f7a58']];
+  const PASTEL = [['#eec8b0', '#dcae94', '#bc8c74'], ['#e8dc9c', '#d6c67e', '#b4a462'], ['#b8d0d8', '#9cb8c4', '#7c98a6']];
+  const VARANDA = [['#f0e4c8', '#e0d0ac', '#bcaa88'], ['#c8d8b8', '#b0c49e', '#90a480'], ['#ecc8c0', '#dcaca4', '#b88a84']];
+  // cabana (32 x 32): parede de pau a pique, porta de varas e o telhado de palha
+  function cabana(v) {
+    const b = new Buf(32, 32);
+    for (let y = 17; y <= 28; y++) for (let x = 6; x <= 25; x++) { let c = x < 11 ? CLAY[0] : x > 21 ? CLAY[1] : '#9a5e42'; if ((y % 4 === 1 && (x + y) % 3 === 0) || H7(x, y, 41 + v) < 0.08) c = PLANK[1]; b.set(x, y, c); }
+    for (let y = 17; y <= 28; y++) { b.set(5, y, PLANK[0]); b.set(26, y, PLANK[0]); }
+    for (let x = 5; x <= 26; x++) b.set(x, 29, P.maroon);
+    porta(b, 13, 21, 28, 5, PLANK[2]);
+    windowAt(b, 20, 20, 3, 3);
+    thatch(b, 15, 4, 17, 5, 14, 51 + v);
+    return b;
+  }
+  // casa de madeira e taipa (32 x 38): base de pedra, parede clara com os esteios escuros em X e telhado alto de tabuinhas
+  function casaEnxaimel(kind, v) {
+    const b = new Buf(32, 38), E0 = PLANK[0];
+    if (kind === 'pedra') stoneWall(b, 3, 16, 28, 34, 61 + v);
+    else {
+      reboco(b, 3, 16, 28, 34, kind === 'barro' ? ['#c88a62', '#b0704e', '#7e4a36'] : ['#ecdcbc', '#dcc8a4', '#b8a484'], 61 + v);
+      for (let x = 3; x <= 28; x += 8) rect7(b, x, 16, x + 1, 34, E0);
+      rect7(b, 3, 16, 28, 17, E0); rect7(b, 3, 25, 28, 25, E0);
+      line(b, 5, 18, 10, 24, E0); line(b, 21, 24, 26, 18, E0);
+      stoneWall(b, 3, 30, 28, 34, 66 + v);
+    }
+    porta(b, 14, 26, 34, 5, PLANK[2]);
+    janela(b, 6, 27, 3, 3, E0, '#2b2b34'); janela(b, 23, 27, 3, 3, E0, '#2b2b34'); janela(b, 14, 19, 4, 3, E0, '#2b2b34');
+    shingles(b, 16, 1, 15, 4, 15, ERA_TETO[v % 2 ? 5 : 4]);
+    return b;
+  }
+  // casa caiada (32 x 34): parede branca, faixa colorida no pé e nas janelas, telha alaranjada
+  function casaCaiada(v) {
+    const b = new Buf(32, 34), C0 = CAL[v % 3];
+    reboco(b, 2, 15, 29, 31, C0, 71 + v);
+    rect7(b, 2, 29, 29, 31, C0[3]); rect7(b, 2, 15, 29, 15, C0[2]);
+    porta(b, 14, 21, 31, 5, C0[3]);
+    janela(b, 6, 20, 4, 5, C0[3], '#2b2b34'); janela(b, 22, 20, 4, 5, C0[3], '#2b2b34');
+    shingles(b, 16, 4, 14, 6, 16, ERA_TETO[6]);
+    return b;
+  }
+  // sobrado (32 x 44): dois andares pintados, sacada de ferro e telhado escuro
+  function sobrado(v) {
+    const b = new Buf(32, 44), P0 = PASTEL[v % 3];
+    reboco(b, 4, 12, 27, 41, P0, 81 + v);
+    rect7(b, 4, 26, 27, 26, P0[2]); rect7(b, 4, 39, 27, 41, '#5a5058');
+    for (const x of [7, 21]) janela(b, x, 15, 4, 8, '#f4f0e6', '#2b2b34');
+    porta(b, 14, 15, 23, 4, '#6a4a3a');
+    rect7(b, 5, 24, 26, 24, '#2a2e34'); for (let x = 5; x <= 26; x += 2) { b.set(x, 25, '#2a2e34'); }
+    porta(b, 13, 30, 41, 6, '#6a2e26');
+    janela(b, 7, 30, 3, 6, '#f4f0e6', '#2b2b34'); janela(b, 23, 30, 3, 6, '#f4f0e6', '#2b2b34');
+    shingles(b, 16, 2, 11, 7, 14, ERA_TETO[7]);
+    return b;
+  }
+  // casa de tijolo (32 x 44): dois andares de tijolo aparente, janelas altas, chaminé e chapa de zinco
+  function casaTijolo(v) {
+    const b = new Buf(32, 44);
+    tijolos(b, 4, 12, 27, 41);
+    rect7(b, 4, 26, 27, 26, '#c8bca8');
+    for (const x of [7, 14, 21]) { janela(b, x, 15, 3, 8, '#c8bca8', v % 2 ? '#2b2b34' : '#3a3e4a'); }
+    porta(b, 13, 31, 41, 6, '#2a3a4a'); rect7(b, 12, 29, 19, 29, '#c8bca8');
+    janela(b, 7, 31, 3, 6, '#c8bca8', '#2b2b34'); janela(b, 23, 31, 3, 6, '#c8bca8', '#2b2b34');
+    tijolos(b, 22, 0, 25, 7); rect7(b, 21, 0, 26, 1, TIJOLO[0]);
+    shingles(b, 16, 3, 11, 8, 14, ERA_TETO[8]);
+    return b;
+  }
+  // casa de varanda (32 x 42): sobrado claro, a varanda com colunas, a lâmpada na porta e telha francesa
+  function casaVaranda(v) {
+    const b = new Buf(32, 42), P0 = VARANDA[v % 3];
+    reboco(b, 4, 12, 27, 38, P0, 91 + v);
+    for (const x of [7, 21]) janela(b, x, 15, 4, 6, '#f4f0e6', '#9ac8e0');
+    porta(b, 15, 29, 38, 4, '#6a4a3a'); janela(b, 8, 30, 4, 5, '#f4f0e6', '#9ac8e0'); janela(b, 22, 30, 3, 5, '#f4f0e6', '#9ac8e0');
+    rect7(b, 2, 25, 29, 27, ERA_TETO[9][2]); rect7(b, 2, 25, 29, 25, ERA_TETO[9][4]); rect7(b, 2, 27, 29, 27, ERA_TETO[9][0]);
+    for (const x of [3, 13, 21, 28]) rect7(b, x, 28, x, 38, '#f4f0e6');
+    b.set(17, 29, '#f8e888');
+    rect7(b, 2, 39, 29, 40, '#8a8478');
+    shingles(b, 16, 2, 11, 7, 14, ERA_TETO[9]);
+    return b;
+  }
+  // prédio de apartamentos (32 x 58): quatro andares de concreto, as janelas em grade, a caixa d'água e a antena
+  function predio(v) {
+    const b = new Buf(32, 58);
+    parede(b, 4, 8, 27, 55); rect7(b, 3, 6, 28, 7, CONCRETO[1]);
+    for (let k = 0; k < 4; k++) { const y = 11 + k * 11; for (const x of [7, 14, 21]) { if (k === 3 && x === 14) continue; janela(b, x, y, 3, 5, CONCRETO[1], ((x + k + v) % 5 === 0) ? '#f0d060' : '#7aa8c8'); } if (k < 3) rect7(b, 4, y + 8, 27, y + 8, CONCRETO[2]); }
+    rect7(b, 13, 44, 18, 55, '#2b2b34'); rect7(b, 14, 45, 17, 55, '#7aa8c8'); rect7(b, 11, 42, 20, 43, CONCRETO[0]);
+    rect7(b, 20, 1, 25, 5, '#78828c'); rect7(b, 20, 1, 25, 1, '#a4adb6'); line(b, 8, 0, 8, 5, '#3e444c'); rect7(b, 6, 2, 10, 2, '#3e444c');
+    for (let x = 4; x <= 27; x++) b.set(x, 56, CONCRETO[0]);
+    return b;
+  }
+  const casaCache = {};
+  // a casa de uma forma (1 a 7): cada id cai numa das três cores, e metade das casas sai espelhada, para a rua não ser carimbo
+  A.casaEra = function (forma, kind, id) {
+    const v = (id || 0) % 3, flip = (id || 0) % 2, chave = forma + '|' + (forma === 2 ? kind || '' : '') + '|' + v + '|' + flip;
+    if (casaCache[chave]) return casaCache[chave];
+    const c = A.polishWith(() => (forma === 1 ? cabana(v) : forma === 2 ? casaEnxaimel(kind, v) : forma === 3 ? casaCaiada(v) : forma === 4 ? sobrado(v) : forma === 5 ? casaTijolo(v) : forma === 6 ? casaVaranda(v) : predio(v)).canvas());
+    if (!flip) return (casaCache[chave] = c);
+    const [o, x] = mk(c.width, c.height);
+    x.translate(c.width, 0); x.scale(-1, 1); x.drawImage(c, 0, 0);
+    return (casaCache[chave] = o);
+  };
+  // a oficina ou instituição numa forma (1 madeira e pedra, 2 tijolo, 3 concreto), com a placa do ofício na parede
+  const OBRA_COR = { armazem: '#a87a30', marcenaria: '#8a5a30', tecelagem: '#a0507a', ferraria: '#505868', escola: '#3a6a9a', biblioteca: '#6a4a8a', hospital: '#2e6a4a', guarda: '#7a3a30', brigada: '#c8423a', mercado: '#c8a030' };
+  const obraCache = {};
+  A.obraEra = function (tipo, forma, w) {
+    const chave = tipo + '|' + forma;
+    if (obraCache[chave]) return obraCache[chave];
+    const c = A.polishWith(() => {
+      const H = w >= 48 ? (forma === 1 ? 50 : forma === 2 ? 54 : 56) : (forma === 1 ? 38 : forma === 2 ? 40 : 42), b = new Buf(w, H), R = w - 3, cor = OBRA_COR[tipo] || '#58606a', cx = w >> 1, chao = H - 3;
+      const passo = w >= 48 ? 11 : 9;
+      if (forma === 1) {
+        reboco(b, 2, 16, R, chao, ['#ecdcbc', '#dcc8a4', '#b8a484'], 101);
+        for (let x = 2; x <= R; x += w >= 48 ? 11 : 9) rect7(b, x, 16, x + 1, chao, PLANK[0]);
+        rect7(b, 2, 16, R, 17, PLANK[0]);
+        stoneWall(b, 2, chao - 4, R, chao, 102);
+        shingles(b, cx, 2, 15, Math.round(w * 0.2), cx - 1, ERA_TETO[5]);
+      } else if (forma === 2) {
+        tijolos(b, 2, 14, R, chao);
+        rect7(b, 1, 12, R + 1, 13, TIJOLO[0]);
+        shingles(b, cx, 2, 11, Math.round(w * 0.25), cx - 1, ERA_TETO[8]);
+      } else {
+        parede(b, 2, 8, R, chao); rect7(b, 1, 6, R + 1, 7, CONCRETO[0]); rect7(b, 1, 5, R + 1, 5, CONCRETO[4]);
+      }
+      const moldura = forma === 2 ? '#c8bca8' : forma === 3 ? CONCRETO[1] : PLANK[0], vidro = forma === 3 ? '#7aa8c8' : '#2b2b34';
+      const yJan = forma === 1 ? 21 : forma === 2 ? 20 : 15;
+      for (let x = 6; x + 4 < w - 4; x += passo) if (Math.abs(x + 2 - cx) > 7) janela(b, x, yJan + 7, 4, 6, moldura, vidro);
+      if (w >= 48) for (let x = 6; x + 4 < w - 4; x += passo) if (Math.abs(x + 2 - cx) > 7) janela(b, x, yJan - 2, 4, 5, moldura, vidro);
+      porta(b, cx - 3, chao - 11, chao, 6, forma === 3 ? '#7aa8c8' : PLANK[1]);
+      if (forma === 3) { rect7(b, cx - 8, chao - 13, cx + 8, chao - 12, cor); for (let x = cx - 8; x <= cx + 8; x += 2) b.set(x, chao - 11, cor); }
+      for (let x = 2; x <= R; x++) b.set(x, chao + 1, forma === 2 ? TIJOLO[0] : CONCRETO[0]);
+      rect7(b, cx - 7, yJan - 6, cx + 6, yJan + 5, cor); rect7(b, cx - 6, yJan - 5, cx + 5, yJan + 4, '#f0e8d8');
+      const out = b.canvas(), ic = A.icon(tipo);
+      if (ic) out.getContext('2d').drawImage(ic, cx - 5, yJan - 5);
+      return out;
+    });
+    return (obraCache[chave] = c);
+  };
   // 0.34: o rádio (32 x 44, 2 x 2 passos): a casinha de concreto, a sala com a janela acesa e a antena alta em treliça
   const CONCRETO = ['#3c3e42', '#5c5e60', '#808180', '#a4a39e', '#c8c6be'];
   function parede(b, x0, y0, x1, y1) { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) b.set(x, y, y === y0 ? CONCRETO[4] : y === y1 ? CONCRETO[1] : (x + y * 3) % 11 === 0 ? CONCRETO[2] : CONCRETO[3]); }
@@ -24189,7 +24362,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       if (b.type === 'fabrica' && b.built && Math.random() < dt * 4) spawn({ x: b.x * TS + 38 + Math.random() * 4, y: b.y * TS - 20, vx: 2 + Math.random() * 3, vy: -8 - Math.random() * 4, g: 0, life: 3.2, col: 'smoke' });   // 0.32: a chaminé da fábrica
       if (b.type === 'moquem' && b.batch && Math.random() < dt * 3) spawn({ x: b.x * TS + 6 + Math.random() * 5, y: b.y * TS + 2, vx: (Math.random() - 0.5) * 3, vy: -7 - Math.random() * 4, g: 0, life: 2.6, col: 'smoke' });
       // casa de pedra com gente dentro no frio: fumaça na chaminé (Etapa 7)
-      if (b.kind === 'pedra' && b.built && S.temp < 14 && Math.random() < dt * 2.5 && FX && FX.tent.has(b.id)) {
+      if (b.kind === 'pedra' && (b.era || 0) < 4 && b.built && S.temp < 14 && Math.random() < dt * 2.5 && FX && FX.tent.has(b.id)) {
         spawn({ x: b.x * TS + 23 + Math.random() * 2, y: b.y * TS - 3, vx: 1 + Math.random() * 2, vy: -6 - Math.random() * 3, g: 0, life: 2.4, col: 'smoke' });
       }
       if (b.type !== 'fogueira' || !b.built || b.fuel <= 0) continue;
@@ -24837,9 +25010,29 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   const HALO = { cura: '#9be070', palavra: '#ffffff', luz: '#fee761', colheita: '#d8c040', caca: '#e4a672', paz: '#9fd8ff', sabedoria: '#c8a8ff', forca: '#f77622' };
   // a figura da obra no nível dela (Etapa 7): casas, oficinas, armazém
   function houseImg(d) { const S2 = A.spr; return d.lv >= 3 && d.kind ? S2.house[d.kind] : S2.house[d.lv >= 2 ? 2 : 1]; }
+  // 0.35: a forma da casa e da oficina na idade delas (null: a figura de sempre)
+  const OBRA_FORMA = { armazem: 1, marcenaria: 1, tecelagem: 1, ferraria: 1, escola: 1, biblioteca: 1, hospital: 1, guarda: 1, brigada: 1, mercado: 1 };
+  function casaImg(b, lv, kind) {
+    const f = G.Eras && G.Eras.formaCasa ? G.Eras.formaCasa(b.era || 0) : 0;
+    return !f || (f === 1 && lv >= 3 && kind) ? null : A.casaEra(f, kind, b.id);
+  }
+  function obraImg(b) {
+    if (!OBRA_FORMA[b.type] || !G.Eras || !G.Eras.formaObra) return null;
+    const f = G.Eras.formaObra(b.era || 0);
+    return f ? A.obraEra(b.type, f, b.w * TS) : null;
+  }
+  let ultimoS = null;
   function drawBuilding(S, b, now, row, part) {
     eraObra = b.built && !SEM_TELHADO[b.type] ? b.era || 0 : 0;
+    ultimoS = S;
     try { drawBuilding0(S, b, now, row, part); } finally { eraObra = 0; }
+    // 0.35: a obra que acabou de ser refeita fica um dia de andaime
+    if (b.reformT && b.built && row === undefined && part === undefined && S.t - b.reformT < C.DAY_MIN && !SEM_TELHADO[b.type]) {
+      const bx = b.x * TS, by = b.y * TS, w = b.w * TS;
+      for (let x = bx + 1; x < bx + w; x += Math.max(8, (w - 3) / 3)) rect(x, by + 4, 1, 27, '#93683f');
+      rect(bx, by + 10, w, 1, '#6e4a35'); rect(bx, by + 20, w, 1, '#6e4a35');
+      if (Math.random() < 0.03) spawn({ x: bx + Math.random() * w, y: by + 8 + Math.random() * 16, vx: (Math.random() - 0.5) * 4, vy: -5, g: 0, life: 1.2, col: 'smoke' });
+    }
   }
   function drawBuilding0(S, b, now, row, part) {
     const S2 = A.spr, bx = b.x * TS, by = b.y * TS;
@@ -24883,7 +25076,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         blit(icon, bx + 16 - icon.width / 2, top - 12 + bob, 0.55 + 0.45 * (0.5 + 0.5 * Math.sin(now / 400)));
       }
     } else {
-      const img = houseImg(d);
+      const nova = casaImg(b, lv, d.kind), img = nova || houseImg(d);
+      if (nova) eraObra = 0;
       const top = by + 31 - img.height;
       blit(S2.bigShadow, bx + 5, by + 26, ghost ? 0.4 : undefined);
       blit(img, bx, top, ghost ? 0.45 : undefined);
@@ -25003,7 +25197,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // chegou, com o desenho inteiro apagadinho atrás e os andaimes por cima
   function drawCidade(S, S2, b, bx, by, ghost, lv) {
     if (b.mar) return;   // Etapa 18: o navio está no mar
-    const set = S2.cidade[b.type], img = Array.isArray(set) ? set[Math.max(1, Math.min(set.length - 1, lv))] : set;
+    const set = S2.cidade[b.type], nova = obraImg(b), img = nova || (Array.isArray(set) ? set[Math.max(1, Math.min(set.length - 1, lv))] : set);
+    if (nova) eraObra = 0;
     const base = by + b.h * TS, top = base - img.height, gr = C.BUILD[b.type].grande;
     blit(S2.bigShadow, bx + b.w * TS / 2 - 10, base - 5, ghost ? 0.4 : undefined);
     if (!gr || b.built || !(b.progress > 0)) { blit(img, bx, top, ghost ? 0.45 : undefined); return; }
@@ -25034,7 +25229,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const imgs = S2.shop[b.type], img = imgs[Math.min(imgs.length - 1, lv)], top = by + 31 - img.height;
     blit(S2.bigShadow, bx + 5, by + 26, ghost ? 0.4 : undefined);
     if (b.type === 'cemiterio' && !ghost && lv >= 2 && G.Memoria) cercaCem(S, b);   // Etapa 13
-    blit(img, bx, top, ghost ? 0.45 : undefined);
+    const nova = obraImg(b);   // 0.35: a forma da idade (as peças em volta seguem no mesmo lugar)
+    if (nova) { eraObra = 0; blit(nova, bx, by + 31 - nova.height, ghost ? 0.45 : undefined); }
+    else blit(img, bx, top, ghost ? 0.45 : undefined);
     if (ghost) return;
     const st = S.stock, it = S2.item;
     if (b.type === 'marcenaria') {
@@ -25440,6 +25637,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     }
     if (S2.cidade && S2.cidade[type]) { const set = S2.cidade[type], im = Array.isArray(set) ? set[Math.max(1, Math.min(3, lv))] : set; return { img: im, dy: C.BUILD[type].h * TS - im.height }; }   // Etapa 16
     const shop = S2.shop[type];
+    const novaIdade = ultimoS && ultimoS.eras ? ultimoS.eras.idade || 0 : 0;   // 0.35: o fantasma já mostra a forma da idade
+    if (type === 'barraca') { const n = casaImg({ era: novaIdade, id: 2 }, lv, kind); if (n) return { img: n, dy: 31 - n.height }; }
+    if (OBRA_FORMA[type]) { const n = obraImg({ type, era: novaIdade, w: C.BUILD[type].w }); if (n) return { img: n, dy: 31 - n.height }; }
     const img = shop ? shop[Math.max(1, Math.min(shop.length - 1, lv))] : houseImg({ lv, kind });
     return { img, dy: 31 - img.height };
   }
@@ -27331,6 +27531,17 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       if (b.hidden === open) b.hidden = !open;
       b.classList.toggle('on', UI.hooks.placing() === b.dataset.build);
       b.querySelectorAll('[data-c]').forEach((s) => s.classList.toggle('lack', S.stock[s.dataset.c] < d.cost[s.dataset.c]));
+      // 0.35: passada a idade das barracas, o botão constrói a casa do tempo
+      if (b.dataset.build === 'barraca' && G.Eras && S.eras) {
+        const f = G.Eras.formaCasa(S.eras.idade || 0), nm = ['Barraca', 'Cabana', 'Casa', 'Casa caiada', 'Sobrado', 'Casa', 'Casa', 'Prédio'][f];
+        if (b.dataset.forma !== String(f)) {
+          b.dataset.forma = String(f);
+          const sp = b.querySelector('span'), ico = b.querySelector('.ico'), kb = sp.querySelector('kbd');
+          sp.textContent = nm; if (kb) sp.appendChild(kb);
+          if (ico) ico.src = ic(f ? 'casa' : 'barraca');
+          b.title = (f ? G.Eras.CASAS[f].name + ': ' + G.Eras.CASAS[f].desc : d.name + ': ' + d.desc);
+        }
+      }
     });
   }
   function barCls(v) { return v < 25 ? 'low' : v < 50 ? 'mid' : ''; }

@@ -187,6 +187,9 @@
   // sai dali: a ave voa, o de chão reaparece no pasto de casa. Só em lugar de onde se chega à volta do ninho.
   function soltar(S, e, h) {
     const w = S.world, R = C.FAUNA_HOME_R;
+    // sorteio próprio: gastar o S.rng aqui mudaria toda a história do mundo a partir deste bicho
+    let sem = (e.id * 2654435761 + S.t) >>> 0;
+    const rint = (_, lo, hi) => { sem = (Math.imul(sem, 1664525) + 1013904223) >>> 0; return lo + sem % (hi - lo + 1); };
     for (let k = 0; k < 40; k++) {
       const x = h.x + rint(S, -R, R), y = h.y + rint(S, -R, R);
       if (!tileOk(w, x, y)) continue;

@@ -645,6 +645,17 @@
       if (b.hidden === open) b.hidden = !open;
       b.classList.toggle('on', UI.hooks.placing() === b.dataset.build);
       b.querySelectorAll('[data-c]').forEach((s) => s.classList.toggle('lack', S.stock[s.dataset.c] < d.cost[s.dataset.c]));
+      // 0.35: passada a idade das barracas, o botão constrói a casa do tempo
+      if (b.dataset.build === 'barraca' && G.Eras && S.eras) {
+        const f = G.Eras.formaCasa(S.eras.idade || 0), nm = ['Barraca', 'Cabana', 'Casa', 'Casa caiada', 'Sobrado', 'Casa', 'Casa', 'Prédio'][f];
+        if (b.dataset.forma !== String(f)) {
+          b.dataset.forma = String(f);
+          const sp = b.querySelector('span'), ico = b.querySelector('.ico'), kb = sp.querySelector('kbd');
+          sp.textContent = nm; if (kb) sp.appendChild(kb);
+          if (ico) ico.src = ic(f ? 'casa' : 'barraca');
+          b.title = (f ? G.Eras.CASAS[f].name + ': ' + G.Eras.CASAS[f].desc : d.name + ': ' + d.desc);
+        }
+      }
     });
   }
   function barCls(v) { return v < 25 ? 'low' : v < 50 ? 'mid' : ''; }
