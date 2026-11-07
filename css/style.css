@@ -139,7 +139,7 @@ body[data-placing] #view { cursor: crosshair; }
 .btn.danger { background: var(--blood); color: #fff; box-shadow: inset 0 0 0 2px #f6757a, inset 0 -4px 0 #a22633; }
 @media (max-width: 520px) { .mundo-row { flex-direction: column; align-items: stretch; } .mundo-acts .btn { flex: 1; } }
 .modal { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: var(--gut); background: rgba(24, 20, 37, 0.7); }
-.modal-card { width: min(420px, 100%); display: grid; gap: 10px; padding: 20px; }
+.modal-card { width: min(420px, 100%); max-height: calc(100vh - 2 * var(--gut)); max-height: calc(100dvh - 2 * var(--gut)); overflow-y: auto; display: grid; gap: 10px; padding: 20px; }   /* 0.38.1: janela mais alta que a tela rola, em vez de cortar o que passa */
 .modal-card label { font-size: 13px; color: var(--muted); margin-top: 6px; }
 .name-row { display: flex; gap: 8px; }
 .name-row input {
@@ -278,6 +278,10 @@ body[data-placing] #view { cursor: crosshair; }
 .narr-opt b { font-size: 14px; }
 .narr-opt span { grid-column: 2; font-size: 12px; color: var(--muted); }
 .narr-opt:has(input:checked) { border-color: var(--gold); background: #2a2238; }
+/* 0.38.1: a tela de novo mundo: mais larga, os povos em duas colunas, e o botão de enviar sempre à vista */
+#form-names { width: min(620px, 100%); }
+#raca-opts { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+#form-names .modal-actions { position: sticky; bottom: -20px; margin: 12px -20px -20px; padding: 10px 20px 20px; background: var(--panel); }
 .select { min-height: 36px; padding: 4px 8px; font: inherit; font-size: 14px; background: var(--night); color: var(--text); border: 2px solid var(--edge); }
 /* viajantes */
 .choice-card { width: min(460px, 100%); max-height: calc(100% - 32px); overflow: auto; }
