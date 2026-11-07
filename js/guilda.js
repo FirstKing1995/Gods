@@ -38,6 +38,12 @@
       ok: ['{g} voltaram arrastando a fera do morro. A vila inteira saiu para ver.', 'A fera do morro não vai mais descer: {g} trouxeram o couro como prova.'],
       mal: ['A fera do morro é maior do que contavam. {g} recuaram, e ela continua lá em cima.'] },
   };
+  // 0.38: a missão de limpar um covil: o nome e o rank vêm do covil
+  Gu.TIPOS.covil = { nome: 'Limpar o covil', rank: 1, dias: [5, 9], risco: 0.25, premio: { ouro: 5, couro: 6 },
+    ok: ['{g} entraram no covil e saíram com o que restou lá dentro. O mato ficou quieto.', '{g} acabaram com o covil. Quem morava perto voltou a dormir de noite.'],
+    mal: ['O covil era maior por dentro. {g} voltaram correndo, e ele continua lá.'] };
+  Gu.rankM = (m) => (m.tipo === 'covil' ? Math.min(3, m.nv || 1) : Gu.TIPOS[m.tipo].rank);
+  Gu.nomeM = (m) => (m.tipo === 'covil' ? 'Limpar: ' + (m.nome || 'o covil') : Gu.TIPOS[m.tipo].nome);
   const FORCA = [4, 10, 24, 50];   // a força somada que cada rank de missão pede
   const tem = (S, k) => S.buildings.some((b) => b.type === k && b.built);
   Gu.temTaberna = (S) => tem(S, 'taberna');
@@ -63,7 +69,7 @@
   Gu.livres = (S) => S.people.filter((p) => livre(S, p)).sort((a, b) => b.rpg.nv - a.rpg.nv || a.id - b.id);
   // o grupo de uma missão: os mais fortes até somar a força (de 2 a 4); null se não dá
   Gu.grupo = function (S, m) {
-    const pede = FORCA[Gu.TIPOS[m.tipo].rank], l = Gu.livres(S);
+    const pede = FORCA[Gu.rankM(m)], l = Gu.livres(S);
     if (l.length < 2) return null;
     const vivos = S.people.filter((p) => p.alive).length;
     const sobra = Math.max(0, Math.min(4, vivos - C.GUILDA_FICAM));
@@ -75,14 +81,16 @@
   };
   // a chance de dar certo: pela força do grupo contra a que a missão pede, e pelo perigo; a proteção de Deus soma
   Gu.chance = function (m, forca, n, protegido) {
-    const T = Gu.TIPOS[m.tipo], pede = FORCA[T.rank];
+    const T = Gu.TIPOS[m.tipo], pede = FORCA[Gu.rankM(m)];
     const c = 0.55 + 0.3 * Math.min(1.5, (forca - pede) / Math.max(1, pede)) + 0.03 * (n - 2) - T.risco * 0.5;
     return Math.max(0.1, Math.min(0.95, c + (protegido ? C.GUILDA_BENCAO : 0)));
   };
   // ---------- o quadro ----------
   function novaMissao(S) {
+    // 0.38: covil sem missão vai primeiro para o quadro
+    if (S.monstros) for (const c of S.monstros.covis) if (!S.guilda.quadro.some((m) => m.covil === c.id) && !S.guilda.idas.some((i) => i.covil === c.id)) { S.guilda.quadro.push({ id: S.guilda.nid++, tipo: 'covil', covil: c.id, nv: c.nv, nome: G.Monstros.nomeDe(c), t: S.t, ate: S.t + C.GUILDA_PRAZO * 4 * DAY() }); return; }
     const g = S.guilda, top = Math.max(0, ...S.people.filter((p) => R().de(p)).map((p) => p.rpg.nv));
-    const pode = Object.keys(Gu.TIPOS).filter((k) => FORCA[Gu.TIPOS[k].rank] <= Math.max(FORCA[0], top * 3));
+    const pode = Object.keys(Gu.TIPOS).filter((k) => k !== 'covil' && FORCA[Gu.TIPOS[k].rank] <= Math.max(FORCA[0], top * 3));
     const fora = pode.filter((k) => !g.quadro.some((m) => m.tipo === k));
     const l = fora.length ? fora : pode;
     const tipo = l[Math.floor(sorte(S, g.nid * 7 + 1) * l.length)];
@@ -93,11 +101,11 @@
     const dias = T.dias[0] + sorte(S, m.id * 11) * (T.dias[1] - T.dias[0]);
     const forca = grupo.reduce((a, p) => a + p.rpg.nv, 0);
     g.quadro = g.quadro.filter((x) => x !== m);
-    const ida = { id: m.id, tipo: m.tipo, t0: S.t, volta: S.t + dias * DAY(), ids: grupo.map((p) => p.id), nomes: grupo.map((p) => p.name), forca, sonho: sonho ? 1 : 0 };
+    const ida = { id: m.id, tipo: m.tipo, covil: m.covil || 0, nv: m.nv || 0, nome: m.nome || '', t0: S.t, volta: S.t + dias * DAY(), ids: grupo.map((p) => p.id), nomes: grupo.map((p) => p.name), forca, sonho: sonho ? 1 : 0 };
     for (const p of grupo) { So().sair(S, p, 'missao'); p.away.vila = 0; p.away.mar = 1; p.away.missao = 1; }
     g.idas.push(ida);
     S.stats.missoesIdas = (S.stats.missoesIdas || 0) + 1;
-    const txt = Sim().listNames(grupo) + ' pegaram no quadro da guilda: ' + T.nome.toLowerCase() + '.';
+    const txt = Sim().listNames(grupo) + ' pegaram no quadro da guilda: ' + Gu.nomeM(m).toLowerCase() + '.';
     if (S.stats.missoesIdas === 1) Sim().chron(S, 'A primeira missão da guilda saiu: ' + txt);
     else if (!S.safe) Sim().toast(S, txt, '');
     return ida;
@@ -119,24 +127,25 @@
     volta.forEach((p, k) => {
       So().voltar(S, p, cx + (k % 3), cy + Math.floor(k / 3));
       if (!ok) p.needs.saude = Math.max(25, p.needs.saude - 40);
-      R().ganha(S, p, (ok ? 10 : 3) * (T.rank + 1), 'luta');
+      R().ganha(S, p, (ok ? 10 : 3) * (Gu.rankM(ida) + 1), 'luta');
       Sm.say(S, p, ok ? 'Voltamos!' : 'Foi por pouco.', true);
     });
     if (G.Soc && G.Soc.reindex) G.Soc.reindex(S);
     if (ok) for (const k in T.premio) if (S.stock[k] !== undefined) S.stock[k] += T.premio[k];
+    if (ok && ida.covil && G.Monstros) { G.Monstros.remove(S, ida.covil); S.stats.covisLimpos = (S.stats.covisLimpos || 0) + 1; }   // 0.38
     if (ok && T.saber && G.Tech && G.Tech.open) { const a = G.Tech.open(S); if (a) G.Tech.addPractice(S, a, T.saber, null); }
     S.stats.missoes = (S.stats.missoes || 0) + 1; if (ok) S.stats.missoesOk = (S.stats.missoesOk || 0) + 1;
     S.stats.mortosMissao = (S.stats.mortosMissao || 0) + mortos.length;
     const frases = ok ? T.ok : T.mal, frase = frases[Math.floor(sorte(S, ida.id * 19) * frases.length)];
     const nomes = Sm.listNames(volta.length ? volta : gente);
-    let txt = volta.length ? frase.replace('{g}', nomes) : 'O grupo que saiu para ' + T.nome.toLowerCase() + ' não voltou.';
+    let txt = volta.length ? frase.replace('{g}', nomes) : 'O grupo que saiu para ' + Gu.nomeM(ida).toLowerCase() + ' não voltou.';
     if (mortos.length && volta.length) txt += ' ' + Sm.listNames(mortos) + (mortos.length > 1 ? ' ficaram' : ' ficou') + ' pelo caminho.';
     else if (mortos.length) txt += ' ' + Sm.listNames(mortos) + (mortos.length > 1 ? ' ficaram' : ' ficou') + ' por lá.';
     if (mortos.length) for (const q of S.people) if (q.alive) Sm.addMem(S, q, 'parenteFoi');
     if (ida.protegido && !ok) txt += ' Dizem que algo os trouxe de volta.';
     g.hist.unshift({ t: S.t, tipo: ida.tipo, ok, txt });
     g.hist = g.hist.slice(0, 12);
-    if (T.rank >= 2 || mortos.length || S.stats.missoes === 1) Sm.chron(S, txt);
+    if (Gu.rankM(ida) >= 2 || ida.covil || mortos.length || S.stats.missoes === 1) Sm.chron(S, txt);
     else if (!S.safe) Sm.toast(S, txt, ok ? 'good' : 'warn');
     return { ok, mortos, volta };
   };

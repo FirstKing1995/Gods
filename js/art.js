@@ -1393,6 +1393,9 @@
       { k: P.ink2, s: P.mist, d: P.bark }],
     torre: [['...kkkk...', '..kyyyyk..', '.kkkkkkkk.', '..kwwwwk..', '..kssssk..', '..ksddsk..', '..kssssk..', '.ksssssk..', '.kssssssk.', 'kkkkkkkkkk'],
       { k: P.ink2, s: P.mist, y: P.tan, w: P.wood, d: P.ink }],
+    // 0.38: o covil
+    covil: [['..........', '...kkkk...', '..kssssk..', '.ksskksk..', '.kskddksk.', 'kskddddksk', 'kskddddksk', 'ksddddddsk', 'kkkkkkkkkk', '..........'],
+      { k: P.ink2, s: P.mist, d: P.ink }],
     // 0.37: a taberna e a guilda
     taberna: [['.kkkkkkkk.', 'kyyyyyyyyk', 'kkkkkkkkkk', '.k......k.', '.kwwkkddk.', '.kwwkkddk.', '.kkkkkkkk.', '...kk.....', '...kk.....', '..kkkk....'],
       { k: P.ink2, y: P.wood, w: P.yellow, d: P.bark }],
@@ -2487,6 +2490,53 @@
     rect7(b, 33, 0, 37, 2, '#c8423a');   // a bandeira
     return b.canvas();
   }
+  // ---------- 0.38: os monstros ----------
+  // folha de 3 quadros por 4 direções (a mesma ordem dos lobos): 0 de frente, 1 de costas, 2 direita, 3 esquerda
+  A.MONSTRO_W = 16; A.MONSTRO_H = 18;
+  const monstroCache = {};
+  function gente(b, f, d, pele, roupa, olho, porte) {
+    const cx = 8, base = 17, h = porte, passo = f === 1 ? 1 : f === 2 ? -1 : 0;
+    const top = base - h;
+    rect7(b, cx - 3, top, cx + 2, top + 4, pele);
+    if (d === 0) { b.set(cx - 2, top + 2, olho); b.set(cx + 1, top + 2, olho); }
+    if (d === 2) b.set(cx + 1, top + 2, olho);
+    if (d === 3) b.set(cx - 2, top + 2, olho);
+    rect7(b, cx - 3, top + 5, cx + 2, base - 4, roupa);
+    rect7(b, cx - 4, top + 5, cx - 4, base - 5 + (passo > 0 ? -1 : 0), pele); rect7(b, cx + 3, top + 5, cx + 3, base - 5 + (passo < 0 ? -1 : 0), pele);
+    rect7(b, cx - 2, base - 3, cx - 1, base - (passo > 0 ? 1 : 0), roupa); rect7(b, cx, base - 3, cx + 1, base - (passo < 0 ? 1 : 0), roupa);
+  }
+  function monstroFrame(m, f, d) {
+    const b = new Buf(A.MONSTRO_W, A.MONSTRO_H);
+    if (m === 'goblin') { gente(b, f, d, '#5e9a3c', '#6a4a30', '#fee761', 11); b.set(4, 8, '#5e9a3c'); b.set(3, 7, '#5e9a3c'); b.set(11, 8, '#5e9a3c'); b.set(12, 7, '#5e9a3c'); line(b, 12, 8, 13, 13, '#a4adb6'); }
+    else if (m === 'esqueleto') { gente(b, f, d, '#e8e4d4', '#2a2e34', '#2b1d1a', 13); for (let y = 10; y <= 13; y += 2) rect7(b, 5, y, 10, y, '#e8e4d4'); line(b, 12, 6, 12, 13, '#a4adb6'); }
+    else if (m === 'ogro') { const o = { 0: 0 }; rect7(b, 2, 2, 13, 13, '#7a8a50'); rect7(b, 4, 0, 11, 5, '#8a9a5e'); if (d !== 1) { b.set(5, 3, '#c8423a'); b.set(10, 3, '#c8423a'); rect7(b, 6, 5, 9, 5, '#2b1d1a'); b.set(6, 6, '#f4f0e6'); b.set(9, 6, '#f4f0e6'); } rect7(b, 3, 9, 12, 12, '#6a4a30'); rect7(b, 0, 4, 1, 11 + (f === 1 ? -1 : 0), '#7a8a50'); rect7(b, 14, 4, 15, 11 + (f === 2 ? -1 : 0), '#7a8a50'); line(b, 15, 2, 15, 13, PLANK[0]); rect7(b, 4, 14, 6, 17 - (f === 1 ? 1 : 0), '#6a7a44'); rect7(b, 9, 14, 11, 17 - (f === 2 ? 1 : 0), '#6a7a44'); o[0] = 1; }
+    else if (m === 'aranha') { rect7(b, 5, 8, 10, 12, '#3a2a3a'); rect7(b, 6, 7, 9, 7, '#4e3a4e'); rect7(b, 6, 12, 9, 13, '#2a1e2a'); if (d !== 1) { b.set(6, 9, '#e43b44'); b.set(9, 9, '#e43b44'); } const q = f === 1 ? 1 : f === 2 ? -1 : 0; for (let k = 0; k < 3; k++) { const dy = k * 2 + (k % 2 ? q : -q); line(b, 5, 9 + k, 1, 6 + dy, '#2a1e2a'); line(b, 1, 6 + dy, 0, 11 + dy, '#2a1e2a'); line(b, 10, 9 + k, 14, 6 + dy, '#2a1e2a'); line(b, 14, 6 + dy, 15, 11 + dy, '#2a1e2a'); } }
+    else { const a = f === 1 ? 1 : f === 2 ? -1 : 0; for (let y = 8 + a; y <= 16; y++) { const t = (y - 8 - a) / (8 - a), hw = Math.round(3 + t * 4); rect7(b, 8 - hw, y, 7 + hw, y, y === 8 + a ? '#c8f0a0' : y === 16 ? '#4e9a3c' : '#7ccc5c'); } if (d !== 1) { b.set(5, 12, '#1f2a14'); b.set(10, 12, '#1f2a14'); } b.set(5, 10 + a, '#e8ffd0'); }
+    return b;
+  }
+  A.monstroSheet = function (m) {
+    if (monstroCache[m]) return monstroCache[m];
+    const [c, x] = mk(A.MONSTRO_W * 3, A.MONSTRO_H * 4);
+    A.polishWith(() => { for (let d = 0; d < 4; d++) for (let f = 0; f < 3; f++) x.drawImage(monstroFrame(m, f, d).canvas(), f * A.MONSTRO_W, d * A.MONSTRO_H); });
+    return (monstroCache[m] = c);
+  };
+  // o covil de cada monstro (32 x 28): a boca de pedra, a tocha e o que ele deixa por perto
+  const covilCache = {};
+  A.covilImg = function (m) {
+    if (covilCache[m]) return covilCache[m];
+    return (covilCache[m] = A.polishWith(() => {
+      const b = new Buf(32, 28);
+      for (let y = 4; y <= 25; y++) { const t = (y - 4) / 21, hw = Math.round(5 + Math.sqrt(t) * 10); for (let x = 16 - hw; x <= 15 + hw; x++) { const c = H7(x, y, 301) < 0.2 ? STONE[1] : x < 14 ? STONE[3] : STONE[2]; b.set(x, y, c); } }
+      for (let y = 13; y <= 25; y++) { const t = (y - 13) / 12, hw = Math.round(2 + Math.sqrt(t) * 5); for (let x = 16 - hw; x <= 15 + hw; x++) b.set(x, y, y < 16 ? '#1f1a24' : '#120e16'); }
+      for (const x of [5, 26]) { rect7(b, x, 16, x, 25, PLANK[0]); rect7(b, x - 1, 14, x + 1, 15, '#f77622'); b.set(x, 13, '#fee761'); }
+      if (m === 'esqueleto') for (const [x, y] of [[9, 25], [21, 26], [12, 26]]) { rect7(b, x, y, x + 2, y, '#e8e4d4'); }
+      if (m === 'aranha') for (let k = 0; k < 5; k++) { line(b, 8, 12, 8 + k * 4, 25, '#e8e8f0'); }
+      if (m === 'gosma') for (const [x, y] of [[7, 25], [23, 26], [17, 26]]) { rect7(b, x, y, x + 2, y + 1, '#7ccc5c'); }
+      if (m === 'goblin') { line(b, 22, 18, 22, 25, PLANK[1]); rect7(b, 21, 18, 23, 19, '#e8e4d4'); }
+      if (m === 'ogro') { rect7(b, 7, 24, 10, 26, '#6d6672'); rect7(b, 21, 25, 24, 26, '#6d6672'); }
+      return b.canvas();
+    }));
+  };
   // 0.37: a taberna (48 x 36, 3 x 2 passos): parede de tábua, janelas acesas, a placa da caneca e o barril na porta
   function tabernaSpr() {
     const b = new Buf(48, 36);

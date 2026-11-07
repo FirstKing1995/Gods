@@ -1184,16 +1184,19 @@
       return `<p class="small">Ainda não há guilda. ${Gu.temTaberna(S) ? esc(wg ? 'Agora não: ' + wg + '.' : 'Construa a guilda: é ali que os grupos se formam.') : esc(w ? 'A taberna ' + w + '.' : 'Comece pela taberna, no menu Construir.')}</p>`;
     }
     const quadro = g.quadro.map((m) => {
-      const T = Gu.TIPOS[m.tipo], R0 = Gu.RANKS[T.rank], why = Gu.sonhoWhy(S, m);
-      return `<li class="povo-row"><img class="ico ico-lg" src="${ic('guilda')}" alt=""><div><b>${esc(T.nome)}</b> <span class="small" style="color:${R0.cor}">rank ${esc(R0.nome)}</span><span class="small">${Math.max(1, Math.ceil((m.ate - S.t) / C.DAY_MIN))} dias no quadro · uns ${T.dias[0]} a ${T.dias[1]} dias de viagem</span><div class="chips"><button type="button" class="btn btn-small" data-gact="guilda-sonho" data-id="${m.id}"${why ? ' disabled' : ''} title="${esc(why ? 'Agora não: ' + why : 'Os mais fortes saem hoje')}">Mandar um sonho (${C.GUILDA_SONHO} de Poder)</button></div></div></li>`;
+      const T = Gu.TIPOS[m.tipo], R0 = Gu.RANKS[Gu.rankM(m)], why = Gu.sonhoWhy(S, m);
+      return `<li class="povo-row"><img class="ico ico-lg" src="${ic(m.tipo === 'covil' ? 'covil' : 'guilda')}" alt=""><div><b>${esc(Gu.nomeM(m))}</b> <span class="small" style="color:${R0.cor}">rank ${esc(R0.nome)}</span><span class="small">${Math.max(1, Math.ceil((m.ate - S.t) / C.DAY_MIN))} dias no quadro · uns ${T.dias[0]} a ${T.dias[1]} dias de viagem</span><div class="chips"><button type="button" class="btn btn-small" data-gact="guilda-sonho" data-id="${m.id}"${why ? ' disabled' : ''} title="${esc(why ? 'Agora não: ' + why : 'Os mais fortes saem hoje')}">Mandar um sonho (${C.GUILDA_SONHO} de Poder)</button></div></div></li>`;
     }).join('');
     const fora = g.idas.map((i) => {
-      const T = Gu.TIPOS[i.tipo], why = Gu.protegeWhy(S, i);
-      return `<li class="povo-row"><img class="ico ico-lg" src="${ic('guilda')}" alt=""><div><b>${esc(T.nome)}</b><span class="small">${esc(i.nomes.join(', '))} · volta em uns ${Math.max(1, Math.ceil((i.volta - S.t) / C.DAY_MIN))} dias</span><div class="chips">${i.protegido ? '<span class="chip dom">Sob a sua proteção</span>' : `<button type="button" class="btn btn-small" data-gact="guilda-protege" data-id="${i.id}"${why ? ' disabled' : ''} title="${esc(why ? 'Agora não: ' + why : 'Mais chance, e ninguém morre nesta viagem')}">Proteger (${C.GUILDA_PROTEGE} de Poder)</button>`}</div></div></li>`;
+      const why = Gu.protegeWhy(S, i);
+      return `<li class="povo-row"><img class="ico ico-lg" src="${ic('guilda')}" alt=""><div><b>${esc(Gu.nomeM(i))}</b><span class="small">${esc(i.nomes.join(', '))} · volta em uns ${Math.max(1, Math.ceil((i.volta - S.t) / C.DAY_MIN))} dias</span><div class="chips">${i.protegido ? '<span class="chip dom">Sob a sua proteção</span>' : `<button type="button" class="btn btn-small" data-gact="guilda-protege" data-id="${i.id}"${why ? ' disabled' : ''} title="${esc(why ? 'Agora não: ' + why : 'Mais chance, e ninguém morre nesta viagem')}">Proteger (${C.GUILDA_PROTEGE} de Poder)</button>`}</div></div></li>`;
     }).join('');
     const hist = g.hist.map((h) => `<li class="small">${esc(h.txt)}</li>`).join('');
+    const Mo = G.Monstros, wEs = Mo ? Mo.esmagaWhy(S) : '';
+    const covis = Mo && S.monstros ? S.monstros.covis.map((c) => `<li class="povo-row"><img class="ico ico-lg" src="${ic('covil')}" alt=""><div><b>${esc(Mo.nomeDe(c))}</b> <span class="small ttl">força ${c.nv} de 3</span><span class="small">${c.bandos ? c.bandos + (c.bandos === 1 ? ' bando já saiu de lá' : ' bandos já saíram de lá') : 'Ainda não saiu nenhum bando'}</span><div class="chips"><button type="button" class="btn btn-small" data-gact="covil-esmaga" data-id="${c.id}"${wEs ? ' disabled' : ''} title="${esc(wEs ? 'Agora não: ' + wEs : 'A terra se abre e o covil acaba. Os heróis não ganham nada com isso')}">Esmagar (${C.COVIL_ESMAGA} de Poder)</button></div></div></li>`).join('') : '';
     return `<h3>O quadro</h3><ul class="donlist povolist">${quadro || '<li class="none small muted">Nenhuma missão pregada agora.</li>'}</ul>` +
       `<h3>Quem está fora</h3><ul class="donlist povolist">${fora || '<li class="none small muted">Ninguém saiu.</li>'}</ul>` +
+      (covis ? `<h3>Os covis</h3><ul class="donlist povolist">${covis}</ul>` : '') +
       (hist ? `<h3>O que já aconteceu</h3><ul class="mems">${hist}</ul>` : '');
   }
   // 0.36: os heróis do povo, do mais forte para o menos forte
@@ -1912,6 +1915,7 @@
       }
       if (a === 'vervila') { const v = S.soc.vila; $('#modal-deus').hidden = true; if (v) UI.hooks.center((v.x + 0.5) * C.TILE, (v.y + 0.5) * C.TILE); return; }
     }
+    if (a === 'covil-esmaga' && G.Monstros) { G.Monstros.esmaga(S, +b.dataset.id); UI.deus('guilda'); UI.update(0, true); return; }   // 0.38
     if (a === 'guilda-sonho' || a === 'guilda-protege') { (a === 'guilda-sonho' ? G.Guilda.sonho : G.Guilda.protege)(S, +b.dataset.id); UI.deus('guilda'); UI.update(0, true); return; }   // 0.37
     if (a === 'heroi') { e.preventDefault(); $('#modal-deus').hidden = true; UI.select(+b.dataset.pid, 0, true); return; }   // 0.36
     if (a === 'chamar' && G.Povos) {   // Etapa 12

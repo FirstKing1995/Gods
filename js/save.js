@@ -117,6 +117,7 @@
       povo: S.povo || null,   // 0.16: o nome e o título do lugar
       raca: S.raca || null,   // 0.36: o povo que fundou o mundo
       guilda: S.guilda || null,   // 0.37: o quadro e os grupos fora
+      monstros: S.monstros || null,   // 0.38: os covis
       tribo: S.tribo || null,   // 0.28: as tribos (a primeira leva as outras e a relação entre elas)
       rel: S.base ? null : S.rel || null,
       outras: S.base || !S.outras ? null : S.outras.map((B) => Save.serialize(B)),
@@ -183,6 +184,7 @@
       tribo: d.tribo || null,
       raca: d.raca || null,
       guilda: d.guilda || null,
+      monstros: d.monstros || null,
     };
     if (base) { S.base = base; S.rel = base.rel; } else S.rel = d.rel || null;
     for (const p of S.people) {

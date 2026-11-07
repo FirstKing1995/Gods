@@ -8,7 +8,7 @@
   const Sim = () => G.Sim, Fam = () => G.Family, Tech = () => G.Tech;
 
   // armado: ferramenta na mão (a lança vem dela) e a lança já descoberta
-  B.armed = (S, p) => !!(p && p.alive && ((p.tool && Tech().known(S, 'lanca')) || (p.sangue && G.Povos && G.Povos.has(p, 'garras') && Fam().age(S, p) >= 12)));   // Etapa 12: o povo-fera luta com as garras
+  B.armed = (S, p) => !!(p && p.alive && ((G.Rpg && G.Rpg.de(p)) || (p.tool && Tech().known(S, 'lanca')) || (p.sangue && G.Povos && G.Povos.has(p, 'garras') && Fam().age(S, p) >= 12)));   // Etapa 12: o povo-fera luta com as garras
   // o alvo de uma luta: { kind: 'fauna' | 'narr', id } → a entidade, se ainda existe
   B.ent = function (S, tgt) {
     if (!tgt) return null;
@@ -23,8 +23,8 @@
     return e.state === 'morta' || e.state === 'fuga' || (e.sp === 'jacare' && e.inWater);
   };
   const SP_NAME = { lobo: 'lobo', onca: 'onça' }, SP_THE = { lobo: 'o lobo', onca: 'a onça' };
-  B.theOf = (S, tgt) => { const e = B.ent(S, tgt); if (!e) return 'o bicho'; return tgt.kind === 'narr' ? SP_THE[e.k] || 'o bicho' : (C.BICHOS[e.sp] || C.BICHOS.capivara).art.replace(/^uma /, 'a ').replace(/^um /, 'o '); };
-  B.nameOf = (S, tgt) => { const e = B.ent(S, tgt); if (!e) return 'bicho'; return tgt.kind === 'narr' ? SP_NAME[e.k] || e.k : (C.BICHOS[e.sp] || C.BICHOS.capivara).name.toLowerCase(); };
+  B.theOf = (S, tgt) => { const e = B.ent(S, tgt); if (!e) return 'o bicho'; if (e.m && G.Monstros) return G.Monstros.TIPOS[e.m].art.replace(/^uma /, 'a ').replace(/^um /, 'o '); return tgt.kind === 'narr' ? SP_THE[e.k] || 'o bicho' : (C.BICHOS[e.sp] || C.BICHOS.capivara).art.replace(/^uma /, 'a ').replace(/^um /, 'o '); };
+  B.nameOf = (S, tgt) => { const e = B.ent(S, tgt); if (!e) return 'bicho'; if (e.m && G.Monstros) return G.Monstros.TIPOS[e.m].name.toLowerCase(); return tgt.kind === 'narr' ? SP_NAME[e.k] || e.k : (C.BICHOS[e.sp] || C.BICHOS.capivara).name.toLowerCase(); };
   const ATTACK = { jacare: (p) => 'Um jacaré atacou ' + p.name + ' na beira d’água!', porco: (p) => 'Um porco-do-mato partiu para cima de ' + p.name + '!',
     anta: (p) => 'Uma anta ferida derrubou ' + p.name + '!' };
 

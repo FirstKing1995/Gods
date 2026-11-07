@@ -1088,6 +1088,7 @@
     if (G.Mar) G.Mar.daily(S);   // Etapa 18: a volta da expedição, a carga do barco, as colônias
     if (G.Rpg) G.Rpg.daily(S);   // 0.36: heróis
     if (G.Guilda) G.Guilda.daily(S);   // 0.37: as missões
+    if (G.Monstros) G.Monstros.daily(S);   // 0.38: os covis
     if (G.Eras) G.Eras.daily(S);   // Etapas 19 e 20: a idade, o rumo, a magia, o desafio de cada idade
     if (G.Avatar) G.Avatar.daily(S);   // Etapa 21: o abençoado (a pergunta, o líder nato)
     if (G.Life) G.Life.daily(S);
@@ -1134,6 +1135,7 @@
     if (G.Campo) G.Campo.hourly(S);
     if (G.Minas) G.Minas.hourly(S);   // Etapa 12: a ferramenta de ferro e a joia de quem passa pelo acampamento
     if (G.Povos) G.Povos.hourly(S);   // e a caravana que está para chegar
+    if (G.Monstros) G.Monstros.hourly(S);   // 0.38: o bando sai de noite
     if (G.Memoria) G.Memoria.hourly(S);   // Etapa 13: o corpo, o velório, o rito, o dia dos mortos
     if (G.Soc) G.Soc.hourly(S);   // Etapa 14: os crimes, o julgamento, o líder, as obras do povo
     if (G.Gente) G.Gente.hourly(S);   // Etapa 15: aprender vendo, o combinado, o que se pensa em voz alta
@@ -1256,7 +1258,7 @@
     if ((d.raio || 0) > 0 && p.needs.saude <= 0 && (d.raio || 0) >= Math.max(d.frio, d.fome, d.sede)) p.cause = 'raio';
     if ((d.parto || 0) > 0 && (d.parto || 0) >= Math.max(d.frio, d.fome, d.sede, d.raio || 0)) p.cause = 'parto';
     // bichos (Etapa 9): lobo, onça, jacaré ou outro bicho; vence quem mais feriu
-    const beasts = [['lobos', d.lobo || 0], ['onca', d.onca || 0], ['jacare', d.jacare || 0], ['bicho', d.bicho || 0]].sort((a, b) => b[1] - a[1]);
+    const beasts = [['lobos', d.lobo || 0], ['onca', d.onca || 0], ['jacare', d.jacare || 0], ['bicho', d.bicho || 0], ['monstro', d.monstro || 0]].sort((a, b) => b[1] - a[1]);
     if (beasts[0][1] > 0 && beasts[0][1] >= Math.max(d.frio, d.fome, d.sede, d.raio || 0, d.parto || 0)) p.cause = beasts[0][0];
     if (d.velhice) p.cause = 'velhice';
     if (d.crime) p.cause = 'crime';   // Etapa 14: morto por outra pessoa
@@ -1276,7 +1278,7 @@
         (i) => (!G.W.objAt(w, i) && w.bgrid[i] < 0 && !Sim.isCamp(S, i) && !G.IS_WATER[w.tile[i]] ? 1 : 0), 30);
       if (r) G.W.addObj(w, 'grave', r.idx % w.W, (r.idx / w.W) | 0, { name: p.name, pid: p.id, t: S.t });
     }
-    const causeTxt = { frio: 'de frio', sede: 'de sede', fome: 'de fome', raio: 'atingid' + (p.sex === 'F' ? 'a' : 'o') + ' por um raio', parto: 'no parto', velhice: 'de velhice', lobos: 'no ataque dos lobos',
+    const causeTxt = { frio: 'de frio', sede: 'de sede', fome: 'de fome', raio: 'atingid' + (p.sex === 'F' ? 'a' : 'o') + ' por um raio', parto: 'no parto', velhice: 'de velhice', monstro: 'no ataque de um monstro', lobos: 'no ataque dos lobos',
       onca: 'no ataque da onça', jacare: 'no ataque de um jacaré', bicho: 'atacad' + (p.sex === 'F' ? 'a' : 'o') + ' por um bicho', crime: 'pelas mãos de outra pessoa', doenca: 'de febre' }[p.cause];
     const age = Sim.ageOf(S, p);
     Sim.chron(S, p.name + ' morreu ' + causeTxt + (age < 1 ? ', com poucos meses.' : ', ' + (age < 12 ? 'com ' : 'aos ') + age + (age === 1 ? ' ano.' : ' anos.')));

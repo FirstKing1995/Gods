@@ -1779,14 +1779,14 @@
       if (!e || B.over(S, a.tgt)) { say(S, p, 'venceu', 0.6, true); return DONE; }
       a.t += dt;
       // na caçada à onça, a caminhada até a toca é longa; na defesa, a luta é curta
-      if (a.t > (hunt ? 360 : 45) || !B.armed(S, p) || p.needs.saude < 25) return DONE;
+      if (a.t > (hunt ? 360 : e.m ? 300 : 45) || !B.armed(S, p) || p.needs.saude < 25) return DONE;   // 0.38: contra monstro, a luta vai longe
       const R = cacaR(S), d = Math.hypot(e.x - p.x, e.y - p.y);
       if (d > R) {
         a.stage = 'go';
         if (!moving(p) || S.t >= a.repath) {
           a.repath = S.t + (hunt && d > 8 ? 20 : 4);
           const w = S.world, ex = e.x, ey = e.y;
-          const r = W.findNearest(w, tileOf(S, p), (i) => { const x = i % w.W + 0.5, y = ((i / w.W) | 0) + 0.5; return Math.hypot(x - ex, y - ey) <= R - 0.4 ? 1 : 0; }, hunt ? 240 : 80);
+          const r = W.findNearest(w, tileOf(S, p), (i) => { const x = i % w.W + 0.5, y = ((i / w.W) | 0) + 0.5; return Math.hypot(x - ex, y - ey) <= R - 0.4 ? 1 : 0; }, hunt || e.m ? 240 : 80);
           if (!r) return FAIL;
           setPath(p, r.path.length ? r.path : null);
         }
@@ -2541,7 +2541,7 @@
   };
   AI.describe = function (S, p) {
     if (p.fora) return G.Soc ? G.Soc.foraTxt(S, p) : 'Foi embora';   // Etapa 14
-    if (!p.alive) { const o = p.sex === 'F' ? 'a' : 'o'; return 'Morreu ' + ({ frio: 'de frio', sede: 'de sede', fome: 'de fome', raio: 'atingid' + o + ' por um raio', parto: 'no parto', velhice: 'de velhice', lobos: 'no ataque dos lobos',
+    if (!p.alive) { const o = p.sex === 'F' ? 'a' : 'o'; return 'Morreu ' + ({ frio: 'de frio', sede: 'de sede', fome: 'de fome', raio: 'atingid' + o + ' por um raio', parto: 'no parto', velhice: 'de velhice', monstro: 'no ataque de um monstro', lobos: 'no ataque dos lobos',
       onca: 'no ataque da onça', jacare: 'no ataque de um jacaré', bicho: 'atacad' + o + ' por um bicho', crime: 'pelas mãos de outra pessoa' }[p.cause] || ''); }
     if (p.carriedBy) { const c = person(S, p.carriedBy); return c ? (c.sleeping ? 'Dormindo no colo de ' : 'No colo de ') + c.name : 'Sozinho'; }
     const a = p.act;
