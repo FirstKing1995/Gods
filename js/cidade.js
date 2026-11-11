@@ -343,6 +343,7 @@
     if (!c || !S.soc || b.fogo) return false;
     b.fogo = S.t; S.soc.arde = 1; c.fogos++;
     if (!S.safe) S.events.push({ k: 'soc', ev: 'fogo', on: true, bid: b.id, x: b.x + b.w / 2, y: b.y + b.h / 2 });
+    if (!S.safe && !S.resumido) S.events.push({ k: 'fx', fx: 'chamas', x: b.x + b.w / 2 - 0.5, y: b.y + b.h - 1, treme: 3, ms: 300 });   // 0.42
     return true;
   };
   function faiscaHora(S) {

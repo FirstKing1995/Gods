@@ -1176,7 +1176,7 @@
     } else if (mode === 'site') {
       if (siteWorld) R.draw(null, 1, now, siteWorld);
     } else if (S) {
-      if (mode === 'game' && speed > 0 && !holdSim) {
+      if (mode === 'game' && speed > 0 && !holdSim && now >= R.pausaAte) {   // 0.42: a pausa do golpe congela o mundo um instante
         acc += dt * (C.DAY_MIN / C.REAL_SEC_PER_DAY) * C.SPEEDS[speed];
         // 0.14: a simulação tem um tanto de tempo por quadro (como nos jogos de cidade): se a aldeia é grande demais para a
         // velocidade pedida, o mundo anda o que dá e a tela segue fluida, em vez de travar tentando alcançar
@@ -1305,7 +1305,7 @@
     document.addEventListener('visibilitychange', () => { if (document.hidden && mode === 'game') beaconSave(); });
     window.addEventListener('pagehide', () => { if (mode === 'game') beaconSave(); });
 
-    $('#btn-new').addEventListener('click', () => { setMode('site'); newSiteWorld(); });
+    $('#btn-new').addEventListener('click', (e) => UI.ocupado(e.currentTarget, 'Gerando o mundo…', () => { setMode('site'); newSiteWorld(); }));
     $('#btn-continue').addEventListener('click', continueGame);
     $('#btn-login').addEventListener('click', () => { Net.warm(); UI.acct('entrar', login); });
     $('#btn-signup').addEventListener('click', () => { Net.warm(); UI.acct('criar', login); });
@@ -1323,6 +1323,34 @@
       S = null; Save.slot = ''; setMode('site'); newSiteWorld();
     });
     $('#btn-mundos').addEventListener('click', openMundos);
+    // 0.41: exportar e importar o mundo como arquivo (o save mora no navegador; limpar os dados apagava tudo)
+    $('#menu-export').addEventListener('click', () => {
+      if (!S || !save(false)) { UI.toast('Não deu para preparar o arquivo agora.', 'warn'); return; }
+      const d = Save.read(Save.slot);
+      if (!d) { UI.toast('Não deu para preparar o arquivo agora.', 'warn'); return; }
+      const url = URL.createObjectURL(new Blob([JSON.stringify(d)], { type: 'application/json' }));
+      const a = document.createElement('a');
+      a.href = url; a.download = Save.nomeArquivo(raiz());
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      UI.toast('Mundo exportado: ' + a.download + '. Guarde o arquivo; dá para abrir em Importar mundo, na tela de início.', 'good');
+    });
+    $('#btn-importar').addEventListener('click', () => { const f = $('#file-importar'); f.value = ''; f.click(); });
+    $('#file-importar').addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      if (file.size > 40e6) { UI.toast('Esse arquivo é grande demais para ser um mundo do Gods.', 'warn'); return; }
+      const rd = new FileReader();
+      rd.onload = () => {
+        let d = null;
+        try { d = JSON.parse(String(rd.result)); } catch (er) { d = null; }
+        const id = d ? Save.importar(d) : null;
+        if (!id) { UI.toast(d && d.game === 'genesis' ? (Save.erro === 'cheio' ? 'Sem espaço neste navegador. Apague um mundo antigo em Seus mundos.' : 'Não deu para guardar o mundo.') : 'Esse arquivo não é um mundo do Gods.', 'warn'); return; }
+        UI.toast('Mundo importado.', 'good');
+        continueGame(id);
+      };
+      rd.readAsText(file);
+    });
     $('#btn-mundos-close').addEventListener('click', () => { $('#modal-mundos').hidden = true; });
     $('#btn-mapa').addEventListener('click', () => abrirMapa());   // Etapa 17
     $('#btn-mapa-close').addEventListener('click', () => { $('#modal-mapa').hidden = true; });

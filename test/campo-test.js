@@ -439,6 +439,7 @@ if (isMainThread) {
     Sim.complete(S, b);
     setDay(S, 0, 1, 6);
     S.stock.madeira = 40;
+    if (G.Soc) G.Soc.setModo(S, 'eu');   // 0.41: desde a 0.14 o povo marca obras sozinho e gastava esta madeira
     S.vontades.construir = 3; S.vontades.roca = 0; S.vontades.madeira = 0; S.vontades.fogo = 0;
     const n = ring(S, b.x - 1, b.y - 1, b.x + 3, b.y + 3, false);
     days(S, 4);

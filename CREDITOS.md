@@ -22,4 +22,11 @@ todas **CC0 (domínio público)**: livres para uso comercial, sem obrigação de
 - Town Theme RPG: https://opengameart.org/content/town-theme-rpg
 
 ## Fontes (SIL Open Font License 1.1)
-- Pixelify Sans e Crimson Pro (Google Fonts); Jersey 10, The Soft Type Project (só os números, em `css/digits.css`).
+- Pixelify Sans e Crimson Pro (Google Fonts, cópias do fontsource); Jersey 10, The Soft Type Project (só os números, em `css/digits.css`).
+  Desde a 0.41 elas vão dentro do jogo, em `css/fonts.css`; o texto da licença está em `licencas/OFL-fontes.txt`.
+
+## Efeitos animados (0.42), em `js/efeitos.js`
+- **PVFX Foundry 1.0.0**, de nerijs: https://nerijs.itch.io/pvfx-foundry. **CC0 1.0** (domínio público, uso comercial livre).
+  Gerados por programa próprio do autor (Pixel VFX Studio), sem arte de terceiros; o kit de desenho que ele usa
+  (pixelfx, de Patch e Hugo Duprez, licença MIT) não vem junto, só é creditado. O pacote original e a licença
+  ficam fora do jogo, em `GODS/pacotes/pvfx-foundry`; `tools/efeitos.js` escolhe e embute os 23 efeitos usados.

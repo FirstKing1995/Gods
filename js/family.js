@@ -440,7 +440,8 @@
       for (const m of men) sum += F.afeto(w, m);
       let r = S.rng.next() * sum, m = men[0];
       for (const x of men) { r -= F.afeto(w, x); if (r <= 0) { m = x; break; } }
-      if (S.rng.next() < C.CONCEIVE_NIGHT * (F.afeto(w, m) / 100) * (G.Deus && G.Deus.dom(S, 'ventre') ? C.DOM.ventreConceive : 1) * ((w.sangue || m.sangue) && G.Povos ? G.Povos.fert(w, m) : 1)) {
+      const fomeV = S.ctx && S.ctx.alive >= C.FOME_FILHO_POVO && S.ctx.foodDays < C.FOME_FILHO_DIAS ? C.FOME_FILHO_MULT : 1;   // 0.41: tempo de fome
+      if (S.rng.next() < fomeV * C.CONCEIVE_NIGHT * (F.afeto(w, m) / 100) * (G.Deus && G.Deus.dom(S, 'ventre') ? C.DOM.ventreConceive : 1) * ((w.sangue || m.sangue) && G.Povos ? G.Povos.fert(w, m) : 1)) {
         w.preg = { t0: S.t, due: S.t + Math.round(C.PREGNANCY_Y * YEAR()), father: m.id, known: false };
         if (G.Avatar && G.Avatar.marcaConcepcao(S, w, m)) w.preg.abencoado = 1;   // Etapa 21: o filho abençoado
       }

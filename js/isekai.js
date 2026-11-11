@@ -70,12 +70,15 @@
   Is.tem = (p, d) => { const o = Is.de(p); return !!(o && o.dom === d); };
   Is.xp = (p) => (Is.tem(p, 'rapido') ? (p.outro.guia ? 3 : 2) : 1);
   // a cada nascimento, uma chance pequena; a primeira alma vem depois de umas tantas crianças
+  // 0.42: um efeito animado na tela (nada na simulação; o dia resumido não tem tela)
+  const fx = (S, k, x, y, o) => { if (!S.resumido && !S.safe && S.events) S.events.push(Object.assign({ k: 'fx', fx: k, x, y }, o || {})); };
   Is.onBirth = function (S, baby) {
     S.stats.nascidosI = (S.stats.nascidosI || 0) + 1;
     const r = hashN(baby.id, S.seed, 11);
     if (S.stats.nascidosI < C.ALMA_DEPOIS || r >= C.ALMA_CHANCE) return false;
     baby.outro = { t: S.t, mundo: Is.MUNDOS[Math.floor(hashN(baby.id, S.seed, 13) * Is.MUNDOS.length)], dom: LISTA[Math.floor(hashN(baby.id, S.seed, 17) * LISTA.length)], falou: 0, escolha: '' };
     S.stats.almas = (S.stats.almas || 0) + 1;
+    fx(S, 'alma', baby.x - 0.5, baby.y - 0.4);
     return true;
   };
   Is.pendentes = (S) => S.people.filter((p) => p.alive && p.outro && p.outro.falou && !p.outro.escolha);

@@ -103,7 +103,7 @@ if (isMainThread) {
     const byHerd = {};
     for (const h of S.fauna.herds) byHerd[h.sp] = (byHerd[h.sp] || 0) + 1;
     // o bicho que Deus cria (Etapa 11) não nasce com o mundo
-    check('bandos de cada espécie, na conta da tabela (o bicho de Deus, nenhum)', Object.keys(C.BICHOS).every((sp) => (C.BICHOS[sp].created ? !byHerd[sp] : (byHerd[sp] || 0) >= 1 && (byHerd[sp] || 0) <= C.BICHOS[sp].n)), JSON.stringify(byHerd));
+    check('bandos de cada espécie, na conta da tabela (o bicho de Deus, nenhum)', Object.keys(C.BICHOS).every((sp) => (C.BICHOS[sp].created ? !byHerd[sp] : (C.BICHOS[sp].hab === 'mangue' || C.BICHOS[sp].hab === 'sertao') ? true /* 0.41: bicho de região não nasce no mapa antigo */ : (byHerd[sp] || 0) >= 1 && (byHerd[sp] || 0) <= C.BICHOS[sp].n)), JSON.stringify(byHerd));
   }
 
   // ===================== save antigo (só capivaras) =====================

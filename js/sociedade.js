@@ -1132,7 +1132,7 @@
     pede: ['O povo pede', 'O líder aponta o lugar e espera o seu sim.'],
     decide: ['O povo decide', 'O líder marca sozinho o que falta, usando até ' + Math.round(C.SOC_TETO * 100) + '% de cada material do estoque. Numa aldeia grande, várias obras ao mesmo tempo.'],
   };
-  So.FALTA = { casa: 'Tem gente dormindo ao relento.', longe: 'As casas de lá ficam longe do estoque.', fogo: 'Há casa longe de qualquer fogo.', armazem: 'A comida está estragando no estoque.', cerca: 'Bicho entrou na roça.', mina: 'Falta pedra.' };
+  So.FALTA = { casa: 'Tem gente dormindo ao relento.', longe: 'As casas de lá ficam longe do estoque.', fogo: 'Há casa longe de qualquer fogo.', armazem: 'A comida está estragando no estoque.', cerca: 'Bicho entrou na roça.', mina: 'Falta pedra.', roca: 'A comida não cresce junto com o povo.' };
   So.setModo = function (S, m) {
     if (!So.MODOS[m]) return false;
     S.soc.modo = m;
@@ -1191,11 +1191,23 @@
       const b = S.buildings.find((x) => x.type === 'roca' && x.built && x.farm && x.farm.raidDay !== undefined && S.ck.day - x.farm.raidDay <= 12 && !K.enclosed(S, x));
       if (b) out.push({ type: 'cerca', why: 'cerca', perto: b });
     }
+    // 0.41: quem já sabe plantar abre roça sozinho quando a comida não acompanha o povo. Antes, a vila largada vivia só
+    // de peixe e, passando de umas 40 pessoas, o rio não dava conta e vinha a fome
+    if (K && precisaRoca(S)) out.push({ type: 'roca', why: 'roca' });
     if (s.semPedra >= 2 && !tem('mina') && C.BUILD.mina && G.Tech.buildOpen(S, 'mina')) out.push({ type: 'mina', why: 'mina' });
     if (G.Cidade && S.cidade) for (const f of G.Cidade.faltas(S)) out.push(f);   // Etapa 16: a instituição que a sociedade pede
     return out;
   }
   So.faltas = faltas;
+  function precisaRoca(S) {
+    if (!G.Campo.known(S, 'roca') || !C.BUILD.roca || !G.Tech.buildOpen(S, 'roca')) return false;
+    const rocas = S.buildings.filter((b) => b.type === 'roca');
+    if (rocas.some((b) => !b.built)) return false;   // uma por vez
+    const vivos = S.people.filter((p) => p.alive).length;
+    if (rocas.length >= Math.ceil(vivos / C.SOC_ROCA_POR)) return false;
+    return !rocas.length || S.ctx.foodDays < C.SOC_ROCA_DIAS;
+  }
+  So.precisaRoca = precisaRoca;
   // 0.16: a casa mais longe de qualquer estoque (o centro ou um armazém), se houver CENTRO_LONGE passos ou mais e
   // pelo menos 3 casas por ali
   function bairroLonge(S) {
@@ -1276,6 +1288,7 @@
     // 0.16: o armazém não fica mais preso ao centro: o das casas longe vai para o meio delas
     if (f.type === 'armazem') return f.perto ? lugar(S, 'armazem', f.perto.x + 1, f.perto.y + 1, 2, 9) : lugar(S, 'armazem', cx, cy, 2, 9);
     if (f.type === 'mina') return lugar(S, 'mina', cx, cy, 3, 40);
+    if (f.type === 'roca') return lugar(S, 'roca', cx, cy, 3, 16) || lugar(S, 'roca', cx, cy, 4, 26);
     if (G.Cidade && G.Cidade.isCidade(f.type)) return lugar(S, f.type, cx, cy, 3, 16) || lugar(S, f.type, cx, cy, 4, 26);   // Etapa 16
     // a casa nova perto das outras
     const casas = S.buildings.filter((b) => Sm.def(b).cap);
@@ -1290,7 +1303,7 @@
     for (const k in cost) if (cost[k] > Math.floor((S.stock[k] || 0) * C.SOC_TETO)) return false;
     return true;
   }
-  const NOME_OBRA = { barraca: 'uma barraca', fogueira: 'uma fogueira', armazem: 'um armazém', cerca: 'uma cerca em volta da roça', mina: 'uma mina' };
+  const NOME_OBRA = { barraca: 'uma barraca', fogueira: 'uma fogueira', armazem: 'um armazém', cerca: 'uma cerca em volta da roça', mina: 'uma mina', roca: 'uma roça' };
   So.NOME_OBRA = NOME_OBRA;
   function marcar(S, q, L) {
     const Sm = Sim(), K = G.Campo;

@@ -78,12 +78,15 @@
   const herois = (S) => S.people.filter((p) => p.alive && R.de(p));
   R.herois = (S) => herois(S).sort((a, b) => b.rpg.nv - a.rpg.nv || a.id - b.id);
   const teto = (S) => Math.max(2, Math.ceil(S.people.filter((p) => p.alive).length * 0.25));   // nem todo mundo é herói
+  // 0.42: um efeito animado na tela (nada na simulação; o dia resumido não tem tela)
+  const fx = (S, k, x, y, o) => { if (!S.resumido && !S.safe && S.events) S.events.push(Object.assign({ k: 'fx', fx: k, x, y }, o || {})); };
   R.desperta = function (S, p, cls) {
     if (R.de(p)) return false;
     const r = p.rpg || (p.rpg = { por: {} });
     r.cls = cls || classeDe(S, p); r.nv = 1; r.xp = r.xp0 || 0; r.habs = []; delete r.xp0; r.t = S.t;
     const c = R.CLASSES[r.cls], nome = R.nome(p);
     S.stats.herois = (S.stats.herois || 0) + 1;
+    fx(S, 'luz', p.x - 0.5, p.y - 0.4);
     if (S.stats.herois === 1) Sim().chron(S, p.name + ' despertou como ' + nome.toLowerCase() + ': é a primeira pessoa do povo a sentir a própria força crescer. ' + c.desc);
     else if (!S.safe) Sim().toast(S, p.name + ' despertou como ' + nome.toLowerCase() + '.', 'good');
     sobe(S, p);
@@ -93,6 +96,7 @@
     const r = p.rpg;
     while (r.nv < R.NIVEL_MAX && r.xp >= R.pede(r.nv)) {
       r.xp -= R.pede(r.nv); r.nv++;
+      fx(S, 'nivel', p.x - 0.5, p.y - 0.4);
       const k = R.NIVEL_HAB.indexOf(r.nv);
       if (k >= 0) {
         const h = R.CLASSES[r.cls].habs[k];

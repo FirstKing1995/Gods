@@ -6,10 +6,10 @@ const root = path.join(__dirname, '..');
 const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
 const html = read('index.html');
 const body = html.split('<!--BODY-->')[1].split('<!--/BODY-->')[0].trim();
-const css = read('css/digits.css') + '\n' + read('css/style.css');
-const order = ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'sociedade', 'gente', 'cidade', 'regioes', 'mar', 'eras', 'avatar', 'visita', 'tribos', 'rpg', 'guilda', 'monstros', 'magia', 'isekai', 'save', 'offline', 'net', 'voz', 'ia', 'pacote', 'art', 'render', 'clima', 'audio', 'ui', 'main'];
+const css = read('css/fonts.css') + '\n' + read('css/digits.css') + '\n' + read('css/style.css');
+const order = ['core', 'config', 'world', 'sim', 'family', 'life', 'tech', 'invencoes', 'obras', 'fauna', 'bichos', 'campo', 'ai', 'god', 'deus', 'narrator', 'povos', 'minas', 'memoria', 'sociedade', 'gente', 'cidade', 'regioes', 'mar', 'eras', 'avatar', 'visita', 'tribos', 'rpg', 'guilda', 'monstros', 'magia', 'isekai', 'efeitos', 'save', 'offline', 'net', 'voz', 'ia', 'pacote', 'art', 'render', 'clima', 'audio', 'ui', 'main'];
 const js = order.map((f) => '/* ---- js/' + f + '.js ---- */\n' + read('js/' + f + '.js')).join('\n');
-const fonts = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400;1,600&family=Pixelify+Sans:wght@400;500;600;700&display=swap">';
+const fonts = '';   // 0.41: as fontes vêm embutidas em css/fonts.css (antes vinham do Google Fonts)
 const safeJs = js.replace(/<\/script/gi, '<\\/script');
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
 const full = `<!doctype html>

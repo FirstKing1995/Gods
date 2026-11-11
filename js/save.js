@@ -268,6 +268,24 @@
     if (!k) return null;
     try { const raw = st.getItem(keyOf(k)); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
   };
+  // 0.41: um mundo trazido de um arquivo (exportado antes) vira um mundo novo da lista. Devolve o id, ou null
+  Save.importar = function (d) {
+    if (!d || d.game !== 'genesis' || !Array.isArray(d.people) || typeof d.seed !== 'number') return null;
+    const st = ls(); if (!st) return null;
+    const id = Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36);
+    try { st.setItem(keyOf(id), JSON.stringify(d)); }
+    catch (e) { Save.erro = /quota/i.test(String(e && (e.name + e.message))) ? 'cheio' : 'falha'; return null; }
+    const l = readIdx(st).filter((m) => m.id !== id);
+    l.push(metaOf(id, d));
+    writeIdx(st, l);
+    return id;
+  };
+  // 0.41: o nome do arquivo de um mundo exportado (sem acento nem espaço)
+  Save.nomeArquivo = function (S) {
+    const ck = G.Sim.clock(S.t), casal = S.people.slice().sort((a, b) => a.id - b.id).slice(0, 2).map((p) => p.name).join('-');
+    const limpo = casal.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9-]+/g, '').toLowerCase() || 'mundo';
+    return 'gods-' + limpo + '-ano' + ck.year + '.json';
+  };
   // apaga só o mundo aberto (os outros ficam)
   Save.clear = function () { if (Save.slot) Save.remove(Save.slot); };
 })(globalThis.G = globalThis.G || {});

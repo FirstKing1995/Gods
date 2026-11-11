@@ -642,6 +642,15 @@
           f.fuel = Math.max(f.fuel, 1); st.madeira--;
           eatRoca(S, p, a, rocaDish(st, true), true, cm);
         }
+        else if (!lit && rocaDish(st, true)) {
+          // 0.41: sem lenha no estoque (ou sem fogueira), junta gravetos e cozinha num foguinho: demora e rende menos.
+          // Antes, com só feijão e mandioca guardados, o povo ficava tentando comer e morria de fome com o estoque cheio
+          const k = rocaDish(st, true);
+          st[k]--; n.fome += C.ROCA[k].food * C.GRAVETO_FOOD; a.next = a.t + C.GRAVETO_MIN; a.dish = k;
+          Sim.addMem(S, p, 'comeuQuente');
+          if (G.Gente) G.Gente.comeu(S, p, k);
+          S.stats.gravetos = (S.stats.gravetos || 0) + 1;
+        }
         else {
           if (n.fome > 40) return DONE;
           // o estoque acabou enquanto chegava: tenta um arbusto com fruta por perto

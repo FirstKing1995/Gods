@@ -55,12 +55,15 @@
       if (c === 'sacerdote' && R().tem(p, 'prece')) for (const q of S.people) if (q.alive && !q.fora && q !== p && Math.hypot(q.x - p.x, q.y - p.y) < 6 && G.God && G.God.addFaith) G.God.addFaith(S, q, 0.5);
     }
   };
+  // 0.42: um efeito animado na tela (nada na simulação; o dia resumido não tem tela)
+  const fx = (S, k, x, y, o) => { if (!S.resumido && !S.safe && S.events) S.events.push(Object.assign({ k: 'fx', fx: k, x, y }, o || {})); };
   // o sacerdote cura um por dia: quem mais precisa, a qualquer distância na vila
   function cura(S, p) {
     const r = p.rpg, alvo = S.people.filter((q) => q.alive && !q.fora && q.needs.saude < 85).sort((a, b) => a.needs.saude - b.needs.saude)[0];
     if (!alvo) return false;
     const n = C.MAGIA_CURA + r.nv * 1.5;
     alvo.needs.saude = Math.min(100, alvo.needs.saude + n);
+    fx(S, 'sacerdote', alvo.x - 0.5, alvo.y - 0.4);
     if (R().tem(p, 'milagre') && alvo.sick) { alvo.sick = null; if (!S.safe) Sim().toast(S, p.name + ' curou a febre de ' + alvo.name + '.', 'good'); }
     if (!S.safe) Sim().float(S, alvo.x, alvo.y, '+saúde');
     R().ganha(S, p, 1);
@@ -90,6 +93,7 @@
     if (Ma.domWhy(S, p)) return false;
     S.god.poder -= C.MAGIA_DOM;
     p.domDado = S.t;
+    fx(S, 'dom', p.x - 0.5, p.y - 0.5, { treme: 2, ms: 260 });
     acorda(S, p, 'Dizem que veio num sonho.');
     if (!S.safe) Sim().toast(S, p.name + ' acordou com o dom: ' + R().nome(p).toLowerCase() + '.', 'good');
     return true;

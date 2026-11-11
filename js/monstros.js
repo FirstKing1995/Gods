@@ -110,6 +110,8 @@
     return n;
   };
   // ---------- o golpe ----------
+  // 0.42: um efeito animado na tela (nada na simulação; o dia resumido não tem tela)
+  const fx = (S, k, x, y, o) => { if (!S.resumido && !S.safe && S.events) S.events.push(Object.assign({ k: 'fx', fx: k, x, y }, o || {})); };
   // um golpe no monstro: ele tem vida e não foge ferido; caiu, conta, e às vezes deixa alguma coisa
   Mo.golpe = function (S, e, p, dano) {
     const T = Mo.TIPOS[e.m], a = S.narr.active.lobos, Sm = Sim();
@@ -118,8 +120,10 @@
     if (principal && G.Magia) G.Magia.espalha(S, e, p);
     if (T.boss && e.cov) { const c0 = Mo.covil(S, e.cov); if (c0) c0.hp = Math.max(1, e.hp); }
     if (a) a.fought = (a.fought || 0) + 1;
-    if (e.hp > 0) return 'acertou';
+    const mago = principal && G.Magia && G.Magia.conjura(p);
+    if (e.hp > 0) { fx(S, mago ? 'fogo' : T.boss ? 'forte' : 'golpe', e.x - 0.5, e.y - 0.6, T.boss ? { treme: 2, ms: 180 } : null); return 'acertou'; }
     e.gone = true;
+    if (T.boss) fx(S, 'explosao', e.x - 0.5, e.y - 0.5, { treme: 9, ms: 600, pausa: 140 }); else fx(S, mago ? 'fogo' : 'poeira', e.x - 0.5, e.y - 0.6, { treme: 1.5, ms: 160, pausa: 45 });
     if (a) a.killed++;
     S.stats.monstros = (S.stats.monstros || 0) + 1;
     if (T.boss && G.Isekai) { G.Isekai.lenda(S, p); return 'morto'; }   // 0.40
@@ -136,6 +140,7 @@
     const c = Mo.covil(S, id);
     if (!c || Mo.esmagaWhy(S)) return false;
     S.god.poder -= C.COVIL_ESMAGA;
+    fx(S, 'esmaga', c.x, c.y, { treme: 10, ms: 650, pausa: 150 }); fx(S, 'pedras', c.x, c.y - 0.4);
     Mo.remove(S, id);
     S.stats.covisLimpos = (S.stats.covisLimpos || 0) + 1;
     Sim().chron(S, 'A terra se abriu sobre ' + Mo.nomeDe(c).toLowerCase() + '. Ninguém do povo viu, mas no outro dia o mato estava quieto.');
