@@ -409,6 +409,9 @@
     off.addEventListener('change', () => { if (!S) return; S.opts = S.opts || {}; S.opts.offline = +off.value; UI.toast('Com o jogo fechado: ' + C.OFFLINE_RATE_NAMES[+off.value] + '.'); });
     $('#menu-save').addEventListener('click', () => { UI.hooks.save(); });
     // o tom do mundo (0.12; antes, a chave das noites picantes): leve, picante ou adulto. Sempre só entre adultos
+    // 0.42: o visual (fica neste aparelho)
+    { const sel = $('#menu-visual'); let v = 'novo'; try { v = localStorage.getItem('gods.visual') || 'novo'; } catch (e) { /* sem guardar */ } sel.value = v; G.R.setVisual(v);
+      sel.addEventListener('change', () => { G.R.setVisual(sel.value); try { localStorage.setItem('gods.visual', sel.value); } catch (e) { /* sem guardar */ } }); }
     $('#menu-tom').addEventListener('change', (e) => {
       if (!S) return;
       const v = e.target.value;
@@ -2136,22 +2139,29 @@
       if (!show) { if (!b.el.hidden) b.el.hidden = true; continue; }
       const s = G.R.toScreen(p.x * C.TILE, (p.inTent ? p.y - 1.6 : p.y) * C.TILE - 12);
       if (s.x < -160 || s.x > vw.w + 160 || s.y < -20 || s.y > vw.h + 120) { if (!b.el.hidden) b.el.hidden = true; continue; }
-      shown.push({ b, x: Math.round(s.x), y: Math.round(s.y) });
+      shown.push({ b, p, x: Math.round(s.x), y: Math.round(s.y) });
     }
     // conversa: a fala mais nova fica no lugar; a mais velha sobe se encostar (lê-se de cima para baixo)
-    shown.sort((a, c) => c.b.t0 - a.b.t0);
+    // 0.42: numa aldeia grande, dezenas de balões cobriam a tela. Agora cabem uns 8 numa tela comum (mais na grande);
+    // passam na frente quem você escolheu ou segue, a reza e a fala com Deus, e depois as falas mais novas. Fala que
+    // precisaria subir mais de duas vezes para não encavalar fica escondida
+    const ov = G.R.overlay, maxB = Math.max(4, Math.round(vw.w * vw.h / 60000));
+    const prio = (it) => (it.p.id === ov.selPerson || it.p.id === ov.follow ? 4 : 0) + (/god/.test(it.b.el.className) ? 2 : 0) + (it.b.cur && it.b.cur.kind === 'historia' ? 1 : 0);
+    shown.sort((a, c) => prio(c) - prio(a) || c.b.t0 - a.b.t0);
     const placed = [];
     for (const it of shown) {
       const el = it.b.el;
-      if (el.hidden) el.hidden = false;
-      if (!it.b.w) { it.b.w = el.offsetWidth || 120; it.b.h = el.offsetHeight || 22; }
+      if (placed.length >= maxB) { if (!el.hidden) el.hidden = true; continue; }
+      if (!it.b.w) { el.hidden = false; it.b.w = el.offsetWidth || 120; it.b.h = el.offsetHeight || 22; }
       const w = it.b.w, h = it.b.h;
-      let y = it.y, up = false;
+      let y = it.y, up = false, sobe = 0;
       for (let k = 0; k < 5; k++) {
         const hit = placed.find((r) => Math.abs(r.x - it.x) < (r.w + w) / 2 + 4 && y > r.y - r.h - 2 && y - h < r.y + 2);
         if (!hit) break;
-        y = hit.y - hit.h - 6; up = true;
+        y = hit.y - hit.h - 6; up = true; sobe++;
       }
+      if (sobe > 2 && prio(it) < 4) { if (!el.hidden) el.hidden = true; continue; }
+      if (el.hidden) el.hidden = false;
       placed.push({ x: it.x, y, w, h });
       if (el.classList.contains('up') !== up) el.classList.toggle('up', up);
       el.style.transform = `translate(${it.x}px, ${y}px) translate(-50%, -100%)`;
@@ -2203,11 +2213,21 @@
       e.preventDefault();
       const nf = f.value.trim() || a, nm = m.value.trim() || b;
       const pick = form.querySelector('input[name="narr"]:checked');
-      $('#modal-names').hidden = true;
-      cb([nf, nm], pick ? pick.value : C.NARR_DEFAULT, raca());
+      // 0.41: criar o mundo leva um instante; o botão avisa antes, em vez de a tela parecer travada
+      UI.ocupado(form.querySelector('button[type="submit"]'), 'Preparando o mundo…', () => { $('#modal-names').hidden = true; cb([nf, nm], pick ? pick.value : C.NARR_DEFAULT, raca()); });
     };
     $('#btn-names-back').onclick = () => { $('#modal-names').hidden = true; if (back) back(); };
     setTimeout(() => f.focus(), 50);
+  };
+
+  // 0.41: mostra no botão que o trabalho começou, deixa a tela pintar e só então faz a parte pesada
+  UI.ocupado = function (btn, txt, fn) {
+    if (!btn || btn.disabled) { if (!btn) fn(); return; }
+    const old = btn.textContent;
+    btn.disabled = true; btn.textContent = txt; document.body.style.cursor = 'progress';
+    requestAnimationFrame(() => setTimeout(() => {
+      try { fn(); } finally { btn.disabled = false; btn.textContent = old; document.body.style.cursor = ''; }
+    }, 20));
   };
 
   // ---------- conta ----------

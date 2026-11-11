@@ -6,9 +6,7 @@
 <title>Gods</title>
 <meta name="description" content="Um casal. Um lugar. Todas as eras. Simulador de sobrevivência em pixel art em que você é Deus.">
 <meta name="theme-color" content="#181425">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400;1,600&family=Pixelify+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/digits.css">
 <link rel="stylesheet" href="css/style.css">
 </head>
@@ -29,6 +27,8 @@
       <p id="continue-info" class="small muted" hidden></p>
       <button id="btn-new" class="btn">Novo mundo</button>
       <button id="btn-mundos" class="btn btn-small" hidden>Seus mundos</button>
+      <button id="btn-importar" class="btn btn-small" title="Abre um mundo exportado antes (arquivo .json)">Importar mundo</button>
+      <input id="file-importar" type="file" accept=".json,application/json" hidden>
       <div id="acct-actions" class="acct-actions" hidden>
         <button id="btn-login" class="btn btn-small">Entrar</button>
         <button id="btn-signup" class="btn btn-small">Criar conta</button>
@@ -300,6 +300,7 @@
   <div id="menu" class="panel menu" hidden role="dialog" aria-label="Menu">
     <div class="menu-head"><h2>Menu</h2><button id="menu-close" class="btn btn-small" aria-label="Fechar o menu">Fechar</button></div>
     <button id="menu-save" class="btn btn-small">Salvar agora</button>
+    <button id="menu-export" class="btn btn-small" title="Baixa um arquivo com este mundo, para guardar ou levar a outro aparelho">Exportar mundo</button>
     <button id="menu-title" class="btn btn-small">Voltar ao título</button>
     <p id="save-status" class="small muted">O jogo salva sozinho a cada minuto.</p>
     <label class="small muted" for="menu-narr">Narrador</label>
@@ -307,6 +308,8 @@
     <p id="narr-desc" class="small muted"></p>
     <label class="small muted" for="menu-offline">Tempo com o jogo fechado</label>
     <select id="menu-offline" class="select"></select>
+    <label class="small muted" for="menu-visual">Visual</label>
+    <select id="menu-visual" class="select"><option value="novo">Novo: cores vivas e sombras</option><option value="classico">Clássico</option></select>
     <label class="small muted" for="menu-tom">Tom do mundo</label>
     <select id="menu-tom" class="select">
       <option value="leve">Leve: sem noites picantes</option>
@@ -454,6 +457,7 @@
 <script src="js/monstros.js"></script>
 <script src="js/magia.js"></script>
 <script src="js/isekai.js"></script>
+<script src="js/efeitos.js"></script>
 <script src="js/save.js"></script>
 <script src="js/offline.js"></script>
 <script src="js/net.js"></script>

@@ -44,14 +44,15 @@
     return ((255 << 24) | ((n & 255) << 16) | (((n >> 8) & 255) << 8) | ((n >> 16) & 255)) >>> 0;
   }
   function buildPal() {
-    PAL = A.TERRAIN.map((seas) => { const o = []; for (let t = 0; t < 9; t++) o[t] = seas[t].map(pack); return o; });
-    PAL.foam = [pack('#cfe6e2'), pack('#cfe6e2'), pack('#d8e6dc'), pack('#eef3f6')];
-    PAL.wet = [pack('#8a7048'), pack('#8e744a'), pack('#86704e'), pack('#a29c98')];
-    PAL.detail = A.DETAIL.map((d) => ({ tuft: pack(d.tuft), tip: pack(d.tip), flowers: d.flowers.map(pack), leaf: d.leaf.map(pack) }));
+    const novo = A.visual === 'novo';   // 0.42: o visual novo troca as cores do chão, da água e dos tufos
+    PAL = (novo ? A.TERRAIN_VIVO : A.TERRAIN).map((seas) => { const o = []; for (let t = 0; t < 9; t++) o[t] = seas[t].map(pack); return o; });
+    PAL.foam = (novo ? A.FOAM_VIVO : ['#cfe6e2', '#cfe6e2', '#d8e6dc', '#eef3f6']).map(pack);
+    PAL.wet = (novo ? A.WET_VIVO : ['#8a7048', '#8e744a', '#86704e', '#a29c98']).map(pack);
+    PAL.detail = (novo ? A.DETAIL_VIVO : A.DETAIL).map((d) => ({ tuft: pack(d.tuft), tip: pack(d.tip), flowers: d.flowers.map(pack), leaf: d.leaf.map(pack) }));
     PAL.pebble = [pack('#938a8c'), pack('#6d6672'), pack('#bdb2a6')];
     PAL.snowSpark = pack('#ffffff');
     // Etapa 17: as cores do chão de cada região, por estação
-    PAL.reg = (A.REGION_TERRAIN || []).map((seas) => { const o = []; for (const rg in seas) { o[rg] = []; for (const t in seas[rg]) o[rg][t] = seas[rg][t].map(pack); } return o; });
+    PAL.reg = ((novo && A.REGION_TERRAIN_VIVO) || A.REGION_TERRAIN || []).map((seas) => { const o = []; for (const rg in seas) { o[rg] = []; for (const t in seas[rg]) o[rg][t] = seas[rg][t].map(pack); } return o; });
   }
 
   // trama ordenada 4x4 (de -0.5 a 0.5) e os tufos de capim desenhados à mão (l = ponta clara, d = base escura)
@@ -167,6 +168,19 @@
       }
     }
     const foam = PAL.foam[season], wet = PAL.wet[season];
+    // 0.42 (visual novo): a ponta fina de um riacho (a faixa de água que passa pelo pixel tem menos de 5 px, de lado
+    // ou de cima a baixo) vira chão molhado; antes, ela saía como um espinho claro de espuma, parecendo cristal.
+    // Faixa que encosta na borda do pedaço conta como longa (continua no pedaço vizinho)
+    if (A.visual === 'novo') {
+      const fino = new Uint8Array(M * M);
+      const faixa = (i, j, di, dj) => { let n = 0, x = i + di, y = j + dj; while (n < 6) { if (x < 0 || y < 0 || x >= M || y >= M) return 99; if (!IS_WATER[types[y * M + x]]) return n; n++; x += di; y += dj; } return n; };
+      for (let j = 0; j < M; j++) for (let i = 0; i < M; i++) {
+        const k = j * M + i;
+        if (!IS_WATER[types[k]]) continue;
+        if (1 + faixa(i, j, -1, 0) + faixa(i, j, 1, 0) < 5 || 1 + faixa(i, j, 0, -1) + faixa(i, j, 0, 1) < 5) fino[k] = 1;
+      }
+      for (let k = 0; k < M * M; k++) if (fino[k]) types[k] = T.GRASS;
+    }
     for (let j = MG; j < M - MG; j++) {
       for (let i = MG; i < M - MG; i++) {
         const k = j * M + i, t = types[k], wx = ox0 + i, wy = oy0 + j;
@@ -358,6 +372,8 @@
     }
   }
   R.invalidate = function () { chunks.clear(); dirty.clear(); chunkKey = ''; };
+  // 0.42: troca o visual (novo ou clássico) e refaz o chão
+  R.setVisual = function (v) { A.visual = v === 'classico' ? 'classico' : 'novo'; PAL = null; ovKey = ''; R.invalidate(); };
 
   // ---------- partículas ----------
   function spawn(p) { if (parts.length < 400) parts.push(p); }
@@ -372,7 +388,9 @@
       }
       return;
     }
+    if (e.k === 'fx') { R.fx(e.fx, e.x, e.y, e); if (e.treme) R.treme(e.treme, e.ms || 320); if (e.pausa) R.pausa(e.pausa); return; }   // 0.42
     if (e.k === 'bolt') {
+      R.fx('raio', e.x, e.y); R.treme(6, 380); R.pausa(70);   // 0.42
       bolts.push({ x: e.x, y: e.y, t0: performance.now(), seed: Math.random() * 1000 });
       for (let i = 0; i < 18; i++) spawn({ x: e.x * TS + 8, y: e.y * TS + 10, vx: (Math.random() - 0.5) * 60, vy: -20 - Math.random() * 40, g: 90, life: 0.7, col: Math.random() < 0.5 ? '#fee761' : '#ffffff' });
       return;
@@ -383,6 +401,7 @@
       return;
     }
     if (e.k === 'miracle') {
+      { const FXM = { cura: 'cura', bencao: 'bencao', revelacao: 'revelacao', calor: 'calor', chuva: 'chuva', consagrar: 'grande', criar: 'grande', saber: 'grande' }; if (FXM[e.kind]) R.fx(FXM[e.kind], e.x, e.y, { s: e.kind === 'calor' ? 1.2 : 1 }); if (FXM[e.kind] === 'grande') R.treme(3, 500); }   // 0.42
       const col = e.kind === 'chuva' ? '#9fe8ff' : e.kind === 'cura' ? '#9be070' : '#fee761';
       // Etapa 11: os grandes atos espalham mais luz (e mais longe)
       const big = e.kind === 'consagrar' || e.kind === 'criar' || e.kind === 'saber', n = big ? 60 : e.kind === 'bencao' ? 40 : 26, R0 = big ? 6 : e.kind === 'bencao' ? 5 : 3;
@@ -393,6 +412,7 @@
       return;
     }
     if (e.k === 'ungir' || e.k === 'converte' || e.k === 'estatua') {
+      R.fx('luz', e.x, e.y);   // 0.42
       // escolhido, convertido, estátua pronta: uma coluna de luz subindo
       const col = e.k === 'converte' ? '#9fe8ff' : '#fee761';
       for (let i = 0; i < 34; i++) spawn({ x: e.x * TS + (Math.random() - 0.5) * 10, y: e.y * TS + 2 - Math.random() * 6, vx: (Math.random() - 0.5) * 3, vy: -18 - Math.random() * 26, g: 0, life: 1.2 + Math.random() * 1.2, col: Math.random() < 0.3 ? '#ffffff' : col });
@@ -589,6 +609,7 @@
     const key = w.seed + ':' + season;
     if (key !== chunkKey) { chunks.clear(); chunkKey = key; }
     ox = Math.round(W / 2 - cam.x * sc); oy = Math.round(H / 2 - cam.y * sc);
+    { const tr = tremorAgora(now); if (tr > 0.3) { ox += Math.round((Math.random() * 2 - 1) * tr * dpr); oy += Math.round((Math.random() * 2 - 1) * tr * dpr); } }   // 0.42
     ctx.imageSmoothingEnabled = sc < 1;
     ctx.fillStyle = '#0c3a68';
     ctx.fillRect(0, 0, W, H);
@@ -632,6 +653,7 @@
     }
     // tapete do estoque, bancos e caminhos marcados (no chão), auras de Calor
     if (S) { drawCamp(S); drawGround(S, tx0, ty0, tx1, ty1); }
+    if (S && A.visual === 'novo' && sc >= 2 && season < 3) drawCapim(S, w, tx0, ty0, tx1, ty1, now, alpha);   // 0.42
     if (S && S.god) drawAuras(S, now);
     // lista ordenada por y
     const list = [], fence = S ? w.fence : null;
@@ -729,6 +751,7 @@
     }
     list.sort((a, b) => a.y - b.y);
     const snow = season === 3;
+    if (S && A.visual === 'novo' && !far && sc >= 1) drawSombras(S, list);   // 0.42
     const fx0 = FX;
     for (const it of list) {
       if (it.T) {   // 0.28: um item de outra tribo
@@ -821,7 +844,122 @@
     if (ov.ring) drawRing(ov.ring);
     if (ov.beam) drawBeam(ov, now);
     if (bolts.length) drawBolts(now);
+    if (vfx.length) drawVfx(now);   // 0.42
   };
+
+  // ---------- 0.42: efeitos animados (PVFX Foundry, CC0) e o peso dos golpes ----------
+  // R.fx('raio', x, y) toca um efeito no passo (x, y) do mapa; o: { s: escala, dy: deslocamento em px, alto: por cima
+  // da noite }. Cada efeito é uma folha de quadros (js/efeitos.js); a imagem é montada na primeira vez que aparece
+  const vfx = [], efxImg = {};
+  function efx(k) {
+    const d = G.EFX_DADOS && G.EFX_DADOS[k];
+    if (!d) return null;
+    if (!efxImg[k]) { const im = new Image(); im.src = d.img; efxImg[k] = im; }
+    return d;
+  }
+  R.fx = function (k, x, y, o) {
+    const d = efx(k);
+    if (!d || vfx.length > 40) return;
+    vfx.push({ k, x: x * TS + 8, y: y * TS + 12 + ((o && o.dy) || 0), t0: performance.now(), s: (o && o.s) || 1, voltas: (o && o.voltas) || 1, flip: !!(o && o.flip) });
+  };
+  function drawVfx(now) {
+    for (let i = vfx.length - 1; i >= 0; i--) {
+      const v = vfx[i], d = G.EFX_DADOS[v.k], im = efxImg[v.k];
+      if (!im || !im.complete || !im.naturalWidth) { if (now - v.t0 > 3000) vfx.splice(i, 1); continue; }
+      let t = now - v.t0, f = -1;
+      const total = d.f.reduce((a, q) => a + q[6], 0);
+      if (t >= total * v.voltas) { vfx.splice(i, 1); continue; }
+      t %= total;
+      for (let j = 0; j < d.f.length; j++) { t -= d.f[j][6]; if (t < 0) { f = j; break; } }
+      if (f < 0) continue;
+      const [sx, sy, w, h, fx, fy] = d.f[f], s = v.s;
+      const X = (v.x + (fx - d.pv[0]) * s), Y = (v.y + (fy - d.pv[1]) * s);
+      if (v.flip) { ctx.save(); ctx.translate(Math.round((v.x) * sc + ox), 0); ctx.scale(-1, 1); ctx.drawImage(im, sx, sy, w, h, Math.round((d.pv[0] - fx - w) * s * sc), Math.round(Y * sc + oy), Math.round(w * s * sc), Math.round(h * s * sc)); ctx.restore(); }
+      else ctx.drawImage(im, sx, sy, w, h, Math.round(X * sc + ox), Math.round(Y * sc + oy), Math.round(w * s * sc), Math.round(h * s * sc));
+    }
+  }
+  // tremor da tela: força em px de tela, some em ms (quem pede menos movimento no sistema não sente)
+  let tremor = { a: 0, t0: 0, ms: 1 };
+  const calmo = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })();
+  R.treme = function (a, ms) { if (calmo) return; const left = tremorAgora(performance.now()); if (a >= left) tremor = { a, t0: performance.now(), ms: ms || 300 }; };
+  function tremorAgora(now) { const k = 1 - (now - tremor.t0) / tremor.ms; return k > 0 ? tremor.a * k * k : 0; }
+  // a pausa do golpe: o mundo para por um instante no impacto (main.js lê R.pausaAte)
+  R.pausaAte = 0;
+  R.pausa = function (ms) { R.pausaAte = Math.max(R.pausaAte, performance.now() + ms); };
+
+  // ---------- 0.42: capim alto que balança ----------
+  // Touceiras de capim em alguns passos de campo e mata (sempre os mesmos, pelo sorteio do lugar). O vento passa
+  // como uma onda; quem anda perto abre o capim para os lados. Só de perto (no zoom de longe não se vê)
+  const CAPIM_T = { 4: 1, 5: 1, 6: 1 };
+  function drawCapim(S, w, tx0, ty0, tx1, ty1, now, alpha) {
+    const det = PAL && A.DETAIL_VIVO[S.ck.season], seed = w.seed, t = now / 1000;
+    if (!det) return;
+    const perto = [];
+    for (const p of S.people) { if (!p.alive || p.inTent || p.carriedBy) continue; const x = U.lerp(p.px, p.x, alpha), y = U.lerp(p.py, p.y, alpha); if (x >= tx0 - 1 && x <= tx1 + 1 && y >= ty0 - 1 && y <= ty1 + 1) perto.push(x, y); }
+    for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
+      const i = ty * w.W + tx;
+      if (!CAPIM_T[w.tile[i]] || w.objGrid[i] >= 0 || w.bgrid[i] >= 0 || (w.road && w.road[i])) continue;
+      const h0 = G.hash2(tx, ty, seed + 811);
+      if (h0 > 0.16) continue;
+      const n = 3 + Math.floor(h0 * 25) % 3, bx = tx * TS + 3 + Math.floor(G.hash2(tx, ty, seed + 813) * 8), by = ty * TS + 10 + Math.floor(G.hash2(ty, tx, seed + 817) * 4);
+      let empurra = 0;
+      for (let k = 0; k < perto.length; k += 2) { const dx = (bx / TS) - perto[k], dy = (by / TS) - perto[k + 1]; if (dx * dx + dy * dy < 0.8) empurra += dx > 0 ? 2 : -2; }
+      const onda = Math.sin(t * 1.7 * wind + tx * 0.45 + ty * 0.3) * wind;
+      for (let k = 0; k < n; k++) {
+        const x = bx + k * 2 - n, alto = 4 + ((k + Math.floor(h0 * 40)) % 3);
+        const topo = Math.round(onda * (0.6 + k * 0.15) + empurra * (k - (n - 1) / 2 >= 0 ? 1 : 0.5));
+        rect(x, by - alto + 2, 1, alto - 2, det.tuft);
+        rect(x + Math.sign(topo) * Math.min(1, Math.abs(topo)), by - alto, 1, 2, det.tip);
+        if (Math.abs(topo) > 1) rect(x + topo, by - alto - 1, 1, 1, det.tip);
+      }
+    }
+  }
+
+  // ---------- 0.42: sombras do sol ----------
+  // Uma passada antes de tudo o que fica de pé: sob cada obra, uma faixa escura de contato e uma sombra oval que o sol
+  // empurra para o lado (de manhã para o oeste, de tarde para o leste, mais comprida perto do nascer e do pôr); sob
+  // as árvores e as pedras, a mesma sombra de sol (a sombrinha redonda de sempre continua). À noite e na chuva, quase nada
+  const sombraCache = new Map();
+  function sombraImg(rx, ry) {
+    const k = rx + 'x' + ry;
+    let c = sombraCache.get(k);
+    if (c) return c;
+    const w = rx * 2 + 1, h = ry * 2 + 1, [cv, x] = A.mk(w, h);
+    x.fillStyle = '#120e24';
+    for (let y = 0; y < h; y++) {
+      const dy = (y - ry) / (ry + 0.5), half = Math.round(rx * Math.sqrt(Math.max(0, 1 - dy * dy)));
+      x.fillRect(rx - half, y, half * 2 + 1, 1);
+    }
+    sombraCache.set(k, cv);
+    return cv;
+  }
+  function sombraEm(cx, cy, rx, ry, a) {
+    const img = sombraImg(Math.max(1, Math.round(rx)), Math.max(1, Math.round(ry)));
+    ctx.globalAlpha = a;
+    ctx.drawImage(img, Math.round((cx - img.width / 2) * sc + ox), Math.round((cy - img.height / 2) * sc + oy), img.width * sc, img.height * sc);
+  }
+  function drawSombras(S, list) {
+    const h = S.ck.hour, luz = 1 - darkness(h) / 0.64;
+    if (luz <= 0.05) return;
+    const sol = U.clamp((h - 12) / 6, -1, 1), longe = 1 + Math.abs(sol) * 0.7;   // -1 manhã cedo, 0 meio-dia, 1 fim de tarde
+    const forca = luz * (S.precip ? 0.45 : 1);
+    ctx.save();
+    for (const it of list) {
+      if (it.T) continue;
+      if (it.b) {
+        const b = it.b;
+        if (it.row !== undefined || it.part === 'back' || b.type === 'roca') continue;
+        const bw = b.w * TS, base = (b.y + b.h) * TS;
+        sombraEm(b.x * TS + bw / 2 + sol * 5 * longe, base - 2, bw / 2 + 2 + Math.abs(sol) * 3, 3.5 * longe, 0.2 * forca);
+        sombraEm(b.x * TS + bw / 2, base - 1, bw / 2, 1.5, 0.22 * forca);   // contato: a obra encosta no chão
+      } else if (it.o) {
+        const o = it.o, bx = o.x * TS + 8, by = o.y * TS + 14;
+        if (o.k === 'tree') sombraEm(bx + sol * 7 * longe, by, 8 + Math.abs(sol) * 4, 3, 0.16 * forca);
+        else if (o.k === 'rock' || (o.k === 'bush' && !o.holy)) sombraEm(bx + sol * 3, by - 2, 5, 2, 0.14 * forca);
+      } else if (it.covil) sombraEm(it.covil.x * TS + 8 + sol * 4, (it.covil.y + 1) * TS - 1, 12, 3, 0.18 * forca);
+    }
+    ctx.restore();
+  }
 
   // quem a câmera segue: quatro cantos de visor em volta da pessoa (da barraca, se ela está dentro; de quem carrega,
   // se é bebê de colo), pulsando de leve
@@ -875,7 +1013,7 @@
       fogCtx.putImageData(img, 0, 0);
     }
     ctx.save();
-    ctx.imageSmoothingEnabled = false;
+    ctx.imageSmoothingEnabled = A.visual === 'novo';   // 0.42: a borda da névoa macia (antes, degraus de um passo)
     ctx.drawImage(fogCv, ox, oy, Wt * TS * sc, Ht * TS * sc);
     ctx.restore();
   }
@@ -1059,7 +1197,11 @@
         else blitTree(S.broad[season][o.v], bx - 3, by + 13 - 23, 6, dx);
         break;
       }
-      case 'stump': blit(S.stump[snow ? 1 : 0], bx + 3, by + 7); break;
+      case 'stump':
+        // 0.42: no visual novo, o toco vira muda na metade do caminho até ser árvore de novo
+        if (A.visual === 'novo' && S.muda && (o.regrow || 0) >= C.TREE_REGROW_DAYS / 3) { const im = S.muda[season][(o.regrow || 0) >= C.TREE_REGROW_DAYS * 2 / 3 ? 1 : 0]; blit(im, bx + 8 - im.width / 2, by + 15 - im.height); }
+        else blit(S.stump[snow ? 1 : 0], bx + 3, by + 7);
+        break;
       case 'junco': blit(S.junco[season][o.v % 2], bx + 3, by + 2); break;   // Etapa 17
       case 'bush':
         if (o.sp === 'cacto') { blit(S.cacto[season][o.fruit > 0 ? 1 : 0], bx + 2, by + 3); break; }   // Etapa 17: o mandacaru
@@ -1168,6 +1310,8 @@
   // o halo do escolhido, pela cor do poder (0.27: os cinco novos)
   const HALO = { cura: '#9be070', palavra: '#ffffff', luz: '#fee761', colheita: '#d8c040', caca: '#e4a672', paz: '#9fd8ff', sabedoria: '#c8a8ff', forca: '#f77622' };
   // a figura da obra no nível dela (Etapa 7): casas, oficinas, armazém
+  const tentCache = [];
+  function tentVar(id) { const v = (id * 7 + 3) % A.TENT_N; return tentCache[v] || (tentCache[v] = A.tentV(v)); }
   function houseImg(d) { const S2 = A.spr; return d.lv >= 3 && d.kind ? S2.house[d.kind] : S2.house[d.lv >= 2 ? 2 : 1]; }
   // 0.35: a forma da casa e da oficina na idade delas (null: a figura de sempre)
   const OBRA_FORMA = { armazem: 1, marcenaria: 1, tecelagem: 1, ferraria: 1, escola: 1, biblioteca: 1, hospital: 1, guarda: 1, brigada: 1, mercado: 1, taberna: 1, guilda: 1 };
@@ -1235,7 +1379,7 @@
         blit(icon, bx + 16 - icon.width / 2, top - 12 + bob, 0.55 + 0.45 * (0.5 + 0.5 * Math.sin(now / 400)));
       }
     } else {
-      const nova = casaImg(b, lv, d.kind), img = nova || houseImg(d);
+      const nova = casaImg(b, lv, d.kind), img = nova || (A.visual === 'novo' && lv < 2 && b.type === 'barraca' ? tentVar(b.id) : houseImg(d));   // 0.42: barracas variadas
       if (nova) eraObra = 0;
       const top = by + 31 - img.height;
       blit(S2.bigShadow, bx + 5, by + 26, ghost ? 0.4 : undefined);

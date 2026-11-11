@@ -320,9 +320,10 @@ if (isMainThread) {
     const st = build(S, 'estatua', 3) || (() => { const a2 = spot(S, 'fogueira', 4); const b = { id: S.nextBid++, type: 'estatua', lv: 1, kind: null, x: a2.x, y: a2.y, w: 2, h: 2, built: true, progress: 1, have: {}, fuel: 0, beds: [], up: null }; S.buildings.push(b); return b; })();
     Object.assign(S.stock, { prata: 3, ouro: 2, gemas: 1 });
     for (const p of alive(S)) p.joia = 1;
+    S.god.poder = 0;   // 0.41: desde a 0.26 o Poder tem teto por nível; cheio, a oferenda não somaria nada
     const pod0 = S.god.poder, of0 = S.stats.oferendas;
     const got = Mi.offer(S, p0, st);
-    check('a oferenda: primeiro a pedra preciosa (40 de Poder), uma por estátua por dia', got === 40 && S.stock.gemas === 0 && near(S.god.poder, pod0 + 40) && S.stats.oferendas === of0 + 1 && Mi.offer(S, p0, st) === 0);
+    check('a oferenda: primeiro a pedra preciosa (40 de Poder), uma por estátua por dia', got === 40 && S.stock.gemas === 0 && near(S.god.poder, pod0 + 40) && S.stats.oferendas === of0 + 1 && Mi.offer(S, p0, st) === 0, [got, S.stock.gemas, S.god.poder - pod0, S.stats.oferendas - of0].join(' '));
     st.oferDay = -1;
     check('depois o ouro (20) e a prata (8)', Mi.offer(S, p0, st) === 20 && (st.oferDay = -1, S.stock.ouro = 0, Mi.offer(S, p0, st) === 8));
     for (const p of alive(S)) p.joia = 0;

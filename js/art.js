@@ -123,6 +123,38 @@
     { tuft: '#8f9bb0', tip: '#ffffff', flowers: [], leaf: [] },
   ];
 
+  // 0.42: o visual novo. Capim de verde fresco (antes oliva, que com a luz quente virava cáqui), água azul com
+  // a parte rasa clara (antes verde-cinza: lago parecia pântano e poça parecia neve) e tufos que acompanham o capim.
+  // A.visual escolhe ('novo' ou 'classico'); render.js monta a paleta a partir daqui
+  A.visual = 'novo';
+  const AGUA_VIVA = { 0: ['#1d5675', '#246a8c', '#2f82a6'], 1: ['#3d8cad', '#4fa3c2', '#76c0d6'], 2: ['#3d8cad', '#4fa3c2', '#76c0d6'] };
+  A.TERRAIN_VIVO = [
+    { // primavera
+      ...AGUA_VIVA,
+      3: ['#d6a45a', '#e6bb74', '#f1d096'], 4: ['#3f7c38', '#4e9441', '#68ad52'], 5: ['#2d5a33', '#376c3a', '#478343'],
+      6: ['#57873a', '#699c43', '#82b452'], 7: ['#5b6170', '#717786', '#9196a2'], 8: ['#a09447', '#b6aa58', '#cbc070'],
+    },
+    { // verão
+      ...AGUA_VIVA,
+      3: ['#d9a75a', '#e9bf74', '#f3d398'], 4: ['#478036', '#57973e', '#73af4c'], 5: ['#30592c', '#3d6b33', '#4f8140'],
+      6: ['#628538', '#759b40', '#8fb34e'], 7: ['#5b6170', '#717786', '#9196a2'], 8: ['#ab9444', '#c0a954', '#d2bd6a'],
+    },
+    { // outono
+      ...AGUA_VIVA,
+      3: ['#d29e56', '#e2b46e', '#eeca90'], 4: ['#6b7632', '#838b3a', '#a09f48'], 5: ['#4c4c29', '#5f5f30', '#76743b'],
+      6: ['#7a7434', '#918a3c', '#aaa24a'], 7: ['#5b6170', '#717786', '#9196a2'], 8: ['#ad8a40', '#c19e50', '#d2b266'],
+    },
+    A.TERRAIN[3],   // inverno: a neve de sempre
+  ];
+  A.DETAIL_VIVO = [
+    { tuft: '#2f6630', tip: '#9ccf62', flowers: ['#f6e27a', '#fbf6ea', '#ee8fa2', '#b9a2ec', '#f0a650'], leaf: ['#4f7c3a', '#7a6a3a'] },
+    { tuft: '#36632c', tip: '#a8c858', flowers: ['#f6e27a', '#fbf6ea', '#f0a650'], leaf: ['#5f7a36', '#7c5e34'] },
+    { tuft: '#56562a', tip: '#c8b04c', flowers: ['#e0903e', '#cc644c'], leaf: ['#b4642e', '#c99a3e', '#8e3f2c'] },
+    A.DETAIL[3],
+  ];
+  A.FOAM_VIVO = ['#e2f6fa', '#e2f6fa', '#e6f2ee', '#eef3f6'];
+  A.WET_VIVO = ['#9c8452', '#a08856', '#96804e', '#a29c98'];
+
   // ---------- copas em tufos ----------
   // A copa é um monte de tufos redondos desenhados de trás (em cima) para a frente (embaixo). Cada tufo tem a luz
   // no alto à esquerda, e o tufo de trás escurece onde o da frente o cobre: é o que separa as folhagens, como
@@ -423,6 +455,64 @@
     // estacas
     b.set(apx - half - 1, base, P.maroon); b.set(apx + half + 1, base, P.maroon);
     for (let x = apx - half; x <= apx + half; x++) b.set(x, base + 1, P.maroon);
+    return b.canvas();
+  }
+  // 0.42: barracas variadas (visual novo). Mesmo desenho da tent1, com o couro de outra cor, às vezes uma faixa
+  // pintada, e uma coisa do dia a dia do lado: feixe de lenha, pote de barro ou couro secando numa vara
+  const TENT_COURO = [
+    ['#c08a58', '#9a6a44', '#6e4a30'],   // couro claro
+    ['#9a6a44', '#7a5034', '#523424'],   // couro escuro
+    ['#d2b08a', '#ae8c66', '#7c6248'],   // pele curtida
+    ['#b0705a', '#8a5240', '#5e3628'],   // avermelhado
+    ['#a69a84', '#857a66', '#5c5446'],   // cinza de feltro
+    ['#c49a62', '#a07848', '#6e5032'],   // palha queimada
+  ];
+  function tentV(v) {
+    const W = 32, H = 30, b = new Buf(W, H), [L, R, E] = TENT_COURO[v % TENT_COURO.length];
+    const apx = 16, top = 5, base = 26, half = 13, faixa = v % 3 === 1 ? 19 : v % 3 === 2 ? 15 : 0;
+    const tinta = ['#e8d8b0', '#c8423a', '#3a6a8a'][v % 3];
+    for (let y = top; y <= base; y++) {
+      const t = (y - top) / (base - top), hw = Math.round(t * half);
+      for (let dx = -hw; dx <= hw; dx++) {
+        const x = apx + dx;
+        let c = dx < 0 ? L : R;
+        if (dx === -hw) c = E;
+        if (dx === hw) c = P.maroon;
+        if (dx >= 0 && dx < 2) c = E;
+        if (y % 5 === 0 && Math.abs(dx) < hw - 1 && (x + y) % 2 === 0) c = dx < 0 ? R : E;   // costuras
+        if (faixa && (y === faixa || y === faixa + 2) && Math.abs(dx) < hw) c = tinta;
+        if (faixa && y === faixa + 1 && Math.abs(dx) < hw && (x % 3 === 0)) c = tinta;
+        b.set(x, y, c);
+      }
+    }
+    for (let y = 15; y <= base; y++) {
+      const hw = Math.round((y - 15) / (base - 15) * 4);
+      for (let dx = -hw; dx <= hw; dx++) b.set(apx + dx + 1, y, dx === -hw ? E : P.ink);
+    }
+    if (v % 2) for (let y = 16; y <= 24; y++) b.set(apx + 1 + Math.round((y - 15) / 11 * 4) - 1, y, L);   // aba da porta presa de lado
+    line(b, apx - 3, 1, apx + 1, 6, P.bark); line(b, apx + 3, 1, apx - 1, 6, P.maroon);
+    if (v % 3 === 0) line(b, apx - 1, 0, apx + 3, 6, P.bark);   // uma vara a mais
+    b.set(apx - half - 1, base, P.maroon); b.set(apx + half + 1, base, P.maroon);
+    for (let x = apx - half; x <= apx + half; x++) b.set(x, base + 1, P.maroon);
+    const lado = v % 2 ? 27 : 2;
+    if (v % 3 === 0) { for (let k = 0; k < 3; k++) { line(b, lado - 1, 23 + k, lado + 3, 23 + k, k === 1 ? P.wood : P.bark); b.set(lado + 3, 23 + k, P.tan); } }   // feixe de lenha
+    else if (v % 3 === 1) { for (let y = 22; y <= 26; y++) for (let x = lado; x <= lado + 3; x++) b.set(x, y, y === 22 ? '#3e2a22' : (x === lado ? '#8a4a2c' : '#b8683a')); b.set(lado + 1, 23, '#d88a52'); }   // pote de barro
+    else { line(b, lado + 1, 16, lado + 1, 27, P.bark); for (let y = 17; y <= 22; y++) for (let x = lado - 1; x <= lado + 3; x++) if (x !== lado + 1) b.set(x, y, (x + y) % 3 ? L : E); }   // couro secando
+    return b.canvas();
+  }
+  A.tentV = tentV;
+  A.TENT_N = TENT_COURO.length;
+  // 0.42: a muda (o toco que volta a ser árvore): um caule e uma copinha redonda, de duas idades
+  function muda(season, grande) {
+    const T0 = season === 2 ? TREE_TONES.autumnY : season === 3 ? TREE_TONES.arauW : TREE_TONES.spring;
+    const w = 12, h = grande ? 16 : 12, b = new Buf(w, h), r = grande ? 4 : 3, cy = grande ? 5 : 4;
+    line(b, 6, cy + 1, 6, h - 1, '#5a3a2a'); b.set(5, h - 1, '#3e2a22'); b.set(7, h - 1, '#3e2a22');
+    for (let y = cy - r; y <= cy + r; y++) for (let x = 6 - r; x <= 6 + r; x++) {
+      const d = Math.hypot(x - 6, (y - cy) * 1.1);
+      if (d > r + 0.3) continue;
+      const lit = (x - 6) * -0.6 + (y - cy) * -0.8;
+      b.set(x, y, d > r - 0.6 ? T0[1] : lit > 1.5 ? T0[5] : lit > 0 ? T0[4] : T0[3]);
+    }
     return b.canvas();
   }
   function tent2() {
@@ -2240,6 +2330,14 @@
     6: { 1: ['#3a5446', '#465f4e', '#627a62'], 2: ['#3a5446', '#465f4e', '#627a62'], 3: ['#6a5c3e', '#7a6a46', '#8e7c54'], 4: ['#4a5c32', '#586a38', '#6a7a42'], 5: ['#30442f', '#3a5034', '#475c3a'] },   // pântano
   };
   A.REGION_TERRAIN = [RT, RT, RT, { 2: { 1: RT[2][1], 2: RT[2][2] }, 6: { 1: RT[6][1], 2: RT[6][2] } }];
+  // 0.42: no visual novo, a mata fechada é verde-escuro de verdade (antes, oliva) e o mangue e o pântano têm água
+  // escura mas ainda água (antes, quase lama)
+  const RTV = Object.assign({}, RT, {
+    2: Object.assign({}, RT[2], { 1: ['#24545a', '#2e6668', '#4a8682'], 2: ['#24545a', '#2e6668', '#4a8682'] }),
+    5: { 4: ['#2c6430', '#377639', '#468a42'], 5: ['#1f4428', '#28532e', '#336436'] },
+    6: Object.assign({}, RT[6], { 1: ['#2e5450', '#3a6460', '#567e74'], 2: ['#2e5450', '#3a6460', '#567e74'] }),
+  });
+  A.REGION_TERRAIN_VIVO = [RTV, RTV, RTV, { 2: { 1: RTV[2][1], 2: RTV[2][2] }, 6: { 1: RTV[6][1], 2: RTV[6][2] } }];
   TREE_TONES.nobre = ['#17241f', '#1d3a2c', '#28503a', '#3a6a3c', '#5e8a40', '#a8b45a'];
   TREE_TONES.mangue = ['#18282a', '#1f3a34', '#2a5040', '#3c6a46', '#5a864c', '#90a85e'];
   // jequitibá: a copa maior e mais escura da mata fechada (a madeira nobre)
@@ -2950,6 +3048,8 @@
     S.salina = salina();
     S.veio = [0, 1].map((v) => [false, true].map((sn) => veio(v, sn)));
     S.stump = [stump(false), stump(true)];
+    // 0.42: a muda que nasce do toco (visual novo): pequena e magra, depois maior, por estação
+    S.muda = [0, 1, 2, 3].map((se) => [muda(se, 0), muda(se, 1)]);
     polishOn = true;   // 0.16: daqui até os itens do estoque, o acabamento de luz
     S.grave = grave().canvas();
     S.fire = [0, 1, 2].map((f) => fireFrame(f, 1));

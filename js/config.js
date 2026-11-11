@@ -3,7 +3,7 @@
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.40.0',
+    VERSION: '0.42.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -802,6 +802,12 @@
     SOC_TETO: 0.4, PEDIDO_D: 5, RECUSA_D: 10, SOC_FOGO_LONGE: 9, SOC_ROT: 3, SOC_PEDRA: 6,
     // 0.14: o padrão é "o povo decide"; obras do povo ao mesmo tempo: 1 + adultos / SOC_OBRAS_POR, até SOC_OBRAS_MAX
     SOC_OBRAS_POR: 12, SOC_OBRAS_MAX: 8,
+    // 0.41: o povo abre uma roça a cada SOC_ROCA_POR pessoas, quando a comida guardada cai abaixo de SOC_ROCA_DIAS dias
+    SOC_ROCA_POR: 6, SOC_ROCA_DIAS: 20,
+    // 0.41: sem lenha, feijão e mandioca vão num foguinho de gravetos: rende GRAVETO_FOOD do cozido e leva GRAVETO_MIN minutos
+    GRAVETO_FOOD: 0.75, GRAVETO_MIN: 45,
+    // 0.41: em tempo de fome, numa aldeia de FOME_FILHO_POVO pessoas ou mais, quase ninguém engravida
+    FOME_FILHO_POVO: 12, FOME_FILHO_DIAS: 4, FOME_FILHO_MULT: 0.15,
     // 0.16: casas a CENTRO_LONGE passos de todo estoque pedem um armazém por ali; o meio das casas a CENTRO_LONGE + 4
     // do centro faz o líder mudar o centro (no máximo uma vez a cada CENTRO_MUDA_D dias)
     CENTRO_LONGE: 14, CENTRO_MUDA_D: 60,

@@ -346,10 +346,10 @@ check('com comida conservada de sobra, o povo não conserva mais', T.keptDays(S)
 // o que estraga: fresco estraga, conservado quase não (sem ninguém mexendo no estoque)
 S = world(777); learnUpTo(S, 'conserva');
 S.people = [];
-Object.assign(S.stock, { peixe: 1000, carne: 1000, frutas: 1000, defumado: 1000, seca: 1000 });
+Object.assign(S.stock, { peixe: 150, carne: 150, frutas: 150, defumado: 150, seca: 150 });   // 0.41: abaixo do teto do estoque (0.26), senão o excesso some e parece que estragou
 S.t = 15 * D + 12 * 60; Sim.refresh(S);
 days(S, 10);
-const lost = (k) => 1000 - S.stock[k];
+const lost = (k) => 150 - S.stock[k];
 check('peixe e carne estragam rápido, defumado quase nada', lost('defumado') * 10 < lost('peixe') && lost('defumado') * 10 < lost('carne'), 'em 10 dias de verão: peixe -' + lost('peixe') + ', carne -' + lost('carne') + ', defumado -' + lost('defumado'));
 check('fruta seca dura muito mais que fruta fresca', lost('seca') * 3 < lost('frutas'), 'frutas -' + lost('frutas') + ', seca -' + lost('seca'));
 

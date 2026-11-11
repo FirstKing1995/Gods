@@ -1490,6 +1490,7 @@ if (isMainThread) {
     check('cercada a roça, a falta some', !So.faltas(S).some((x) => x.type === 'cerca') && K.enclosed(S, roca));
     // a mina
     S.soc.semPedra = 3; S.stock.pedra = 2;
+    S.soc.recusa.roca = S.t + 1e6;   // 0.41: a roça que falta vem antes da mina; aqui só a mina está em teste
     check('sem conhecer a mineração, ninguém pede mina', !So.faltas(S).some((x) => x.type === 'mina'));
     S.tech.known.mineracao = { t: S.t, by: 'teste', how: 'pratica' };
     check('faltando pedra por dois dias, com a mineração conhecida, o líder quer uma mina', So.faltas(S).some((x) => x.type === 'mina'));
