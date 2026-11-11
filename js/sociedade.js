@@ -1295,11 +1295,11 @@
     const mx = casas.length ? casas.reduce((a, b) => a + b.x, 0) / casas.length : cx, my = casas.length ? casas.reduce((a, b) => a + b.y, 0) / casas.length : cy;
     return lugar(S, 'barraca', mx, my, 2, 14) || lugar(S, 'barraca', cx, cy, 3, 22);
   }
-  const custoDe = (q) => (q.type === 'cerca' ? { madeira: q.tiles.length * C.CERCA_WOOD } : C.BUILD[q.type].cost || {});
+  const custoDe = (q, S) => (q.type === 'cerca' ? { madeira: q.tiles.length * C.CERCA_WOOD } : Sim().custoNovo(S, q.type) || {});
   So.custoDe = custoDe;
   // cabe no teto? O povo só compromete uma parte do que há de cada material
   function cabe(S, q) {
-    const cost = custoDe(q);
+    const cost = custoDe(q, S);
     for (const k in cost) if (cost[k] > Math.floor((S.stock[k] || 0) * C.SOC_TETO)) return false;
     return true;
   }
@@ -2278,6 +2278,6 @@
   So.pedidosInfo = function (S) {
     const s = S.soc;
     if (!s) return [];
-    return s.pedidos.map((q) => ({ id: q.id, type: q.type, nome: NOME_OBRA[q.type], why: So.FALTA[q.why], x: q.x, y: q.y, tiles: q.tiles || null, custo: custoDe(q), dias: Math.max(0, Math.ceil(C.PEDIDO_D - (S.t - q.t) / DAY)) }));
+    return s.pedidos.map((q) => ({ id: q.id, type: q.type, nome: NOME_OBRA[q.type], why: So.FALTA[q.why], x: q.x, y: q.y, tiles: q.tiles || null, custo: custoDe(q, S), dias: Math.max(0, Math.ceil(C.PEDIDO_D - (S.t - q.t) / DAY)) }));
   };
 })(globalThis.G = globalThis.G || {});

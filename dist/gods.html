@@ -865,6 +865,18 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   kbd { display: none !important; }
 }
 
+/* 0.43: o começo guiado (a meta da vez embaixo do relógio; o botão que resolve pisca) */
+.guia { position: fixed; top: 62px; left: 50%; transform: translateX(-50%); z-index: 6; display: flex; align-items: stretch; max-width: min(560px, calc(100vw - 24px)); padding: 0; animation: tin 0.3s ease-out; }
+.guia-ir { flex: 1; text-align: left; background: transparent; border: 0; color: var(--text); font: inherit; font-size: 13px; padding: 7px 10px; cursor: pointer; line-height: 1.35; }
+.guia-ir b { color: var(--gold-hi); }
+.guia-dica { display: block; color: var(--muted); font-size: 12px; }
+.guia-x { background: transparent; border: 0; border-left: 1px solid var(--edge); color: var(--muted); font-size: 18px; padding: 0 10px; cursor: pointer; }
+.guia-x:hover, .guia-ir:hover b { color: var(--gold); }
+.guiado { animation: guiaPulso 1.2s ease-in-out infinite; }
+@keyframes guiaPulso { 50% { box-shadow: inset 0 0 0 2px var(--gold-hi), 0 0 12px rgba(254, 231, 97, 0.45); color: var(--gold-hi); } }
+@media (max-width: 760px) { .guia { top: auto; bottom: 74px; } }
+@media (prefers-reduced-motion: reduce) { .guiado { animation: none; box-shadow: inset 0 0 0 2px var(--gold-hi); } }
+
 </style>
 </head>
 <body data-mode="title">
@@ -1136,6 +1148,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         <div id="event-line" class="event-line small" hidden><img class="ico" alt=""><span></span></div>
       </div>
     </div>
+    <!-- 0.43: o começo guiado: a meta da vez, com o botão certo piscando -->
+    <div id="guia" class="guia panel" hidden><button type="button" id="guia-ir" class="guia-ir"><b>Próximo:</b> <span id="guia-txt"></span><span id="guia-dica" class="guia-dica"></span></button><button type="button" id="guia-x" class="guia-x" aria-label="Esconder o guia" title="Esconder o guia">×</button></div>
     <div class="clock panel" id="clockbox">
       <span id="clock">07:00</span>
       <img id="weather-ico" class="ico" alt="">
@@ -1409,7 +1423,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.42.0',
+    VERSION: '0.43.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -3218,6 +3232,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   };
   // 0.35: a casa reformada tem o nome e o abrigo da forma da idade dela (a melhor das duas: uma oca de 12 lugares não encolhe)
   const casaCache = {};
+  // 0.43: o custo de uma obra nova agora (a casa pede o material da idade)
+  Sim.custoNovo = (S, t) => (t === 'barraca' && G.Eras && G.Eras.custoCasa ? G.Eras.custoCasa(S) : C.BUILD[t].cost);
   Sim.def = function (b) {
     const d = Sim.defOf(b.type, b.lv, b.kind);
     if (b.type !== 'barraca' || !b.era || !G.Eras || !G.Eras.formaCasa) return d;
@@ -3462,7 +3478,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     if (b.site) return null;
     if (b.demol) return { b, demol: true, cost: {}, have: {}, work: b.demol.work, get progress() { return b.demol.progress; }, set progress(v) { b.demol.progress = v; } };
     if (b.re) return { b, re: true, cost: b.re.cost, have: b.re.have, work: b.re.work, get progress() { return b.re.progress; }, set progress(v) { b.re.progress = v; } };
-    if (!b.built) { const d = C.BUILD[b.type]; return { b, cost: d.cost, have: b.have, work: d.work, get progress() { return b.progress; }, set progress(v) { b.progress = v; } }; }
+    if (!b.built) { const d = C.BUILD[b.type], cost = b.type === 'barraca' && b.era && G.Eras && G.Eras.formaCasa(b.era) >= 2 ? G.Eras.CASAS[G.Eras.formaCasa(b.era)].cost : d.cost; return { b, cost, have: b.have, work: d.work, get progress() { return b.progress; }, set progress(v) { b.progress = v; } }; }
     if (b.up) { const d = Sim.upDef(b); return { b, cost: d.cost, have: b.up.have, work: d.work, get progress() { return b.up.progress; }, set progress(v) { b.up.progress = v; } }; }
     return null;
   };
@@ -16791,11 +16807,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const mx = casas.length ? casas.reduce((a, b) => a + b.x, 0) / casas.length : cx, my = casas.length ? casas.reduce((a, b) => a + b.y, 0) / casas.length : cy;
     return lugar(S, 'barraca', mx, my, 2, 14) || lugar(S, 'barraca', cx, cy, 3, 22);
   }
-  const custoDe = (q) => (q.type === 'cerca' ? { madeira: q.tiles.length * C.CERCA_WOOD } : C.BUILD[q.type].cost || {});
+  const custoDe = (q, S) => (q.type === 'cerca' ? { madeira: q.tiles.length * C.CERCA_WOOD } : Sim().custoNovo(S, q.type) || {});
   So.custoDe = custoDe;
   // cabe no teto? O povo só compromete uma parte do que há de cada material
   function cabe(S, q) {
-    const cost = custoDe(q);
+    const cost = custoDe(q, S);
     for (const k in cost) if (cost[k] > Math.floor((S.stock[k] || 0) * C.SOC_TETO)) return false;
     return true;
   }
@@ -17774,7 +17790,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   So.pedidosInfo = function (S) {
     const s = S.soc;
     if (!s) return [];
-    return s.pedidos.map((q) => ({ id: q.id, type: q.type, nome: NOME_OBRA[q.type], why: So.FALTA[q.why], x: q.x, y: q.y, tiles: q.tiles || null, custo: custoDe(q), dias: Math.max(0, Math.ceil(C.PEDIDO_D - (S.t - q.t) / DAY)) }));
+    return s.pedidos.map((q) => ({ id: q.id, type: q.type, nome: NOME_OBRA[q.type], why: So.FALTA[q.why], x: q.x, y: q.y, tiles: q.tiles || null, custo: custoDe(q, S), dias: Math.max(0, Math.ceil(C.PEDIDO_D - (S.t - q.t) / DAY)) }));
   };
 })(globalThis.G = globalThis.G || {});
 
@@ -19447,14 +19463,16 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // 0.35: a casa muda de forma com a idade, não só de cor: a barraca vira cabana, a cabana vira casa de madeira e taipa,
   // depois a casa caiada, o sobrado, a casa de tijolo, a casa de varanda e o prédio. Cada forma abriga mais e melhor
   E.CASAS = [null,
-    { name: 'Cabana', a: 'a', heat: 10, cap: 6, sleep: 12, desc: 'Paredes de pau a pique e telhado de palha: +10 °C e 6 lugares.' },
-    { name: 'Casa de madeira e taipa', a: 'a', heat: 12, cap: 6, sleep: 13, desc: 'Esteios de madeira e paredes de taipa: +12 °C e 6 lugares.' },
-    { name: 'Casa caiada', a: 'a', heat: 14, cap: 7, sleep: 13, desc: 'Paredes brancas de cal e telha de barro: +14 °C e 7 lugares.' },
-    { name: 'Sobrado', a: 'o', heat: 15, cap: 8, sleep: 14, desc: 'Dois andares e sacada de ferro: +15 °C e 8 lugares.' },
-    { name: 'Casa de tijolo', a: 'a', heat: 16, cap: 8, sleep: 14, desc: 'Tijolo aparente e chaminé: +16 °C e 8 lugares.' },
-    { name: 'Casa de varanda', a: 'a', heat: 18, cap: 9, sleep: 14, desc: 'Varanda com colunas e luz na porta: +18 °C e 9 lugares.' },
-    { name: 'Prédio de apartamentos', a: 'o', heat: 20, cap: 12, sleep: 15, desc: 'Quatro andares de concreto: +20 °C e 12 lugares no chão de uma casa.' },
+    { name: 'Cabana', a: 'a', heat: 10, cap: 6, sleep: 12, cost: { madeira: 14 }, desc: 'Paredes de pau a pique e telhado de palha: +10 °C e 6 lugares.' },
+    { name: 'Casa de madeira e taipa', a: 'a', heat: 12, cap: 6, sleep: 13, cost: { madeira: 16, argila: 4 }, desc: 'Esteios de madeira e paredes de taipa: +12 °C e 6 lugares.' },
+    { name: 'Casa caiada', a: 'a', heat: 14, cap: 7, sleep: 13, cost: { madeira: 14, pedra: 6, argila: 6 }, desc: 'Paredes brancas de cal e telha de barro: +14 °C e 7 lugares.' },
+    { name: 'Sobrado', a: 'o', heat: 15, cap: 8, sleep: 14, cost: { tabuas: 10, pedra: 10, argila: 6 }, desc: 'Dois andares e sacada de ferro: +15 °C e 8 lugares.' },
+    { name: 'Casa de tijolo', a: 'a', heat: 16, cap: 8, sleep: 14, cost: { tabuas: 8, pedra: 8, argila: 14 }, desc: 'Tijolo aparente e chaminé: +16 °C e 8 lugares.' },
+    { name: 'Casa de varanda', a: 'a', heat: 18, cap: 9, sleep: 14, cost: { tabuas: 12, pedra: 10, argila: 12 }, desc: 'Varanda com colunas e luz na porta: +18 °C e 9 lugares.' },
+    { name: 'Prédio de apartamentos', a: 'o', heat: 20, cap: 12, sleep: 15, cost: { tabuas: 10, pedra: 30, argila: 20 }, desc: 'Quatro andares de concreto: +20 °C e 12 lugares no chão de uma casa.' },
   ];
+  // 0.43: o que a casa nova pede na idade de agora (até a 0.42, sempre 14 de madeira, mesmo o prédio de concreto)
+  E.custoCasa = (S) => { const f = E.formaCasa((S && S.eras && S.eras.idade) || 0); return f >= 2 && E.CASAS[f].cost ? E.CASAS[f].cost : C.BUILD.barraca.cost; };
   E.formaCasa = (era) => (era >= 10 ? 7 : era >= 9 ? 6 : era >= 8 ? 5 : era >= 7 ? 4 : era >= 6 ? 3 : era >= 4 ? 2 : era >= 2 ? 1 : 0);
   // as oficinas e as instituições têm três formas: madeira e pedra, tijolo, concreto
   E.formaObra = (era) => (era >= 9 ? 3 : era >= 7 ? 2 : era >= 4 ? 1 : 0);
@@ -26416,6 +26434,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       const top = by + 31 - img.height;
       blit(S2.bigShadow, bx + 5, by + 26, ghost ? 0.4 : undefined);
       blit(img, bx, top, ghost ? 0.45 : undefined);
+      if (A.visual === 'novo' && !ghost && b.built && nova) drawProps(b, bx, by, now);   // 0.43
       // parto dentro da barraca: um sinal acima dela
       const dentro = FX && FX.tent.get(b.id);
       const labor = dentro ? dentro.labor : null;
@@ -26770,8 +26789,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       const hy = top - 2 + dy + Math.round(Math.sin(now / 400) * 0.5);
       rect(wx - 2, hy, 4, 1, col); rect(wx - 3, hy + 1, 1, 1, col); rect(wx + 2, hy + 1, 1, 1, col);
     }
-    // 0.36: quem já tem força leva uma estrelinha na cor da classe
-    if (G.Rpg && p.rpg && p.rpg.cls && p.rpg.nv >= 5 && !p.escolhido && !kid) { const col = G.Rpg.CLASSES[p.rpg.cls].cor, hy = top - 3 + dy; rect(wx - 1, hy + 1, 3, 1, col); rect(wx, hy, 1, 3, col); }
+    // 0.36: quem já tem força leva uma estrelinha na cor da classe (0.43: no visual novo, o equipamento da classe)
+    if (G.Rpg && p.rpg && p.rpg.cls && !kid) {
+      const caca = a && (a.type === 'caca' || a.type === 'defender');
+      if (A.visual === 'novo') { if (!work && !caca && !drummer) drawGear(p, wx, top + dy, now); }
+      else if (p.rpg.nv >= 5 && !p.escolhido) { const col = G.Rpg.CLASSES[p.rpg.cls].cor, hy = top - 3 + dy; rect(wx - 1, hy + 1, 3, 1, col); rect(wx, hy, 1, 3, col); }
+    }
     // Etapa 14: o cocar do líder, a marca de Deus na testa, e o olho sobre quem vai fazer o que não deve (você vê tudo)
     if (S.soc && !kid) {
       if (S.soc.lider === p.id) { const hy = top - 2 + dy; rect(wx - 2, hy + 1, 1, 1, '#e43b44'); rect(wx - 1, hy, 1, 2, '#feae34'); rect(wx, hy - 1, 1, 3, '#fee761'); rect(wx + 1, hy, 1, 2, '#feae34'); rect(wx + 2, hy + 1, 1, 1, '#e43b44'); }
@@ -26796,6 +26819,72 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       const it = A.spr.item[carryKind(p.carry)];
       if (it) blit(it, wx - it.width / 2, top - it.height);
     }
+  }
+  // 0.43: as coisas do dia a dia na frente da casa, conforme a era em que ela foi feita (visual novo). No canto da
+  // frente à esquerda, longe da porta; a mesma casa tem sempre as mesmas coisas
+  const MADEIRA = ['#733e39', '#9a6440', '#c28569'], BARRO = ['#7a3a22', '#b8683a', '#d88a52'], FERRO = ['#3a4466', '#5a6988', '#8b9bb4'];
+  function drawProps(b, bx, by, now) {
+    const f = G.Eras && G.Eras.formaCasa ? G.Eras.formaCasa(b.era || 0) : 0, v = (b.id * 5 + 1) % 3, x = bx + 1, y = by + 30;
+    if (f <= 0) return;
+    const lenha = () => { for (let k = 0; k < 3; k++) { rect(x, y - 2 - k * 2, 6, 2, MADEIRA[k % 2]); rect(x + 5, y - 2 - k * 2, 1, 2, '#e4a672'); } };
+    const pote = (dx) => { rect(x + dx, y - 5, 4, 5, BARRO[1]); rect(x + dx, y - 5, 1, 5, BARRO[0]); rect(x + dx + 1, y - 6, 2, 1, '#3e2a22'); rect(x + dx + 2, y - 4, 1, 1, BARRO[2]); };
+    const cesto = () => { rect(x, y - 4, 6, 4, '#c9a068'); rect(x, y - 4, 6, 1, '#8a6a4a'); rect(x + 1, y - 5, 1, 1, '#e43b44'); rect(x + 3, y - 5, 1, 1, '#feae34'); rect(x + 4, y - 6, 1, 1, '#e43b44'); };
+    const barril = (dx) => { rect(x + dx, y - 7, 5, 7, MADEIRA[1]); rect(x + dx, y - 7, 5, 1, MADEIRA[0]); rect(x + dx, y - 5, 5, 1, FERRO[0]); rect(x + dx, y - 2, 5, 1, FERRO[0]); rect(x + dx + 3, y - 6, 1, 5, MADEIRA[2]); };
+    const banco = () => { rect(x, y - 4, 8, 1, MADEIRA[2]); rect(x, y - 3, 8, 1, MADEIRA[0]); rect(x + 1, y - 2, 1, 2, MADEIRA[0]); rect(x + 6, y - 2, 1, 2, MADEIRA[0]); };
+    const flores = (dx) => { rect(x + dx, y - 3, 5, 3, BARRO[1]); rect(x + dx, y - 3, 5, 1, BARRO[0]); rect(x + dx + 1, y - 5, 1, 2, '#3e8948'); rect(x + dx + 3, y - 6, 1, 3, '#3e8948'); rect(x + dx, y - 6, 2, 1, '#f6757a'); rect(x + dx + 3, y - 7, 2, 1, '#fee761'); };
+    const caixote = (dx) => { rect(x + dx, y - 5, 6, 5, MADEIRA[2]); rect(x + dx, y - 5, 6, 1, MADEIRA[1]); rect(x + dx, y - 3, 6, 1, MADEIRA[1]); rect(x + dx, y - 5, 1, 5, MADEIRA[0]); };
+    const rede = () => { rect(x + 1, y - 9, 1, 9, MADEIRA[0]); for (let k = 0; k < 4; k++) for (let j = 0; j < 3; j++) if ((k + j) % 2) rect(x + 2 + j * 2, y - 8 + k * 2, 1, 1, '#c8bfae'); rect(x + 2, y - 9, 6, 1, '#c8bfae'); };
+    const lampiao = (dx) => { rect(x + dx + 1, y - 10, 1, 10, FERRO[0]); rect(x + dx, y - 12, 3, 2, (Math.floor(now / 500) + b.id) % 7 ? '#fee761' : '#feae34'); rect(x + dx, y - 13, 3, 1, FERRO[0]); };
+    const carrinho = () => { rect(x, y - 5, 6, 3, FERRO[1]); rect(x, y - 5, 6, 1, FERRO[2]); rect(x + 1, y - 2, 2, 2, '#181425'); rect(x + 6, y - 4, 2, 1, MADEIRA[0]); };
+    const tijolos = () => { for (let k = 0; k < 3; k++) for (let j = 0; j < 2; j++) rect(x + j * 3 + (k % 2), y - 2 - k * 2, 3, 2, (j + k) % 2 ? '#a64032' : '#c2563e'); };
+    const bici = () => { rect(x, y - 3, 3, 3, '#181425'); rect(x + 5, y - 3, 3, 3, '#181425'); rect(x + 1, y - 2, 1, 1, FERRO[2]); rect(x + 6, y - 2, 1, 1, FERRO[2]); rect(x + 2, y - 5, 4, 1, '#e43b44'); rect(x + 5, y - 6, 1, 2, '#e43b44'); rect(x + 2, y - 6, 1, 1, '#181425'); };
+    const varal = () => { rect(x, y - 10, 1, 10, MADEIRA[0]); rect(x + 9, y - 10, 1, 10, MADEIRA[0]); rect(x, y - 10, 10, 1, '#c0cbdc'); rect(x + 1, y - 9, 2, 3, '#2ce8f5'); rect(x + 4, y - 9, 2, 4, '#e43b44'); rect(x + 7, y - 9, 2, 3, '#fee761'); };
+    const lixeira = () => { rect(x, y - 6, 4, 6, '#3e8948'); rect(x, y - 7, 4, 1, '#265c42'); rect(x + 1, y - 5, 1, 4, '#63c74d'); };
+    if (f === 1) [lenha, () => { pote(0); rect(x + 5, y - 3, 2, 3, MADEIRA[1]); }, cesto][v]();
+    else if (f === 2) [() => barril(0), banco, () => flores(0)][v]();
+    else if (f === 3) [() => { barril(0); caixote(5); }, rede, () => flores(1)][v]();
+    else if (f === 4) [() => { caixote(0); lampiao(7); }, carrinho, () => flores(0)][v]();
+    else if (f === 5) [carrinho, tijolos, () => barril(0)][v]();
+    else if (f === 6) [() => lampiao(0), bici, varal][v]();
+    else [lixeira, bici, () => flores(0)][v]();
+  }
+  // 0.43: o equipamento do herói (visual novo). top: o alto da cabeça; o corpo vai de top a top+13, centrado em wx.
+  // dir 0 de frente, 1 de costas, 2 para a direita, 3 para a esquerda. Do nível 10 em diante, uma capa da cor da classe
+  const ACO = '#c0cbdc', ACO2 = '#8b9bb4', CABO = '#733e39', COURO = '#8a5a3a';
+  function drawGear(p, wx, top, now) {
+    const r = p.rpg, cls = r.cls, d = p.dir, cor = G.Rpg.CLASSES[cls].cor;
+    const lado = d === 3 ? -1 : 1, xs = d === 3 ? wx - 5 : wx + 4, xc = d === 3 ? wx + 3 : wx - 4;   // xs: a mão; xc: as costas
+    if (r.nv >= 10) {   // capa
+      if (d === 1) { rect(wx - 3, top + 5, 6, 7, cor); rect(wx - 3, top + 11, 6, 1, '#181425'); }
+      else if (d === 2 || d === 3) rect(xc, top + 5, 1, 7, cor);
+      else { rect(wx - 4, top + 5, 1, 6, cor); rect(wx + 3, top + 5, 1, 6, cor); }
+    }
+    switch (cls) {
+      case 'guerreiro':
+        if (d !== 1) { rect(xs, top + 3, 1, 6, ACO); rect(xs, top + 3, 1, 1, '#ffffff'); rect(xs - 1, top + 9, 3, 1, CABO); rect(xs, top + 10, 1, 1, CABO); }
+        { const ex = d === 1 ? wx - 2 : xc - (d === 3 ? 0 : 1); rect(ex, top + 6, 3, 4, '#a22633'); rect(ex + 1, top + 7, 1, 2, '#feae34'); }   // escudo
+        break;
+      case 'arqueiro':
+        { const bx = d === 1 ? wx : xc; for (let k = 0; k < 7; k++) rect(bx + (k === 0 || k === 6 ? 0 : k === 3 ? 2 : 1) * (d === 3 ? -1 : 1) * 0.5, top + 3 + k, 1, 1, CABO); rect(bx + (d === 3 ? 1 : -1), top + 3, 1, 7, '#ead4aa'); }
+        if (d !== 0) { const qx = d === 1 ? wx + 1 : xc - lado; rect(qx, top + 4, 2, 5, COURO); rect(qx, top + 3, 1, 1, '#ffffff'); rect(qx + 1, top + 3, 1, 1, '#e43b44'); }
+        break;
+      case 'cacador':
+        rect(xs, top - 2, 1, 13, CABO); rect(xs, top - 4, 1, 2, ACO); rect(xs, top - 3, 1, 1, '#ffffff');
+        break;
+      case 'mago':
+        rect(xs, top, 1, 12, CABO); { const brilho = (Math.floor(now / 300) + p.id) % 3 ? '#b080ff' : '#e8d8ff'; rect(xs - 1, top - 2, 3, 2, brilho); }
+        rect(wx - 3, top - 1, 6, 1, '#4a2c7a'); rect(wx - 2, top - 2, 4, 1, '#5e3a96'); rect(wx - 1, top - 3, 2, 1, '#5e3a96'); rect(wx + (d === 3 ? -1 : 0), top - 4, 1, 1, '#5e3a96');   // chapéu
+        break;
+      case 'sacerdote':
+        rect(xs, top + 1, 1, 11, '#ead4aa'); rect(xs - 1, top - 1, 3, 1, '#fee761'); rect(xs, top - 2, 1, 3, '#fee761');
+        if (d !== 1) rect(wx - 1, top + 6, 2, 4, '#fff0a0');   // a faixa clara no peito
+        break;
+      case 'explorador':
+        { const mx = d === 1 ? wx - 2 : d === 0 ? wx - 2 : xc - (d === 3 ? 0 : 2); if (d !== 0) { rect(mx, top + 5, 4, 5, COURO); rect(mx, top + 5, 4, 1, '#5a3a2a'); rect(mx + 1, top + 7, 2, 1, '#c9a068'); } }
+        rect(wx - 3, top, 6, 1, '#8a6a4a'); rect(wx - 2, top - 1, 4, 1, '#a07a50');   // chapéu de aba
+        break;
+    }
+    if (r.nv >= 20 && Math.random() < 0.02) spawn({ x: wx + (Math.random() - 0.5) * 8, y: top + 4, vx: 0, vy: -6, g: 0, life: 0.9, col: cor });   // os fortes brilham de leve
   }
   // Etapa 14: a vila de fora (com fumaça, se há gente), as cinzas de uma obra queimada, o pedido do líder (a obra em
   // fantasma, com um ponto de interrogação)
@@ -28642,6 +28731,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     off.innerHTML = C.OFFLINE_RATE_NAMES.map((n, i) => `<option value="${i}">${n}</option>`).join('');
     off.addEventListener('change', () => { if (!S) return; S.opts = S.opts || {}; S.opts.offline = +off.value; UI.toast('Com o jogo fechado: ' + C.OFFLINE_RATE_NAMES[+off.value] + '.'); });
     $('#menu-save').addEventListener('click', () => { UI.hooks.save(); });
+    $('#guia-ir').addEventListener('click', () => UI.guiaIr());   // 0.43
+    $('#guia-x').addEventListener('click', () => UI.guiaFecha());
     // o tom do mundo (0.12; antes, a chave das noites picantes): leve, picante ou adulto. Sempre só entre adultos
     // 0.42: o visual (fica neste aparelho)
     { const sel = $('#menu-visual'); let v = 'novo'; try { v = localStorage.getItem('gods.visual') || 'novo'; } catch (e) { /* sem guardar */ } sel.value = v; G.R.setVisual(v);
@@ -28859,8 +28950,27 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       row.querySelector('.who').textContent = who.length ? who.join(', ') : '';
     });
   }
+  // 0.43: o começo guiado. Na primeira fase de metas (e até o fim do ano 2), a meta da vez aparece embaixo do
+  // relógio e o botão que a resolve pisca. Tocar na faixa abre o painel certo; o × esconde de vez (neste aparelho)
+  const GUIA_BTN = { fogo: ['construir', 'fogueira'], barraca: ['construir', 'barraca'], milagre: ['deus'], oracao: ['deus'], vontade: ['vontades'], frutas20: ['vontades'], agua10: ['vontades'], peixe5: ['vontades'], lenha: ['vontades'], comida: ['vontades'], olhar: ['povo'] };
+  let guiaOff = false;
+  try { guiaOff = localStorage.getItem('gods.guia') === 'off'; } catch (e) { /* sem guardar */ }
+  function paintGuia() {
+    const el = $('#guia');
+    if (!el) return;
+    const g = !guiaOff && (S.goalsPhase || 1) === 1 && S.ck.year <= 2 && S.goals.find((x) => !x.done);
+    document.querySelectorAll('.guiado').forEach((b) => { const alvo = g && GUIA_BTN[g.id]; if (!alvo || (b.dataset.open !== alvo[0] && b.dataset.build !== alvo[1])) b.classList.remove('guiado'); });
+    if (!g) { if (!el.hidden) el.hidden = true; return; }
+    if (el.dataset.meta !== g.id) { el.dataset.meta = g.id; $('#guia-txt').textContent = g.text; $('#guia-dica').textContent = GOAL_HINT[g.id] || ''; }
+    if (el.hidden) el.hidden = false;
+    const alvo = GUIA_BTN[g.id];
+    if (alvo) { const b = document.querySelector('[data-open="' + alvo[0] + '"]'); if (b) b.classList.add('guiado'); if (alvo[1]) { const c = document.querySelector('.bbtn[data-build="' + alvo[1] + '"]'); if (c) c.classList.add('guiado'); } }
+  }
+  UI.guiaIr = function () { const el = $('#guia'), alvo = el && GUIA_BTN[el.dataset.meta]; if (!alvo) return; const b = document.querySelector('[data-open="' + alvo[0] + '"]'); if (b && !b.classList.contains('on')) b.click(); };
+  UI.guiaFecha = function () { guiaOff = true; try { localStorage.setItem('gods.guia', 'off'); } catch (e) { /* sem guardar */ } paintGuia(); };
   // metas: quantas já foram e as próximas 4 (a primeira com a dica); cada uma mostra o Poder que rende
   function paintGoals() {
+    paintGuia();
     const done = S.goals.filter((g) => g.done).length;
     $('#goals-title').textContent = (S.goalsPhase === 4 ? (S.stats.aldeiaGoals ? 'A aldeia tomou forma' : 'Metas da Aldeia') : S.stats.eraEnd ? 'Era da Família completa' : S.goalsPhase === 3 ? 'Metas das Descobertas' : S.goalsPhase === 2 ? 'Metas da Família' : 'Metas do Ato 1') +
       ' · ' + done + ' de ' + S.goals.length;
@@ -28887,12 +28997,13 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       const open = G.Tech.buildOpen(S, b.dataset.build) && (b.dataset.build !== 'cemiterio' || !G.Memoria || !S.memoria || (!G.Memoria.cemetery(S) && (S.stats.winters >= 1 || S.stats.lastDeathAt > 0 || S.memoria.corpos.length > 0)));
       if (b.hidden === open) b.hidden = !open;
       b.classList.toggle('on', UI.hooks.placing() === b.dataset.build);
-      b.querySelectorAll('[data-c]').forEach((s) => s.classList.toggle('lack', S.stock[s.dataset.c] < d.cost[s.dataset.c]));
+      { const cc = Sim.custoNovo(S, b.dataset.build); b.querySelectorAll('[data-c]').forEach((s) => s.classList.toggle('lack', S.stock[s.dataset.c] < (cc[s.dataset.c] || 0))); }
       // 0.35: passada a idade das barracas, o botão constrói a casa do tempo
       if (b.dataset.build === 'barraca' && G.Eras && S.eras) {
         const f = G.Eras.formaCasa(S.eras.idade || 0), nm = ['Barraca', 'Cabana', 'Casa', 'Casa caiada', 'Sobrado', 'Casa', 'Casa', 'Prédio'][f];
         if (b.dataset.forma !== String(f)) {
           b.dataset.forma = String(f);
+          { const cc = Sim.custoNovo(S, 'barraca'), box = b.querySelector('.cost'); if (box) box.innerHTML = Object.keys(cc).map((k) => `<span data-c="${k}"><img src="${ic(k)}" alt="${RES_NAME[k]}"> ${cc[k]}</span>`).join(''); }   // 0.43
           const sp = b.querySelector('span'), ico = b.querySelector('.ico'), kb = sp.querySelector('kbd');
           sp.textContent = nm; if (kb) sp.appendChild(kb);
           if (ico) ico.src = ic(f ? 'casa' : 'barraca');
@@ -31402,7 +31513,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     const b = Sim.placeBlueprint(S, P.type, P.x, P.y);
     if (b) {
       const d = C.BUILD[b.type];
-      const costs = Object.entries(d.cost).map(([k, v]) => v + ' de ' + k);
+      const costs = Object.entries(Sim.jobOf(b) ? Sim.jobOf(b).cost : d.cost).map(([k, v]) => v + ' de ' + k);
       UI.toast(d.name + (d.a === 'o' ? ' marcado' : ' marcada') + '. ' + (costs.length ? 'Precisa de ' + (costs.length > 1 ? costs.slice(0, -1).join(', ') + ' e ' + costs[costs.length - 1] : costs[0]) + '.' : 'Só pede trabalho: o povo lavra a terra.'), '');
       if (!S.vontades.construir) UI.toast('Construir está proibido nas Vontades. Ninguém vai trabalhar na obra.', 'warn');
     }

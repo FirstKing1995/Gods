@@ -408,6 +408,8 @@
     off.innerHTML = C.OFFLINE_RATE_NAMES.map((n, i) => `<option value="${i}">${n}</option>`).join('');
     off.addEventListener('change', () => { if (!S) return; S.opts = S.opts || {}; S.opts.offline = +off.value; UI.toast('Com o jogo fechado: ' + C.OFFLINE_RATE_NAMES[+off.value] + '.'); });
     $('#menu-save').addEventListener('click', () => { UI.hooks.save(); });
+    $('#guia-ir').addEventListener('click', () => UI.guiaIr());   // 0.43
+    $('#guia-x').addEventListener('click', () => UI.guiaFecha());
     // o tom do mundo (0.12; antes, a chave das noites picantes): leve, picante ou adulto. Sempre só entre adultos
     // 0.42: o visual (fica neste aparelho)
     { const sel = $('#menu-visual'); let v = 'novo'; try { v = localStorage.getItem('gods.visual') || 'novo'; } catch (e) { /* sem guardar */ } sel.value = v; G.R.setVisual(v);
@@ -625,8 +627,27 @@
       row.querySelector('.who').textContent = who.length ? who.join(', ') : '';
     });
   }
+  // 0.43: o começo guiado. Na primeira fase de metas (e até o fim do ano 2), a meta da vez aparece embaixo do
+  // relógio e o botão que a resolve pisca. Tocar na faixa abre o painel certo; o × esconde de vez (neste aparelho)
+  const GUIA_BTN = { fogo: ['construir', 'fogueira'], barraca: ['construir', 'barraca'], milagre: ['deus'], oracao: ['deus'], vontade: ['vontades'], frutas20: ['vontades'], agua10: ['vontades'], peixe5: ['vontades'], lenha: ['vontades'], comida: ['vontades'], olhar: ['povo'] };
+  let guiaOff = false;
+  try { guiaOff = localStorage.getItem('gods.guia') === 'off'; } catch (e) { /* sem guardar */ }
+  function paintGuia() {
+    const el = $('#guia');
+    if (!el) return;
+    const g = !guiaOff && (S.goalsPhase || 1) === 1 && S.ck.year <= 2 && S.goals.find((x) => !x.done);
+    document.querySelectorAll('.guiado').forEach((b) => { const alvo = g && GUIA_BTN[g.id]; if (!alvo || (b.dataset.open !== alvo[0] && b.dataset.build !== alvo[1])) b.classList.remove('guiado'); });
+    if (!g) { if (!el.hidden) el.hidden = true; return; }
+    if (el.dataset.meta !== g.id) { el.dataset.meta = g.id; $('#guia-txt').textContent = g.text; $('#guia-dica').textContent = GOAL_HINT[g.id] || ''; }
+    if (el.hidden) el.hidden = false;
+    const alvo = GUIA_BTN[g.id];
+    if (alvo) { const b = document.querySelector('[data-open="' + alvo[0] + '"]'); if (b) b.classList.add('guiado'); if (alvo[1]) { const c = document.querySelector('.bbtn[data-build="' + alvo[1] + '"]'); if (c) c.classList.add('guiado'); } }
+  }
+  UI.guiaIr = function () { const el = $('#guia'), alvo = el && GUIA_BTN[el.dataset.meta]; if (!alvo) return; const b = document.querySelector('[data-open="' + alvo[0] + '"]'); if (b && !b.classList.contains('on')) b.click(); };
+  UI.guiaFecha = function () { guiaOff = true; try { localStorage.setItem('gods.guia', 'off'); } catch (e) { /* sem guardar */ } paintGuia(); };
   // metas: quantas já foram e as próximas 4 (a primeira com a dica); cada uma mostra o Poder que rende
   function paintGoals() {
+    paintGuia();
     const done = S.goals.filter((g) => g.done).length;
     $('#goals-title').textContent = (S.goalsPhase === 4 ? (S.stats.aldeiaGoals ? 'A aldeia tomou forma' : 'Metas da Aldeia') : S.stats.eraEnd ? 'Era da Família completa' : S.goalsPhase === 3 ? 'Metas das Descobertas' : S.goalsPhase === 2 ? 'Metas da Família' : 'Metas do Ato 1') +
       ' · ' + done + ' de ' + S.goals.length;
@@ -653,12 +674,13 @@
       const open = G.Tech.buildOpen(S, b.dataset.build) && (b.dataset.build !== 'cemiterio' || !G.Memoria || !S.memoria || (!G.Memoria.cemetery(S) && (S.stats.winters >= 1 || S.stats.lastDeathAt > 0 || S.memoria.corpos.length > 0)));
       if (b.hidden === open) b.hidden = !open;
       b.classList.toggle('on', UI.hooks.placing() === b.dataset.build);
-      b.querySelectorAll('[data-c]').forEach((s) => s.classList.toggle('lack', S.stock[s.dataset.c] < d.cost[s.dataset.c]));
+      { const cc = Sim.custoNovo(S, b.dataset.build); b.querySelectorAll('[data-c]').forEach((s) => s.classList.toggle('lack', S.stock[s.dataset.c] < (cc[s.dataset.c] || 0))); }
       // 0.35: passada a idade das barracas, o botão constrói a casa do tempo
       if (b.dataset.build === 'barraca' && G.Eras && S.eras) {
         const f = G.Eras.formaCasa(S.eras.idade || 0), nm = ['Barraca', 'Cabana', 'Casa', 'Casa caiada', 'Sobrado', 'Casa', 'Casa', 'Prédio'][f];
         if (b.dataset.forma !== String(f)) {
           b.dataset.forma = String(f);
+          { const cc = Sim.custoNovo(S, 'barraca'), box = b.querySelector('.cost'); if (box) box.innerHTML = Object.keys(cc).map((k) => `<span data-c="${k}"><img src="${ic(k)}" alt="${RES_NAME[k]}"> ${cc[k]}</span>`).join(''); }   // 0.43
           const sp = b.querySelector('span'), ico = b.querySelector('.ico'), kb = sp.querySelector('kbd');
           sp.textContent = nm; if (kb) sp.appendChild(kb);
           if (ico) ico.src = ic(f ? 'casa' : 'barraca');

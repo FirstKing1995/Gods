@@ -72,5 +72,19 @@ function ergue(S, t) {
   delete b.era;
   check('a obra de save antigo sem idade continua barraca', Sim.def(b).name === 'Barraca simples');
 }
+// 0.43: a casa nova pede o material da idade
+{
+  const S = mundo(11, 0);
+  check('na pedra, a barraca pede só madeira', JSON.stringify(Sim.custoNovo(S, 'barraca')) === JSON.stringify(C.BUILD.barraca.cost));
+  S.eras.idade = 2;
+  check('a cabana ainda pede só madeira', Object.keys(Sim.custoNovo(S, 'barraca')).join() === 'madeira');
+  S.eras.idade = 8;
+  check('na Revolução Industrial, a casa de tijolo pede argila, pedra e tábuas', Sim.custoNovo(S, 'barraca').argila === 14 && Sim.custoNovo(S, 'barraca').tabuas === 8);
+  S.eras.idade = 10;
+  const at = (() => { for (let r = 3; r < 30; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (!Sim.canPlace(S, 'barraca', S.camp.x + dx, S.camp.y + dy)) return { x: S.camp.x + dx, y: S.camp.y + dy }; return null; })();
+  const b = Sim.placeBlueprint(S, 'barraca', at.x, at.y);
+  check('o prédio marcado na Era Moderna pede o concreto dele na obra', Sim.jobOf(b).cost.pedra === 30 && Sim.jobOf(b).cost.argila === 20);
+  check('as outras obras não mudam de custo', Sim.custoNovo(S, 'fogueira') === C.BUILD.fogueira.cost);
+}
 console.log('unidades: ' + ok + ' ok, ' + bad + ' falhas');
 process.exit(bad ? 1 : 0);

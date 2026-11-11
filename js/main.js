@@ -521,7 +521,7 @@
     const b = Sim.placeBlueprint(S, P.type, P.x, P.y);
     if (b) {
       const d = C.BUILD[b.type];
-      const costs = Object.entries(d.cost).map(([k, v]) => v + ' de ' + k);
+      const costs = Object.entries(Sim.jobOf(b) ? Sim.jobOf(b).cost : d.cost).map(([k, v]) => v + ' de ' + k);
       UI.toast(d.name + (d.a === 'o' ? ' marcado' : ' marcada') + '. ' + (costs.length ? 'Precisa de ' + (costs.length > 1 ? costs.slice(0, -1).join(', ') + ' e ' + costs[costs.length - 1] : costs[0]) + '.' : 'Só pede trabalho: o povo lavra a terra.'), '');
       if (!S.vontades.construir) UI.toast('Construir está proibido nas Vontades. Ninguém vai trabalhar na obra.', 'warn');
     }

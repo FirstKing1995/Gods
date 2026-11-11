@@ -776,3 +776,15 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 @media (hover: none) and (pointer: coarse) {
   kbd { display: none !important; }
 }
+
+/* 0.43: o começo guiado (a meta da vez embaixo do relógio; o botão que resolve pisca) */
+.guia { position: fixed; top: 62px; left: 50%; transform: translateX(-50%); z-index: 6; display: flex; align-items: stretch; max-width: min(560px, calc(100vw - 24px)); padding: 0; animation: tin 0.3s ease-out; }
+.guia-ir { flex: 1; text-align: left; background: transparent; border: 0; color: var(--text); font: inherit; font-size: 13px; padding: 7px 10px; cursor: pointer; line-height: 1.35; }
+.guia-ir b { color: var(--gold-hi); }
+.guia-dica { display: block; color: var(--muted); font-size: 12px; }
+.guia-x { background: transparent; border: 0; border-left: 1px solid var(--edge); color: var(--muted); font-size: 18px; padding: 0 10px; cursor: pointer; }
+.guia-x:hover, .guia-ir:hover b { color: var(--gold); }
+.guiado { animation: guiaPulso 1.2s ease-in-out infinite; }
+@keyframes guiaPulso { 50% { box-shadow: inset 0 0 0 2px var(--gold-hi), 0 0 12px rgba(254, 231, 97, 0.45); color: var(--gold-hi); } }
+@media (max-width: 760px) { .guia { top: auto; bottom: 74px; } }
+@media (prefers-reduced-motion: reduce) { .guiado { animation: none; box-shadow: inset 0 0 0 2px var(--gold-hi); } }
