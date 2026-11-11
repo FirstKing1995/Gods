@@ -1384,6 +1384,7 @@
       const top = by + 31 - img.height;
       blit(S2.bigShadow, bx + 5, by + 26, ghost ? 0.4 : undefined);
       blit(img, bx, top, ghost ? 0.45 : undefined);
+      if (A.visual === 'novo' && !ghost && b.built && nova) drawProps(b, bx, by, now);   // 0.43
       // parto dentro da barraca: um sinal acima dela
       const dentro = FX && FX.tent.get(b.id);
       const labor = dentro ? dentro.labor : null;
@@ -1738,8 +1739,12 @@
       const hy = top - 2 + dy + Math.round(Math.sin(now / 400) * 0.5);
       rect(wx - 2, hy, 4, 1, col); rect(wx - 3, hy + 1, 1, 1, col); rect(wx + 2, hy + 1, 1, 1, col);
     }
-    // 0.36: quem já tem força leva uma estrelinha na cor da classe
-    if (G.Rpg && p.rpg && p.rpg.cls && p.rpg.nv >= 5 && !p.escolhido && !kid) { const col = G.Rpg.CLASSES[p.rpg.cls].cor, hy = top - 3 + dy; rect(wx - 1, hy + 1, 3, 1, col); rect(wx, hy, 1, 3, col); }
+    // 0.36: quem já tem força leva uma estrelinha na cor da classe (0.43: no visual novo, o equipamento da classe)
+    if (G.Rpg && p.rpg && p.rpg.cls && !kid) {
+      const caca = a && (a.type === 'caca' || a.type === 'defender');
+      if (A.visual === 'novo') { if (!work && !caca && !drummer) drawGear(p, wx, top + dy, now); }
+      else if (p.rpg.nv >= 5 && !p.escolhido) { const col = G.Rpg.CLASSES[p.rpg.cls].cor, hy = top - 3 + dy; rect(wx - 1, hy + 1, 3, 1, col); rect(wx, hy, 1, 3, col); }
+    }
     // Etapa 14: o cocar do líder, a marca de Deus na testa, e o olho sobre quem vai fazer o que não deve (você vê tudo)
     if (S.soc && !kid) {
       if (S.soc.lider === p.id) { const hy = top - 2 + dy; rect(wx - 2, hy + 1, 1, 1, '#e43b44'); rect(wx - 1, hy, 1, 2, '#feae34'); rect(wx, hy - 1, 1, 3, '#fee761'); rect(wx + 1, hy, 1, 2, '#feae34'); rect(wx + 2, hy + 1, 1, 1, '#e43b44'); }
@@ -1764,6 +1769,72 @@
       const it = A.spr.item[carryKind(p.carry)];
       if (it) blit(it, wx - it.width / 2, top - it.height);
     }
+  }
+  // 0.43: as coisas do dia a dia na frente da casa, conforme a era em que ela foi feita (visual novo). No canto da
+  // frente à esquerda, longe da porta; a mesma casa tem sempre as mesmas coisas
+  const MADEIRA = ['#733e39', '#9a6440', '#c28569'], BARRO = ['#7a3a22', '#b8683a', '#d88a52'], FERRO = ['#3a4466', '#5a6988', '#8b9bb4'];
+  function drawProps(b, bx, by, now) {
+    const f = G.Eras && G.Eras.formaCasa ? G.Eras.formaCasa(b.era || 0) : 0, v = (b.id * 5 + 1) % 3, x = bx + 1, y = by + 30;
+    if (f <= 0) return;
+    const lenha = () => { for (let k = 0; k < 3; k++) { rect(x, y - 2 - k * 2, 6, 2, MADEIRA[k % 2]); rect(x + 5, y - 2 - k * 2, 1, 2, '#e4a672'); } };
+    const pote = (dx) => { rect(x + dx, y - 5, 4, 5, BARRO[1]); rect(x + dx, y - 5, 1, 5, BARRO[0]); rect(x + dx + 1, y - 6, 2, 1, '#3e2a22'); rect(x + dx + 2, y - 4, 1, 1, BARRO[2]); };
+    const cesto = () => { rect(x, y - 4, 6, 4, '#c9a068'); rect(x, y - 4, 6, 1, '#8a6a4a'); rect(x + 1, y - 5, 1, 1, '#e43b44'); rect(x + 3, y - 5, 1, 1, '#feae34'); rect(x + 4, y - 6, 1, 1, '#e43b44'); };
+    const barril = (dx) => { rect(x + dx, y - 7, 5, 7, MADEIRA[1]); rect(x + dx, y - 7, 5, 1, MADEIRA[0]); rect(x + dx, y - 5, 5, 1, FERRO[0]); rect(x + dx, y - 2, 5, 1, FERRO[0]); rect(x + dx + 3, y - 6, 1, 5, MADEIRA[2]); };
+    const banco = () => { rect(x, y - 4, 8, 1, MADEIRA[2]); rect(x, y - 3, 8, 1, MADEIRA[0]); rect(x + 1, y - 2, 1, 2, MADEIRA[0]); rect(x + 6, y - 2, 1, 2, MADEIRA[0]); };
+    const flores = (dx) => { rect(x + dx, y - 3, 5, 3, BARRO[1]); rect(x + dx, y - 3, 5, 1, BARRO[0]); rect(x + dx + 1, y - 5, 1, 2, '#3e8948'); rect(x + dx + 3, y - 6, 1, 3, '#3e8948'); rect(x + dx, y - 6, 2, 1, '#f6757a'); rect(x + dx + 3, y - 7, 2, 1, '#fee761'); };
+    const caixote = (dx) => { rect(x + dx, y - 5, 6, 5, MADEIRA[2]); rect(x + dx, y - 5, 6, 1, MADEIRA[1]); rect(x + dx, y - 3, 6, 1, MADEIRA[1]); rect(x + dx, y - 5, 1, 5, MADEIRA[0]); };
+    const rede = () => { rect(x + 1, y - 9, 1, 9, MADEIRA[0]); for (let k = 0; k < 4; k++) for (let j = 0; j < 3; j++) if ((k + j) % 2) rect(x + 2 + j * 2, y - 8 + k * 2, 1, 1, '#c8bfae'); rect(x + 2, y - 9, 6, 1, '#c8bfae'); };
+    const lampiao = (dx) => { rect(x + dx + 1, y - 10, 1, 10, FERRO[0]); rect(x + dx, y - 12, 3, 2, (Math.floor(now / 500) + b.id) % 7 ? '#fee761' : '#feae34'); rect(x + dx, y - 13, 3, 1, FERRO[0]); };
+    const carrinho = () => { rect(x, y - 5, 6, 3, FERRO[1]); rect(x, y - 5, 6, 1, FERRO[2]); rect(x + 1, y - 2, 2, 2, '#181425'); rect(x + 6, y - 4, 2, 1, MADEIRA[0]); };
+    const tijolos = () => { for (let k = 0; k < 3; k++) for (let j = 0; j < 2; j++) rect(x + j * 3 + (k % 2), y - 2 - k * 2, 3, 2, (j + k) % 2 ? '#a64032' : '#c2563e'); };
+    const bici = () => { rect(x, y - 3, 3, 3, '#181425'); rect(x + 5, y - 3, 3, 3, '#181425'); rect(x + 1, y - 2, 1, 1, FERRO[2]); rect(x + 6, y - 2, 1, 1, FERRO[2]); rect(x + 2, y - 5, 4, 1, '#e43b44'); rect(x + 5, y - 6, 1, 2, '#e43b44'); rect(x + 2, y - 6, 1, 1, '#181425'); };
+    const varal = () => { rect(x, y - 10, 1, 10, MADEIRA[0]); rect(x + 9, y - 10, 1, 10, MADEIRA[0]); rect(x, y - 10, 10, 1, '#c0cbdc'); rect(x + 1, y - 9, 2, 3, '#2ce8f5'); rect(x + 4, y - 9, 2, 4, '#e43b44'); rect(x + 7, y - 9, 2, 3, '#fee761'); };
+    const lixeira = () => { rect(x, y - 6, 4, 6, '#3e8948'); rect(x, y - 7, 4, 1, '#265c42'); rect(x + 1, y - 5, 1, 4, '#63c74d'); };
+    if (f === 1) [lenha, () => { pote(0); rect(x + 5, y - 3, 2, 3, MADEIRA[1]); }, cesto][v]();
+    else if (f === 2) [() => barril(0), banco, () => flores(0)][v]();
+    else if (f === 3) [() => { barril(0); caixote(5); }, rede, () => flores(1)][v]();
+    else if (f === 4) [() => { caixote(0); lampiao(7); }, carrinho, () => flores(0)][v]();
+    else if (f === 5) [carrinho, tijolos, () => barril(0)][v]();
+    else if (f === 6) [() => lampiao(0), bici, varal][v]();
+    else [lixeira, bici, () => flores(0)][v]();
+  }
+  // 0.43: o equipamento do herói (visual novo). top: o alto da cabeça; o corpo vai de top a top+13, centrado em wx.
+  // dir 0 de frente, 1 de costas, 2 para a direita, 3 para a esquerda. Do nível 10 em diante, uma capa da cor da classe
+  const ACO = '#c0cbdc', ACO2 = '#8b9bb4', CABO = '#733e39', COURO = '#8a5a3a';
+  function drawGear(p, wx, top, now) {
+    const r = p.rpg, cls = r.cls, d = p.dir, cor = G.Rpg.CLASSES[cls].cor;
+    const lado = d === 3 ? -1 : 1, xs = d === 3 ? wx - 5 : wx + 4, xc = d === 3 ? wx + 3 : wx - 4;   // xs: a mão; xc: as costas
+    if (r.nv >= 10) {   // capa
+      if (d === 1) { rect(wx - 3, top + 5, 6, 7, cor); rect(wx - 3, top + 11, 6, 1, '#181425'); }
+      else if (d === 2 || d === 3) rect(xc, top + 5, 1, 7, cor);
+      else { rect(wx - 4, top + 5, 1, 6, cor); rect(wx + 3, top + 5, 1, 6, cor); }
+    }
+    switch (cls) {
+      case 'guerreiro':
+        if (d !== 1) { rect(xs, top + 3, 1, 6, ACO); rect(xs, top + 3, 1, 1, '#ffffff'); rect(xs - 1, top + 9, 3, 1, CABO); rect(xs, top + 10, 1, 1, CABO); }
+        { const ex = d === 1 ? wx - 2 : xc - (d === 3 ? 0 : 1); rect(ex, top + 6, 3, 4, '#a22633'); rect(ex + 1, top + 7, 1, 2, '#feae34'); }   // escudo
+        break;
+      case 'arqueiro':
+        { const bx = d === 1 ? wx : xc; for (let k = 0; k < 7; k++) rect(bx + (k === 0 || k === 6 ? 0 : k === 3 ? 2 : 1) * (d === 3 ? -1 : 1) * 0.5, top + 3 + k, 1, 1, CABO); rect(bx + (d === 3 ? 1 : -1), top + 3, 1, 7, '#ead4aa'); }
+        if (d !== 0) { const qx = d === 1 ? wx + 1 : xc - lado; rect(qx, top + 4, 2, 5, COURO); rect(qx, top + 3, 1, 1, '#ffffff'); rect(qx + 1, top + 3, 1, 1, '#e43b44'); }
+        break;
+      case 'cacador':
+        rect(xs, top - 2, 1, 13, CABO); rect(xs, top - 4, 1, 2, ACO); rect(xs, top - 3, 1, 1, '#ffffff');
+        break;
+      case 'mago':
+        rect(xs, top, 1, 12, CABO); { const brilho = (Math.floor(now / 300) + p.id) % 3 ? '#b080ff' : '#e8d8ff'; rect(xs - 1, top - 2, 3, 2, brilho); }
+        rect(wx - 3, top - 1, 6, 1, '#4a2c7a'); rect(wx - 2, top - 2, 4, 1, '#5e3a96'); rect(wx - 1, top - 3, 2, 1, '#5e3a96'); rect(wx + (d === 3 ? -1 : 0), top - 4, 1, 1, '#5e3a96');   // chapéu
+        break;
+      case 'sacerdote':
+        rect(xs, top + 1, 1, 11, '#ead4aa'); rect(xs - 1, top - 1, 3, 1, '#fee761'); rect(xs, top - 2, 1, 3, '#fee761');
+        if (d !== 1) rect(wx - 1, top + 6, 2, 4, '#fff0a0');   // a faixa clara no peito
+        break;
+      case 'explorador':
+        { const mx = d === 1 ? wx - 2 : d === 0 ? wx - 2 : xc - (d === 3 ? 0 : 2); if (d !== 0) { rect(mx, top + 5, 4, 5, COURO); rect(mx, top + 5, 4, 1, '#5a3a2a'); rect(mx + 1, top + 7, 2, 1, '#c9a068'); } }
+        rect(wx - 3, top, 6, 1, '#8a6a4a'); rect(wx - 2, top - 1, 4, 1, '#a07a50');   // chapéu de aba
+        break;
+    }
+    if (r.nv >= 20 && Math.random() < 0.02) spawn({ x: wx + (Math.random() - 0.5) * 8, y: top + 4, vx: 0, vy: -6, g: 0, life: 0.9, col: cor });   // os fortes brilham de leve
   }
   // Etapa 14: a vila de fora (com fumaça, se há gente), as cinzas de uma obra queimada, o pedido do líder (a obra em
   // fantasma, com um ponto de interrogação)

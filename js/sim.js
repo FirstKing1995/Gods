@@ -519,6 +519,8 @@
   };
   // 0.35: a casa reformada tem o nome e o abrigo da forma da idade dela (a melhor das duas: uma oca de 12 lugares não encolhe)
   const casaCache = {};
+  // 0.43: o custo de uma obra nova agora (a casa pede o material da idade)
+  Sim.custoNovo = (S, t) => (t === 'barraca' && G.Eras && G.Eras.custoCasa ? G.Eras.custoCasa(S) : C.BUILD[t].cost);
   Sim.def = function (b) {
     const d = Sim.defOf(b.type, b.lv, b.kind);
     if (b.type !== 'barraca' || !b.era || !G.Eras || !G.Eras.formaCasa) return d;
@@ -763,7 +765,7 @@
     if (b.site) return null;
     if (b.demol) return { b, demol: true, cost: {}, have: {}, work: b.demol.work, get progress() { return b.demol.progress; }, set progress(v) { b.demol.progress = v; } };
     if (b.re) return { b, re: true, cost: b.re.cost, have: b.re.have, work: b.re.work, get progress() { return b.re.progress; }, set progress(v) { b.re.progress = v; } };
-    if (!b.built) { const d = C.BUILD[b.type]; return { b, cost: d.cost, have: b.have, work: d.work, get progress() { return b.progress; }, set progress(v) { b.progress = v; } }; }
+    if (!b.built) { const d = C.BUILD[b.type], cost = b.type === 'barraca' && b.era && G.Eras && G.Eras.formaCasa(b.era) >= 2 ? G.Eras.CASAS[G.Eras.formaCasa(b.era)].cost : d.cost; return { b, cost, have: b.have, work: d.work, get progress() { return b.progress; }, set progress(v) { b.progress = v; } }; }
     if (b.up) { const d = Sim.upDef(b); return { b, cost: d.cost, have: b.up.have, work: d.work, get progress() { return b.up.progress; }, set progress(v) { b.up.progress = v; } }; }
     return null;
   };

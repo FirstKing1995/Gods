@@ -274,14 +274,16 @@
   // 0.35: a casa muda de forma com a idade, não só de cor: a barraca vira cabana, a cabana vira casa de madeira e taipa,
   // depois a casa caiada, o sobrado, a casa de tijolo, a casa de varanda e o prédio. Cada forma abriga mais e melhor
   E.CASAS = [null,
-    { name: 'Cabana', a: 'a', heat: 10, cap: 6, sleep: 12, desc: 'Paredes de pau a pique e telhado de palha: +10 °C e 6 lugares.' },
-    { name: 'Casa de madeira e taipa', a: 'a', heat: 12, cap: 6, sleep: 13, desc: 'Esteios de madeira e paredes de taipa: +12 °C e 6 lugares.' },
-    { name: 'Casa caiada', a: 'a', heat: 14, cap: 7, sleep: 13, desc: 'Paredes brancas de cal e telha de barro: +14 °C e 7 lugares.' },
-    { name: 'Sobrado', a: 'o', heat: 15, cap: 8, sleep: 14, desc: 'Dois andares e sacada de ferro: +15 °C e 8 lugares.' },
-    { name: 'Casa de tijolo', a: 'a', heat: 16, cap: 8, sleep: 14, desc: 'Tijolo aparente e chaminé: +16 °C e 8 lugares.' },
-    { name: 'Casa de varanda', a: 'a', heat: 18, cap: 9, sleep: 14, desc: 'Varanda com colunas e luz na porta: +18 °C e 9 lugares.' },
-    { name: 'Prédio de apartamentos', a: 'o', heat: 20, cap: 12, sleep: 15, desc: 'Quatro andares de concreto: +20 °C e 12 lugares no chão de uma casa.' },
+    { name: 'Cabana', a: 'a', heat: 10, cap: 6, sleep: 12, cost: { madeira: 14 }, desc: 'Paredes de pau a pique e telhado de palha: +10 °C e 6 lugares.' },
+    { name: 'Casa de madeira e taipa', a: 'a', heat: 12, cap: 6, sleep: 13, cost: { madeira: 16, argila: 4 }, desc: 'Esteios de madeira e paredes de taipa: +12 °C e 6 lugares.' },
+    { name: 'Casa caiada', a: 'a', heat: 14, cap: 7, sleep: 13, cost: { madeira: 14, pedra: 6, argila: 6 }, desc: 'Paredes brancas de cal e telha de barro: +14 °C e 7 lugares.' },
+    { name: 'Sobrado', a: 'o', heat: 15, cap: 8, sleep: 14, cost: { tabuas: 10, pedra: 10, argila: 6 }, desc: 'Dois andares e sacada de ferro: +15 °C e 8 lugares.' },
+    { name: 'Casa de tijolo', a: 'a', heat: 16, cap: 8, sleep: 14, cost: { tabuas: 8, pedra: 8, argila: 14 }, desc: 'Tijolo aparente e chaminé: +16 °C e 8 lugares.' },
+    { name: 'Casa de varanda', a: 'a', heat: 18, cap: 9, sleep: 14, cost: { tabuas: 12, pedra: 10, argila: 12 }, desc: 'Varanda com colunas e luz na porta: +18 °C e 9 lugares.' },
+    { name: 'Prédio de apartamentos', a: 'o', heat: 20, cap: 12, sleep: 15, cost: { tabuas: 10, pedra: 30, argila: 20 }, desc: 'Quatro andares de concreto: +20 °C e 12 lugares no chão de uma casa.' },
   ];
+  // 0.43: o que a casa nova pede na idade de agora (até a 0.42, sempre 14 de madeira, mesmo o prédio de concreto)
+  E.custoCasa = (S) => { const f = E.formaCasa((S && S.eras && S.eras.idade) || 0); return f >= 2 && E.CASAS[f].cost ? E.CASAS[f].cost : C.BUILD.barraca.cost; };
   E.formaCasa = (era) => (era >= 10 ? 7 : era >= 9 ? 6 : era >= 8 ? 5 : era >= 7 ? 4 : era >= 6 ? 3 : era >= 4 ? 2 : era >= 2 ? 1 : 0);
   // as oficinas e as instituições têm três formas: madeira e pedra, tijolo, concreto
   E.formaObra = (era) => (era >= 9 ? 3 : era >= 7 ? 2 : era >= 4 ? 1 : 0);
