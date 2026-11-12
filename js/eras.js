@@ -34,6 +34,12 @@
     { nome: 'Era Elétrica', curto: 'luz e cidade grande', escrita: true, magia: 'raio', gente: 330, marco: ['usina', 'bonde'], txt: 'A cidade acendeu de noite e o bonde corre no trilho: começou a Era Elétrica.', txtM: 'As mais velhas guardaram o relâmpago em vasos de barro, e as casas acenderam sem fio nenhum: começou, do jeito do conselho, a Era Elétrica.' },
     // 0.34: a Era Moderna (o conselho chega a ela pelo eco)
     { nome: 'Era Moderna', curto: 'motor, rádio e hospital', escrita: true, magia: 'eco', gente: 420, marco: ['radio', 'hospitalgeral'], txt: 'A voz do rádio entra em todas as casas e o motor corre na estrada: começou a Era Moderna.', txtM: 'As mais velhas falam baixo na beira do rio, e o eco leva a voz delas a toda casa: começou, do jeito do conselho, a Era Moderna.' },
+    // 0.45: a Era da Informação (o conselho chega a ela pelo sonho)
+    { nome: 'Era da Informação', curto: 'computador e televisão', escrita: true, magia: 'sonho', gente: 520, marco: ['televisao', 'centrodados'], txt: 'A tela acende em toda sala e a máquina guarda o que o povo sabe: começou a Era da Informação.', txtM: 'As mais velhas aprenderam a entrar no sonho de cada um, e o que uma sabe, todos sonham: começou, do jeito do conselho, a Era da Informação.' },
+    // 0.46: a Era da Inteligência Artificial (o conselho chega a ela pelos espíritos)
+    { nome: 'Era da Inteligência Artificial', curto: 'máquinas que pensam', escrita: true, magia: 'espiritos', gente: 620, marco: ['robotica', 'mente'], txt: 'A máquina aprendeu a pensar junto com o povo: começou a Era da Inteligência Artificial.', txtM: 'As mais velhas chamaram os espíritos da mata para morar nas ferramentas, e as ferramentas passaram a ajudar sozinhas: começou, do jeito do conselho, a Era da Inteligência Artificial.' },
+    // 0.47: a Era Espacial, a última (o conselho chega a ela pelos astros)
+    { nome: 'Era Espacial', curto: 'foguetes e estrelas', escrita: true, magia: 'astros', gente: 720, marco: ['observatorio', 'foguete'], txt: 'O povo olha para cima e quer ir: começou a Era Espacial.', txtM: 'As mais velhas aprenderam o caminho dos astros e cantam a rota até eles: começou, do jeito do conselho, a Era Espacial.' },
   ];
   E.init = function (S) {
     const e = S.eras || (S.eras = {});
@@ -98,11 +104,11 @@
   }
   E.ordem = (S) => (S.eras ? S.eras.ordem : '');
   // os efeitos de cada ordem (ganchos pequenos, chamados de onde a coisa acontece)
-  E.crimeMult = (S) => (E.ordem(S) === 'reino' ? 0.85 : 1) * (E.temCastelo && E.temCastelo(S) ? C.CASTELO_CRIME : 1) * (E.temRadio(S) ? C.RADIO_CRIME : 1);   // 0.29: o castelo   // 0.34: o rádio
+  E.crimeMult = (S) => (E.ordem(S) === 'reino' ? 0.85 : 1) * (E.temCastelo && E.temCastelo(S) ? C.CASTELO_CRIME : 1) * (E.temRadio(S) ? C.RADIO_CRIME : 1) * (tem(S, 'mente') ? C.MENTE_CRIME : 1) * (E.temMagia(S, 'espiritos') ? C.ESPIRITOS_CRIME : 1);   // 0.46: a mente da cidade e os espíritos   // 0.29: o castelo   // 0.34: o rádio
   E.trocaMult = (S) => (E.ordem(S) === 'reino' ? 1.3 : 1);
   E.xp = (S) => (E.ordem(S) === 'guildas' ? 1.15 : 1);
   E.cacaMult = (S) => (E.ordem(S) === 'clas' ? 1.25 : 1);
-  E.descMult = (S) => (E.ordem(S) === 'assembleia' ? 0.75 : 1) * (E.temLuz(S) ? C.USINA_DESC : 1) * (G.Guilda ? G.Guilda.descMult(S) : 1);   // 0.33: a luz
+  E.descMult = (S) => (E.ordem(S) === 'assembleia' ? 0.75 : 1) * (E.temLuz(S) ? C.USINA_DESC : 1) * (G.Guilda ? G.Guilda.descMult(S) : 1) * (S.buildings.some((b) => b.type === 'televisao' && b.built) ? C.TV_DESC : 1) * (E.temMagia(S, 'sonho') ? C.SONHO_DESC : 1) * (tem(S, 'mente') ? C.MENTE_DESC : 1);   // 0.33: a luz   // 0.45: a TV e o sonho
   // no conselho, só mulher fala por todos (o matriarcado das elfas)
   E.candidatos = (S, list) => (E.ordem(S) === 'conselho' && list.some((p) => p.sex === 'F') ? list.filter((p) => p.sex === 'F') : list);
 
@@ -111,6 +117,9 @@
     runas: { nome: 'Runas', de: 'das runas', txt: 'As mais velhas gravaram runas nas pedras das casas: a pedra aquece, e quem dorme sente 4 °C a mais.' },
     ervas: { nome: 'Ervas', de: 'das ervas', txt: 'O conselho juntou o saber das ervas e dos cantos: a febre pesa bem menos, e a saúde volta mais depressa.' },
     circulos: { nome: 'Círculos', de: 'dos círculos', txt: 'Círculos de pedra em volta da roça: a terra rende 20% mais.' },
+    astros: { nome: 'Astros', de: 'dos astros', txt: 'O conselho aprendeu o caminho dos astros: as mais velhas sabem dias antes quando o céu vai cair, e o povo aprende mais depressa olhando as estrelas.' },   // 0.47
+    espiritos: { nome: 'Espíritos', de: 'dos espíritos', txt: 'O conselho chamou os espíritos da mata para morar nas ferramentas: as oficinas trabalham 25% mais depressa, e o malfeito cai, porque alguém sempre está olhando.' },   // 0.46
+    sonho: { nome: 'Sonho', de: 'do sonho', txt: 'O conselho aprendeu a entrar no sonho do povo: o que uma sabe, todos sonham. As descobertas chegam mais depressa, e quem dorme acorda mais calmo.' },   // 0.45
     eco: { nome: 'Eco', de: 'do eco', txt: 'O conselho aprendeu a falar com o eco: a voz das mais velhas chega a toda casa, o malfeito cai 20% e duas tribos se conhecem de longe.' },   // 0.34
     raio: { nome: 'Relâmpago', de: 'do relâmpago', txt: 'O conselho aprendeu a guardar o relâmpago em vasos de barro: as casas acendem à noite, o povo estuda até tarde e reclama menos.' },   // 0.33
     seiva: { nome: 'Seiva', de: 'da seiva', txt: 'O conselho aprendeu a falar com a seiva: a madeira, a fibra e o ferro obedecem, e as oficinas trabalham 30% mais depressa.' },   // 0.32
@@ -122,7 +131,7 @@
   // o conselho aprende um saber por idade (a partir da Pedra Polida), em vez de esperar o metal
   function magia(S) {
     if (E.ordem(S) !== 'conselho') return;
-    const ordem = ['runas', 'ervas', 'circulos', 'estrelas', 'mares', 'cantos', 'seiva', 'raio', 'eco'], e = S.eras;
+    const ordem = ['runas', 'ervas', 'circulos', 'estrelas', 'mares', 'cantos', 'seiva', 'raio', 'eco', 'sonho', 'espiritos', 'astros'], e = S.eras;
     for (let k = 0; k < ordem.length; k++) {
       const id = ordem[k];
       if (e.magia[id]) continue;
@@ -132,7 +141,7 @@
   }
   E.temMagia = (S, id) => !!(S.eras && S.eras.magia[id]);
   E.calorCasa = (S) => (E.temMagia(S, 'runas') ? C.RUNAS_HEAT : 0);
-  E.febreMult = (S) => (E.temMagia(S, 'ervas') ? 0.6 : 1) * (S.buildings.some((b) => b.type === 'hospitalgeral' && b.built) ? C.HGERAL_FEBRE : 1);   // 0.34: o hospital geral
+  E.febreMult = (S) => (E.temMagia(S, 'ervas') ? 0.6 : 1) * (S.buildings.some((b) => b.type === 'hospitalgeral' && b.built) ? C.HGERAL_FEBRE : 1) * (S.buildings.some((b) => b.type === 'mente' && b.built) ? C.MENTE_FEBRE : 1);   // 0.46   // 0.34: o hospital geral
   // 0.29: o moinho (qualquer um pronto) faz toda a roça render mais
   E.rocaMult = (S) => (E.temMagia(S, 'circulos') ? 1.2 : 1) * (S.buildings.some((b) => b.type === 'moinho' && b.built) ? C.MOINHO_ROCA : 1);
   E.temCastelo = (S) => S.buildings.some((b) => b.type === 'castelo' && b.built);
@@ -141,15 +150,18 @@
   const tem = (S, k) => S.buildings.some((b) => b.type === k && b.built);
   E.temArsenal = (S) => tem(S, 'arsenal');
   // 0.32: a fábrica e a seiva apressam as oficinas; a greve, enquanto dura, faz o contrário
-  E.oficioMult = (S) => (tem(S, 'fabrica') ? C.FABRICA_OFICIO : 1) * (E.temMagia(S, 'seiva') ? C.SEIVA_OFICIO : 1) * (S.eras && S.eras.greve > S.t ? C.GREVE_OFICIO : 1) * (S.eras && S.eras.apagao > S.t ? C.APAGAO_OFICIO : 1) * (S.eras && S.eras.crise > S.t ? C.CRISE_OFICIO : 1);
+  E.oficioMult = (S) => (tem(S, 'fabrica') ? C.FABRICA_OFICIO : 1) * (E.temMagia(S, 'seiva') ? C.SEIVA_OFICIO : 1) * (S.eras && S.eras.greve > S.t ? C.GREVE_OFICIO : 1) * (S.eras && S.eras.apagao > S.t ? C.APAGAO_OFICIO : 1) * (S.eras && S.eras.crise > S.t ? C.CRISE_OFICIO : 1) *
+    (tem(S, 'robotica') ? C.ROBO_OFICIO : 1) * (E.temMagia(S, 'espiritos') ? C.ESPIRITOS_OFICIO : 1) * (S.eras && S.eras.parada > S.t ? C.PARADA_OFICIO : 1);   // 0.46: os robôs, os espíritos e as máquinas paradas
   E.temEstacao = (S) => tem(S, 'estacao');
   // 0.34: o rádio (ou o eco do conselho) e os motores da garagem
   E.temRadio = (S) => tem(S, 'radio') || E.temMagia(S, 'eco');
-  E.cargaMult = (S) => (tem(S, 'garagem') ? C.GARAGEM_CARGA : 1);
+  E.cargaMult = (S) => (tem(S, 'garagem') ? C.GARAGEM_CARGA : 1) * (tem(S, 'robotica') ? C.ROBO_CARGA : 1);   // 0.46: os robôs carregam junto
   // 0.33: a luz nas casas vem da usina (some no apagão) ou do relâmpago do conselho; o bonde apressa o passo de todos
   E.temLuz = (S) => !!(S.eras && (E.temMagia(S, 'raio') || (tem(S, 'usina') && !(S.eras.apagao > S.t))));
   E.walkMult = (S) => (tem(S, 'bonde') ? C.BONDE_ANDA : 1);
-  E.pratMult = (S) => (tem(S, 'imprensa') ? C.IMPRENSA_PRAT : 1) * (tem(S, 'universidade') ? C.UNIV_PRAT : 1) * (E.temMagia(S, 'cantos') ? C.CANTOS_PRAT : 1) * (E.temLuz(S) ? C.USINA_PRAT : 1);
+  E.pratMult = (S) => (tem(S, 'imprensa') ? C.IMPRENSA_PRAT : 1) * (tem(S, 'universidade') ? C.UNIV_PRAT : 1) * (E.temMagia(S, 'cantos') ? C.CANTOS_PRAT : 1) * (E.temLuz(S) ? C.USINA_PRAT : 1) *
+    (tem(S, 'centrodados') ? C.COMPUTA_PRAT : 1) * (E.temMagia(S, 'sonho') ? C.SONHO_PRAT : 1) * (S.eras && S.eras.pane > S.t ? C.PANE_PRAT : 1) *
+    (tem(S, 'observatorio') ? C.OBSERV_PRAT : 1) * (E.temMagia(S, 'astros') ? C.ASTROS_PRAT : 1);   // 0.47: o observatório e os astros   // 0.45: o computador, o sonho e a pane
 
   // ---------- o desafio de cada idade ----------
   const pronto = (S, k) => !(S.eras.prox[k] > S.t);
@@ -189,6 +201,34 @@
       for (let k = 0; k < n && pode.length; k++) G.Cidade.adoece(S, pode.splice(Math.floor(S.rng.next() * pode.length), 1)[0]);
       S.eras.prox.peste = S.t + 3 * YEAR(); S.stats.pestes = (S.stats.pestes || 0) + 1;
       Sim().chron(S, 'A Grande Peste chegou pela trilha: ' + n + (n === 1 ? ' pessoa caiu' : ' pessoas caíram') + ' de febre de uma vez. Quem tem casa de cura sofre menos.');
+      return;
+    }
+    // 0.47: Era Espacial: a chuva de meteoros. Com observatório (ou os astros do conselho), o povo vê dias antes e
+    // tira tudo do caminho; sem, uma ou duas obras pegam fogo
+    if (id >= 13 && pronto(S, 'meteoros') && r < C.ERA_METEOROS / C.YEAR_DAYS) {
+      S.eras.prox.meteoros = S.t + 3 * YEAR(); S.stats.meteoros = (S.stats.meteoros || 0) + 1;
+      if (tem(S, 'observatorio') || E.temMagia(S, 'astros')) { Sim().chron(S, 'Uma chuva de meteoros riscou o céu a noite inteira. ' + (tem(S, 'observatorio') ? 'O observatório viu dias antes' : 'As mais velhas leram nos astros dias antes') + ', o povo tirou tudo do caminho, e ninguém se feriu.'); return; }
+      const alvos = S.buildings.filter((b) => b.built && !b.fogo && !C.BUILD[b.type].grande).sort((a, b) => a.id - b.id), quais = [];
+      for (let k = 0; k < C.METEOROS_OBRAS && alvos.length; k++) { const b = alvos.splice(Math.floor(S.rng.next() * alvos.length), 1)[0]; if (G.Cidade && G.Cidade.queima(S, b)) quais.push(b); }
+      Sim().chron(S, 'Uma chuva de meteoros caiu de noite sobre a cidade' + (quais.length ? ': ' + quais.map((b) => (C.BUILD[b.type].a === 'o' ? 'o ' : 'a ') + Sim().def(b).name.toLowerCase()).join(' e ') + (quais.length > 1 ? ' pegaram' : ' pegou') + ' fogo.' : '.') + ' Um observatório teria visto antes.');
+      return;
+    }
+    // 0.46: Era da IA: as máquinas param (ninguém lembra mais como fazer à mão, e as oficinas caem pela metade por uns
+    // dias). Com escola, quem aprendeu o ofício à mão segura o serviço
+    if (id >= 12 && pronto(S, 'parada') && r < C.ERA_PARADA / C.YEAR_DAYS) {
+      S.eras.prox.parada = S.t + 3 * YEAR(); S.stats.paradas = (S.stats.paradas || 0) + 1;
+      if (G.Cidade && G.Cidade.nivel && G.Cidade.nivel(S, 'escola')) { Sim().chron(S, 'As máquinas pararam de uma vez, e por um momento ninguém sabia o que fazer. Mas quem passou pela escola ainda sabia o ofício à mão, e o serviço seguiu.'); return; }
+      S.eras.parada = S.t + C.PARADA_D * DAY();
+      Sim().chron(S, 'As máquinas pararam de uma vez, e ninguém lembrava mais como fazer à mão. Por ' + C.PARADA_D + ' dias, as oficinas trabalham pela metade. Uma escola teria ensinado o ofício.');
+      return;
+    }
+    // 0.45: Era da Informação: a Grande Pane (as máquinas apagam o que guardavam e o aprendizado cai pela metade por uns
+    // dias). Com biblioteca, os livros de papel guardaram tudo e nada se perde
+    if (id >= 11 && pronto(S, 'pane') && r < C.ERA_PANE / C.YEAR_DAYS) {
+      S.eras.prox.pane = S.t + 3 * YEAR(); S.stats.panes = (S.stats.panes || 0) + 1;
+      if (G.Cidade && G.Cidade.nivel && G.Cidade.nivel(S, 'biblioteca')) { Sim().chron(S, 'A Grande Pane: as máquinas apagaram de uma vez o que guardavam. Na biblioteca, os livros de papel tinham tudo, e ninguém perdeu nada.'); return; }
+      S.eras.pane = S.t + C.PANE_D * DAY();
+      Sim().chron(S, 'A Grande Pane: as máquinas apagaram de uma vez o que guardavam. Por ' + C.PANE_D + ' dias, o povo aprende pela metade, refazendo o que se perdeu. Uma biblioteca teria guardado.');
       return;
     }
     // 0.34: Era Moderna: a Grande Crise (o dinheiro some e as oficinas perdem o ritmo). Com mercado, a vila troca o que tem
@@ -256,12 +296,25 @@
   E.daily = function (S) {
     if (!S.eras) E.init(S);
     passa(S);
+    lancamento(S);   // 0.47
     rumo(S);
     magia(S);
     desafios(S);
     reforma(S);
     estudos(S);
   };
+  // 0.47: a base de lançamento pronta: o foguete sobe com os que escolheram ir, e a história do povo chega às
+  // estrelas. Acontece uma vez por mundo; o jogo continua (o povo que fica segue a vida, e Deus ganha a glória toda)
+  function lancamento(S) {
+    if (S.stats.lancou || !tem(S, 'foguete') || S.resumido) return;
+    const b = S.buildings.find((x) => x.type === 'foguete' && x.built);
+    S.stats.lancou = S.t;
+    const fundadores = S.people.slice().sort((a, c) => a.id - c.id).slice(0, 2).map((p) => p.name);   // o casal que chegou primeiro, vivo ou não
+    Sim().chron(S, 'O foguete subiu numa coluna de fogo, e a cidade inteira parou para olhar. Lá dentro iam os netos dos netos de ' + fundadores.join(' e ') + ', o casal que um dia chegou com uma cesta de frutas. O povo chegou às estrelas. Daqui para a frente, a história continua lá em cima e aqui embaixo.');
+    if (G.God && G.God.gain) G.God.gain(S, C.FOGUETE_GLORIA);
+    if (!S.safe && b) { S.events.push({ k: 'fx', fx: 'explosao', x: b.x + b.w / 2 - 0.5, y: b.y + b.h - 1, treme: 12, ms: 1200, pausa: 200 }); S.events.push({ k: 'fx', fx: 'chamas', x: b.x + b.w / 2 - 0.5, y: b.y + b.h - 1 }); S.events.push({ k: 'toast', text: 'O povo chegou às estrelas.', tone: 'good' }); }
+  }
+  E.lancou = (S) => !!(S.stats && S.stats.lancou);
   // 0.31: a cada UNIV_D dias, os estudiosos da universidade adiantam a descoberta da vez
   function estudos(S) {
     if (S.safe || S.resumido || !tem(S, 'universidade') || S.ck.day % C.UNIV_D !== 0) return;

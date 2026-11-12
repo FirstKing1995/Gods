@@ -1497,6 +1497,21 @@
     // 0.35: a casa, quando a barraca fica para trás
     casa: [['....kk....', '...kyyk...', '..kyyyyk..', '.kyyyyyyk.', 'kkkkkkkkkk', '.kwwwwwwk.', '.kwdkwwwk.', '.kwdkwbwk.', '.kwdkwwwk.', '.kkkkkkkk.'],
       { k: P.ink2, y: P.wood, w: P.parch, d: P.bark, b: P.sky }],
+    // 0.47: o observatório e a base de lançamento
+    observatorio: [['...kkkk...', '..kwwwwk..', '.kwwwwssk.', '.kwwwwwwk.', 'kkkkkkkkkk', 'kssssssssk', 'ksddsssssk', 'ksddsssssk', 'kssssssssk', 'kkkkkkkkkk'],
+      { k: P.ink2, w: P.parch, s: P.silver, d: P.ink }],
+    foguete: [['....kk....', '...kwwk...', '...kwwk...', '...krrk...', '...kwwk...', '..kwwwwk..', '..kwbbwk..', '.kkwwwwkk.', '.k.kffk.k.', '...kffk...'],
+      { k: P.ink2, w: '#f4f4f4', r: P.red, b: '#2ce8f5', f: P.orange }],
+    // 0.46: a fábrica de robôs e a mente da cidade
+    robotica: [['..........', '...kkkk...', '...kwwk...', '...kkkk...', '.kkkkkkkk.', 'k.kssssk.k', 'k.kskksk.k', '..kssssk..', '..kk..kk..', '.kkk..kkk.'],
+      { k: P.ink2, w: '#2ce8f5', s: P.silver }],
+    mente: [['...kkkk...', '..kppppk..', '.kpwppwpk.', 'kppppppppk', 'kpwpppwppk', 'kppppppppk', '.kpppwppk.', '..kppppk..', '...kkkk...', '....kk....'],
+      { k: P.ink2, p: '#8a5cc8', w: '#e8d8ff' }],
+    // 0.45: a estação de TV e o centro de computação
+    televisao: [['....rk....', '....kk....', '...kkkk...', '..k.kk.k..', 'kkkkkkkkkk', 'kbbbbbbbbk', 'kbwbbbbbbk', 'kbbbbgbbbk', 'kkkkkkkkkk', '...kkkk...'],
+      { k: P.ink2, r: P.red, b: '#3a6a9a', w: '#c8e8ff', g: '#63c74d' }],
+    centrodados: [['kkkkkkkkkk', 'kddddddddk', 'kdgdgdgdgk', 'kddddddddk', 'kdgdgdgdgk', 'kddddddddk', 'kdgdgdgdgk', 'kddddddddk', 'kddkkkkddk', 'kkkkkkkkkk'],
+      { k: P.ink2, d: '#3a4466', g: '#63c74d' }],
     // 0.34: o rádio, a garagem e o hospital geral
     radio: [['....rr....', '....kk....', '...k..k...', '...kkkk...', '..k....k..', '..kkkkkk..', '.kssssssk.', '.kswwsdsk.', '.kssssdsk.', 'kkkkkkkkkk'],
       { k: P.ink2, r: P.red, s: P.mist, w: P.yellow, d: P.ink }],
@@ -2845,6 +2860,80 @@
     for (let x = 3; x <= 28; x++) b.set(x, 42, CONCRETO[0]);
     return b.canvas();
   }
+  // 0.47: o observatório (32 x 40, 2 x 2 passos): a cúpula branca com a fresta aberta e o telescópio para fora
+  function observatorioSpr() {
+    const b = new Buf(32, 40);
+    parede(b, 4, 22, 27, 37);
+    for (let y = 6; y <= 22; y++) { const hw = Math.round(Math.sqrt(Math.max(0, 1 - Math.pow((22 - y) / 16, 2))) * 12); for (let x = 16 - hw; x <= 16 + hw; x++) b.set(x, y, x < 14 ? '#c8c6be' : (x + y) % 7 === 0 ? '#dcdad2' : '#f0eee6'); }
+    for (let y = 7; y <= 21; y++) { b.set(17, y, '#1c2238'); b.set(18, y, '#1c2238'); }
+    line(b, 18, 12, 25, 5, '#5a6988'); line(b, 19, 12, 26, 5, '#8b9bb4'); rect7(b, 25, 3, 27, 5, '#3a4466');
+    rect7(b, 13, 28, 18, 37, '#2b1d1a'); rect7(b, 6, 26, 10, 30, '#3e444c'); rect7(b, 7, 27, 9, 29, '#9ac8e0');
+    for (let x = 4; x <= 27; x++) b.set(x, 38, CONCRETO[0]);
+    return b.canvas();
+  }
+  // 0.47: a base de lançamento (64 x 84, 4 x 4 passos): a torre de aço, o foguete branco de faixa vermelha em pé e a
+  // plataforma de concreto
+  function fogueteSpr() {
+    const b = new Buf(64, 84);
+    for (let y = 70; y <= 81; y++) for (let x = 4; x <= 59; x++) b.set(x, y, y === 70 ? CONCRETO[4] : (x + y) % 9 === 0 ? CONCRETO[2] : CONCRETO[3]);
+    for (let y = 6; y <= 70; y++) { b.set(12, y, '#c8423a'); b.set(20, y, '#c8423a'); if (y % 6 === 0) { line(b, 12, y, 20, y, '#a22633'); line(b, 12, y, 20, y + 6 < 70 ? y + 6 : y, '#a22633'); } }
+    for (let y = 18; y <= 42; y += 12) line(b, 20, y, 30, y, '#8b9bb4');
+    for (let y = 4; y <= 64; y++) { const hw = y < 14 ? Math.round((y - 4) / 10 * 6) : 6; for (let x = 36 - hw; x <= 36 + hw; x++) b.set(x, y, x < 34 ? '#d8dce4' : '#f4f4f4'); }
+    for (let x = 30; x <= 42; x++) { b.set(x, 24, '#e43b44'); b.set(x, 25, '#e43b44'); }
+    rect7(b, 34, 30, 38, 34, '#2ce8f5'); b.set(35, 31, '#c8f4ff');
+    for (const sx of [-1, 1]) for (let y = 52; y <= 66; y++) { const w = Math.round((y - 52) / 14 * 5); for (let k = 0; k <= w; k++) b.set(36 + sx * (7 + k), y, '#c8423a'); }
+    rect7(b, 32, 65, 40, 69, '#3a4466'); rect7(b, 34, 69, 38, 70, '#5a6988');
+    for (let x = 4; x <= 59; x++) b.set(x, 82, CONCRETO[0]);
+    return b.canvas();
+  }
+  // 0.46: a fábrica de robôs (48 x 38, 3 x 2 passos): o galpão branco, o portão de vidro e um braço mecânico laranja
+  function roboticaSpr() {
+    const b = new Buf(48, 38);
+    for (let y = 10; y <= 35; y++) for (let x = 2; x <= 45; x++) b.set(x, y, y === 10 ? '#f4f4f4' : (x + y * 3) % 13 === 0 ? '#d8dce4' : '#e8ecf2');
+    rect7(b, 1, 8, 46, 9, '#8b9bb4');
+    rect7(b, 5, 16, 24, 35, '#2b2b34'); for (let x = 6; x <= 23; x += 3) line(b, x, 17, x, 35, '#4fa3c2');
+    line(b, 31, 35, 31, 26, '#f77622'); line(b, 31, 26, 37, 20, '#f77622'); line(b, 32, 26, 38, 20, '#feae34'); rect7(b, 37, 18, 40, 20, '#3a4466'); b.set(41, 19, '#2ce8f5'); rect7(b, 29, 33, 33, 35, '#3a4466');
+    rect7(b, 28, 12, 43, 15, '#262b44'); for (let x = 29; x <= 42; x += 2) b.set(x, 13, (x % 4) ? '#63c74d' : '#2ce8f5');
+    for (let x = 2; x <= 45; x++) b.set(x, 36, CONCRETO[0]);
+    return b.canvas();
+  }
+  // 0.46: a mente da cidade (64 x 68, 4 x 4 passos): a torre de vidro lilás, o núcleo que pulsa por dentro e o anel
+  // de luz no alto
+  function menteSpr() {
+    const b = new Buf(64, 68);
+    for (let y = 14; y <= 65; y++) { const hw = y < 22 ? Math.round(8 + (y - 14) * 1.2) : 18; for (let x = 32 - hw; x <= 32 + hw; x++) b.set(x, y, x === 32 - hw ? '#2a1e44' : (x + y) % 9 === 0 ? '#b89cf0' : x < 32 ? '#6a48a8' : '#7e5cbc'); }
+    for (let y = 28; y <= 60; y += 6) for (let x = 16; x <= 48; x++) if (x % 4 !== 0) b.set(x, y, '#c8b4f4');
+    for (let y = 30; y <= 46; y++) for (let x = 26; x <= 38; x++) { const d = Math.hypot(x - 32, (y - 38) * 0.8); if (d < 7) b.set(x, y, d < 3 ? '#ffffff' : d < 5 ? '#e8d8ff' : '#b080ff'); }
+    for (let x = 18; x <= 46; x++) { b.set(x, 8 + Math.round(Math.abs(x - 32) / 7), '#2ce8f5'); }
+    line(b, 32, 0, 32, 14, '#c0cbdc'); b.set(32, 0, '#fee761');
+    rect7(b, 27, 56, 37, 65, '#1c1630'); rect7(b, 28, 57, 31, 65, '#9a7ad8'); rect7(b, 33, 57, 36, 65, '#9a7ad8');
+    for (let x = 14; x <= 50; x++) b.set(x, 66, CONCRETO[0]);
+    return b.canvas();
+  }
+  // 0.45: a estação de TV (32 x 46, 2 x 2 passos): o prédio baixo, a torre de treliça vermelha e branca e a antena parabólica
+  function televisaoSpr() {
+    const b = new Buf(32, 46);
+    parede(b, 2, 28, 29, 43); rect7(b, 1, 26, 30, 27, CONCRETO[0]);
+    for (let y = 0; y <= 26; y++) { const hw = Math.round(y / 26 * 4) + 1, cor = Math.floor(y / 4) % 2 ? '#e8e4d8' : '#c8423a'; b.set(22 - hw, y, cor); b.set(22 + hw, y, cor); if (y % 3 === 0) rect7(b, 22 - hw, y, 22 + hw, y, cor); }
+    b.set(22, 0, '#fee761');
+    for (let y = 18; y <= 24; y++) { const hw = Math.round(Math.sqrt(Math.max(0, 9 - (y - 21) * (y - 21)))); rect7(b, 7 - hw, y, 7 + hw, y, y === 18 ? '#e8e4d8' : '#c8c6be'); } line(b, 7, 21, 11, 17, '#5c5e60'); line(b, 7, 25, 7, 26, '#5c5e60');
+    rect7(b, 5, 31, 16, 38, '#2b2b34'); rect7(b, 6, 32, 15, 37, '#4fa3c2'); rect7(b, 7, 33, 10, 35, '#c8e8ff'); rect7(b, 12, 35, 14, 36, '#f6757a');
+    rect7(b, 20, 33, 26, 43, '#2b1d1a');
+    for (let x = 2; x <= 29; x++) b.set(x, 44, CONCRETO[0]);
+    return b.canvas();
+  }
+  // 0.45: o centro de computação (64 x 52, 4 x 3 passos): o prédio de vidro escuro, as fileiras de máquinas com luz
+  // verde piscando por trás das janelas e as antenas no teto
+  function centroDadosSpr() {
+    const b = new Buf(64, 52);
+    for (let y = 10; y <= 49; y++) for (let x = 3; x <= 60; x++) b.set(x, y, y === 10 ? '#5a6988' : (x % 8 === 3) ? '#262b44' : '#3a4466');
+    rect7(b, 2, 8, 61, 9, CONCRETO[1]);
+    for (const y of [14, 25, 36]) for (let x = 5; x <= 58; x += 8) { rect7(b, x, y, x + 5, y + 7, '#1c2238'); for (let k = 0; k < 3; k++) b.set(x + 1 + k * 2, y + 2 + (k + x) % 4, (k + y + x) % 3 ? '#63c74d' : '#2ce8f5'); }
+    rect7(b, 27, 40, 36, 49, '#1c2238'); rect7(b, 28, 41, 31, 49, '#4fa3c2'); rect7(b, 33, 41, 35, 49, '#4fa3c2');
+    line(b, 10, 1, 10, 8, '#8b9bb4'); b.set(10, 0, '#e43b44'); line(b, 52, 3, 52, 8, '#8b9bb4'); rect7(b, 49, 2, 55, 3, '#c0cbdc');
+    for (let x = 3; x <= 60; x++) b.set(x, 50, CONCRETO[0]);
+    return b.canvas();
+  }
   // a garagem (48 x 36, 3 x 2 passos): o galpão de concreto, o portão aberto e o caminhão vermelho na porta
   function garagemSpr() {
     const b = new Buf(48, 36);
@@ -3023,7 +3112,7 @@
     return b.canvas();
   }
   A.cidadeSprites = function () {
-    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr(), imprensa: imprensaSpr(), universidade: universidadeSpr(), arsenal: arsenalSpr(), fabrica: fabricaSpr(), estacao: estacaoSpr(), usina: usinaSpr(), bonde: bondeSpr(), radio: radioSpr(), garagem: garagemSpr(), hospitalgeral: hospitalGeralSpr(), taberna: tabernaSpr(), guilda: guildaSpr(), torremagia: torreMagiaSpr() };
+    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr(), imprensa: imprensaSpr(), universidade: universidadeSpr(), arsenal: arsenalSpr(), fabrica: fabricaSpr(), estacao: estacaoSpr(), usina: usinaSpr(), bonde: bondeSpr(), radio: radioSpr(), garagem: garagemSpr(), hospitalgeral: hospitalGeralSpr(), televisao: televisaoSpr(), centrodados: centroDadosSpr(), robotica: roboticaSpr(), mente: menteSpr(), observatorio: observatorioSpr(), foguete: fogueteSpr(), taberna: tabernaSpr(), guilda: guildaSpr(), torremagia: torreMagiaSpr() };
     for (const k of ['escola', 'biblioteca', 'hospital', 'guarda', 'brigada', 'mercado']) out[k] = [null, instituicao(k, 1), instituicao(k, 2), instituicao(k, 3)];
     return out;
   };

@@ -181,6 +181,12 @@
       ['taberna', 'taberna'], ['guilda', 'guilda'],
       // 0.34: a Era Moderna
       ['radio', 'radio'], ['garagem', 'garagem'], ['hospitalgeral', 'hospitalgeral'],
+      // 0.45: a Era da Informação
+      ['televisao', 'televisao'], ['centrodados', 'centrodados'],
+      // 0.46: a Era da IA
+      ['robotica', 'robotica'], ['mente', 'mente'],
+      // 0.47: a Era Espacial
+      ['observatorio', 'observatorio'], ['foguete', 'foguete'],
       // 0.33: a Era Elétrica
       ['usina', 'usina'], ['bonde', 'bonde'],
       // 0.32: a Revolução Industrial
