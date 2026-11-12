@@ -56,7 +56,8 @@
   R.tem = (p, h) => !!(p && p.rpg && p.rpg.habs && p.rpg.habs.indexOf(h) >= 0);
   R.nome = (p) => { const r = R.de(p); if (!r) return ''; const c = R.CLASSES[r.cls]; return p.sex === 'F' ? c.nameF : c.name; };
   R.nivel = (p) => { const r = R.de(p); return r ? r.nv : 0; };
-  R.pede = (nv) => Math.round(8 * Math.pow(nv, 1.3));   // o xp de um nível ao próximo
+  // 0.44: a curva ficou mais mansa (antes 8·n^1.3: em 16 anos ninguém passava do nível 19 e o Ouro, 25, não chegava)
+  R.pede = (nv) => Math.round(6 * Math.pow(nv, 1.2));   // o xp de um nível ao próximo
   // a profissão: o trabalho em que a pessoa é melhor (só depois que ela já é boa em alguma coisa)
   R.profissao = function (p) {
     let top = '', v = 0;

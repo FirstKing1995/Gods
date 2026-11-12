@@ -10,7 +10,7 @@
   const Sim = () => G.Sim, Fam = () => G.Family;
   const DAY = () => C.DAY_MIN;
 
-  const GRANDES = ['templo', 'muralha', 'torre', 'aqueduto', 'ponte', 'castelo', 'porto', 'universidade', 'estacao', 'bonde', 'hospitalgeral'];   // 0.34: o hospital geral   // 0.33: o bonde   // 0.32: a estação   // 0.31: a universidade   // 0.30: o porto   // a ponte de pedra veio com a Etapa 17; o castelo, com a 0.29
+  const GRANDES = ['templo', 'muralha', 'torre', 'aqueduto', 'ponte', 'castelo', 'porto', 'universidade', 'estacao', 'bonde', 'hospitalgeral', 'centrodados', 'mente', 'foguete'];   // 0.47: a base de lançamento   // 0.46: a mente da cidade   // 0.45: o centro de computação   // 0.34: o hospital geral   // 0.33: o bonde   // 0.32: a estação   // 0.31: a universidade   // 0.30: o porto   // a ponte de pedra veio com a Etapa 17; o castelo, com a 0.29
   const INST = ['guarda', 'brigada', 'hospital', 'escola', 'biblioteca', 'mercado'];   // a ordem em que o líder olha
   Ci.GRANDES = GRANDES; Ci.INST = INST;
   Ci.isCidade = (t) => GRANDES.indexOf(t) >= 0 || INST.indexOf(t) >= 0;
@@ -56,6 +56,15 @@
     // 0.37: a taberna pede gente para beber; a guilda pede a taberna (é ali que os grupos se formam)
     taberna: (S) => (vivos(S) >= 12 ? '' : 'pede 12 pessoas'),
     guilda: (S) => (!S.buildings.some((b) => b.type === 'taberna' && b.built) ? 'pede uma taberna pronta' : vivos(S) >= 20 ? '' : 'pede 20 pessoas'),
+    // 0.47: a Era Espacial (chega com a Era da IA; o observatório pede a mente da cidade, ou os espíritos do conselho)
+    observatorio: (S) => (!(G.Eras && G.Eras.idade(S) >= 12) ? 'chega com a Era da Inteligência Artificial' : S.buildings.some((b) => b.type === 'mente' && b.built) || (G.Eras && G.Eras.temMagia(S, 'espiritos')) ? '' : 'pede a mente da cidade pronta'),
+    foguete: (S) => (!(G.Eras && G.Eras.idade(S) >= 12) ? 'chega com a Era da Inteligência Artificial' : vivos(S) >= 500 ? '' : 'pede uma cidade de 500 pessoas'),
+    // 0.46: a Era da IA (chega com a Era da Informação; os robôs pedem o centro de computação, ou o sonho do conselho)
+    robotica: (S) => (!(G.Eras && G.Eras.idade(S) >= 11) ? 'chega com a Era da Informação' : S.buildings.some((b) => b.type === 'centrodados' && b.built) || (G.Eras && G.Eras.temMagia(S, 'sonho')) ? '' : 'pede um centro de computação pronto'),
+    mente: (S) => (!(G.Eras && G.Eras.idade(S) >= 11) ? 'chega com a Era da Informação' : vivos(S) >= 400 ? '' : 'pede uma cidade de 400 pessoas'),
+    // 0.45: a Era da Informação (chega com a Era Moderna; a TV pede o rádio, ou o eco do conselho)
+    televisao: (S) => (!(G.Eras && G.Eras.idade(S) >= 10) ? 'chega com a Era Moderna' : S.buildings.some((b) => b.type === 'radio' && b.built) || (G.Eras && G.Eras.temMagia(S, 'eco')) ? '' : 'pede um rádio pronto'),
+    centrodados: (S) => (!(G.Eras && G.Eras.idade(S) >= 10) ? 'chega com a Era Moderna' : vivos(S) >= 300 ? '' : 'pede uma cidade de 300 pessoas'),
     // 0.34: a Era Moderna (chega com a Era Elétrica; o rádio e a garagem pedem a usina)
     radio: (S) => (!(G.Eras && G.Eras.idade(S) >= 9) ? 'chega com a Era Elétrica' : S.buildings.some((b) => b.type === 'usina' && b.built) || (G.Eras && G.Eras.temMagia(S, 'raio')) ? '' : 'pede uma usina pronta'),
     garagem: (S) => (!(G.Eras && G.Eras.idade(S) >= 9) ? 'chega com a Era Elétrica' : S.buildings.some((b) => b.type === 'usina' && b.built) || (G.Eras && G.Eras.temMagia(S, 'raio')) ? '' : 'pede uma usina pronta'),

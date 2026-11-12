@@ -3,7 +3,7 @@
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.43.0',
+    VERSION: '0.47.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -212,6 +212,21 @@
         desc: 'Mesa comprida, caneca e conversa até tarde: o descontentamento cresce menos, e mais gente acorda para a aventura.' },
       guilda: { name: 'Guilda de aventureiros', a: 'a', key: '', w: 3, h: 3, cost: { madeira: 60, pedra: 40 }, work: 3000,
         desc: 'O quadro de missões: quem já despertou forma grupo, sai em busca de prêmio e volta com história. Ou não volta.' },
+      // 0.47: a Era Espacial. O observatório (obra comum) e a base de lançamento (grande obra)
+      observatorio: { name: 'Observatório', a: 'o', key: '', w: 2, h: 2, cost: { pedra: 80, tabuas: 30 }, extra: { ferro: 15 }, work: 5000,
+        desc: 'A cúpula branca e o telescópio virado para o céu: o povo aprende 20% mais depressa, e a chuva de meteoros é vista dias antes. Pede a mente da cidade e 15 de ferro.' },
+      foguete: { name: 'Base de lançamento', a: 'a', key: '', w: 4, h: 4, cost: { pedra: 360, tabuas: 120 }, extra: { ferro: 80, carvao: 60 }, work: 60000, grande: true,
+        desc: 'A torre de lançamento e o foguete de pé, esperando o dia. Quando fica pronta, o povo sobe até as estrelas. Pede 500 pessoas, 80 de ferro e 60 de carvão.' },
+      // 0.46: a Era da Inteligência Artificial. A fábrica de robôs (obra comum) e a mente da cidade (grande obra)
+      robotica: { name: 'Fábrica de robôs', a: 'a', key: '', w: 3, h: 2, cost: { pedra: 100, tabuas: 50 }, extra: { ferro: 30, carvao: 20 }, work: 6000,
+        desc: 'Braços de metal que não cansam: as oficinas trabalham 40% mais depressa e cada um carrega 20% mais. Pede o centro de computação, 30 de ferro e 20 de carvão.' },
+      mente: { name: 'Mente da cidade', a: 'a', key: '', w: 4, h: 4, cost: { pedra: 300, tabuas: 100 }, extra: { ferro: 40 }, work: 46000, grande: true,
+        desc: 'Uma máquina que pensa e cuida da cidade: avisa o malfeito antes (cai 40%), vê a febre chegando (pesa 30% menos) e escuta a queixa de cada um (cresce 10% menos). Pede 400 pessoas e 40 de ferro.' },
+      // 0.45: a Era da Informação. A estação de TV (obra comum) e o centro de computação (grande obra)
+      televisao: { name: 'Estação de TV', a: 'a', key: '', w: 2, h: 2, cost: { pedra: 70, tabuas: 40 }, extra: { ferro: 12 }, work: 4500,
+        desc: 'A torre de transmissão e a tela em toda sala: o povo reclama 15% menos e a novela junta a vizinhança. Pede o rádio e 12 de ferro.' },
+      centrodados: { name: 'Centro de computação', a: 'o', key: '', w: 4, h: 3, cost: { pedra: 240, tabuas: 80 }, extra: { ferro: 30 }, work: 40000, grande: true,
+        desc: 'Salas frias cheias de máquinas que guardam e contam tudo: o povo aprende as descobertas 40% mais depressa. Pede 300 pessoas e 30 de ferro.' },
       // 0.34: a Era Moderna. O rádio e a garagem (obras comuns) e o hospital geral (grande obra)
       radio: { name: 'Rádio', a: 'o', key: '', w: 2, h: 2, cost: { pedra: 60, tabuas: 40 }, extra: { ferro: 10 }, work: 4000,
         desc: 'A antena alta e a voz que chega em toda casa: o malfeito cai 20%, e a Grande Crise não vira revolta. Duas tribos com rádio se conhecem na hora. Pede a usina e 10 de ferro.' },
@@ -672,6 +687,12 @@
     MONSTRO_GENTE: 40, MONSTRO_HEROIS: 6, COVIL_DIST: [22, 42], COVIL_MAX: 3, COVIL_NOVO: [60, 140], COVIL_RAID: [12, 24], COVIL_ESPERA: 60, COVIL_SEM_GUILDA: 4, COVIL_CRESCE: 2, COVIL_ESMAGA: 150,
     // 0.37: a guilda
     GUILDA_FICAM: 8, GUILDA_QUADRO: 3, GUILDA_PRAZO: 25, GUILDA_GRUPOS: 2, GUILDA_MORTE: 0.6, GUILDA_BENCAO: 0.2, GUILDA_SONHO: 20, GUILDA_PROTEGE: 40, TABERNA_DESC: 0.9, TABERNA_DESPERTA: 3,
+    // 0.47: a Era Espacial
+    OBSERV_PRAT: 1.2, ASTROS_PRAT: 1.15, ERA_METEOROS: 0.5, METEOROS_OBRAS: 2, FOGUETE_GLORIA: 500,
+    // 0.46: a Era da IA
+    ROBO_OFICIO: 1.4, ROBO_CARGA: 1.2, MENTE_CRIME: 0.6, MENTE_FEBRE: 0.7, MENTE_DESC: 0.9, ESPIRITOS_OFICIO: 1.25, ESPIRITOS_CRIME: 0.8, ERA_PARADA: 0.5, PARADA_D: 5, PARADA_OFICIO: 0.5,
+    // 0.45: a Era da Informação
+    TV_DESC: 0.85, COMPUTA_PRAT: 1.4, SONHO_PRAT: 1.25, SONHO_DESC: 0.9, ERA_PANE: 0.5, PANE_D: 5, PANE_PRAT: 0.5,
     // 0.34: a Era Moderna
     RADIO_CRIME: 0.8, GARAGEM_CARGA: 1.3, HGERAL_FEBRE: 0.5, ERA_CRISE: 0.5, CRISE_D: 6, CRISE_OFICIO: 0.7, CRISE_DESC: 10,
     // 0.33: a Era Elétrica

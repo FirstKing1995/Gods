@@ -15,7 +15,7 @@
     goblin: { name: 'Goblin', art: 'um goblin', pl: 'Os goblins', de: 'de goblins', covil: 'Toca dos goblins', hp: 2, forca: 0.7, pack: [3, 6], min: 0, ouro: 1 },
     esqueleto: { name: 'Esqueleto', art: 'um esqueleto', pl: 'Os esqueletos', de: 'de esqueletos', covil: 'Cripta esquecida', hp: 3, forca: 1, pack: [3, 5], min: 5, ouro: 1 },
     aranha: { name: 'Aranha gigante', art: 'uma aranha gigante', pl: 'As aranhas gigantes', de: 'de aranhas', fem: 1, covil: 'Ninho de aranhas', hp: 3, forca: 1.2, pack: [2, 4], min: 5, ouro: 0 },
-    dragao: { name: 'Dragão', art: 'o dragão', pl: 'O dragão', de: 'de dragão', covil: 'Ninho do dragão', hp: 160, forca: 3, pack: [1, 1], min: 9999, ouro: 0, boss: 1, verbo: 'vem' },
+    dragao: { name: 'Dragão', art: 'o dragão', pl: 'O dragão', de: 'de dragão', covil: 'Ninho do dragão', hp: 300, forca: 4, pack: [1, 1], min: 9999, ouro: 0, boss: 1, verbo: 'vem' },
     ogro: { name: 'Ogro', art: 'um ogro', pl: 'Os ogros', de: 'de ogros', covil: 'Caverna do ogro', hp: 7, forca: 2, pack: [1, 2], min: 10, ouro: 3 },
   };
   function sorte(S, sal) {

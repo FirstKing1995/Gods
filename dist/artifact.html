@@ -1414,7 +1414,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
 (function (G) {
   'use strict';
   G.CFG = {
-    VERSION: '0.43.0',
+    VERSION: '0.47.0',
     VOZ_FE: 3,           // 0.24: fé que a primeira conversa do dia com Deus dá a cada pessoa
     // 0.14: com mais de CHRON_GRANDE vivos, nascimento não pausa o jogo nem vai um a um para a Crônica (fica o resumo do ano)
     CHRON_GRANDE: 40,
@@ -1623,6 +1623,21 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
         desc: 'Mesa comprida, caneca e conversa até tarde: o descontentamento cresce menos, e mais gente acorda para a aventura.' },
       guilda: { name: 'Guilda de aventureiros', a: 'a', key: '', w: 3, h: 3, cost: { madeira: 60, pedra: 40 }, work: 3000,
         desc: 'O quadro de missões: quem já despertou forma grupo, sai em busca de prêmio e volta com história. Ou não volta.' },
+      // 0.47: a Era Espacial. O observatório (obra comum) e a base de lançamento (grande obra)
+      observatorio: { name: 'Observatório', a: 'o', key: '', w: 2, h: 2, cost: { pedra: 80, tabuas: 30 }, extra: { ferro: 15 }, work: 5000,
+        desc: 'A cúpula branca e o telescópio virado para o céu: o povo aprende 20% mais depressa, e a chuva de meteoros é vista dias antes. Pede a mente da cidade e 15 de ferro.' },
+      foguete: { name: 'Base de lançamento', a: 'a', key: '', w: 4, h: 4, cost: { pedra: 360, tabuas: 120 }, extra: { ferro: 80, carvao: 60 }, work: 60000, grande: true,
+        desc: 'A torre de lançamento e o foguete de pé, esperando o dia. Quando fica pronta, o povo sobe até as estrelas. Pede 500 pessoas, 80 de ferro e 60 de carvão.' },
+      // 0.46: a Era da Inteligência Artificial. A fábrica de robôs (obra comum) e a mente da cidade (grande obra)
+      robotica: { name: 'Fábrica de robôs', a: 'a', key: '', w: 3, h: 2, cost: { pedra: 100, tabuas: 50 }, extra: { ferro: 30, carvao: 20 }, work: 6000,
+        desc: 'Braços de metal que não cansam: as oficinas trabalham 40% mais depressa e cada um carrega 20% mais. Pede o centro de computação, 30 de ferro e 20 de carvão.' },
+      mente: { name: 'Mente da cidade', a: 'a', key: '', w: 4, h: 4, cost: { pedra: 300, tabuas: 100 }, extra: { ferro: 40 }, work: 46000, grande: true,
+        desc: 'Uma máquina que pensa e cuida da cidade: avisa o malfeito antes (cai 40%), vê a febre chegando (pesa 30% menos) e escuta a queixa de cada um (cresce 10% menos). Pede 400 pessoas e 40 de ferro.' },
+      // 0.45: a Era da Informação. A estação de TV (obra comum) e o centro de computação (grande obra)
+      televisao: { name: 'Estação de TV', a: 'a', key: '', w: 2, h: 2, cost: { pedra: 70, tabuas: 40 }, extra: { ferro: 12 }, work: 4500,
+        desc: 'A torre de transmissão e a tela em toda sala: o povo reclama 15% menos e a novela junta a vizinhança. Pede o rádio e 12 de ferro.' },
+      centrodados: { name: 'Centro de computação', a: 'o', key: '', w: 4, h: 3, cost: { pedra: 240, tabuas: 80 }, extra: { ferro: 30 }, work: 40000, grande: true,
+        desc: 'Salas frias cheias de máquinas que guardam e contam tudo: o povo aprende as descobertas 40% mais depressa. Pede 300 pessoas e 30 de ferro.' },
       // 0.34: a Era Moderna. O rádio e a garagem (obras comuns) e o hospital geral (grande obra)
       radio: { name: 'Rádio', a: 'o', key: '', w: 2, h: 2, cost: { pedra: 60, tabuas: 40 }, extra: { ferro: 10 }, work: 4000,
         desc: 'A antena alta e a voz que chega em toda casa: o malfeito cai 20%, e a Grande Crise não vira revolta. Duas tribos com rádio se conhecem na hora. Pede a usina e 10 de ferro.' },
@@ -2083,6 +2098,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     MONSTRO_GENTE: 40, MONSTRO_HEROIS: 6, COVIL_DIST: [22, 42], COVIL_MAX: 3, COVIL_NOVO: [60, 140], COVIL_RAID: [12, 24], COVIL_ESPERA: 60, COVIL_SEM_GUILDA: 4, COVIL_CRESCE: 2, COVIL_ESMAGA: 150,
     // 0.37: a guilda
     GUILDA_FICAM: 8, GUILDA_QUADRO: 3, GUILDA_PRAZO: 25, GUILDA_GRUPOS: 2, GUILDA_MORTE: 0.6, GUILDA_BENCAO: 0.2, GUILDA_SONHO: 20, GUILDA_PROTEGE: 40, TABERNA_DESC: 0.9, TABERNA_DESPERTA: 3,
+    // 0.47: a Era Espacial
+    OBSERV_PRAT: 1.2, ASTROS_PRAT: 1.15, ERA_METEOROS: 0.5, METEOROS_OBRAS: 2, FOGUETE_GLORIA: 500,
+    // 0.46: a Era da IA
+    ROBO_OFICIO: 1.4, ROBO_CARGA: 1.2, MENTE_CRIME: 0.6, MENTE_FEBRE: 0.7, MENTE_DESC: 0.9, ESPIRITOS_OFICIO: 1.25, ESPIRITOS_CRIME: 0.8, ERA_PARADA: 0.5, PARADA_D: 5, PARADA_OFICIO: 0.5,
+    // 0.45: a Era da Informação
+    TV_DESC: 0.85, COMPUTA_PRAT: 1.4, SONHO_PRAT: 1.25, SONHO_DESC: 0.9, ERA_PANE: 0.5, PANE_D: 5, PANE_PRAT: 0.5,
     // 0.34: a Era Moderna
     RADIO_CRIME: 0.8, GARAGEM_CARGA: 1.3, HGERAL_FEBRE: 0.5, ERA_CRISE: 0.5, CRISE_D: 6, CRISE_OFICIO: 0.7, CRISE_DESC: 10,
     // 0.33: a Era Elétrica
@@ -18321,7 +18342,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   const Sim = () => G.Sim, Fam = () => G.Family;
   const DAY = () => C.DAY_MIN;
 
-  const GRANDES = ['templo', 'muralha', 'torre', 'aqueduto', 'ponte', 'castelo', 'porto', 'universidade', 'estacao', 'bonde', 'hospitalgeral'];   // 0.34: o hospital geral   // 0.33: o bonde   // 0.32: a estação   // 0.31: a universidade   // 0.30: o porto   // a ponte de pedra veio com a Etapa 17; o castelo, com a 0.29
+  const GRANDES = ['templo', 'muralha', 'torre', 'aqueduto', 'ponte', 'castelo', 'porto', 'universidade', 'estacao', 'bonde', 'hospitalgeral', 'centrodados', 'mente', 'foguete'];   // 0.47: a base de lançamento   // 0.46: a mente da cidade   // 0.45: o centro de computação   // 0.34: o hospital geral   // 0.33: o bonde   // 0.32: a estação   // 0.31: a universidade   // 0.30: o porto   // a ponte de pedra veio com a Etapa 17; o castelo, com a 0.29
   const INST = ['guarda', 'brigada', 'hospital', 'escola', 'biblioteca', 'mercado'];   // a ordem em que o líder olha
   Ci.GRANDES = GRANDES; Ci.INST = INST;
   Ci.isCidade = (t) => GRANDES.indexOf(t) >= 0 || INST.indexOf(t) >= 0;
@@ -18367,6 +18388,15 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     // 0.37: a taberna pede gente para beber; a guilda pede a taberna (é ali que os grupos se formam)
     taberna: (S) => (vivos(S) >= 12 ? '' : 'pede 12 pessoas'),
     guilda: (S) => (!S.buildings.some((b) => b.type === 'taberna' && b.built) ? 'pede uma taberna pronta' : vivos(S) >= 20 ? '' : 'pede 20 pessoas'),
+    // 0.47: a Era Espacial (chega com a Era da IA; o observatório pede a mente da cidade, ou os espíritos do conselho)
+    observatorio: (S) => (!(G.Eras && G.Eras.idade(S) >= 12) ? 'chega com a Era da Inteligência Artificial' : S.buildings.some((b) => b.type === 'mente' && b.built) || (G.Eras && G.Eras.temMagia(S, 'espiritos')) ? '' : 'pede a mente da cidade pronta'),
+    foguete: (S) => (!(G.Eras && G.Eras.idade(S) >= 12) ? 'chega com a Era da Inteligência Artificial' : vivos(S) >= 500 ? '' : 'pede uma cidade de 500 pessoas'),
+    // 0.46: a Era da IA (chega com a Era da Informação; os robôs pedem o centro de computação, ou o sonho do conselho)
+    robotica: (S) => (!(G.Eras && G.Eras.idade(S) >= 11) ? 'chega com a Era da Informação' : S.buildings.some((b) => b.type === 'centrodados' && b.built) || (G.Eras && G.Eras.temMagia(S, 'sonho')) ? '' : 'pede um centro de computação pronto'),
+    mente: (S) => (!(G.Eras && G.Eras.idade(S) >= 11) ? 'chega com a Era da Informação' : vivos(S) >= 400 ? '' : 'pede uma cidade de 400 pessoas'),
+    // 0.45: a Era da Informação (chega com a Era Moderna; a TV pede o rádio, ou o eco do conselho)
+    televisao: (S) => (!(G.Eras && G.Eras.idade(S) >= 10) ? 'chega com a Era Moderna' : S.buildings.some((b) => b.type === 'radio' && b.built) || (G.Eras && G.Eras.temMagia(S, 'eco')) ? '' : 'pede um rádio pronto'),
+    centrodados: (S) => (!(G.Eras && G.Eras.idade(S) >= 10) ? 'chega com a Era Moderna' : vivos(S) >= 300 ? '' : 'pede uma cidade de 300 pessoas'),
     // 0.34: a Era Moderna (chega com a Era Elétrica; o rádio e a garagem pedem a usina)
     radio: (S) => (!(G.Eras && G.Eras.idade(S) >= 9) ? 'chega com a Era Elétrica' : S.buildings.some((b) => b.type === 'usina' && b.built) || (G.Eras && G.Eras.temMagia(S, 'raio')) ? '' : 'pede uma usina pronta'),
     garagem: (S) => (!(G.Eras && G.Eras.idade(S) >= 9) ? 'chega com a Era Elétrica' : S.buildings.some((b) => b.type === 'usina' && b.built) || (G.Eras && G.Eras.temMagia(S, 'raio')) ? '' : 'pede uma usina pronta'),
@@ -19214,6 +19244,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     { nome: 'Era Elétrica', curto: 'luz e cidade grande', escrita: true, magia: 'raio', gente: 330, marco: ['usina', 'bonde'], txt: 'A cidade acendeu de noite e o bonde corre no trilho: começou a Era Elétrica.', txtM: 'As mais velhas guardaram o relâmpago em vasos de barro, e as casas acenderam sem fio nenhum: começou, do jeito do conselho, a Era Elétrica.' },
     // 0.34: a Era Moderna (o conselho chega a ela pelo eco)
     { nome: 'Era Moderna', curto: 'motor, rádio e hospital', escrita: true, magia: 'eco', gente: 420, marco: ['radio', 'hospitalgeral'], txt: 'A voz do rádio entra em todas as casas e o motor corre na estrada: começou a Era Moderna.', txtM: 'As mais velhas falam baixo na beira do rio, e o eco leva a voz delas a toda casa: começou, do jeito do conselho, a Era Moderna.' },
+    // 0.45: a Era da Informação (o conselho chega a ela pelo sonho)
+    { nome: 'Era da Informação', curto: 'computador e televisão', escrita: true, magia: 'sonho', gente: 520, marco: ['televisao', 'centrodados'], txt: 'A tela acende em toda sala e a máquina guarda o que o povo sabe: começou a Era da Informação.', txtM: 'As mais velhas aprenderam a entrar no sonho de cada um, e o que uma sabe, todos sonham: começou, do jeito do conselho, a Era da Informação.' },
+    // 0.46: a Era da Inteligência Artificial (o conselho chega a ela pelos espíritos)
+    { nome: 'Era da Inteligência Artificial', curto: 'máquinas que pensam', escrita: true, magia: 'espiritos', gente: 620, marco: ['robotica', 'mente'], txt: 'A máquina aprendeu a pensar junto com o povo: começou a Era da Inteligência Artificial.', txtM: 'As mais velhas chamaram os espíritos da mata para morar nas ferramentas, e as ferramentas passaram a ajudar sozinhas: começou, do jeito do conselho, a Era da Inteligência Artificial.' },
+    // 0.47: a Era Espacial, a última (o conselho chega a ela pelos astros)
+    { nome: 'Era Espacial', curto: 'foguetes e estrelas', escrita: true, magia: 'astros', gente: 720, marco: ['observatorio', 'foguete'], txt: 'O povo olha para cima e quer ir: começou a Era Espacial.', txtM: 'As mais velhas aprenderam o caminho dos astros e cantam a rota até eles: começou, do jeito do conselho, a Era Espacial.' },
   ];
   E.init = function (S) {
     const e = S.eras || (S.eras = {});
@@ -19278,11 +19314,11 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   }
   E.ordem = (S) => (S.eras ? S.eras.ordem : '');
   // os efeitos de cada ordem (ganchos pequenos, chamados de onde a coisa acontece)
-  E.crimeMult = (S) => (E.ordem(S) === 'reino' ? 0.85 : 1) * (E.temCastelo && E.temCastelo(S) ? C.CASTELO_CRIME : 1) * (E.temRadio(S) ? C.RADIO_CRIME : 1);   // 0.29: o castelo   // 0.34: o rádio
+  E.crimeMult = (S) => (E.ordem(S) === 'reino' ? 0.85 : 1) * (E.temCastelo && E.temCastelo(S) ? C.CASTELO_CRIME : 1) * (E.temRadio(S) ? C.RADIO_CRIME : 1) * (tem(S, 'mente') ? C.MENTE_CRIME : 1) * (E.temMagia(S, 'espiritos') ? C.ESPIRITOS_CRIME : 1);   // 0.46: a mente da cidade e os espíritos   // 0.29: o castelo   // 0.34: o rádio
   E.trocaMult = (S) => (E.ordem(S) === 'reino' ? 1.3 : 1);
   E.xp = (S) => (E.ordem(S) === 'guildas' ? 1.15 : 1);
   E.cacaMult = (S) => (E.ordem(S) === 'clas' ? 1.25 : 1);
-  E.descMult = (S) => (E.ordem(S) === 'assembleia' ? 0.75 : 1) * (E.temLuz(S) ? C.USINA_DESC : 1) * (G.Guilda ? G.Guilda.descMult(S) : 1);   // 0.33: a luz
+  E.descMult = (S) => (E.ordem(S) === 'assembleia' ? 0.75 : 1) * (E.temLuz(S) ? C.USINA_DESC : 1) * (G.Guilda ? G.Guilda.descMult(S) : 1) * (S.buildings.some((b) => b.type === 'televisao' && b.built) ? C.TV_DESC : 1) * (E.temMagia(S, 'sonho') ? C.SONHO_DESC : 1) * (tem(S, 'mente') ? C.MENTE_DESC : 1);   // 0.33: a luz   // 0.45: a TV e o sonho
   // no conselho, só mulher fala por todos (o matriarcado das elfas)
   E.candidatos = (S, list) => (E.ordem(S) === 'conselho' && list.some((p) => p.sex === 'F') ? list.filter((p) => p.sex === 'F') : list);
 
@@ -19291,6 +19327,9 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     runas: { nome: 'Runas', de: 'das runas', txt: 'As mais velhas gravaram runas nas pedras das casas: a pedra aquece, e quem dorme sente 4 °C a mais.' },
     ervas: { nome: 'Ervas', de: 'das ervas', txt: 'O conselho juntou o saber das ervas e dos cantos: a febre pesa bem menos, e a saúde volta mais depressa.' },
     circulos: { nome: 'Círculos', de: 'dos círculos', txt: 'Círculos de pedra em volta da roça: a terra rende 20% mais.' },
+    astros: { nome: 'Astros', de: 'dos astros', txt: 'O conselho aprendeu o caminho dos astros: as mais velhas sabem dias antes quando o céu vai cair, e o povo aprende mais depressa olhando as estrelas.' },   // 0.47
+    espiritos: { nome: 'Espíritos', de: 'dos espíritos', txt: 'O conselho chamou os espíritos da mata para morar nas ferramentas: as oficinas trabalham 25% mais depressa, e o malfeito cai, porque alguém sempre está olhando.' },   // 0.46
+    sonho: { nome: 'Sonho', de: 'do sonho', txt: 'O conselho aprendeu a entrar no sonho do povo: o que uma sabe, todos sonham. As descobertas chegam mais depressa, e quem dorme acorda mais calmo.' },   // 0.45
     eco: { nome: 'Eco', de: 'do eco', txt: 'O conselho aprendeu a falar com o eco: a voz das mais velhas chega a toda casa, o malfeito cai 20% e duas tribos se conhecem de longe.' },   // 0.34
     raio: { nome: 'Relâmpago', de: 'do relâmpago', txt: 'O conselho aprendeu a guardar o relâmpago em vasos de barro: as casas acendem à noite, o povo estuda até tarde e reclama menos.' },   // 0.33
     seiva: { nome: 'Seiva', de: 'da seiva', txt: 'O conselho aprendeu a falar com a seiva: a madeira, a fibra e o ferro obedecem, e as oficinas trabalham 30% mais depressa.' },   // 0.32
@@ -19302,7 +19341,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // o conselho aprende um saber por idade (a partir da Pedra Polida), em vez de esperar o metal
   function magia(S) {
     if (E.ordem(S) !== 'conselho') return;
-    const ordem = ['runas', 'ervas', 'circulos', 'estrelas', 'mares', 'cantos', 'seiva', 'raio', 'eco'], e = S.eras;
+    const ordem = ['runas', 'ervas', 'circulos', 'estrelas', 'mares', 'cantos', 'seiva', 'raio', 'eco', 'sonho', 'espiritos', 'astros'], e = S.eras;
     for (let k = 0; k < ordem.length; k++) {
       const id = ordem[k];
       if (e.magia[id]) continue;
@@ -19312,7 +19351,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   }
   E.temMagia = (S, id) => !!(S.eras && S.eras.magia[id]);
   E.calorCasa = (S) => (E.temMagia(S, 'runas') ? C.RUNAS_HEAT : 0);
-  E.febreMult = (S) => (E.temMagia(S, 'ervas') ? 0.6 : 1) * (S.buildings.some((b) => b.type === 'hospitalgeral' && b.built) ? C.HGERAL_FEBRE : 1);   // 0.34: o hospital geral
+  E.febreMult = (S) => (E.temMagia(S, 'ervas') ? 0.6 : 1) * (S.buildings.some((b) => b.type === 'hospitalgeral' && b.built) ? C.HGERAL_FEBRE : 1) * (S.buildings.some((b) => b.type === 'mente' && b.built) ? C.MENTE_FEBRE : 1);   // 0.46   // 0.34: o hospital geral
   // 0.29: o moinho (qualquer um pronto) faz toda a roça render mais
   E.rocaMult = (S) => (E.temMagia(S, 'circulos') ? 1.2 : 1) * (S.buildings.some((b) => b.type === 'moinho' && b.built) ? C.MOINHO_ROCA : 1);
   E.temCastelo = (S) => S.buildings.some((b) => b.type === 'castelo' && b.built);
@@ -19321,15 +19360,18 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   const tem = (S, k) => S.buildings.some((b) => b.type === k && b.built);
   E.temArsenal = (S) => tem(S, 'arsenal');
   // 0.32: a fábrica e a seiva apressam as oficinas; a greve, enquanto dura, faz o contrário
-  E.oficioMult = (S) => (tem(S, 'fabrica') ? C.FABRICA_OFICIO : 1) * (E.temMagia(S, 'seiva') ? C.SEIVA_OFICIO : 1) * (S.eras && S.eras.greve > S.t ? C.GREVE_OFICIO : 1) * (S.eras && S.eras.apagao > S.t ? C.APAGAO_OFICIO : 1) * (S.eras && S.eras.crise > S.t ? C.CRISE_OFICIO : 1);
+  E.oficioMult = (S) => (tem(S, 'fabrica') ? C.FABRICA_OFICIO : 1) * (E.temMagia(S, 'seiva') ? C.SEIVA_OFICIO : 1) * (S.eras && S.eras.greve > S.t ? C.GREVE_OFICIO : 1) * (S.eras && S.eras.apagao > S.t ? C.APAGAO_OFICIO : 1) * (S.eras && S.eras.crise > S.t ? C.CRISE_OFICIO : 1) *
+    (tem(S, 'robotica') ? C.ROBO_OFICIO : 1) * (E.temMagia(S, 'espiritos') ? C.ESPIRITOS_OFICIO : 1) * (S.eras && S.eras.parada > S.t ? C.PARADA_OFICIO : 1);   // 0.46: os robôs, os espíritos e as máquinas paradas
   E.temEstacao = (S) => tem(S, 'estacao');
   // 0.34: o rádio (ou o eco do conselho) e os motores da garagem
   E.temRadio = (S) => tem(S, 'radio') || E.temMagia(S, 'eco');
-  E.cargaMult = (S) => (tem(S, 'garagem') ? C.GARAGEM_CARGA : 1);
+  E.cargaMult = (S) => (tem(S, 'garagem') ? C.GARAGEM_CARGA : 1) * (tem(S, 'robotica') ? C.ROBO_CARGA : 1);   // 0.46: os robôs carregam junto
   // 0.33: a luz nas casas vem da usina (some no apagão) ou do relâmpago do conselho; o bonde apressa o passo de todos
   E.temLuz = (S) => !!(S.eras && (E.temMagia(S, 'raio') || (tem(S, 'usina') && !(S.eras.apagao > S.t))));
   E.walkMult = (S) => (tem(S, 'bonde') ? C.BONDE_ANDA : 1);
-  E.pratMult = (S) => (tem(S, 'imprensa') ? C.IMPRENSA_PRAT : 1) * (tem(S, 'universidade') ? C.UNIV_PRAT : 1) * (E.temMagia(S, 'cantos') ? C.CANTOS_PRAT : 1) * (E.temLuz(S) ? C.USINA_PRAT : 1);
+  E.pratMult = (S) => (tem(S, 'imprensa') ? C.IMPRENSA_PRAT : 1) * (tem(S, 'universidade') ? C.UNIV_PRAT : 1) * (E.temMagia(S, 'cantos') ? C.CANTOS_PRAT : 1) * (E.temLuz(S) ? C.USINA_PRAT : 1) *
+    (tem(S, 'centrodados') ? C.COMPUTA_PRAT : 1) * (E.temMagia(S, 'sonho') ? C.SONHO_PRAT : 1) * (S.eras && S.eras.pane > S.t ? C.PANE_PRAT : 1) *
+    (tem(S, 'observatorio') ? C.OBSERV_PRAT : 1) * (E.temMagia(S, 'astros') ? C.ASTROS_PRAT : 1);   // 0.47: o observatório e os astros   // 0.45: o computador, o sonho e a pane
 
   // ---------- o desafio de cada idade ----------
   const pronto = (S, k) => !(S.eras.prox[k] > S.t);
@@ -19369,6 +19411,34 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       for (let k = 0; k < n && pode.length; k++) G.Cidade.adoece(S, pode.splice(Math.floor(S.rng.next() * pode.length), 1)[0]);
       S.eras.prox.peste = S.t + 3 * YEAR(); S.stats.pestes = (S.stats.pestes || 0) + 1;
       Sim().chron(S, 'A Grande Peste chegou pela trilha: ' + n + (n === 1 ? ' pessoa caiu' : ' pessoas caíram') + ' de febre de uma vez. Quem tem casa de cura sofre menos.');
+      return;
+    }
+    // 0.47: Era Espacial: a chuva de meteoros. Com observatório (ou os astros do conselho), o povo vê dias antes e
+    // tira tudo do caminho; sem, uma ou duas obras pegam fogo
+    if (id >= 13 && pronto(S, 'meteoros') && r < C.ERA_METEOROS / C.YEAR_DAYS) {
+      S.eras.prox.meteoros = S.t + 3 * YEAR(); S.stats.meteoros = (S.stats.meteoros || 0) + 1;
+      if (tem(S, 'observatorio') || E.temMagia(S, 'astros')) { Sim().chron(S, 'Uma chuva de meteoros riscou o céu a noite inteira. ' + (tem(S, 'observatorio') ? 'O observatório viu dias antes' : 'As mais velhas leram nos astros dias antes') + ', o povo tirou tudo do caminho, e ninguém se feriu.'); return; }
+      const alvos = S.buildings.filter((b) => b.built && !b.fogo && !C.BUILD[b.type].grande).sort((a, b) => a.id - b.id), quais = [];
+      for (let k = 0; k < C.METEOROS_OBRAS && alvos.length; k++) { const b = alvos.splice(Math.floor(S.rng.next() * alvos.length), 1)[0]; if (G.Cidade && G.Cidade.queima(S, b)) quais.push(b); }
+      Sim().chron(S, 'Uma chuva de meteoros caiu de noite sobre a cidade' + (quais.length ? ': ' + quais.map((b) => (C.BUILD[b.type].a === 'o' ? 'o ' : 'a ') + Sim().def(b).name.toLowerCase()).join(' e ') + (quais.length > 1 ? ' pegaram' : ' pegou') + ' fogo.' : '.') + ' Um observatório teria visto antes.');
+      return;
+    }
+    // 0.46: Era da IA: as máquinas param (ninguém lembra mais como fazer à mão, e as oficinas caem pela metade por uns
+    // dias). Com escola, quem aprendeu o ofício à mão segura o serviço
+    if (id >= 12 && pronto(S, 'parada') && r < C.ERA_PARADA / C.YEAR_DAYS) {
+      S.eras.prox.parada = S.t + 3 * YEAR(); S.stats.paradas = (S.stats.paradas || 0) + 1;
+      if (G.Cidade && G.Cidade.nivel && G.Cidade.nivel(S, 'escola')) { Sim().chron(S, 'As máquinas pararam de uma vez, e por um momento ninguém sabia o que fazer. Mas quem passou pela escola ainda sabia o ofício à mão, e o serviço seguiu.'); return; }
+      S.eras.parada = S.t + C.PARADA_D * DAY();
+      Sim().chron(S, 'As máquinas pararam de uma vez, e ninguém lembrava mais como fazer à mão. Por ' + C.PARADA_D + ' dias, as oficinas trabalham pela metade. Uma escola teria ensinado o ofício.');
+      return;
+    }
+    // 0.45: Era da Informação: a Grande Pane (as máquinas apagam o que guardavam e o aprendizado cai pela metade por uns
+    // dias). Com biblioteca, os livros de papel guardaram tudo e nada se perde
+    if (id >= 11 && pronto(S, 'pane') && r < C.ERA_PANE / C.YEAR_DAYS) {
+      S.eras.prox.pane = S.t + 3 * YEAR(); S.stats.panes = (S.stats.panes || 0) + 1;
+      if (G.Cidade && G.Cidade.nivel && G.Cidade.nivel(S, 'biblioteca')) { Sim().chron(S, 'A Grande Pane: as máquinas apagaram de uma vez o que guardavam. Na biblioteca, os livros de papel tinham tudo, e ninguém perdeu nada.'); return; }
+      S.eras.pane = S.t + C.PANE_D * DAY();
+      Sim().chron(S, 'A Grande Pane: as máquinas apagaram de uma vez o que guardavam. Por ' + C.PANE_D + ' dias, o povo aprende pela metade, refazendo o que se perdeu. Uma biblioteca teria guardado.');
       return;
     }
     // 0.34: Era Moderna: a Grande Crise (o dinheiro some e as oficinas perdem o ritmo). Com mercado, a vila troca o que tem
@@ -19436,12 +19506,25 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   E.daily = function (S) {
     if (!S.eras) E.init(S);
     passa(S);
+    lancamento(S);   // 0.47
     rumo(S);
     magia(S);
     desafios(S);
     reforma(S);
     estudos(S);
   };
+  // 0.47: a base de lançamento pronta: o foguete sobe com os que escolheram ir, e a história do povo chega às
+  // estrelas. Acontece uma vez por mundo; o jogo continua (o povo que fica segue a vida, e Deus ganha a glória toda)
+  function lancamento(S) {
+    if (S.stats.lancou || !tem(S, 'foguete') || S.resumido) return;
+    const b = S.buildings.find((x) => x.type === 'foguete' && x.built);
+    S.stats.lancou = S.t;
+    const fundadores = S.people.slice().sort((a, c) => a.id - c.id).slice(0, 2).map((p) => p.name);   // o casal que chegou primeiro, vivo ou não
+    Sim().chron(S, 'O foguete subiu numa coluna de fogo, e a cidade inteira parou para olhar. Lá dentro iam os netos dos netos de ' + fundadores.join(' e ') + ', o casal que um dia chegou com uma cesta de frutas. O povo chegou às estrelas. Daqui para a frente, a história continua lá em cima e aqui embaixo.');
+    if (G.God && G.God.gain) G.God.gain(S, C.FOGUETE_GLORIA);
+    if (!S.safe && b) { S.events.push({ k: 'fx', fx: 'explosao', x: b.x + b.w / 2 - 0.5, y: b.y + b.h - 1, treme: 12, ms: 1200, pausa: 200 }); S.events.push({ k: 'fx', fx: 'chamas', x: b.x + b.w / 2 - 0.5, y: b.y + b.h - 1 }); S.events.push({ k: 'toast', text: 'O povo chegou às estrelas.', tone: 'good' }); }
+  }
+  E.lancou = (S) => !!(S.stats && S.stats.lancou);
   // 0.31: a cada UNIV_D dias, os estudiosos da universidade adiantam a descoberta da vez
   function estudos(S) {
     if (S.safe || S.resumido || !tem(S, 'universidade') || S.ck.day % C.UNIV_D !== 0) return;
@@ -20102,7 +20185,8 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   R.tem = (p, h) => !!(p && p.rpg && p.rpg.habs && p.rpg.habs.indexOf(h) >= 0);
   R.nome = (p) => { const r = R.de(p); if (!r) return ''; const c = R.CLASSES[r.cls]; return p.sex === 'F' ? c.nameF : c.name; };
   R.nivel = (p) => { const r = R.de(p); return r ? r.nv : 0; };
-  R.pede = (nv) => Math.round(8 * Math.pow(nv, 1.3));   // o xp de um nível ao próximo
+  // 0.44: a curva ficou mais mansa (antes 8·n^1.3: em 16 anos ninguém passava do nível 19 e o Ouro, 25, não chegava)
+  R.pede = (nv) => Math.round(6 * Math.pow(nv, 1.2));   // o xp de um nível ao próximo
   // a profissão: o trabalho em que a pessoa é melhor (só depois que ela já é boa em alguma coisa)
   R.profissao = function (p) {
     let top = '', v = 0;
@@ -20419,7 +20503,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     goblin: { name: 'Goblin', art: 'um goblin', pl: 'Os goblins', de: 'de goblins', covil: 'Toca dos goblins', hp: 2, forca: 0.7, pack: [3, 6], min: 0, ouro: 1 },
     esqueleto: { name: 'Esqueleto', art: 'um esqueleto', pl: 'Os esqueletos', de: 'de esqueletos', covil: 'Cripta esquecida', hp: 3, forca: 1, pack: [3, 5], min: 5, ouro: 1 },
     aranha: { name: 'Aranha gigante', art: 'uma aranha gigante', pl: 'As aranhas gigantes', de: 'de aranhas', fem: 1, covil: 'Ninho de aranhas', hp: 3, forca: 1.2, pack: [2, 4], min: 5, ouro: 0 },
-    dragao: { name: 'Dragão', art: 'o dragão', pl: 'O dragão', de: 'de dragão', covil: 'Ninho do dragão', hp: 160, forca: 3, pack: [1, 1], min: 9999, ouro: 0, boss: 1, verbo: 'vem' },
+    dragao: { name: 'Dragão', art: 'o dragão', pl: 'O dragão', de: 'de dragão', covil: 'Ninho do dragão', hp: 300, forca: 4, pack: [1, 1], min: 9999, ouro: 0, boss: 1, verbo: 'vem' },
     ogro: { name: 'Ogro', art: 'um ogro', pl: 'Os ogros', de: 'de ogros', covil: 'Caverna do ogro', hp: 7, forca: 2, pack: [1, 2], min: 10, ouro: 3 },
   };
   function sorte(S, sal) {
@@ -23409,6 +23493,21 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     // 0.35: a casa, quando a barraca fica para trás
     casa: [['....kk....', '...kyyk...', '..kyyyyk..', '.kyyyyyyk.', 'kkkkkkkkkk', '.kwwwwwwk.', '.kwdkwwwk.', '.kwdkwbwk.', '.kwdkwwwk.', '.kkkkkkkk.'],
       { k: P.ink2, y: P.wood, w: P.parch, d: P.bark, b: P.sky }],
+    // 0.47: o observatório e a base de lançamento
+    observatorio: [['...kkkk...', '..kwwwwk..', '.kwwwwssk.', '.kwwwwwwk.', 'kkkkkkkkkk', 'kssssssssk', 'ksddsssssk', 'ksddsssssk', 'kssssssssk', 'kkkkkkkkkk'],
+      { k: P.ink2, w: P.parch, s: P.silver, d: P.ink }],
+    foguete: [['....kk....', '...kwwk...', '...kwwk...', '...krrk...', '...kwwk...', '..kwwwwk..', '..kwbbwk..', '.kkwwwwkk.', '.k.kffk.k.', '...kffk...'],
+      { k: P.ink2, w: '#f4f4f4', r: P.red, b: '#2ce8f5', f: P.orange }],
+    // 0.46: a fábrica de robôs e a mente da cidade
+    robotica: [['..........', '...kkkk...', '...kwwk...', '...kkkk...', '.kkkkkkkk.', 'k.kssssk.k', 'k.kskksk.k', '..kssssk..', '..kk..kk..', '.kkk..kkk.'],
+      { k: P.ink2, w: '#2ce8f5', s: P.silver }],
+    mente: [['...kkkk...', '..kppppk..', '.kpwppwpk.', 'kppppppppk', 'kpwpppwppk', 'kppppppppk', '.kpppwppk.', '..kppppk..', '...kkkk...', '....kk....'],
+      { k: P.ink2, p: '#8a5cc8', w: '#e8d8ff' }],
+    // 0.45: a estação de TV e o centro de computação
+    televisao: [['....rk....', '....kk....', '...kkkk...', '..k.kk.k..', 'kkkkkkkkkk', 'kbbbbbbbbk', 'kbwbbbbbbk', 'kbbbbgbbbk', 'kkkkkkkkkk', '...kkkk...'],
+      { k: P.ink2, r: P.red, b: '#3a6a9a', w: '#c8e8ff', g: '#63c74d' }],
+    centrodados: [['kkkkkkkkkk', 'kddddddddk', 'kdgdgdgdgk', 'kddddddddk', 'kdgdgdgdgk', 'kddddddddk', 'kdgdgdgdgk', 'kddddddddk', 'kddkkkkddk', 'kkkkkkkkkk'],
+      { k: P.ink2, d: '#3a4466', g: '#63c74d' }],
     // 0.34: o rádio, a garagem e o hospital geral
     radio: [['....rr....', '....kk....', '...k..k...', '...kkkk...', '..k....k..', '..kkkkkk..', '.kssssssk.', '.kswwsdsk.', '.kssssdsk.', 'kkkkkkkkkk'],
       { k: P.ink2, r: P.red, s: P.mist, w: P.yellow, d: P.ink }],
@@ -24757,6 +24856,80 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     for (let x = 3; x <= 28; x++) b.set(x, 42, CONCRETO[0]);
     return b.canvas();
   }
+  // 0.47: o observatório (32 x 40, 2 x 2 passos): a cúpula branca com a fresta aberta e o telescópio para fora
+  function observatorioSpr() {
+    const b = new Buf(32, 40);
+    parede(b, 4, 22, 27, 37);
+    for (let y = 6; y <= 22; y++) { const hw = Math.round(Math.sqrt(Math.max(0, 1 - Math.pow((22 - y) / 16, 2))) * 12); for (let x = 16 - hw; x <= 16 + hw; x++) b.set(x, y, x < 14 ? '#c8c6be' : (x + y) % 7 === 0 ? '#dcdad2' : '#f0eee6'); }
+    for (let y = 7; y <= 21; y++) { b.set(17, y, '#1c2238'); b.set(18, y, '#1c2238'); }
+    line(b, 18, 12, 25, 5, '#5a6988'); line(b, 19, 12, 26, 5, '#8b9bb4'); rect7(b, 25, 3, 27, 5, '#3a4466');
+    rect7(b, 13, 28, 18, 37, '#2b1d1a'); rect7(b, 6, 26, 10, 30, '#3e444c'); rect7(b, 7, 27, 9, 29, '#9ac8e0');
+    for (let x = 4; x <= 27; x++) b.set(x, 38, CONCRETO[0]);
+    return b.canvas();
+  }
+  // 0.47: a base de lançamento (64 x 84, 4 x 4 passos): a torre de aço, o foguete branco de faixa vermelha em pé e a
+  // plataforma de concreto
+  function fogueteSpr() {
+    const b = new Buf(64, 84);
+    for (let y = 70; y <= 81; y++) for (let x = 4; x <= 59; x++) b.set(x, y, y === 70 ? CONCRETO[4] : (x + y) % 9 === 0 ? CONCRETO[2] : CONCRETO[3]);
+    for (let y = 6; y <= 70; y++) { b.set(12, y, '#c8423a'); b.set(20, y, '#c8423a'); if (y % 6 === 0) { line(b, 12, y, 20, y, '#a22633'); line(b, 12, y, 20, y + 6 < 70 ? y + 6 : y, '#a22633'); } }
+    for (let y = 18; y <= 42; y += 12) line(b, 20, y, 30, y, '#8b9bb4');
+    for (let y = 4; y <= 64; y++) { const hw = y < 14 ? Math.round((y - 4) / 10 * 6) : 6; for (let x = 36 - hw; x <= 36 + hw; x++) b.set(x, y, x < 34 ? '#d8dce4' : '#f4f4f4'); }
+    for (let x = 30; x <= 42; x++) { b.set(x, 24, '#e43b44'); b.set(x, 25, '#e43b44'); }
+    rect7(b, 34, 30, 38, 34, '#2ce8f5'); b.set(35, 31, '#c8f4ff');
+    for (const sx of [-1, 1]) for (let y = 52; y <= 66; y++) { const w = Math.round((y - 52) / 14 * 5); for (let k = 0; k <= w; k++) b.set(36 + sx * (7 + k), y, '#c8423a'); }
+    rect7(b, 32, 65, 40, 69, '#3a4466'); rect7(b, 34, 69, 38, 70, '#5a6988');
+    for (let x = 4; x <= 59; x++) b.set(x, 82, CONCRETO[0]);
+    return b.canvas();
+  }
+  // 0.46: a fábrica de robôs (48 x 38, 3 x 2 passos): o galpão branco, o portão de vidro e um braço mecânico laranja
+  function roboticaSpr() {
+    const b = new Buf(48, 38);
+    for (let y = 10; y <= 35; y++) for (let x = 2; x <= 45; x++) b.set(x, y, y === 10 ? '#f4f4f4' : (x + y * 3) % 13 === 0 ? '#d8dce4' : '#e8ecf2');
+    rect7(b, 1, 8, 46, 9, '#8b9bb4');
+    rect7(b, 5, 16, 24, 35, '#2b2b34'); for (let x = 6; x <= 23; x += 3) line(b, x, 17, x, 35, '#4fa3c2');
+    line(b, 31, 35, 31, 26, '#f77622'); line(b, 31, 26, 37, 20, '#f77622'); line(b, 32, 26, 38, 20, '#feae34'); rect7(b, 37, 18, 40, 20, '#3a4466'); b.set(41, 19, '#2ce8f5'); rect7(b, 29, 33, 33, 35, '#3a4466');
+    rect7(b, 28, 12, 43, 15, '#262b44'); for (let x = 29; x <= 42; x += 2) b.set(x, 13, (x % 4) ? '#63c74d' : '#2ce8f5');
+    for (let x = 2; x <= 45; x++) b.set(x, 36, CONCRETO[0]);
+    return b.canvas();
+  }
+  // 0.46: a mente da cidade (64 x 68, 4 x 4 passos): a torre de vidro lilás, o núcleo que pulsa por dentro e o anel
+  // de luz no alto
+  function menteSpr() {
+    const b = new Buf(64, 68);
+    for (let y = 14; y <= 65; y++) { const hw = y < 22 ? Math.round(8 + (y - 14) * 1.2) : 18; for (let x = 32 - hw; x <= 32 + hw; x++) b.set(x, y, x === 32 - hw ? '#2a1e44' : (x + y) % 9 === 0 ? '#b89cf0' : x < 32 ? '#6a48a8' : '#7e5cbc'); }
+    for (let y = 28; y <= 60; y += 6) for (let x = 16; x <= 48; x++) if (x % 4 !== 0) b.set(x, y, '#c8b4f4');
+    for (let y = 30; y <= 46; y++) for (let x = 26; x <= 38; x++) { const d = Math.hypot(x - 32, (y - 38) * 0.8); if (d < 7) b.set(x, y, d < 3 ? '#ffffff' : d < 5 ? '#e8d8ff' : '#b080ff'); }
+    for (let x = 18; x <= 46; x++) { b.set(x, 8 + Math.round(Math.abs(x - 32) / 7), '#2ce8f5'); }
+    line(b, 32, 0, 32, 14, '#c0cbdc'); b.set(32, 0, '#fee761');
+    rect7(b, 27, 56, 37, 65, '#1c1630'); rect7(b, 28, 57, 31, 65, '#9a7ad8'); rect7(b, 33, 57, 36, 65, '#9a7ad8');
+    for (let x = 14; x <= 50; x++) b.set(x, 66, CONCRETO[0]);
+    return b.canvas();
+  }
+  // 0.45: a estação de TV (32 x 46, 2 x 2 passos): o prédio baixo, a torre de treliça vermelha e branca e a antena parabólica
+  function televisaoSpr() {
+    const b = new Buf(32, 46);
+    parede(b, 2, 28, 29, 43); rect7(b, 1, 26, 30, 27, CONCRETO[0]);
+    for (let y = 0; y <= 26; y++) { const hw = Math.round(y / 26 * 4) + 1, cor = Math.floor(y / 4) % 2 ? '#e8e4d8' : '#c8423a'; b.set(22 - hw, y, cor); b.set(22 + hw, y, cor); if (y % 3 === 0) rect7(b, 22 - hw, y, 22 + hw, y, cor); }
+    b.set(22, 0, '#fee761');
+    for (let y = 18; y <= 24; y++) { const hw = Math.round(Math.sqrt(Math.max(0, 9 - (y - 21) * (y - 21)))); rect7(b, 7 - hw, y, 7 + hw, y, y === 18 ? '#e8e4d8' : '#c8c6be'); } line(b, 7, 21, 11, 17, '#5c5e60'); line(b, 7, 25, 7, 26, '#5c5e60');
+    rect7(b, 5, 31, 16, 38, '#2b2b34'); rect7(b, 6, 32, 15, 37, '#4fa3c2'); rect7(b, 7, 33, 10, 35, '#c8e8ff'); rect7(b, 12, 35, 14, 36, '#f6757a');
+    rect7(b, 20, 33, 26, 43, '#2b1d1a');
+    for (let x = 2; x <= 29; x++) b.set(x, 44, CONCRETO[0]);
+    return b.canvas();
+  }
+  // 0.45: o centro de computação (64 x 52, 4 x 3 passos): o prédio de vidro escuro, as fileiras de máquinas com luz
+  // verde piscando por trás das janelas e as antenas no teto
+  function centroDadosSpr() {
+    const b = new Buf(64, 52);
+    for (let y = 10; y <= 49; y++) for (let x = 3; x <= 60; x++) b.set(x, y, y === 10 ? '#5a6988' : (x % 8 === 3) ? '#262b44' : '#3a4466');
+    rect7(b, 2, 8, 61, 9, CONCRETO[1]);
+    for (const y of [14, 25, 36]) for (let x = 5; x <= 58; x += 8) { rect7(b, x, y, x + 5, y + 7, '#1c2238'); for (let k = 0; k < 3; k++) b.set(x + 1 + k * 2, y + 2 + (k + x) % 4, (k + y + x) % 3 ? '#63c74d' : '#2ce8f5'); }
+    rect7(b, 27, 40, 36, 49, '#1c2238'); rect7(b, 28, 41, 31, 49, '#4fa3c2'); rect7(b, 33, 41, 35, 49, '#4fa3c2');
+    line(b, 10, 1, 10, 8, '#8b9bb4'); b.set(10, 0, '#e43b44'); line(b, 52, 3, 52, 8, '#8b9bb4'); rect7(b, 49, 2, 55, 3, '#c0cbdc');
+    for (let x = 3; x <= 60; x++) b.set(x, 50, CONCRETO[0]);
+    return b.canvas();
+  }
   // a garagem (48 x 36, 3 x 2 passos): o galpão de concreto, o portão aberto e o caminhão vermelho na porta
   function garagemSpr() {
     const b = new Buf(48, 36);
@@ -24935,7 +25108,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
     return b.canvas();
   }
   A.cidadeSprites = function () {
-    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr(), imprensa: imprensaSpr(), universidade: universidadeSpr(), arsenal: arsenalSpr(), fabrica: fabricaSpr(), estacao: estacaoSpr(), usina: usinaSpr(), bonde: bondeSpr(), radio: radioSpr(), garagem: garagemSpr(), hospitalgeral: hospitalGeralSpr(), taberna: tabernaSpr(), guilda: guildaSpr(), torremagia: torreMagiaSpr() };
+    const out = { templo: templo(), muralha: portao(), torre: torre(), aqueduto: aqueduto(), ponte: ponteSpr(), canoa: canoaSpr(), barco: barcoSpr(), navio: navioSpr(), castelo: castelo(), moinho: moinho(), porto: portoSpr(), galeao: galeaoSpr(), imprensa: imprensaSpr(), universidade: universidadeSpr(), arsenal: arsenalSpr(), fabrica: fabricaSpr(), estacao: estacaoSpr(), usina: usinaSpr(), bonde: bondeSpr(), radio: radioSpr(), garagem: garagemSpr(), hospitalgeral: hospitalGeralSpr(), televisao: televisaoSpr(), centrodados: centroDadosSpr(), robotica: roboticaSpr(), mente: menteSpr(), observatorio: observatorioSpr(), foguete: fogueteSpr(), taberna: tabernaSpr(), guilda: guildaSpr(), torremagia: torreMagiaSpr() };
     for (const k of ['escola', 'biblioteca', 'hospital', 'guarda', 'brigada', 'mercado']) out[k] = [null, instituicao(k, 1), instituicao(k, 2), instituicao(k, 3)];
     return out;
   };
@@ -25589,7 +25762,7 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
   // ---------- helpers de desenho ----------
   // 0.31: as obras sem telhado de sapê (madeira, pedra, barco) não mudam de cor com a idade: a tábua e o sapê têm cores
   // parecidas demais para separar pela cor, então quem decide é o tipo da obra
-  const SEM_TELHADO = { porto: 1, galeao: 1, navio: 1, barco: 1, canoa: 1, ponte: 1, jirau: 1, moquem: 1, curral: 1, roca: 1, fogueira: 1, estatua: 1, cemiterio: 1, mina: 1, aqueduto: 1, muralha: 1, castelo: 1, arsenal: 1, universidade: 1, fabrica: 1, estacao: 1, usina: 1, bonde: 1, radio: 1, garagem: 1, hospitalgeral: 1, torremagia: 1 };
+  const SEM_TELHADO = { porto: 1, galeao: 1, navio: 1, barco: 1, canoa: 1, ponte: 1, jirau: 1, moquem: 1, curral: 1, roca: 1, fogueira: 1, estatua: 1, cemiterio: 1, mina: 1, aqueduto: 1, muralha: 1, castelo: 1, arsenal: 1, universidade: 1, fabrica: 1, estacao: 1, usina: 1, bonde: 1, radio: 1, garagem: 1, hospitalgeral: 1, televisao: 1, centrodados: 1, robotica: 1, mente: 1, observatorio: 1, foguete: 1, torremagia: 1 };
   let eraObra = 0;   // 0.27: a idade da construção que está sendo desenhada (o telhado muda de cor)
   function blit(img, wx, wy, alpha) {
     if (eraObra >= 2) img = A.eraImg(img, eraObra);
@@ -28495,6 +28668,12 @@ body[data-fresh] #p-pessoa { pointer-events: none; }   /* acabou de abrir com um
       ['taberna', 'taberna'], ['guilda', 'guilda'],
       // 0.34: a Era Moderna
       ['radio', 'radio'], ['garagem', 'garagem'], ['hospitalgeral', 'hospitalgeral'],
+      // 0.45: a Era da Informação
+      ['televisao', 'televisao'], ['centrodados', 'centrodados'],
+      // 0.46: a Era da IA
+      ['robotica', 'robotica'], ['mente', 'mente'],
+      // 0.47: a Era Espacial
+      ['observatorio', 'observatorio'], ['foguete', 'foguete'],
       // 0.33: a Era Elétrica
       ['usina', 'usina'], ['bonde', 'bonde'],
       // 0.32: a Revolução Industrial
